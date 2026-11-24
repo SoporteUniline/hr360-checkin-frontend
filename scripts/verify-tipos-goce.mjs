@@ -18,6 +18,7 @@ import { createHmac, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
+import { elegir, gruposOpciones, textosOpciones, valorDe } from "./lib/desplegable.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -174,26 +175,15 @@ async function simular(page) {
 
 // Texto visible de cada select cabe en su caja (también las opciones de los motivos y horas).
 async function selectsSinRecorte(raiz, etiqueta) {
-  const malos = await raiz.evaluate((el) => {
-    const ctx = document.createElement("canvas").getContext("2d");
-    const out = [];
-    for (const s of el.querySelectorAll("select")) {
-      if (!s.offsetParent) continue;
-      const cs = getComputedStyle(s);
-      ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-      const libre = s.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (cs.appearance === "none" ? -2 : 18); // con flecha propia el padding ya la incluye
-      const textos = [s.options[s.selectedIndex]?.text ?? ""];
-      // Las opciones no elegidas solo cuentan si el select tiene ancho fijo (con field-sizing: content se ajusta a lo elegido).
-      if (cs.fieldSizing !== "content" && /Motivo|Horas no trabajadas|Goce/.test(s.getAttribute("aria-label") ?? "")) textos.push(...[...s.options].map((o) => o.text));
-      for (const t of textos) if (ctx.measureText(t).width > libre) out.push(`${s.getAttribute("aria-label")}: «${t}» (${Math.round(ctx.measureText(t).width)} > ${Math.round(libre)})`);
-    }
-    return out;
-  });
+  // (24/11/2026) Los desplegables son SelectConIconos (combobox de Radix): el texto elegido no debe quedar cortado.
+  const malos = await raiz.evaluate((el) => [...el.querySelectorAll("[role=combobox][data-valor]")].filter((c) => c.offsetParent)
+    .map((c) => [c.getAttribute("aria-label"), c.querySelector("[data-texto-valor]"), c]).filter(([, t, c]) => t && (t.scrollWidth > t.clientWidth + 1 || t.getBoundingClientRect().bottom > c.getBoundingClientRect().bottom + 1))
+    .map(([a, t]) => `${a}: «${t.innerText}» (${t.scrollWidth} > ${t.clientWidth})`));
   assert.deepEqual(malos, [], `${etiqueta}: selects con texto recortado`);
 }
 // Letra de los campos entre 13 y 16 px (13–14 en escritorio; 16 en celular para que iOS no haga zoom).
 async function letraCampos(raiz, etiqueta, min = 13, max = 14) {
-  const malos = await raiz.evaluate((el, [a, b]) => [...el.querySelectorAll("select,input:not([type=checkbox])")].filter((c) => c.offsetParent)
+  const malos = await raiz.evaluate((el, [a, b]) => [...el.querySelectorAll("[role=combobox],input:not([type=checkbox])")].filter((c) => c.offsetParent)
     .map((c) => [c.getAttribute("aria-label") || c.id || c.type, parseFloat(getComputedStyle(c).fontSize)]).filter(([, f]) => f < a || f > b), [min, max]);
   assert.deepEqual(malos, [], `${etiqueta}: tamaño de letra de los campos`);
 }
@@ -278,9 +268,10 @@ try {
   assert.equal(await enlaceActa.innerText(), "📄 Acta en borrador");
   assert.equal(await enlaceActa.getAttribute("href"), "/panel/actas-administrativas?acta=77");
   // «Qué pasó» de la fila sin checadas (sin «Sin checar»; los de ley al final con 🔒).
-  assert.deepEqual(await page.getByLabel("Qué pasó de Diego León").evaluate((s) => [...s.options].map((o) => o.text)),
+  assert.deepEqual(await textosOpciones(page.getByLabel("Qué pasó de Diego León")),
+  // (24/11/2026) Los días de ley llevan el candado como icono (SelectConIconos), ya no « 🔒» en el texto.
     ["❌ Sin Checar", "Asistencia", "Falta injustificada", "Entrada después de tiempo", "Salida antes de tiempo", "Salida entre jornada", "Falta justificada",
-      "Home office", "Vacaciones 🔒", "Incapacidad IMSS 🔒", "Suspensión disciplinaria 🔒", "Día de descanso 🔒"]);
+      "Home office", "Vacaciones", "Incapacidad IMSS", "Suspensión disciplinaria", "Día de descanso"]);
   await sinDesborde(page.locator("html"), "asistencias 1440");
   await celdasSinRecorte(page, "asistencias 1440");
   await selectsSinRecorte(page.locator("tbody"), "asistencias 1440");
@@ -288,22 +279,22 @@ try {
   assert.ok(cajas.every((b) => b === "0px"), "sin cuadros alrededor del estado");
 
   // Ejemplo 2: Falta injustificada (sin motivo) → OK, sin motivo ni goce.
-  await page.getByLabel("Qué pasó de Ana Ruiz").selectOption("2");
+  await elegir(page.getByLabel("Qué pasó de Ana Ruiz"), "2");
   await filaDe("Ana Ruiz").getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 1, "PUT estado-dia falta injustificada");
   assert.deepEqual(pet.estado[0], { id: 602, cuerpo: { id_tipo_permiso: 2 } });
   await page.getByText("Se creó un acta administrativa en borrador por la falta injustificada.").waitFor({ timeout: 5000 });
 
   // Ejemplo 3: Falta justificada (tipo anterior, servidor viejo) · «Permiso personal» · goce del tipo (sin goce).
-  await page.getByLabel("Qué pasó de Luis Mora").selectOption("3");
+  await elegir(page.getByLabel("Qué pasó de Luis Mora"), "3");
   const pend = filaDe("Luis Mora").locator("[data-estado-pendiente]");
   await pend.waitFor();
   const motivoLuis = page.getByLabel("Motivo de Luis Mora");
-  await motivoLuis.locator("option", { hasText: "Permiso personal" }).waitFor({ state: "attached" });
-  const opcionesMotivo = await motivoLuis.evaluate((s) => [...s.options].map((o) => o.text));
+  await motivoLuis.waitFor();
+  const opcionesMotivo = await textosOpciones(motivoLuis);
   assert.deepEqual(opcionesMotivo, ["Sin motivo", "Visita al médico", "Permiso personal", "Trámite", "Escuela de los hijos", "Capacitación", "Boda", "Otro…"]);
-  await motivoLuis.selectOption({ label: "Permiso personal" });
-  assert.equal(await pend.getByLabel("Goce del día").inputValue(), "sin", "goce preseleccionado del tipo");
+  await elegir(motivoLuis, { label: "Permiso personal" });
+  assert.equal(await valorDe(pend.getByLabel("Goce del día")), "sin", "goce preseleccionado del tipo");
   await selectsSinRecorte(filaDe("Luis Mora"), "fila con motivo");
   await letraCampos(filaDe("Luis Mora"), "fila con motivo");
   await foto(page, "1440-fila-motivo");
@@ -312,28 +303,29 @@ try {
   assert.deepEqual(pet.estado[1], { id: 603, cuerpo: { id_tipo_permiso: 3, id_motivo: 2, goce: "sin" } });
 
   // Ejemplo 1: Diego · «Sí vino → Entrada después de tiempo» → reloj con el permiso puesto; entra 11:00; visita al médico.
-  await page.getByLabel("Qué pasó de Diego León").selectOption("4");
+  await elegir(page.getByLabel("Qué pasó de Diego León"), "4");
   const dlg = page.getByRole("dialog", { name: /Diego León/ });
   const perm = dlg.locator("[data-permiso-dia]");
   await perm.waitFor({ timeout: 10000 });
-  assert.equal(await perm.getByLabel("Qué pasó").inputValue(), "4");
+  assert.equal(await valorDe(perm.getByLabel("Qué pasó")), "4");
   // Sin checadas, un permiso parcial no se puede guardar (el servidor responde 400): se avisa antes.
-  await perm.getByLabel("Motivo").selectOption({ label: "Visita al médico" });
-  assert.match(await perm.getByRole("alert").innerText(), /Si no vino, elige «Inasistencia»/);
-  await perm.getByLabel("Motivo").selectOption("");
+  await elegir(perm.getByLabel("Motivo"), { label: "Visita al médico" });
+  // (24/11/2026) Un tipo parcial pide su hora: sin checadas ni hora, el aviso es el de la hora (lib/asistencia/horaPermiso.mjs).
+  assert.match(await perm.getByRole("alert").innerText(), /^Entrada después de tiempo: indica a qué hora entró \(debe ser después de las 9:00 a\.m\.\)$/);
+  await elegir(perm.getByLabel("Motivo"), "");
   await dlg.getByRole("button", { name: "Cargar su horario normal" }).click();
   await dlg.locator('[data-renglon="1"]').getByLabel("Entrada").fill("11:00");
   // Sin motivo no hay permiso: es un retardo (se puede guardar así).
   assert.match(await dlg.locator("[data-estado-calculado]").innerText(), /Retardo/);
-  const ops = await perm.getByLabel("Motivo").evaluate((s) => [...s.options].map((o) => o.text));
+  const ops = await textosOpciones(perm.getByLabel("Motivo"));
   assert.ok(ops.includes("Visita al médico") && ops.at(-1) === "Otro…", ops.join(","));
-  const opsRenglon = await dlg.locator('[data-renglon="1"]').getByLabel("Motivo").evaluate((s) => [...s.querySelectorAll("optgroup")].map((g) => g.label));
+  const opsRenglon = await gruposOpciones(dlg.locator('[data-renglon="1"]').getByLabel("Motivo"));
   assert.deepEqual(opsRenglon, ["Corrección"], "el motivo del renglón es solo de corrección");
-  await perm.getByLabel("Motivo").selectOption({ label: "Visita al médico" });
+  await elegir(perm.getByLabel("Motivo"), { label: "Visita al médico" });
   assert.match(await perm.locator("[data-permiso-calculo]").innerText(), /^2 h no trabajadas · se reponen\s*Día con goce · 2 h a su cuenta de horas$/);
-  await perm.getByLabel("Horas no trabajadas").selectOption("descuentan");
+  await elegir(perm.getByLabel("Horas no trabajadas"), "descuentan");
   assert.match(await perm.locator("[data-permiso-calculo]").innerText(), /2 h no trabajadas · se descuentan\s*Día con goce · se descuentan 2 h/);
-  await perm.getByLabel("Horas no trabajadas").selectOption("reponen");
+  await elegir(perm.getByLabel("Horas no trabajadas"), "reponen");
   assert.match(await dlg.locator("[data-estado-calculado]").innerText(), /Entró tarde con permiso/);
   await selectsSinRecorte(dlg, "reloj con permiso 1440");
   await letraCampos(perm, "permiso del día");
@@ -355,8 +347,8 @@ try {
   const dlgR = page.getByRole("dialog", { name: /Raúl Vega/ });
   const permR = dlgR.locator("[data-permiso-dia]");
   await permR.waitFor({ timeout: 10000 });
-  await permR.getByLabel("Qué pasó").selectOption("5");
-  await permR.getByLabel("Motivo").selectOption({ label: "Otro…" });
+  await elegir(permR.getByLabel("Qué pasó"), "5");
+  await elegir(permR.getByLabel("Motivo"), { label: "Otro…" });
   await permR.getByLabel("Escribe el motivo").fill("Cita en el banco");
   // Motivo sin configuración (servidor viejo): las horas las trae el tipo (se descuentan).
   assert.match(await permR.locator("[data-permiso-calculo]").innerText(), /2 h no trabajadas · se descuentan\s*Día con goce · se descuentan 2 h/);
@@ -394,16 +386,16 @@ try {
   const empresaSel = dp.getByRole("combobox").first();
   await empresaSel.waitFor({ timeout: 15000 });
   if (!/Empresa prueba/.test(await empresaSel.innerText())) { await empresaSel.click(); await page.getByRole("option", { name: "Empresa prueba" }).click(); }
-  const opcionesTipo = await dp.getByLabel("Qué pasó").evaluate((s) => [...s.options].map((o) => o.text));
+  const opcionesTipo = await textosOpciones(dp.getByLabel("Qué pasó"));
   assert.deepEqual(opcionesTipo, ["Elige qué pasó…", "Falta injustificada", "Entrada después de tiempo", "Salida antes de tiempo", "Salida entre jornada"]);
-  await dp.getByLabel("Qué pasó").selectOption("2");
+  await elegir(dp.getByLabel("Qué pasó"), "2");
   await dp.getByText("Diego León").waitFor({ timeout: 10000 });
   await dp.locator("li", { hasText: "Diego León" }).getByRole("checkbox").check();
   const [ini, fin] = proximaSemana();
   await dp.locator('input[type="date"]').nth(0).fill(ini);
   await dp.locator('input[type="date"]').nth(1).fill(fin);
-  await dp.getByLabel("Motivo", { exact: true }).selectOption({ label: "Permiso personal" });
-  assert.equal(await dp.getByLabel("Goce del día").inputValue(), "sin", "goce preseleccionado");
+  await elegir(dp.getByLabel("Motivo", { exact: true }), { label: "Permiso personal" });
+  assert.equal(await valorDe(dp.getByLabel("Goce del día")), "sin", "goce preseleccionado");
   await letraCampos(dp.locator("[data-que-paso-permiso]"), "permisos qué pasó y motivo");
   await foto(page, "1440-permisos");
   await dp.getByRole("button", { name: "Guardar" }).click();
@@ -413,8 +405,8 @@ try {
   // Un parcial: por horas (lo dice el tipo), día con goce y las horas del motivo.
   await page.getByRole("button", { name: /Nuevo permiso/ }).first().click();
   const dp2 = page.getByRole("dialog");
-  await dp2.getByLabel("Qué pasó").selectOption("5");
-  await dp2.getByLabel("Motivo", { exact: true }).selectOption({ label: "Visita al médico" });
+  await elegir(dp2.getByLabel("Qué pasó"), "5");
+  await elegir(dp2.getByLabel("Motivo", { exact: true }), { label: "Visita al médico" });
   assert.equal(await dp2.getByLabel("Goce del día").count(), 0, "parcial con motivo: día con goce");
   assert.equal(await dp2.getByLabel("Horas no trabajadas").isDisabled(), false);
   assert.equal(await dp2.getByRole("radiogroup", { name: "Duración del permiso" }).count(), 0, "el tipo ya dice que es por horas");
@@ -438,10 +430,10 @@ try {
   await page.getByText("Luis Mora").first().click();
   const estadoMovil = page.getByLabel("Qué pasó de Luis Mora");
   await estadoMovil.waitFor({ timeout: 10000 });
-  await estadoMovil.selectOption("3");
+  await elegir(estadoMovil, "3");
   const pendM = page.locator("[data-estado-movil] [data-estado-fila]");
-  await pendM.getByLabel("Motivo de Luis Mora").selectOption({ label: "Permiso personal" });
-  const bajos = await pendM.evaluate((el) => [...el.querySelectorAll("select,button")].filter((c) => c.getBoundingClientRect().height < 43.5).map((c) => c.getAttribute("aria-label") || c.textContent));
+  await elegir(pendM.getByLabel("Motivo de Luis Mora"), { label: "Permiso personal" });
+  const bajos = await pendM.evaluate((el) => [...el.querySelectorAll("[role=combobox],button")].filter((c) => c.getBoundingClientRect().height < 43.5).map((c) => c.getAttribute("aria-label") || c.textContent));
   assert.deepEqual(bajos, [], "controles de 44 px en celular");
   await letraCampos(pendM, "fila móvil", 16, 16);
   await foto(page, "390-detalle-motivo");
@@ -449,17 +441,17 @@ try {
   await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
   await page.getByText("Diego León").first().waitFor({ timeout: 30000 });
   await page.getByText("Diego León").first().click();
-  await page.getByLabel("Qué pasó de Diego León").selectOption("4");
+  await elegir(page.getByLabel("Qué pasó de Diego León"), "4");
   const hoja = page.getByRole("dialog", { name: /Diego León/ });
   const permM = hoja.locator("[data-permiso-dia]");
   await permM.waitFor({ timeout: 15000 });
   await dormir(500);
-  assert.equal(await permM.getByLabel("Qué pasó").inputValue(), "4", "el tipo de la fila llega al reloj en celular");
+  assert.equal(await valorDe(permM.getByLabel("Qué pasó")), "4", "el tipo de la fila llega al reloj en celular");
   await hoja.getByRole("button", { name: "Cargar su horario normal" }).click();
-  await permM.getByLabel("Motivo").selectOption({ label: "Visita al médico" });
+  await elegir(permM.getByLabel("Motivo"), { label: "Visita al médico" });
   await sinDesborde(hoja.locator(".overflow-y-auto").first(), "reloj 390");
   await selectsSinRecorte(hoja, "reloj 390");
-  const bajosR = await permM.evaluate((el) => [...el.querySelectorAll("select,input")].filter((c) => c.offsetParent && c.getBoundingClientRect().height < 43.5).map((c) => c.getAttribute("aria-label")));
+  const bajosR = await permM.evaluate((el) => [...el.querySelectorAll("[role=combobox],input")].filter((c) => c.offsetParent && c.getBoundingClientRect().height < 43.5).map((c) => c.getAttribute("aria-label")));
   assert.deepEqual(bajosR, [], "permiso del día con controles de 44 px");
   await permM.scrollIntoViewIfNeeded();
   await foto(page, "390-reloj-permiso");

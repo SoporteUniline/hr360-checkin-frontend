@@ -7,11 +7,15 @@
 // Backend simulado con page.route; ninguna petición sale a internet.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build && node scripts/verify-reloj-dia.mjs
 // CAPTURAS=<carpeta> guarda capturas a 1440 y 390 (tabla, modal, modal vacío, móvil).
+// CAPTURAS_SELECTS=<carpeta> guarda los desplegables ABIERTOS («Qué pasó», «Motivo», Concepto) a 1440 y 390.
+// (24/11/2026) Permiso parcial con hora obligatoria (Rosa: Salida temprano; Tomás: Entrada tarde, Salir en medio turno y
+// motivo de corrección «Otro»), lib/asistencia/horaPermiso.mjs.
 import assert from "node:assert/strict";
 import { createHmac, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
+import { elegir, textosOpciones, valorDe } from "./lib/desplegable.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -26,6 +30,7 @@ const next = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start"
   { stdio: "ignore", env: { ...process.env, JWT_SECRET: secret } });
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 const capturas = process.env.CAPTURAS;
+const capturasSelects = process.env.CAPTURAS_SELECTS;
 
 function token() {
   const head = Buffer.from('{"alg":"HS256","typ":"JWT"}').toString("base64url");
@@ -63,6 +68,10 @@ const filas = () => [
     hora_salida_programada: "14:00:00", hora_salida_comida_programada: null, hora_regreso_comida_programada: null, minutos_trabajados: 305,
     dia: { tipo: "domingo", nombre: "Domingo", pago: "Prima dominical 25% (art. 71)" }, estado_calculado: { clave: "ok", texto: "Asistió", atencion: false } }),
   fila(507, "Diego", "León", "Administración", { entrada: `${F} 08:55:00`, checadas_vivas: 1, estado_calculado: { clave: "sinsalida", texto: "Sin salida", atencion: true } }),
+  fila(508, "Rosa", "Díaz", "Ventas", { entrada: `${F} 09:00:00`, salida: `${F} 16:00:00`, checadas_vivas: 3, minutos_trabajados: 390, minutos_comida: 30,
+    hora_salida_comida_programada: "11:00:00", hora_regreso_comida_programada: "11:30:00", estado_calculado: { clave: "ok", texto: "Asistió", atencion: false } }),
+  fila(509, "Tomás", "Ruiz", "Ventas", { entrada: `${F} 09:00:00`, salida: `${F} 16:00:00`, checadas_vivas: 1, minutos_trabajados: 420,
+    hora_salida_comida_programada: null, hora_regreso_comida_programada: null, estado_calculado: { clave: "ok", texto: "Asistió", atencion: false } }),
 ];
 const tiposPermiso = [
   // (24/11/2026) «Qué pasó» + «Motivo»: rol y captura del servidor; «Falta justificada» quedó solo para el historial.
@@ -77,8 +86,18 @@ const motivosPermiso = [{ id: 1, nombre: "Visita al médico", global: true }, { 
 const motivos = {
   permisos: [{ clave: "tp:31", nombre: "Permiso: entrada tarde" }, { clave: "tp:32", nombre: "Permiso: salida antes" }],
   correccion: [{ clave: "olvido", nombre: "Olvidó checar" }, { clave: "reloj", nombre: "Falla del reloj" }, { clave: "captura", nombre: "Error de captura" },
-    { clave: "fuera", nombre: "Trabajó fuera de la sucursal" }, { clave: "duplicada", nombre: "Checada duplicada" }],
+    { clave: "fuera", nombre: "Trabajó fuera de la sucursal" }, { clave: "duplicada", nombre: "Checada duplicada" },
+    // (24/11/2026) Claves nuevas del servidor (motivo_correccion VARCHAR(40); «otro: <texto>»).
+    { clave: "permiso", nombre: "Por el permiso del día" }, { clave: "remoto", nombre: "Trabajo remoto / home office" },
+    { clave: "comision", nombre: "Visita a cliente o comisión" }, { clave: "evento", nombre: "Capacitación o evento externo" },
+    { clave: "sin_dispositivo", nombre: "Sin dispositivo o reloj sin conexión" }, { clave: "otro", nombre: "Otro (escribe el motivo)" }],
 };
+// Tipos parciales del «Permiso del día» (GET /:id/reloj → tipos_parciales).
+const parciales = [
+  { id: 31, nombre: "Entrada tarde", alcance: "entrada", rol: "entrada", captura: 1, es_permiso: 1 },
+  { id: 32, nombre: "Salida temprano", alcance: "salida", rol: "salida", captura: 1, es_permiso: 1 },
+  { id: 33, nombre: "Salir en medio turno", alcance: "medio", rol: "medio", captura: 1, es_permiso: 1 },
+];
 const autorizadores = [{ id: 3, nombre: "Laura Méndez (RH)" }, { id: 9, nombre: "Carlos Ruiz (jefe)" }];
 const chec = (id, e, s, o = {}) => ({ id, entrada: e, salida: s, entrada_reloj: e, salida_reloj: s, concepto: "jornada", motivo: null,
   origen: "reloj", anulado: false, id_autoriza: null, autoriza_no: false, ...o });
@@ -91,6 +110,10 @@ const relojes = {
   505: { horario: { entrada: "08:00", salida: "17:00", salida_comida: null, regreso_comida: null },
     dia: { tipo: "festivo_oficial", nombre: "Festivo oficial", pago: "Salario doble además del día (art. 75)" },
     registros: [chec(7201, "2026-11-16 08:00:00", "2026-11-16 17:00:00")] },
+  508: { horario: { entrada: "09:00", salida: "16:00", salida_comida: "11:00", regreso_comida: "11:30" }, tipos_parciales: parciales,
+    registros: [chec(7401, `${F} 09:00:00`, `${F} 11:00:00`), chec(7402, `${F} 11:00:00`, `${F} 11:30:00`, { concepto: "comida" }), chec(7403, `${F} 11:30:00`, `${F} 16:00:00`)] },
+  509: { horario: { entrada: "09:00", salida: "16:00", salida_comida: null, regreso_comida: null }, tipos_parciales: parciales,
+    registros: [chec(7501, `${F} 09:00:00`, `${F} 16:00:00`)] },
   506: { horario: { entrada: "09:00", salida: "14:00", salida_comida: null, regreso_comida: null },
     dia: { tipo: "domingo", nombre: "Domingo", pago: "Prima dominical 25% (art. 71)" }, registros: [chec(7301, "2026-11-22 08:58:00", "2026-11-22 14:03:00")] },
 };
@@ -137,6 +160,7 @@ async function simular(page) {
       const r = relojes[idA] ?? { horario: relojes[502].horario, registros: [] };
       return json({ ok: true, asistencia: { id: idA, id_empleado: idA, nombre: `${f.nombre} ${f.apellido_paterno}`, departamento: f.departamento, fecha: f.fecha },
         horario: r.horario, dia: r.dia ?? NORMAL, registros: r.registros, motivos, autorizadores,
+        ...(r.tipos_parciales ? { tipos_parciales: r.tipos_parciales, motivos_permiso: motivosPermiso, permiso_dia: null } : {}),
         resumen: { minutos_trabajados: f.minutos_trabajados ?? 0, minutos_comida: f.minutos_comida ?? 0, minutos_extra: f.minutos_extra,
           minutos_extra_por_autorizar: f.minutos_extra_por_autorizar, checadas_vivas: f.checadas_vivas, abierto: f.estado_calculado?.clave === "sinsalida",
           estado: f.estado_calculado, estado_calculado: f.estado_calculado },
@@ -161,20 +185,10 @@ async function simular(page) {
 
 // Texto visible de cada select cabe en su caja (sin «Motivo (opci…»); también la opción más larga de los motivos.
 async function selectsSinRecorte(raiz, etiqueta) {
-  const malos = await raiz.evaluate((el) => {
-    const ctx = document.createElement("canvas").getContext("2d");
-    const out = [];
-    for (const s of el.querySelectorAll("select")) {
-      if (!s.offsetParent) continue;
-      const cs = getComputedStyle(s);
-      ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-      const libre = s.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (cs.appearance === "none" ? -2 : 18); // con flecha propia el padding ya la incluye
-      const textos = [s.options[s.selectedIndex]?.text ?? ""];
-      if (s.getAttribute("aria-label") === "Motivo") textos.push(...[...s.options].map((o) => o.text));
-      for (const t of textos) if (ctx.measureText(t).width > libre) out.push(`${s.getAttribute("aria-label")}: «${t}» (${Math.round(ctx.measureText(t).width)} > ${Math.round(libre)})`);
-    }
-    return out;
-  });
+  // (24/11/2026) Los desplegables son SelectConIconos (combobox de Radix): el texto elegido no debe quedar cortado.
+  const malos = await raiz.evaluate((el) => [...el.querySelectorAll("[role=combobox][data-valor]")].filter((c) => c.offsetParent)
+    .map((c) => [c.getAttribute("aria-label"), c.querySelector("[data-texto-valor]"), c]).filter(([, t, c]) => t && (t.scrollWidth > t.clientWidth + 1 || t.getBoundingClientRect().bottom > c.getBoundingClientRect().bottom + 1))
+    .map(([a, t]) => `${a}: «${t.innerText}» (${t.scrollWidth} > ${t.clientWidth})`));
   assert.deepEqual(malos, [], `${etiqueta}: selects con texto recortado`);
 }
 async function sinDesborde(loc, etiqueta) {
@@ -216,8 +230,8 @@ try {
   assert.match(await filaDe("Alondra Munguía").innerText(), /6 h 10 min[\s\S]*de 6 h[\s\S]*🕒 Retardo \+18 min[\s\S]*1 corregido en reloj · Laura M\./);
   assert.match(await filaDe("Pedro Salas").innerText(), /Festivo oficial[\s\S]*Salario doble además del día \(art\. 75\)/);
   assert.match(await filaDe("Sofía Ramos").innerText(), /Domingo[\s\S]*Prima dominical 25% \(art\. 71\)/);
-  assert.equal(await filaDe("Pedro Salas").locator("td", { hasText: "Festivo oficial" }).locator("input,select").count(), 0, "festivo solo lectura");
-  assert.equal(await filaDe("Alondra Munguía").locator("select").count(), 0, "con checadas el estado es solo lectura");
+  assert.equal(await filaDe("Pedro Salas").locator("td", { hasText: "Festivo oficial" }).locator("input,[role=combobox]").count(), 0, "festivo solo lectura");
+  assert.equal(await filaDe("Alondra Munguía").getByRole("combobox").count(), 0, "con checadas el estado es solo lectura");
   await sinDesborde(page.locator("html"), "página 1440");
   const celdasCortadas = await page.locator("tbody").evaluate((tb) => [...tb.querySelectorAll("td")].filter((td) => td.scrollWidth > td.clientWidth + 1).map((td) => td.innerText.slice(0, 40)));
   assert.deepEqual(celdasCortadas, [], "celdas sin texto recortado");
@@ -236,25 +250,25 @@ try {
   // 3) Estado en la fila: el motivo «Otro…» pide escribirlo; «Día de descanso» (de ley) sin motivo, con OK.
   // (24/11/2026) Juan ya tiene «Inasistencia» (injustificada); se le pone el motivo «Otro…» escrito: OK bloqueado sin el texto.
   const motivoJuan = page.getByLabel("Motivo de Juan Pérez");
-  await motivoJuan.selectOption({ label: "Otro…" });
+  await elegir(motivoJuan, { label: "Otro…" });
   assert.equal(await filaDe("Juan Pérez").getByRole("button", { name: "OK" }).isDisabled(), true);
   await filaDe("Juan Pérez").getByLabel("Escribe el motivo").fill("Cita médica con comprobante");
   await filaDe("Juan Pérez").getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 1, "PUT estado-dia");
   assert.deepEqual(pet.estado[0], { id: 503, cuerpo: { id_tipo_permiso: 2, id_motivo: 6, motivo_permiso: "Cita médica con comprobante", goce: "sin" } });
-  await page.getByLabel("Qué pasó de Armando González").selectOption("5");
+  await elegir(page.getByLabel("Qué pasó de Armando González"), "5");
   await filaDe("Armando González").getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 2, "PUT estado-dia descanso");
   assert.deepEqual(pet.estado[1], { id: 502, cuerpo: { id_tipo_permiso: 5 } });
 
   // 4) «Asistencia» abre el reloj vacío; «Cargar su horario normal»; 400 del servidor por renglón; luego guarda.
-  await page.getByLabel("Qué pasó de Armando González").selectOption("__asistencia");
+  await elegir(page.getByLabel("Qué pasó de Armando González"), "__asistencia");
   const dlgA = page.getByRole("dialog", { name: /Armando González/ });
   await dlgA.locator("[data-reloj-vacio]").waitFor({ timeout: 10000 });
   assert.match(await dlgA.locator("[data-reloj-vacio]").innerText(), /No tiene checadas\. ¿De qué hora a qué hora trabajó\?/);
   // Sin checadas, el reloj ofrece el mismo par que la fila: «Qué pasó» con Asistencia, Inasistencia y los días de ley.
   const quePaso = dlgA.locator("[data-reloj-que-paso]");
-  const opcionesQuePaso = await quePaso.locator("select").first().locator("option").allInnerTexts();
+  const opcionesQuePaso = await textosOpciones(quePaso.getByRole("combobox").first());
   assert.ok(opcionesQuePaso.includes("Inasistencia") && opcionesQuePaso.includes("Asistencia") && !opcionesQuePaso.includes("Falta justificada"), `opciones de «Qué pasó»: ${opcionesQuePaso.join(" | ")}`);
   await dormir(500);
   const cajaA = await dlgA.boundingBox();
@@ -285,9 +299,29 @@ try {
   assert.equal(await r1.getByRole("alert").innerText(), "Cambiaste la hora: elige el motivo.");
   assert.match(await r1.innerText(), /reloj: 9:18 a\.m\./);
   assert.equal(await dlg.getByRole("button", { name: "Guardar" }).isDisabled(), true, "con errores no se guarda");
-  await r1.getByLabel("Motivo").selectOption("olvido");
+  await elegir(r1.getByLabel("Motivo"), "olvido");
   assert.equal(await r1.getByRole("alert").count(), 0);
-  await dlg.locator('[data-renglon="3"]').getByLabel("Motivo").selectOption("fuera");
+  await elegir(dlg.locator('[data-renglon="3"]').getByLabel("Motivo"), "fuera");
+  // (24/11/2026) Desplegable propio dentro del diálogo, con teclado: Enter abre, flechas, Enter elige; Esc cierra solo el menú.
+  const conc = r1.getByLabel("Concepto");
+  const menu = page.locator("[data-select-con-iconos]");
+  await conc.focus();
+  await page.keyboard.press("Enter");
+  await menu.waitFor();
+  assert.equal(await menu.evaluate((m) => getComputedStyle(m).backgroundColor), "rgb(255, 255, 255)", "menú de fondo blanco");
+  await menu.locator("[role=option]:focus").waitFor(); // el foco entra al menú (dentro del diálogo, sin pelear con su trampa de foco)
+  await page.keyboard.press("ArrowDown");
+  await menu.locator('[role=option][data-valor="comida"]:focus').waitFor(); // Radix mueve el foco en el siguiente ciclo
+  await page.keyboard.press("Enter");
+  await menu.waitFor({ state: "detached" });
+  assert.equal(await valorDe(conc), "comida", "flecha abajo + Enter elige «Comida»");
+  await conc.focus();
+  await page.keyboard.press("ArrowDown");
+  await menu.waitFor();
+  await page.keyboard.press("Escape");
+  await menu.waitFor({ state: "detached" });
+  assert.equal(await dlg.isVisible(), true, "Esc cierra el menú, no el reloj");
+  await elegir(conc, "jornada");
   await selectsSinRecorte(dlg, "modal 1440");
   await sinDesborde(dlg.locator(".overflow-y-auto").first(), "modal 1440");
   assert.match(await dlg.locator("[data-estado-calculado]").innerText(), /Asistió/);
@@ -308,7 +342,7 @@ try {
   assert.equal(await extra.getByRole("alert").innerText(), "Hora extra: falta quién autoriza.");
   assert.match(await extra.innerText(), /lo decide la ley por semana/);
   assert.equal(await extra.getByText(/dobles|triples|tiempo por tiempo/i).count(), 1, "solo el texto de la ley, sin pedir forma de pago");
-  await extra.getByLabel("Quién autoriza").selectOption("3");
+  await elegir(extra.getByLabel("Quién autoriza"), "3");
   assert.equal(await extra.getByRole("alert").count(), 0);
   await dlgM.getByRole("button", { name: "Guardar" }).click();
   await dlgM.waitFor({ state: "detached", timeout: 10000 });
@@ -324,7 +358,7 @@ try {
     const cal = d.locator("[data-calendario]");
     await cal.waitFor({ timeout: 10000 });
     assert.match(await cal.innerText(), txt);
-    assert.equal(await cal.locator("input,select,button").count(), 0, `${n}: calendario solo lectura`);
+    assert.equal(await cal.locator("input,[role=combobox],button").count(), 0, `${n}: calendario solo lectura`);
     assert.equal(await d.getByText(/Pago triple|Prima dominical %|% día festivo|Hrs comida/).count(), 0);
     if (n === "Sofía Ramos") {
       await d.locator("[data-reloj-solo-lectura]").waitFor();
@@ -335,6 +369,109 @@ try {
     await d.getByRole("button", { name: "Cancelar" }).click();
     await d.waitFor({ state: "detached", timeout: 10000 });
   }
+
+  // 7b) (24/11/2026) «Si puse salida temprano, tendría que decirme a qué horas»: el tipo parcial exige su hora.
+  // Rosa (9:00–4:00, comida 11:00–11:30, checó el día completo): Salida temprano · Permiso personal sin hora → no guarda.
+  await page.getByRole("button", { name: "Abrir el reloj de Rosa Díaz" }).click();
+  const dR = page.getByRole("dialog", { name: /Rosa Díaz/ });
+  const permR = dR.locator("[data-permiso-dia]");
+  await permR.waitFor({ timeout: 10000 });
+  await elegir(permR.getByLabel("Qué pasó"), "32");
+  await elegir(permR.getByLabel("Motivo"), { label: "Permiso personal" });
+  const avisoHora = "Salida temprano: indica a qué hora salió (debe ser antes de las 4:00 p.m.)";
+  assert.equal(await permR.getByRole("alert").innerText(), avisoHora);
+  assert.equal(await dR.getByRole("button", { name: "Guardar" }).isDisabled(), true, "sin hora de salida no se guarda");
+  assert.equal(await permR.getByLabel("¿A qué hora salió?").inputValue(), "");
+  await permR.getByLabel("¿A qué hora salió?").fill("17:00");
+  assert.equal(await permR.getByRole("alert").innerText(), avisoHora, "fuera de la jornada");
+  if (capturasSelects) {
+    await permR.getByLabel("Qué pasó").click();
+    await page.locator("[data-select-con-iconos]").waitFor();
+    await dormir(350);
+    await page.screenshot({ path: `${capturasSelects}/1440-que-paso.png` });
+    await page.keyboard.press("Escape");
+    await page.locator("[data-select-con-iconos]").waitFor({ state: "detached" });
+    await permR.getByLabel("Motivo").click();
+    await page.locator("[data-select-con-iconos]").waitFor();
+    await dormir(350);
+    await page.screenshot({ path: `${capturasSelects}/1440-motivo.png` });
+    await page.keyboard.press("Escape");
+    await page.locator("[data-select-con-iconos]").waitFor({ state: "detached" });
+  }
+  await permR.getByLabel("¿A qué hora salió?").fill("14:00");
+  assert.equal(await permR.getByRole("alert").count(), 0);
+  const r3 = dR.locator('[data-renglon="3"]');
+  assert.equal(await r3.getByLabel("Salida").inputValue(), "14:00", "la última salida queda a las 2:00 p.m.");
+  assert.equal(await valorDe(r3.getByLabel("Motivo")), "permiso", "motivo de corrección «Por el permiso del día»");
+  assert.match(await r3.getByLabel("Motivo").innerText(), /Por el permiso del día/);
+  assert.match(await permR.locator("[data-permiso-calculo]").innerText(), /^2 h no trabajadas · se reponen/);
+  await selectsSinRecorte(dR, "reloj con permiso 1440");
+  await dR.getByRole("button", { name: "Guardar" }).click();
+  await dR.waitFor({ state: "detached", timeout: 10000 });
+  assert.deepEqual(pet.reloj.at(-1), { id: 508, cuerpo: {
+    registros: [
+      { id: 7401, entrada: `${F} 09:00:00`, salida: `${F} 11:00:00`, concepto: "jornada", motivo: null, anulado: false, id_autoriza: null, autoriza_no: false },
+      { id: 7402, entrada: `${F} 11:00:00`, salida: `${F} 11:30:00`, concepto: "comida", motivo: null, anulado: false, id_autoriza: null, autoriza_no: false },
+      { id: 7403, entrada: `${F} 11:30:00`, salida: `${F} 14:00:00`, concepto: "jornada", motivo: "permiso", anulado: false, id_autoriza: null, autoriza_no: false },
+    ],
+    permiso_dia: { id_tipo: 32, id_motivo: 2, motivo: "Permiso personal", horas: "reponen" },
+  } });
+
+  // Tomás (9:00–4:00 sin comida, una checada): Entrada tarde 11:00 ajusta la entrada; Salir en medio turno 12:00–1:00
+  // parte el renglón; el motivo «Otro» pide al menos 3 letras y viaja como «otro: <texto>».
+  await page.getByRole("button", { name: "Abrir el reloj de Tomás Ruiz" }).click();
+  const dT = page.getByRole("dialog", { name: /Tomás Ruiz/ });
+  const permT = dT.locator("[data-permiso-dia]");
+  await permT.waitFor({ timeout: 10000 });
+  await elegir(permT.getByLabel("Qué pasó"), "31");
+  await elegir(permT.getByLabel("Motivo"), { label: "Visita al médico" });
+  assert.equal(await permT.getByRole("alert").innerText(), "Entrada tarde: indica a qué hora entró (debe ser después de las 9:00 a.m.)");
+  await permT.getByLabel("¿A qué hora entró?").fill("11:00");
+  assert.equal(await dT.locator('[data-renglon="1"]').getByLabel("Entrada").inputValue(), "11:00", "la entrada pasa a las 11:00");
+  assert.match(await permT.locator("[data-permiso-calculo]").innerText(), /^2 h no trabajadas · se reponen/);
+  await elegir(permT.getByLabel("Qué pasó"), "33");
+  assert.equal(await dT.locator('[data-renglon="1"]').getByLabel("Entrada").inputValue(), "09:00", "al cambiar de tipo vuelven las checadas");
+  assert.equal(await permT.getByRole("alert").innerText(), "Salir en medio turno: indica a qué hora salió y a qué hora regresó (entre las 9:00 a.m. y las 4:00 p.m.)");
+  await permT.getByLabel("Salió a las").fill("12:00");
+  await permT.getByLabel("Regresó a las").fill("13:00");
+  assert.equal(await dT.locator("[data-renglon]").count(), 2, "el renglón se parte en dos");
+  assert.deepEqual([await dT.locator('[data-renglon="1"]').getByLabel("Salida").inputValue(), await dT.locator('[data-renglon="2"]').getByLabel("Entrada").inputValue()], ["12:00", "13:00"]);
+  assert.match(await permT.locator("[data-permiso-calculo]").innerText(), /^1 h no trabajadas · se reponen/);
+  const rT1 = dT.locator('[data-renglon="1"]');
+  const opsCorr = await textosOpciones(rT1.getByLabel("Motivo"));
+  for (const t of ["Olvidó checar", "Por el permiso del día", "Trabajo remoto / home office", "Visita a cliente o comisión",
+    "Capacitación o evento externo", "Sin dispositivo o reloj sin conexión", "Otro (escribe el motivo)"]) assert.ok(opsCorr.includes(t), `motivo de corrección ${t}: ${opsCorr.join(" | ")}`);
+  if (capturasSelects) {
+    await rT1.getByLabel("Concepto").click();
+    await page.locator("[data-select-con-iconos]").waitFor();
+    await dormir(350);
+    await page.screenshot({ path: `${capturasSelects}/1440-concepto.png` });
+    await page.keyboard.press("Escape");
+    await page.locator("[data-select-con-iconos]").waitFor({ state: "detached" });
+    await rT1.getByLabel("Motivo").click();
+    await page.locator("[data-select-con-iconos]").waitFor();
+    await dormir(350);
+    await page.screenshot({ path: `${capturasSelects}/1440-motivo-correccion.png` });
+    await page.keyboard.press("Escape");
+    await page.locator("[data-select-con-iconos]").waitFor({ state: "detached" });
+  }
+  await elegir(rT1.getByLabel("Motivo"), "otro");
+  const textoOtro = rT1.getByLabel("Escribe el motivo de la corrección");
+  assert.equal(await textoOtro.getAttribute("maxlength"), "34");
+  await textoOtro.fill("ab");
+  assert.equal(await rT1.getByRole("alert").innerText(), "Escribe el motivo (al menos 3 letras).");
+  assert.equal(await dT.getByRole("button", { name: "Guardar" }).isDisabled(), true);
+  await textoOtro.fill("Junta con el cliente");
+  assert.equal(await rT1.getByRole("alert").count(), 0);
+  await dT.getByRole("button", { name: "Guardar" }).click();
+  await dT.waitFor({ state: "detached", timeout: 10000 });
+  assert.deepEqual(pet.reloj.at(-1), { id: 509, cuerpo: {
+    registros: [
+      { id: 7501, entrada: `${F} 09:00:00`, salida: `${F} 12:00:00`, concepto: "jornada", motivo: "otro: Junta con el cliente", anulado: false, id_autoriza: null, autoriza_no: false },
+      { entrada: `${F} 13:00:00`, salida: `${F} 16:00:00`, concepto: "jornada", motivo: "permiso", anulado: false, id_autoriza: null, autoriza_no: false },
+    ],
+    permiso_dia: { id_tipo: 33, id_motivo: 1, motivo: "Visita al médico", horas: "reponen" },
+  } });
 
   // 8) Masivos: «Marcar como…» (solo sin checadas) y «Cargar horario normal…» (sin checadas o sin salida), motivo obligatorio.
   await page.getByLabel("Elegir a Juan Pérez").check();
@@ -380,12 +517,26 @@ try {
   const caja = await hoja.boundingBox();
   assert.ok(caja.width >= 389 && caja.x <= 0.5, `hoja a pantalla completa (${caja.width}px)`);
   await sinDesborde(hoja.locator(".overflow-y-auto").first(), "hoja 390");
-  const bajos = await hoja.evaluate((el) => [...el.querySelectorAll("input,select,button")].filter((c) => c.offsetParent)
+  const bajos = await hoja.evaluate((el) => [...el.querySelectorAll("input,[role=combobox],button")].filter((c) => c.offsetParent)
     .filter((c) => c.getBoundingClientRect().height < 43.5).map((c) => c.getAttribute("aria-label") || c.textContent.trim()));
   assert.deepEqual(bajos, [], "controles de 44 px");
   await selectsSinRecorte(hoja, "hoja 390");
   for (const t of await hoja.locator("[data-renglon]").all()) assert.ok((await t.boundingBox()).width <= 390, "cada checada cabe");
   if (capturas) { await dormir(400); await page.screenshot({ path: `${capturas}/390-modal.png` }); }
+  if (capturasSelects) {
+    // Desplegables abiertos a 390: Concepto y Motivo de la checada (hoja a pantalla completa).
+    for (const [etq, nombre] of [["Concepto", "390-concepto"], ["Motivo", "390-motivo-correccion"]]) {
+      await hoja.locator('[data-renglon="1"]').getByLabel(etq).click();
+      const m = page.locator("[data-select-con-iconos]");
+      await m.waitFor();
+      await dormir(350);
+      const altos = await m.locator("[role=option]").evaluateAll((os) => os.map((o) => o.getBoundingClientRect().height));
+      assert.ok(altos.every((h) => h >= 43.5), `${etq}: opciones de 44 px en celular (${altos.join(",")})`);
+      await page.screenshot({ path: `${capturasSelects}/${nombre}.png` });
+      await page.keyboard.press("Escape");
+      await m.waitFor({ state: "detached" });
+    }
+  }
   await hoja.getByRole("button", { name: "Cerrar el reloj" }).click();
   await hoja.waitFor({ state: "detached", timeout: 10000 });
   await page.getByText("Armando González").first().click();
@@ -393,7 +544,17 @@ try {
   await estadoMovil.waitFor({ timeout: 10000 });
   assert.ok((await estadoMovil.boundingBox()).height >= 43.5, "select de estado de 44 px");
   if (capturas) { await dormir(400); await page.screenshot({ path: `${capturas}/390-detalle-estado.png` }); }
-  await estadoMovil.selectOption("__asistencia");
+  if (capturasSelects) {
+    // «Qué pasó» abierto a 390 (detalle del empleado sin checadas). El detalle se vuelve a dibujar al llegar los datos.
+    for (let i = 0; i < 4; i++) { try { await estadoMovil.click({ timeout: 4000 }); break; } catch (e) { if (i === 3) throw e; await dormir(500); } }
+    await page.locator("[data-select-con-iconos]").waitFor();
+    await dormir(350);
+    await page.screenshot({ path: `${capturasSelects}/390-que-paso.png` });
+    await page.keyboard.press("Escape"); // cierra solo el menú, no el detalle
+    await page.locator("[data-select-con-iconos]").waitFor({ state: "detached" });
+    assert.equal(await estadoMovil.isVisible(), true, "Esc no cierra el detalle");
+  }
+  await elegir(estadoMovil, "__asistencia");
   const hojaVacia = page.getByRole("dialog", { name: /Armando González/ });
   await hojaVacia.locator("[data-reloj-vacio]").waitFor({ timeout: 15000 });
   await sinDesborde(hojaVacia.locator(".overflow-y-auto").first(), "hoja vacía 390");
