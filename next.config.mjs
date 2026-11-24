@@ -19,7 +19,7 @@ const nextConfig = {
         destination: "/api/diagnostico/reloj",
       },
       {
-        // (23/11/2026) «No pudimos cargar tu equipo»: /api/solicitudes-equipo llegaba al backend (HTML «Cannot GET»).
+        // «No pudimos cargar tu equipo»: /api/solicitudes-equipo llegaba al backend (HTML «Cannot GET»).
         source: "/internal/solicitudes-equipo/:path*",
         destination: "/api/solicitudes-equipo/:path*",
       },
@@ -38,7 +38,7 @@ const nextConfig = {
     ],
   },
 
-  // (20/11/2026) Activos y uniformes es un solo módulo en /panel/activos. Las rutas viejas de los dos
+  // Activos y uniformes es un solo módulo en /panel/activos. Las rutas viejas de los dos
   // módulos redirigen a su equivalente (la consulta, p. ej. ?empresa=, se conserva sola).
   async redirects() {
     const viejo = "/panel/:modulo(control-activos|control-uniformes)";
@@ -57,11 +57,11 @@ const nextConfig = {
       a(`${viejo}/:ajuste(ubicaciones|paquetes)`, "/panel/activos/ajustes/:ajuste"),
       a(`${viejo}/:seccion(entregas|resguardos|solicitudes)/:resto*`, "/panel/activos/:seccion/:resto*"),
       a(viejo, "/panel/activos"),
-      // (20/11/2026) Evaluaciones: «Tablero» era el mismo «Resumen»; resultados y planes viven en cada
+      // Evaluaciones: «Tablero» era el mismo «Resumen»; resultados y planes viven en cada
       // campaña o en «Mis resultados». La entrada del módulo decide la pestaña según el rol.
       a("/panel/evaluaciones/:vista(tablero|resultados|seguimiento)", "/panel/evaluaciones"),
       a("/empleado/panel/evaluaciones/:vista(tablero|resultados|seguimiento)", "/empleado/panel/evaluaciones"),
-      // (21/11/2026) El blog vive en /blog; la página vieja estaba apagada.
+      // El blog vive en /blog; la página vieja estaba apagada.
       a("/blog-y-noticias", "/blog"),
     ];
   },

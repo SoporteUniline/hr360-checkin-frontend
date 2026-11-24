@@ -1,4 +1,4 @@
-// Verificación en navegador (celular 390 px) de «Debes X» en el Inicio del empleado (22/11/2026), backend simulado:
+// Verificación en navegador (celular 390 px) de «Debes X» en el Inicio del empleado, backend simulado:
 // con deuda muestra cuánto y el detalle; al corriente lo dice; sin permisos que se reponen no aparece; pide solo su cuenta.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-tiempo-reponer.mjs
 import assert from "node:assert/strict";

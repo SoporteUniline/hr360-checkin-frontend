@@ -140,7 +140,7 @@ const fixture = http.createServer(async (req, res) => {
   reads.push(url.pathname);
   if (url.pathname.endsWith("/users/verify/token"))
     return send({
-      // (23/11/2026) ownerSession: el dueño/RH vinculado a su registro de empleado (no es sesión de empleado).
+      // ownerSession: el dueño/RH vinculado a su registro de empleado (no es sesión de empleado).
       user: {
         id_usuario: 10,
         id_empleado: 1,
@@ -196,7 +196,7 @@ const fixture = http.createServer(async (req, res) => {
     writes.push({ id: row.id, ...body });
     return send({ success: true });
   }
-  // (23/11/2026) El saldo se pide por persona (antes, el reporte de toda la empresa).
+  // El saldo se pide por persona (antes, el reporte de toda la empresa).
   if (url.pathname.endsWith("/vacaciones/reporte"))
     return send({ error: "No debe pedirse el reporte de toda la empresa" }, 500);
   if (url.pathname.includes("/vacaciones/saldo/"))
@@ -390,7 +390,7 @@ async function main() {
   rosterDenied = true;
   assert.equal((await api()).status, 403);
   rosterDenied = false;
-  // (23/11/2026) El dueño/RH vinculado a su empleado también puede aprobar (antes: «ya no está pendiente a tu cargo»).
+  // El dueño/RH vinculado a su empleado también puede aprobar (antes: «ya no está pendiente a tu cargo»).
   ownerSession = true;
   const ownerApproval = await api("/103", { method: "POST", body: JSON.stringify({ estado: "Rechazado" }) });
   assert.equal(ownerApproval.status, 200, await ownerApproval.text());

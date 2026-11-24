@@ -1,6 +1,5 @@
-// Reglas de pantalla del módulo de evaluaciones (src/lib/evaluaciones/model.mjs).
-// (20/11/2026) Antes probaba la demostración (ya no existe). Resultados, campañas y permisos se prueban
-// en el backend (scripts/test-evaluaciones-desempeno.mjs) y el cliente de la API en test-evaluaciones-api.mjs.
+// Reglas de pantalla del módulo de evaluaciones (src/lib/evaluaciones/model.mjs). Resultados, campañas y permisos se
+// prueban en el backend (scripts/test-evaluaciones-desempeno.mjs) y el cliente de la API en test-evaluaciones-api.mjs.
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
@@ -53,7 +52,7 @@ test("respuestas: el envío definitivo exige al menos una respuesta con puntaje"
   assert.match(civilToday(), /^\d{4}-\d{2}-\d{2}$/);
 });
 
-// (20/11/2026) Avance de la campaña en una sola pantalla: pasos y fila por persona.
+// Avance de la campaña en una sola pantalla: pasos y fila por persona.
 
 const campana = {
   status: "active",
@@ -92,7 +91,7 @@ test("pasos: el primero sin terminar es el actual", () => {
   assert.equal(pasosCampana(cerrada, filasCampana(cerrada, publicados, [{ subjectId: 2 }]))[4].detalle, "1 con plan");
 });
 
-// (23/11/2026) Cada vista con su dirección y su entrada en el menú (src/lib/evaluaciones/vistas.mjs).
+// Cada vista con su dirección y su entrada en el menú (src/lib/evaluaciones/vistas.mjs).
 test("vistas por perfil: RH, Dirección, jefe y colaborador ven lo mismo que antes, y Configuración es vista propia", async () => {
   const { vistasVisibles, vistaInicio, vistaActual, seccionConfiguracion, SCOPE_DE_RUTA } = await import("../src/lib/evaluaciones/vistas.mjs");
   const rh = { flags: { canViewCampaigns: true }, scopes: ["templates", "settings", "campaigns", "assignments", "team", "results", "plans"] };

@@ -1,7 +1,7 @@
 // Verificación en navegador de WhatsApp en ADAMIA (R1): bandeja, control humano/IA, envío, errores, reintento,
 // móvil, administración por empresa y enlace de vacante. R2: agente entrevistador (configuración, preguntas por
 // vacante, filtros por calificación, evaluación del candidato y «Marcar como atendido»).
-// 27/11/2026: bolsa de trabajo opcional (interruptor, PUT, también con WhatsApp apagado), «Copiar enlace de la vacante»,
+// Bolsa de trabajo opcional (interruptor, PUT, también con WhatsApp apagado), «Copiar enlace de la vacante»,
 // paquete de entrevistas (chip, aviso de extras, campos del administrador) y la bolsa pública (/vacantes/filter y la tira
 // de empresas con ?bolsa=1).
 // R3: agenda de entrevistas y recordatorios (pestaña «Agenda y recordatorios», agenda por vacante con vista previa de
@@ -149,7 +149,7 @@ function estadoInicial() {
   const sinRespuesta = { 3: [{ pregunta: "¿Dan transporte de personal en la noche?", id_vacante: 56, creado_en: hace(60 * 26 + 5) }] };
   const agente = { id_empresa: 10, activo: false, nombre_asistente: "", horario_json: null, mensaje_fuera_horario: "", respuestas_frecuentes: "", palabras_humano: "", aviso_privacidad_url: AVISO };
   const preguntas = { 55: [{ id: 1, orden: 1, texto: "¿Tienes licencia tipo C?", tipo: "si_no", opciones: ["Sí", "No"], descartan: ["No"], alertan: [], activa: true }] };
-  // 27/11/2026: paquete por empresa (10 con paquete, 11 sin paquete), bolsa de trabajo y respuestas públicas.
+  // Paquete por empresa (10 con paquete, 11 sin paquete), bolsa de trabajo y respuestas públicas.
   const paquetes = { 10: { entrevistas_mes: 32, entrevistas_incluidas: 200, entrevistas_extra: 0 }, 11: { entrevistas_mes: 3, entrevistas_incluidas: null, entrevistas_extra: 0 } };
   const publico = {
     empresas: [{ id_empresa: 10, nombre_empresa: "Uniline", url_imagen: null }],
@@ -603,7 +603,7 @@ try {
   assert.equal(cuenta((x) => x.ruta === "/vacantes/55/enlace"), enlacesAntes + 1);
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), ENLACE);
   assert.equal(await dlgVac.getByRole("link", { name: "Abrir enlace de WhatsApp de Operador de montacargas" }).getAttribute("href"), ENLACE);
-  // 27/11/2026: «Copiar enlace de la vacante» copia la página pública con su formulario, sin pedir nada al API.
+  // «Copiar enlace de la vacante» copia la página pública con su formulario, sin pedir nada al API.
   const enlacesAntesPagina = pedidos.length;
   await dlgVac.getByRole("button", { name: "Copiar enlace de la vacante Operador de montacargas" }).click();
   await dlgVac.getByRole("button", { name: "Copiar enlace de la vacante Operador de montacargas" }).filter({ hasText: "Copiado" }).waitFor();
@@ -701,7 +701,7 @@ try {
   assert.match(await tel.locator('[data-estado-wa="apagado"]').innerText(), /Pídele a ADAMIA que lo active/);
   assert.equal(await tel.getByRole("list", { name: "Conversaciones" }).count(), 0);
   if (OUT) await tel.screenshot({ path: OUT + "/06-movil-apagado.png" });
-  // 27/11/2026: con WhatsApp apagado «Enlaces de vacantes» sigue: bolsa y página de la vacante funcionan; WhatsApp avisa.
+  // Con WhatsApp apagado «Enlaces de vacantes» sigue: bolsa y página de la vacante funcionan; WhatsApp avisa.
   await tel.getByRole("button", { name: "Enlaces de vacantes" }).tap();
   const hojaApagada = tel.getByRole("dialog", { name: "Enlaces de vacantes" });
   await hojaApagada.getByRole("list", { name: "Vacantes abiertas" }).waitFor();
@@ -1071,7 +1071,7 @@ try {
   assert.ok(await sinScrollHorizontal(t2));
   await movR2.close();
 
-  // ═══════════ 27/11/2026 · Paquete con extras y bolsa de trabajo pública ═══════════
+  // ═══════════ Paquete con extras y bolsa de trabajo pública ═══════════
   S.paquetes[10] = { entrevistas_mes: 212, entrevistas_incluidas: 200, entrevistas_extra: 12 };
   const ctxP = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "es-MX", timezoneId: "America/Mexico_City" });
   await ctxP.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
@@ -1759,7 +1759,7 @@ async function chatTodoEnUno(browser, errores) {
   await page.keyboard.press("Escape");
   if (OUT) await page.screenshot({ path: OUT + "/chat-09-lineas-sistema.png" });
 
-  // Selector sin horarios (pedido del dueño): falta migración, días vacíos y agenda sin configurar.
+  // Selector sin horarios: falta migración, días vacíos y agenda sin configurar.
   // Vacante 57 (nunca consultada): la caché sin conexión de la app responde con lo último guardado ante un 5xx.
   const abrirAgendar = async (t = tarjeta) => {
     await t.getByRole("button", { name: "Agendar", exact: true }).click();

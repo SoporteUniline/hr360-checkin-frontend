@@ -469,7 +469,7 @@ const jwt = () => {
   await page.getByText("Publicado", { exact: true }).waitFor();
   console.log("PASS: approve and publish");
   campaign.status = "active";
-  // (20/11/2026) Los planes ya no tienen vista aparte: se crean dentro del resultado de la persona.
+  // Los planes ya no tienen vista aparte: se crean dentro del resultado de la persona.
   await go("/resultados/7/101");
   await page.getByRole("button", { name: "Nuevo plan", exact: true }).click();
   await page.getByLabel("Campaña", { exact: true }).selectOption("7");
@@ -515,7 +515,7 @@ const jwt = () => {
     await page.locator("h1").first().waitFor();
   }
   // Menos vistas: RH ve Campañas, Plantillas (y «Por responder» porque tiene una asignada) y Configuración
-  // (23/11/2026: antes era un engrane; ahora es vista propia con su entrada en el menú).
+  // como vista propia con su entrada en el menú.
   const pestanas = () => page.locator(".ev-nav a").allInnerTexts();
   await go("");
   await page.getByRole("heading", { name: "Campañas de evaluación" }).waitFor();
@@ -566,7 +566,7 @@ const jwt = () => {
   await page.getByRole("button", { name: "Confirmar", exact: true }).click();
   await page.getByText(/Recepción registrada:/).waitFor();
   console.log("PASS: employee receipt without client legal-text override");
-  // (20/11/2026) PENDIENTE aparte: React #418 (hidratación) sale en 1 de cada 4 cargas de CUALQUIER
+  // PENDIENTE aparte: React #418 (hidratación) sale en 1 de cada 4 cargas de CUALQUIER
   // pantalla del panel, también en dev sin estos cambios (medido: activos 10/40, departamentos 12/40).
   // Se cuenta y se avisa, pero no oculta ningún otro error.
   const hidratacion = errors.filter((m) => m.includes("Minified React error #418"));

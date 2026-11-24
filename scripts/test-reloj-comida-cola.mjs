@@ -1,4 +1,4 @@
-// INC-RELOJ-COMIDA-001 (23/11/2026): la cola del reloj con rostro perdía las opciones del servidor y la pantalla
+// INC-RELOJ-COMIDA-001: la cola del reloj con rostro perdía las opciones del servidor y la pantalla
 // ofrecía salida temporal/cerrar turno a empleados con cierre automático; el rechazo atoraba las siguientes checadas.
 import test from 'node:test';
 import assert from 'node:assert/strict';

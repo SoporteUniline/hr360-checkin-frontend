@@ -2,7 +2,8 @@
 // gráfica con tooltip y tabla, errores en lenguaje claro, conversaciones afectadas con «Abrir chat», periodo), sin la
 // migración del servidor, teléfono (sin desborde, botones ≥ 44 px) y la tabla del administrador con semáforo.
 // Backend simulado: nada sale a internet.
-// Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx NEXT_PUBLIC_RECRUITMENT_ENABLED=true npm run build
+// Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx \
+//      NEXT_PUBLIC_RECRUITMENT_ENABLED=true npm run build
 //      CAPTURAS=/ruta/capturas node scripts/verify-whatsapp-salud.mjs
 import { createHmac, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";

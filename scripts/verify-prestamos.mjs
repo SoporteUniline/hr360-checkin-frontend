@@ -1,4 +1,4 @@
-// Verificación en navegador de Préstamos (Nómina R2, 21/11/2026) con el backend simulado en memoria:
+// Verificación en navegador de Préstamos (Nómina R2) con el backend simulado en memoria:
 // RH ve la solicitud de Ana, la aprueba ajustando el abono, registra un abono en efectivo; registra otro préstamo con
 // avisos de la ley; el empleado ve su saldo, firma su acuerdo y no puede pedir otro mientras tenga uno abierto.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-prestamos.mjs

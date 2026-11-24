@@ -1,4 +1,4 @@
-// Verificación en navegador de las pantallas de Nómina R1 (21/11/2026), con el backend simulado en memoria:
+// Verificación en navegador de las pantallas de Nómina R1, con el backend simulado en memoria:
 // RH crea la nómina, revisa un recibo, edita un importe con motivo, envía a autorizar (no ve «Autorizar»);
 // el dueño autoriza; el empleado ve «Mis recibos» y firma. También: celular sin desbordes.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-nomina.mjs
@@ -84,7 +84,7 @@ async function rutas(ctx, usuario) {
       return ok({ registros: [{ id: 501, id_empleado: 15, nombre: "Ana", apellido_paterno: "Torres", fecha: "2026-11-18", entrada: "2026-11-18 09:10:00", salida: "2026-11-18 17:00:00", asistencia: 1, hora_entrada_programada: "09:00:00", hora_salida_programada: "17:00:00", zona_horaria: "America/Mexico_City", tipo_registro_nombre: "Asistencia" }], total: 1, page: 1 });
     }
     if (/^\/checador\/asistencias\/501$/.test(p) && req.method() === "PUT") { estado.asistencias.push(req.postDataJSON()); return ok({ ok: true }); }
-    // Misma forma que el backend real ({ data: [...] }): la ventana necesita la lista, no el objeto (falla del 21/11/2026).
+    // Misma forma que el backend real ({ data: [...] }): la ventana necesita la lista, no el objeto.
     if (p === "/checador/empleados") return ok({ data: [{ id_empleado: 15, nombre: "Ana", apellido_paterno: "Torres" }, { id_empleado: 3, nombre: "Luis", apellido_paterno: "Jefe" }], total: 2 });
     if (p === "/checador/tiposPermiso") return ok({ tiposPermiso: [{ id: 1, nombre: "Asistencia" }] });
     // Ficha del empleado (clic en su nombre en cualquier pantalla).
@@ -184,7 +184,7 @@ try {
   assert.deepEqual(estado.ediciones.at(-1).lineas, [{ clave: "concepto:1", importe: 0, motivo: "Se le quitó (también de su ficha)" }]);
   await page.keyboard.press("Escape");
 
-  // 2b) Clic en el NOMBRE: abre aquí mismo su ficha (la misma de Empleados), ya editable (23/11/2026); Ctrl+clic sería
+  // 2b) Clic en el NOMBRE: abre aquí mismo su ficha (la misma de Empleados), ya editable; Ctrl+clic sería
   // otra pestaña.
   const enlace = page.getByRole("row", { name: /Ana Torres/ }).first().getByRole("link", { name: "Ana Torres" });
   assert.equal(await enlace.getAttribute("href"), "/panel/empleados?id=15");

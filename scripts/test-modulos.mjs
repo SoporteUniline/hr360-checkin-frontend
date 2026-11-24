@@ -1,4 +1,4 @@
-// Módulos por empresa (03/12/2026): catálogo y filtro del menú/rutas (src/lib/modulos/*.mjs).
+// Módulos por empresa: catálogo y filtro del menú/rutas (src/lib/modulos/*.mjs).
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { CLAVES, BASE, OPCIONALES, modulo, modulosDeRuta } from "../src/lib/modulos/catalogo.mjs";

@@ -1,15 +1,16 @@
-// Verificación DE PUNTA A PUNTA de Reclutamiento real (03/12/2026): navegador → frontend → backend real
+// Verificación DE PUNTA A PUNTA de Reclutamiento real: navegador → frontend → backend real
 // (rutas de panel, vacantes, postulaciones, OTP y WhatsApp contra MariaDB de prueba; ver backend
 // scripts/servidor-prueba-reclutamiento.cjs: solo sesión, S3, correo, SMS y efectos externos del alta simulados).
 // Recorrido: crear vacante con el asistente → lista y detalle → bolsa de trabajo → un candidato se postula (celular,
 // con código de verificación) → moverlo de etapa → nota → contratarlo y verlo como empleado. Después, cada pantalla
 // a 390 px: sin desborde horizontal y controles de al menos 44 px.
-// 04/12/2026 · Candidato de WhatsApp con el mismo proceso: desde el chat (ver la etapa, moverla, nota, agendar y aceptar
+// Candidato de WhatsApp con el mismo proceso: desde el chat (ver la etapa, moverla, nota, agendar y aceptar
 // la sugerencia «Entrevista», contratar con aviso por WhatsApp y ver al empleado) y lo mismo desde Reclutamiento →
 // Candidatos; el chat también a 390 px (hoja inferior con las acciones).
 // Uso:
 //   NEXT_PUBLIC_RUTA_BACKEND=http://127.0.0.1:4020/api NEXT_PUBLIC_RECRUITMENT_ENABLED=true npm run build
-//   BACKEND_DIR=../hr360-checkin-backend RECLUTAMIENTO_TEST_DB=reclutamiento_prueba NOMINA_TEST_USER=u NOMINA_TEST_PASSWORD=p node scripts/verify-reclutamiento-real.mjs
+//   BACKEND_DIR=../hr360-checkin-backend RECLUTAMIENTO_TEST_DB=reclutamiento_prueba NOMINA_TEST_USER=u NOMINA_TEST_PASSWORD=p \
+//     node scripts/verify-reclutamiento-real.mjs
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
@@ -119,7 +120,7 @@ try {
   ultima = pc;
   pc.on("pageerror", (e) => errores.push(e.message));
   await pc.goto(`${base}/vacante/${encodeURIComponent(slug)}`, { waitUntil: "domcontentloaded" });
-  // 23/11/2026 (rediseño de la bolsa): en celular «Postularme ahora» va fijo abajo y el aviso de cookies lo tapa hasta
+  // En celular «Postularme ahora» va fijo abajo y el aviso de cookies lo tapa hasta
   // contestarlo; se espera a que la página cargue para cerrarlo. La solicitud ya no va en acordeón.
   await pc.getByRole("button", { name: "Postularme ahora" }).waitFor({ timeout: 30000 });
   const avisoCookies = pc.getByRole("button", { name: "Solo necesarias" });

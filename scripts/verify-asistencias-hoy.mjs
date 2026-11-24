@@ -1,4 +1,4 @@
-// Verificación en navegador de Asistencias → Hoy (23/11/2026, maqueta aprobada) con hora fija (11:12 CDMX) y backend
+// Verificación en navegador de Asistencias → Hoy con hora fija (11:12 CDMX) y backend
 // simulado: tarjetas y conteos, filtro por tarjeta (aria-pressed), grupos en orden, «Salió antes» vs «Ya salió» con y
 // sin permiso, plegado de «No laboran hoy», «Ver día» → ventana de edición, búsqueda/área, celular 390 px sin
 // desborde y sin errores de JS. (Antes: scripts/verify-en-vivo.mjs, la vista de columnas que esta reemplaza.)

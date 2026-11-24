@@ -1,10 +1,11 @@
-// Verificación DE PUNTA A PUNTA de Adamia AI (23/11/2026): navegador → panel → backend real (/api/checador/ia con la LFT
+// Verificación DE PUNTA A PUNTA de Adamia AI: navegador → panel → backend real (/api/checador/ia con la LFT
 // oficial en MariaDB de prueba) → IA real (Gemini). Solo la sesión es simulada (ver backend scripts/servidor-prueba-ia.cjs).
 // Revisa: RH no la puede encender, el dueño sí; la respuesta cita artículos y se pueden leer; historial; un empleado no
 // ve el botón; en teléfono el panel cabe.
 // Uso:
 //   NEXT_PUBLIC_RUTA_BACKEND=http://127.0.0.1:4011/api npm run build
-//   BACKEND_DIR=../hr360-checkin-backend IA_TEST_DB=ia_e2e NOMINA_TEST_USER=u NOMINA_TEST_PASSWORD=p [IA_SIMULADA=1 | GEMINI_API_KEY=…] node scripts/verify-adamia-ai.mjs
+//   BACKEND_DIR=../hr360-checkin-backend IA_TEST_DB=ia_e2e NOMINA_TEST_USER=u NOMINA_TEST_PASSWORD=p \
+//     [IA_SIMULADA=1 | GEMINI_API_KEY=…] node scripts/verify-adamia-ai.mjs
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";

@@ -83,11 +83,11 @@ try {
   assert.match(await hoja.locator('[data-summary-section="true"]').innerText(), /EXTRA DOBLES\s*9 h[\s\S]*EXTRA TRIPLES\s*2 h/i);
   assert.match(await hoja.innerText(), /\+5 h[\s\S]*Más de 4 h extra/);
   assert.match(await hoja.innerText(), /extra autorizadas\s*11 h\s*\(9 h dobles, 2 h triples\)/);
-  // (23/11/2026) Columna y resumen de comida checada con «Salir a comer».
+  // Columna y resumen de comida checada con «Salir a comer».
   assert.match(await hoja.locator("thead").innerText(), /HORAS\s*COMIDA\s*ESTADO/i);
   assert.match(await hoja.innerText(), /2:00 p\.m\.–3:10 p\.m\. · 70 de 60 min · \+10 min/);
   assert.match(await hoja.locator('[data-summary-section="true"]').innerText(), /COMIDA\s*1:10 h/i);
-  // (23/11/2026, opción A) Aviso de días medidos con el horario actual (sin historial).
+  // Aviso de días medidos con el horario actual (sin historial).
   assert.match(await hoja.locator('[data-sin-historial="true"]').innerText(), /2 días se midieron con el horario actual/);
   const hojaIvan = page.locator('[data-report-block="true"]').nth(1);
   assert.match(await hojaIvan.innerText(), /\+1 h por autorizar/);

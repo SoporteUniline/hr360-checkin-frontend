@@ -1,4 +1,4 @@
-// Regresión (23/11/2026): al checar entrada salía «The DOMException.message getter can only be used on instances of
+// Regresión: al checar entrada salía «The DOMException.message getter can only be used on instances of
 // DOMException». axios (AxiosError.from) truena al copiar un DOMException con que se rechaza fetch. Con fetchSeguro el
 // error llega a la pantalla con su mensaje real.
 import { test } from "node:test";

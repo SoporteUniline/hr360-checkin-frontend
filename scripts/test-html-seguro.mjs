@@ -1,4 +1,4 @@
-// Regresión (24/11/2026, INC-REC-003): la página pública de la vacante pintaba con dangerouslySetInnerHTML el HTML
+// Regresión (INC-REC-003): la página pública de la vacante pintaba con dangerouslySetInnerHTML el HTML
 // que manda el backend (descripción, responsabilidades, escolaridad…). Quien edita una vacante podía ejecutar código
 // en el navegador de cada candidato (<img onerror>, <script>, enlaces javascript:). Ahora todo pasa por sanearHtml.
 import { test } from "node:test";
@@ -8,7 +8,7 @@ import { readFile } from "node:fs/promises";
 const raiz = new URL("../", import.meta.url).pathname;
 
 test("las vistas de vacante solo insertan HTML saneado", async () => {
-  // 23/11/2026: la vista pública de la vacante se movió a VacanteDetalle.jsx; page.jsx (servidor) solo inserta el JSON-LD.
+  // La vista pública de la vacante se movió a VacanteDetalle.jsx; page.jsx (servidor) solo inserta el JSON-LD.
   for (const archivo of ["src/app/(public)/vacante/[slug]/VacanteDetalle.jsx", "src/app/panel/empleados/DetalleVacante.jsx"]) {
     const texto = await readFile(`${raiz}${archivo}`, "utf8");
     const usos = [...texto.matchAll(/dangerouslySetInnerHTML=\{\{\s*__html:\s*([^}]+?)\s*\}\}/g)].map((m) => m[1]);

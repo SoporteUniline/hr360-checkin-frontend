@@ -146,7 +146,7 @@ test("validación del alta de WhatsApp por empresa", () => {
   assert.match(formatearPrecio(1200), /1,200\.00/);
 });
 
-// ——— 27/11/2026: paquetes de entrevistas y enlace de la página de la vacante ———
+// ——— Paquetes de entrevistas y enlace de la página de la vacante ———
 test("paquete: textos del chip, aviso de extras y columna del administrador", () => {
   assert.equal(textoEntrevistasMes({ entrevistas_mes: 32, entrevistas_incluidas: 200, entrevistas_extra: 0 }), "32 de 200 entrevistas este mes");
   assert.equal(textoEntrevistasMes({ entrevistas_mes: 1, entrevistas_incluidas: 200 }), "1 de 200 entrevistas este mes");
@@ -187,7 +187,7 @@ test("enlace de la página de la vacante (/vacante/<slug>) con el dominio config
 });
 
 // El API manda el consentimiento como texto ("aceptado" | "rechazado" | "pendiente"); el panel decía «Aún no responde»
-// aunque el candidato ya había aceptado y la entrevista avanzaba (23/11/2026).
+// aunque el candidato ya había aceptado y la entrevista avanzaba.
 test("consentimiento: el texto del API se muestra como aceptado o rechazado", async () => {
   const { textoConsentimiento, consentimientoAceptado } = await import("../src/lib/whatsapp/entrevista.mjs");
   assert.equal(textoConsentimiento("aceptado"), "Aceptó el aviso de privacidad");

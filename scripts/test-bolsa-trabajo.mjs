@@ -1,4 +1,4 @@
-// Bolsa de trabajo pública (rediseño 23/11/2026): filtros → consulta del API, dirección de la página, sueldo,
+// Bolsa de trabajo pública: filtros → consulta del API, dirección de la página, sueldo,
 // «hace X días», texto plano, paginación y datos estructurados JobPosting. Uso: node --test scripts/test-bolsa-trabajo.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";

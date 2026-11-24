@@ -83,7 +83,7 @@ test("preloader runs only in authenticated app routes and survives internal navi
   assert.equal(starts, 1);
   render("/seleccionar-reloj", true);
   assert.equal(starts, 2);
-  // (19/11/2026) Panel de RH: no se precarga (Asistencias se dibujaba a pedazos).
+  // Panel de RH: no se precarga (Asistencias se dibujaba a pedazos).
   render("/panel/registro-asistencia", true);
   assert.equal(cancellations, 2);
   render("/panel", true);

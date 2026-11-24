@@ -1,4 +1,4 @@
-// Asistencias → Hoy (23/11/2026): un estado por persona, precedencia, permisos, tolerancia, turno nocturno, varios tramos
+// Asistencias → Hoy: un estado por persona, precedencia, permisos, tolerancia, turno nocturno, varios tramos
 // y comida pasada. Uso: node --test scripts/test-asistencias-hoy.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -251,7 +251,7 @@ test("hora actual y fecha en la zona de la empresa", async () => {
   assert.equal(textoFechaHoy("America/Mexico_City", d, { corto: true }), "Lun 23 nov");
 });
 
-// Columnas Entrada / Salida / Comida (pedido del 23/11/2026).
+// Columnas Entrada / Salida / Comida.
 test("checadas del día: entrada, salida y comida reales; la salida a comer no es su salida", async () => {
   const { checadasDelDia } = await import("../src/lib/asistencia/hoy.mjs");
   const base = { tramos: [], hayAbierto: false, abierto: null, comida: null };

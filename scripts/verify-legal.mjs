@@ -1,4 +1,4 @@
-// Verificación en navegador de lo legal (21/11/2026), con el backend simulado:
+// Verificación en navegador de lo legal, con el backend simulado:
 // documentos publicados con responsable y versión (sin CURP), el Pixel de Meta solo tras aceptar cookies,
 // y la casilla obligatoria de Contacto que deja constancia (contexto, documentos y versión) antes de abrir WhatsApp.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx npm run build

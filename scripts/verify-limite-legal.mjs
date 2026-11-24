@@ -1,4 +1,4 @@
-// Verificación en navegador (23/11/2026): catálogo de jornadas legales de Luis conectado. Backend simulado.
+// Verificación en navegador: catálogo de jornadas legales del backend conectado. Backend simulado.
 // 1) Turnos: un turno de Lun–Sáb 8:00–17:00 con 1 h de comida (48 h) avisa que en 2027 el límite es 46 h; 46 h no avisa.
 // 2) App del empleado: tarjeta «Mi semana» con el resumen semanal (programadas null → «Por revisar»).
 // Uso: npm run build && node scripts/verify-limite-legal.mjs
