@@ -334,7 +334,6 @@ export default function EmpleadosTable({
   useEffect(() => {
     if (!limpiarFiltrosToken) return;
     clearAllHeaderFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [limpiarFiltrosToken]);
 
   // ——— Pestañas por estado ———

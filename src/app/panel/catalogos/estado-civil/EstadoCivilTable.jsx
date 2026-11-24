@@ -280,7 +280,7 @@ export default function EstadoCivilTable({
                         <Pencil className="h-4 w-4 text-[#2563EB]" />
                       </button>
                       <button
-                        onClick={() => onDelete(civ.id_estado_civil, key)}
+                        onClick={() => onDelete(civ.id_estado_civil)}
                         className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                         title="Eliminar"
                       >

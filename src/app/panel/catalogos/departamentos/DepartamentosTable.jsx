@@ -293,7 +293,7 @@ export default function DepartamentosTable({
                         <Pencil className="h-4 w-4 text-[#2563EB]" />
                       </button>
                       <button
-                        onClick={() => onDelete(dep.id_departamento, key)}
+                        onClick={() => onDelete(dep.id_departamento)}
                         className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                         title="Eliminar"
                       >

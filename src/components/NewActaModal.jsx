@@ -400,7 +400,6 @@ const NewActaModal = ({
         shouldDirty: false,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     open,
     mode,

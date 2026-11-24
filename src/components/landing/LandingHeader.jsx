@@ -73,9 +73,9 @@ export default function LandingHeader() {
                 "shadow-[0_10px_30px_rgba(0,0,0,0.14)] transition hover:-translate-y-0.5"
               )}
             >
-              <a href="/contratar-plan">
+              <Link href="/contratar-plan">
                 Contratar <ArrowRight className="ml-2 h-4 w-4" />
-              </a>
+              </Link>
             </Button>
           </nav>
 
@@ -129,9 +129,9 @@ export default function LandingHeader() {
 
                 <div className="mt-6">
                   <Button asChild className="w-full rounded-xl">
-                    <a href="/contratar-plan">
+                    <Link href="/contratar-plan">
                       Contratar ahora
-                    </a>
+                    </Link>
                   </Button>
                 </div>
               </SheetContent>
