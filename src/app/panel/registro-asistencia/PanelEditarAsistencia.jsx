@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
 import { ETIQUETAS_ESTADO, FORMAS_PAGO, estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
+import { puedeAgregarComida } from "@/lib/asistencia/jornada.mjs";
 import ChecadasDelDia from "./ChecadasDelDia";
 import BotonAgregarComida from "./BotonAgregarComida";
 
@@ -120,11 +121,9 @@ export default function PanelEditarAsistencia({
             <ChecadasDelDia empleado={registro} activo={abierto} mutateAsistencia={mutateAsistencia} />
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[11px] text-slate-400">Con el lápiz corriges una checada; la hora original del reloj queda tachada.</p>
-              {/* Agregar comida: disponible cuando el día tiene entrada y salida y un solo tramo
-                  (o el servidor aún no manda tramos). Se valida otra vez en el servidor. */}
-              {/* Si ya checó su comida («Salir a comer»), no se ofrece agregarla. */}
-              {registro.entrada && registro.salida && !registro.comida_checada?.salida &&
-                (!Array.isArray(registro.tramos_checadas) || registro.tramos_checadas.length <= 1) && (
+              {/* Agregar comida: con entrada y salida, sin comida (checada o manual) y sin una pausa real dentro de su comida.
+                  El servidor aplica la misma regla. */}
+              {puedeAgregarComida(registro) && (
                 <BotonAgregarComida
                   variante="boton"
                   registro={registro}
