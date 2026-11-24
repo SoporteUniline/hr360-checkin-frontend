@@ -227,6 +227,7 @@ try {
   await page.goto(base + "/panel/catalogos/tipos-registro", { waitUntil: "domcontentloaded" });
   const filaTipo = (id) => page.locator(`tr[data-tipo="${id}"]`);
   await filaTipo(4).waitFor({ timeout: 30000 });
+  await page.locator("thead th", { hasText: "Abarca" }).waitFor({ timeout: 10000 }); // innerText vacío mientras entra la tabla
   const enc = (await page.locator("thead th").allInnerTexts()).map((t) => t.trim());
   for (const c of ["Tipo", "Abarca", "Goce del día", "Horas no trabajadas", "Se cambia al aplicar", "Acciones"]) assert.ok(enc.includes(c), `columna ${c}: ${enc.join(" | ")}`);
   assert.equal(await filaTipo(4).locator("[data-personalizado]").innerText(), "Personalizado");
