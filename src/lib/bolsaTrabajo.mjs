@@ -1,4 +1,4 @@
-// Bolsa de trabajo pública de ADAMIA (rediseño 23/11/2026). Lógica pura, sin React ni navegador, para la lista
+// Bolsa de trabajo pública de ADAMIA. Lógica pura, sin React ni navegador, para la lista
 // (/bolsa-de-trabajo) y la página de cada vacante (/vacante/[slug]). Pruebas: scripts/test-bolsa-trabajo.mjs.
 //
 // Contrato del API que NO cambia (backend: modules/recruitment/models/vacanteModel.js → filter):

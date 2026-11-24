@@ -1,4 +1,4 @@
-// Acciones masivas de Asistencias (maqueta aprobada 19/11/2026).
+// Acciones masivas de Asistencias.
 // Cada «plan» recibe las filas elegidas y las opciones del formulario y devuelve:
 //   { aplicar: [{ registro, cambios?, comida?, antes, despues }], omitir: [{ registro, motivo }] }
 // `cambios` se guarda con PUT /checador/asistencias/:id (mismos campos que la edición de una fila,
@@ -76,7 +76,7 @@ export function planHora(filas, { campo = "salida", modo = "horario", hora, hora
     }
     const entrada = cambios.entrada ?? r.entrada;
     const salida = cambios.salida ?? r.salida;
-    // (19/11/2026) Una hora que todavía no llega deja una checada «en el futuro» y el reloj rechaza
+    // Una hora que todavía no llega deja una checada «en el futuro» y el reloj rechaza
     // cualquier checada nueva de esa persona («Existe una checada posterior…») hasta esa hora.
     const ahoraMin = Math.floor(ahora / 60000);
     const futura = [cambios.entrada, cambios.salida].find((v) => v && minutos(v) > ahoraMin);

@@ -1,4 +1,4 @@
-// Estado del rostro registrado en la ficha (23/11/2026): «Registrado desde el celular el 23 nov, 5:15 p.m.», con el
+// Estado del rostro registrado en la ficha: «Registrado desde el celular el 23 nov, 5:15 p.m.», con el
 // último cambio del historial rostro_actualizaciones (GET /checador/mi-espacio/rostro/empleado/:id, el mismo que usa
 // AvisoRostroApp). Sin historial (rostros anteriores a la migración) solo dice «Rostro registrado».
 const ORIGEN = { celular: "desde el celular", empleado: "desde la app", rh: "desde la ficha" };

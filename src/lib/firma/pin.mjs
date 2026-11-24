@@ -1,4 +1,4 @@
-// Reglas del PIN para firmar (22/11/2026). Son las mismas que valida el servidor (firmaPin.validarPin); aquí solo se
+// Reglas del PIN para firmar. Son las mismas que valida el servidor (firmaPin.validarPin); aquí solo se
 // avisa antes de enviar. 6 dígitos, sin repetir el mismo número ni series como 123456 o 654321.
 export function errorPin(pin) {
   const p = String(pin ?? "");

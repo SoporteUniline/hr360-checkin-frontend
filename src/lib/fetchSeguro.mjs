@@ -1,8 +1,5 @@
-// (23/11/2026) «The DOMException.message getter can only be used on instances of DOMException» al checar entrada.
-// Causa: cuando fetch se rechaza con un DOMException (petición cancelada, almacenamiento bloqueado en Safari,
-// permisos…), axios lo copia con AxiosError.from, que lee las propiedades del PROTOTIPO de DOMException y el navegador
-// truena (Safari con ese mensaje; Chrome «Illegal invocation»). Se le da a axios un fetch que convierte esos errores en
-// un Error normal con el mismo nombre y mensaje, antes de que axios los toque.
+// Si fetch se rechaza con un DOMException, AxiosError.from lee propiedades del prototipo y el navegador lanza
+// («DOMException.message getter…» / «Illegal invocation»). Este fetch los convierte antes en un Error normal.
 
 export function errorNormal(error) {
   const esDomException = typeof DOMException !== "undefined" && error instanceof DOMException;

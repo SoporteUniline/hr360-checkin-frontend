@@ -1,4 +1,4 @@
-// Acceso al API real de Reclutamiento (03/12/2026). Usa la instancia de axios del proyecto, que pone la sesión.
+// Acceso al API real de Reclutamiento. Usa la instancia de axios del proyecto, que pone la sesión.
 // La empresa la valida el servidor contra la sesión; ?empresa= solo elige entre las del usuario.
 import axios from "@/lib/axios";
 
@@ -24,7 +24,7 @@ export const guardarPreparacion = (id, cuerpo) => axios.put(`${postulacion(id)}/
 export const agregarNota = (id, texto) => axios.post(`${postulacion(id)}/notas`, { texto }).then((r) => r.data.postulacion);
 export const contratar = (id, cuerpo) => axios.post(`${postulacion(id)}/contratar`, cuerpo).then((r) => r.data);
 
-// Candidato de WhatsApp (04/12/2026): meter al proceso una entrevista que aceptó el aviso y avisarle por WhatsApp.
+// Candidato de WhatsApp: meter al proceso una entrevista que aceptó el aviso y avisarle por WhatsApp.
 export const iniciarProcesoWhatsapp = (idEntrevista) =>
   axios.post(`${RUTA_PANEL}/whatsapp/${encodeURIComponent(idEntrevista)}/proceso`).then((r) => r.data.postulacion);
 const conversacionWa = (id) => `/reclutamiento/whatsapp/conversaciones/${encodeURIComponent(id)}`;

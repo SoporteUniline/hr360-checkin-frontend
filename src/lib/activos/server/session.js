@@ -86,8 +86,8 @@ export async function getScope(request, self = false) {
     "Selecciona una empresa válida.",
     400,
   );
-  // (03/12/2026) Módulos por empresa: con «Activos y uniformes» apagado o sin derecho no se lee ni se escribe nada.
-  // La sesión trae las claves activas de sus empresas (sin dato = servidor viejo: como antes).
+  // Módulos por empresa: con «Activos y uniformes» apagado o sin derecho no se lee ni se escribe nada.
+  // La sesión trae las claves activas de sus empresas (sin dato = servidor sin módulos: se permite).
   const activosEmpresa = sesion.modulos && !sesion.modulos.todos ? sesion.modulos.modulos?.[String(companyId.data)] : null;
   ensure(
     !Array.isArray(activosEmpresa) || activosEmpresa.includes("activos"),

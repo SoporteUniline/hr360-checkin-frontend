@@ -1,7 +1,5 @@
 let loading;
-// (19/11/2026) El reloj pide acercarse: con la cara grande basta el detector rápido (190 KB) y no se
-// descarga SSD (5.4 MB) al abrir. (20/11/2026, etapa 3) Se quitó el camino de SSD, que ya no se usaba;
-// si algún día hiciera falta volver, está en el historial de git.
+// El reloj pide acercarse: con la cara grande basta el detector rápido (190 KB) y no se descarga SSD (5.4 MB).
 // Marca opcional del modo diagnóstico (no hace nada si está apagado).
 const diag = (nombre, datos) => globalThis.__adamiaDiag?.marca(nombre, datos);
 
@@ -60,7 +58,7 @@ export function loadBrowserFaceApi() {
   return loading;
 }
 
-// Opciones del detector rápido para checar. inputSize 160 (19/11/2026, 7 caras cercanas): 7/7 detectadas y
+// Opciones del detector rápido para checar. inputSize 160: 7/7 detectadas y
 // huella 99.4–99.8 % igual a la de SSD, muy por encima del 95 % que pide el reloj. Con 224 una cara quedó
 // en 87 %: no subirlo sin volver a medir. `sensible`: umbral más bajo para poca luz.
 export function opcionesRapidas(api = window.faceapi, sensible = false) {

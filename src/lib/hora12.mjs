@@ -1,6 +1,5 @@
-// Hora para mostrar en 12 horas con a.m./p.m. (decisión del 19/11/2026: «en 12 horas con a.m. y p.m.»).
-// Solo para MOSTRAR. Los campos de captura (<input type="time">) y los cálculos siguen en HH:mm.
-// Acepta un objeto dayjs o un texto «HH:mm» / «HH:mm:ss». Probado en scripts/test-hora12.mjs.
+// Hora para mostrar en 12 horas con a.m./p.m. Solo para MOSTRAR: captura (<input type="time">) y cálculos siguen
+// en HH:mm. Acepta dayjs o «HH:mm» / «HH:mm:ss». Probado en scripts/test-hora12.mjs.
 export function hora12(valor, { segundos = false } = {}) {
   if (valor == null || valor === "") return "";
   let h, m, s;

@@ -1,7 +1,5 @@
-// Vistas del módulo Evaluación de desempeño y quién ve cada una (23/11/2026, pedido del dueño:
-// «separa cada vista en su módulo»). Una sola fuente para las pestañas del módulo
-// (src/components/evaluaciones/EvaluationModule.jsx) y las entradas del menú (src/components/Sidebar/nav-main.jsx).
-// Quién puede qué lo decide el servidor en /capabilities (scopes y flags); aquí solo se lee.
+// Vistas del módulo Evaluación de desempeño: una sola fuente para las pestañas (EvaluationModule.jsx) y el menú
+// (Sidebar/nav-main.jsx). Quién puede qué lo decide el servidor en /capabilities; aquí solo se lee.
 
 // RH (y Dirección, que solo consulta) trabaja por campañas. «Por responder» solo aparece si tiene evaluaciones asignadas.
 export const VISTAS_RH = [
@@ -16,7 +14,7 @@ export const VISTAS_PERSONALES = [
   { path: "equipo", texto: "Mi equipo", scope: "team" },
   { path: "mis-evaluaciones", texto: "Mis resultados", scope: "results" },
 ];
-// Configuración: tres vistas que no dependen entre sí (antes, un solo listado largo).
+// Configuración: tres vistas que no dependen entre sí.
 export const SECCIONES_CONFIGURACION = [
   {
     path: "configuracion",

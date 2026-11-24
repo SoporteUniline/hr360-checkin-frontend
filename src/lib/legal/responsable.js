@@ -1,4 +1,4 @@
-// Datos del responsable de ADAMIA para los documentos legales (de su Constancia de Situación Fiscal, 21/11/2026).
+// Datos del responsable de ADAMIA para los documentos legales (de su Constancia de Situación Fiscal).
 // Solo lo que piden los documentos: nombre, domicilio y RFC (este último solo en Términos). Nunca la CURP.
 // Un valor null se muestra como «Pendiente» y activa el aviso de borrador en la página.
 export const RESPONSABLE = {

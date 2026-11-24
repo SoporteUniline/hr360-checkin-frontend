@@ -1,8 +1,5 @@
-// Avance de una campaña en una sola pantalla (20/11/2026, «menos vistas»).
-// Antes: «Resultados», «Seguimiento» y «Tablero» eran vistas aparte. Ahora el detalle de la campaña
-// muestra los 5 pasos y una fila por persona. Solo cuenta lo que ya manda el servidor
-// (campaña con asignaciones, resultados y planes de esa campaña): no decide permisos ni calificaciones.
-// Probado en scripts/test-evaluaciones.mjs.
+// Avance de una campaña en una sola pantalla: los 5 pasos y una fila por persona. Solo cuenta lo que ya manda el
+// servidor; no decide permisos ni calificaciones. Probado en scripts/test-evaluaciones.mjs.
 
 // Quién falta, en palabras cortas para la fila de la persona.
 const QUIEN = {

@@ -1,6 +1,6 @@
 "use client";
 
-// Reclutamiento real (03/12/2026): los datos de la empresa (vacantes, candidatos, catálogos, WhatsApp y agenda) en
+// Reclutamiento real: los datos de la empresa (vacantes, candidatos, catálogos, WhatsApp y agenda) en
 // una sola consulta SWR que comparten todas las pantallas del módulo. keepPreviousData evita parpadeos al revalidar.
 import { useCallback, useMemo } from "react";
 import useSWR, { mutate as mutarClave } from "swr";
@@ -23,9 +23,8 @@ export function usePostulacion(id, base) {
   return { detail: detalle, error, isLoading, mutate };
 }
 
-// Acciones sobre una postulación fuera de la pantalla de Reclutamiento (chat de WhatsApp, 04/12/2026). Mismas rutas y
-// reglas del servidor que RecruitmentModule; el expediente se actualiza con lo que responde el servidor.
-// alCambiar(): después de cada escritura (p. ej. refrescar la conversación y la lista). Devuelven { ok, message, ... }.
+// Acciones sobre una postulación fuera de Reclutamiento (chat de WhatsApp), con las mismas rutas y reglas.
+// alCambiar(): después de cada escritura (p. ej. refrescar la conversación). Devuelven { ok, message, ... }.
 export function useAccionesPostulacion(id, { alCambiar } = {}) {
   const guardar = useCallback((postulacion) => {
     if (postulacion?.id) mutarClave(rutaPostulacion(postulacion.id), { postulacion }, { revalidate: false });

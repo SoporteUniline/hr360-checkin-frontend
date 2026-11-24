@@ -1,4 +1,4 @@
-// Contenido de las páginas de detalle de Funciones (21/11/2026). Solo funciones que existen en el sistema.
+// Contenido de las páginas de detalle de Funciones. Solo funciones que existen en el sistema.
 export const DETALLE = {
   "reloj-checador": {
     ruta: "/funcionalidades/reloj-checador",

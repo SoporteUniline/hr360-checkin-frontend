@@ -1,7 +1,7 @@
 // Pestaña «Horas» de Asistencias: semana legal (lunes–domingo) contra el límite de la LFT.
 // Datos: GET /checador/reportes/horas-ley (reporte.ley.semanas y reporte.dias[].ley).
 //
-// Criterio (19/11/2026): la ley mide por semana, así que siempre se calculan semanas completas
+// Criterio: la ley mide por semana, así que siempre se calculan semanas completas
 // a partir del rango elegido; si el rango toca varias semanas se elige una (por defecto la que
 // contiene hoy, o la última). La proyección («va a pasar de 46 h») solo aplica a la semana en curso.
 

@@ -34,7 +34,7 @@ export const firmaDigitalApi = {
     return res.data;
   },
 
-  // (22/11/2026) Firmar con el PIN: el servidor estampa la firma que la persona guardó en Mi espacio. Sin foto.
+  // Firmar con el PIN: el servidor estampa la firma que la persona guardó en Mi espacio. Sin foto.
   async firmarConPin(token, pin) {
     const formData = new FormData();
     formData.append("consentimiento", "true");
@@ -88,7 +88,7 @@ export const firmaDigitalAdminApi = {
     return res.data;
   },
 
-  // (23/11/2026) Foto, fecha, método y dispositivo de quien firmó. Solo RH y dueño; cada consulta queda registrada.
+  // Foto, fecha, método y dispositivo de quien firmó. Solo RH y dueño; cada consulta queda registrada.
   async obtenerEvidencia({ idSolicitud, idEmpresa }) {
     const res = await firmaDigitalPublicApi.get(
       `/checador/firma-digital/solicitudes/${encodeURIComponent(idSolicitud)}/evidencia`,

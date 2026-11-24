@@ -1,4 +1,4 @@
-// Asistencias → Hoy (23/11/2026, maqueta aprobada por el dueño): UN estado por persona a esta hora, en orden de prioridad.
+// Asistencias → Hoy: UN estado por persona a esta hora, en orden de prioridad.
 // Funciones puras (sin React ni zona del navegador). Probado en scripts/test-asistencias-hoy.mjs.
 //
 // Escala de tiempo: «minutos absolutos» de la hora de pared en la zona de la empresa (fechaHora.minutosAbsolutos):
@@ -352,7 +352,7 @@ export function textoFechaHoy(zona, fecha = new Date(), { corto = false } = {}) 
   return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${p.day}${corto ? " " : " de "}${mes}`;
 }
 
-// (23/11/2026, pedido del dueño) Columnas Entrada / Salida / Comida de la vista Hoy: horas reales del día.
+// Columnas Entrada / Salida / Comida de la vista Hoy: horas reales del día.
 // - Entrada: la primera checada de entrada.
 // - Salida: la última salida, solo si ya no tiene un tramo abierto ni está en comida (la salida a comer no es su salida).
 // - Comida: solo el tiempo («26 min»), si sigue en comida y si se pasó; las horas en `detalle` (tooltip).

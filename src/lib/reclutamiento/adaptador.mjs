@@ -1,4 +1,4 @@
-// Reclutamiento real (03/12/2026): traduce lo que responde /api/reclutamiento/panel al modelo que usan las pantallas,
+// Reclutamiento real: traduce lo que responde /api/reclutamiento/panel al modelo que usan las pantallas,
 // y de regreso. Sin React ni red: lo prueba scripts/test-reclutamiento-adaptador.mjs. Los nombres del servidor están en
 // español (docs/reclutamiento-real.md del backend); las pantallas conservan los nombres del diseño.
 
@@ -128,7 +128,7 @@ export function aVacante(v, modalidades = []) {
 const CALIFICACION = { califica: "Califica", con_alerta: "Con alerta", no_califica: "No califica", incompleto: "Entrevista incompleta" };
 const contratacionVacia = () => ({ startDate: "", branchId: "", checklist: [], completedAt: null, employeeId: null, existingEmployee: false });
 
-// 04/12/2026: una postulación de WhatsApp (origen «whatsapp») tiene el mismo proceso que la de la página, más los datos
+// Una postulación de WhatsApp (origen «whatsapp») tiene el mismo proceso que la de la página, más los datos
 // de su entrevista con el agente (calificación, resumen, puntajes), su conversación y la sugerencia de etapa del agente.
 function datosWhatsapp(w) {
   if (!w) return null;

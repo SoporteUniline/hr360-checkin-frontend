@@ -15,9 +15,9 @@ export function motivoPendiente(event, online = typeof navigator === 'undefined'
 // si no se resuelve: no debe parecer un problema de conexión de la persona.
 export const errorDelServidor = (event) => Boolean(event && event.status === 'pending' && event.error && event.httpStatus);
 
-// Texto de la checada confirmada. «ignorada» (19/11/2026): el servidor no registró un movimiento nuevo
+// Texto de la checada confirmada. «ignorada»: el servidor no registró un movimiento nuevo
 // porque la persona ya había checado hace menos de 5 min (candado contra checadas repetidas).
-// Pregunta del candado (19/11/2026): «Acabas de registrar tu salida a las 4:49 p.m. ¿Registrar otra vez?».
+// Pregunta del candado: «Acabas de registrar tu salida a las 4:49 p.m. ¿Registrar otra vez?».
 export function preguntaRepetida(rebote, mensaje) {
   if (rebote?.tipo && rebote?.hora) {
     return `Acabas de registrar tu ${rebote.tipo} a las ${hora12(rebote.hora)}`;
