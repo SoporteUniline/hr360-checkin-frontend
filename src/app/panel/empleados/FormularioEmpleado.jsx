@@ -52,7 +52,7 @@ import PanelEmpleadoDocumentos from "@/app/panel/panel-empleado/components/Panel
 import BotonCredencial from "@/components/BotonCredencial";
 import { toPng } from "html-to-image";
 import { qrComoDataUrl } from "@/lib/qrImagen.mjs";
-import { copiarValores, hayCambiosPendientes, valoresIguales } from "@/lib/cambiosPendientes.mjs";
+import { camposCambiados, copiarValores, hayCambiosPendientes, valoresIguales } from "@/lib/cambiosPendientes.mjs";
 import { useGuardiaSalida } from "@/components/cambios/CambiosPendientes";
 import { fechaParaInput } from "@/lib/fechaInput.mjs";
 
@@ -179,7 +179,10 @@ export default function FormularioEmpleado({
 
   const fijarBase = useCallback(() => setBase(copiarValores(form.getValues())), [form]);
   const sincronizarCampo = useCallback((campo, valor) => {
-    form.setValue(campo, valor, { shouldDirty: false, shouldValidate: false });
+    // (24/11/2026) También es el nuevo «valor original» del formulario, para que solo cuente lo que la persona toque.
+    // resetField solo actúa sobre campos registrados: tipo_horario, id_turno o areasAsignadas no tienen input propio.
+    form.register(campo);
+    form.resetField(campo, { defaultValue: copiarValores(valor) });
     setBase((b) => (b ? { ...b, [campo]: copiarValores(valor) } : b));
   }, [form]);
   // Empleado nuevo: la base son los valores vacíos con los que abre.
@@ -665,6 +668,8 @@ export default function FormularioEmpleado({
         // (23/11/2026) Lo guardado es la nueva base: ya no hay cambios pendientes. Se queda en la pestaña donde estaba.
         setSelectedFile(null);
         setRostroNuevo(false);
+        // Lo guardado pasa a ser el «valor original» (base y valores por omisión del formulario).
+        form.reset(form.getValues());
         fijarBase();
       } else {
         enqueueSnackbar("Empleado registrado", {
@@ -723,12 +728,18 @@ export default function FormularioEmpleado({
   // emergencia en borrador. No cuentan: «Continuar desde el celular», firma y PIN, consentimiento del rostro, contactos
   // de un empleado ya guardado, bonos y conceptos de pago (se guardan solos en el servidor).
   const valoresActuales = form.watch();
+  // (24/11/2026) Solo cuenta lo que la persona tocó (y quedó distinto): abrir la ficha nunca marca cambios aunque el
+  // sistema acomode datos al cargar (pasaba con datos reales: «no he movido nada y dice cambios sin guardar»).
+  const { dirtyFields } = form.formState;
   const hayCambios = !soloLectura && Boolean(base) && hayCambiosPendientes({
     base,
     actual: valoresActuales,
     ignorar: NO_CUENTAN_COMO_CAMBIO,
     extras: [selectedFile, rostroNuevo, !editar && contactosEmergencia.length > 0],
+    tocados: dirtyFields,
   });
+  // Qué campos cuentan como cambio (se ve al pasar el mouse por «Cambios sin guardar» y ayuda a diagnosticar).
+  const cambiados = base ? camposCambiados(base, valoresActuales, NO_CUENTAN_COMO_CAMBIO, dirtyFields) : [];
   const { isSubmitting } = form.formState;
   // «Guardar y salir» usa exactamente lo mismo que el botón Guardar (validación + servidor); true solo si se guardó.
   const guardar = () => new Promise((resolve) => {
@@ -803,7 +814,7 @@ export default function FormularioEmpleado({
                   : "Nuevo empleado"}
               </span>
             </button>
-            {editar && !soloLectura && <EstadoCambios hayCambios={hayCambios} />}
+            {editar && !soloLectura && <EstadoCambios hayCambios={hayCambios} campos={cambiados} />}
           </div>
         </div>
 
@@ -820,7 +831,7 @@ export default function FormularioEmpleado({
             </button>
 
             <div className="flex items-center gap-3">
-              {editar && !soloLectura && <EstadoCambios hayCambios={hayCambios} />}
+              {editar && !soloLectura && <EstadoCambios hayCambios={hayCambios} campos={cambiados} />}
               {soloLectura ? null : (
                 <Button
                   type="submit"
@@ -1060,9 +1071,9 @@ export default function FormularioEmpleado({
 }
 
 // (23/11/2026) Estado junto al botón Guardar: punto + «Cambios sin guardar», o «Sin cambios» discreto.
-function EstadoCambios({ hayCambios }) {
+function EstadoCambios({ hayCambios, campos = [] }) {
   return hayCambios ? (
-    <span data-estado-cambios="pendientes" role="status" className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-amber-700 sm:text-sm">
+    <span data-estado-cambios="pendientes" data-campos-cambiados={campos.join(",")} title={campos.length ? `Cambió: ${campos.join(", ")}` : undefined} role="status" className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-amber-700 sm:text-sm">
       <span aria-hidden="true" className="size-2 rounded-full bg-amber-500" />
       Cambios sin guardar
     </span>

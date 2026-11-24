@@ -245,7 +245,7 @@ export default function TabPersonales({ renderCampos = () => null, form, soloLec
                 </FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  value={field.value !== "" ? field.value : "sin-seleccion"}
+                  value={field.value ? String(field.value) : "sin-seleccion"}
                   disabled={soloLectura}
                 >
                   <FormControl>
@@ -260,6 +260,10 @@ export default function TabPersonales({ renderCampos = () => null, form, soloLec
                     <SelectItem value="Masculino">Masculino</SelectItem>
                     <SelectItem value="Femenino">Femenino</SelectItem>
                     <SelectItem value="Otro">Otro</SelectItem>
+                    {/* Dato guardado con otro texto (p. ej. «F»): se muestra tal cual para no perderlo. */}
+                    {field.value && !["sin-seleccion", "Masculino", "Femenino", "Otro"].includes(field.value) ? (
+                      <SelectItem value={String(field.value)}>{String(field.value)}</SelectItem>
+                    ) : null}
                   </SelectContent>
                 </Select>
                 <FormMessage />

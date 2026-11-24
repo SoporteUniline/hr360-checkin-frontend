@@ -53,18 +53,29 @@ export function valoresIguales(a, b) {
   return comoTexto(a) === comoTexto(b);
 }
 
+// ¿La persona tocó este campo? `marca` es la entrada de dirtyFields de react-hook-form: true, o un objeto/lista
+// (campos anidados como horarios o campos personalizados) con algún true dentro.
+export function tieneMarca(marca) {
+  if (marca === true) return true;
+  if (marca && typeof marca === "object") return Object.values(marca).some(tieneMarca);
+  return false;
+}
+
 // Campos de primer nivel que cambiaron respecto a la base. `ignorar`: campos que no cuentan (derivados de otros o que
-// se revisan aparte, como el rostro).
-export function camposCambiados(base = {}, actual = {}, ignorar = []) {
+// se revisan aparte, como el rostro). `tocados` (24/11/2026): si se da (dirtyFields), solo cuentan los campos que la
+// persona tocó; lo que el sistema acomoda solo al abrir (catálogos, formatos, datos del servidor) nunca es «cambio».
+export function camposCambiados(base = {}, actual = {}, ignorar = [], tocados = null) {
   const fuera = new Set(ignorar);
   const claves = new Set([...Object.keys(base ?? {}), ...Object.keys(actual ?? {})]);
-  return [...claves].filter((k) => !fuera.has(k) && !valoresIguales(base?.[k], actual?.[k])).sort();
+  return [...claves]
+    .filter((k) => !fuera.has(k) && (!tocados || tieneMarca(tocados[k])) && !valoresIguales(base?.[k], actual?.[k]))
+    .sort();
 }
 
 // ¿Hay algo que se perdería al salir? Valores del formulario + lo que se guarda con la ficha y no vive en el formulario
 // (foto nueva, rostro capturado con la cámara, contactos de emergencia en borrador de un empleado nuevo).
-export function hayCambiosPendientes({ base, actual, ignorar = [], extras = [] } = {}) {
-  return extras.some(Boolean) || camposCambiados(base, actual, ignorar).length > 0;
+export function hayCambiosPendientes({ base, actual, ignorar = [], extras = [], tocados = null } = {}) {
+  return extras.some(Boolean) || camposCambiados(base, actual, ignorar, tocados).length > 0;
 }
 
 // Copia profunda de valores de formulario (texto, números, listas, objetos simples) para guardar la base.

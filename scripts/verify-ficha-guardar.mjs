@@ -44,6 +44,7 @@ const emp = {
   hrs_por_dia: "8.00", hrs_de_comida: "1.00", checar_gps: 1, solicitar_gps: 0, enviar_asistencia_automatica: 1, autoriza_horas_extra: 0,
   horarios: dias.map((dia) => ({ dia, entrada: "09:00", salida_comida: "14:00", regreso_comida: "15:00", salida: "18:00" })),
   cuenta_bancaria: { banco: "BBVA", numero_cuenta: "0123456789", tipo_cuenta: "Cuenta" },
+  sexo: "F", // dato viejo que no está entre las opciones (24/11/2026)
 };
 const puts = [];
 let fallarPut = false;
@@ -288,6 +289,27 @@ try {
   await dialogo(pg).getByRole("button", { name: "Salir sin guardar" }).click();
   await enTabla(pg);
   pasos.push("11 fechas con hora y turno al cambiar de pestaña");
+
+  // 12) (24/11/2026, «no he movido nada y dice cambios sin guardar») Abrir por enlace directo (?id=) a alguien con un
+  // dato que no está en la lista (sexo «F»): no marca cambios y el dato se conserva y se manda tal cual al guardar.
+  await pg.goto(base + "/panel/empleados?id=15", { waitUntil: "domcontentloaded" });
+  await nombre(pg).waitFor({ timeout: 30000 });
+  await dormir(2500);
+  assert.equal(await estado(pg), "sin-cambios", `abrir no marca cambios (${await pg.locator("[data-estado-cambios]:visible").first().getAttribute("data-campos-cambiados")})`);
+  assert.match(await ficha(pg).locator("button[role=combobox]", { hasText: /^F$/ }).first().innerText(), /^F$/, "el sexo guardado se ve");
+  const antesPut = puts.length;
+  await nombre(pg).fill("Ana Sofía");
+  assert.equal(await pg.locator("[data-estado-cambios]:visible").first().getAttribute("data-campos-cambiados"), "nombre", "solo cuenta lo que se tocó");
+  await botonGuardar(pg).click();
+  await pg.getByText("Cambios guardados").first().waitFor({ timeout: 15000 });
+  assert.equal(puts.length, antesPut + 1);
+  assert.match(puts.at(-1), /"sexo":"F"|name="sexo"\r\n\r\nF\r\n/, "no borra el sexo al guardar");
+  await pg.waitForFunction(() => document.querySelector("[data-estado-cambios]")?.dataset.estadoCambios === "sin-cambios");
+  await nombre(pg).fill("Ana");
+  assert.equal(await estado(pg), "pendientes", "tras guardar, volver al valor anterior sí es un cambio");
+  await nombre(pg).fill("Ana Sofía");
+  await pg.waitForFunction(() => document.querySelector("[data-estado-cambios]")?.dataset.estadoCambios === "sin-cambios");
+  pasos.push("12 enlace directo con dato fuera de lista: sin cambios falsos y sin perder el dato");
   await ctx.close();
 
   // 10) Teléfono a 390 px: abre editable desde la lista; barra inferior con Guardar; el diálogo cabe.

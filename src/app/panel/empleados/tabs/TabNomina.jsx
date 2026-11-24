@@ -192,7 +192,7 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
                         const value = e.target.value;
                         field.onChange(value ? parseFloat(value) : null);
                         if (form.getValues("forma_calculo") === "$") {
-                          form.setValue("porcentaje", null);
+                          form.setValue("porcentaje", null, { shouldDirty: true });
                         }
                       }}
                     />
@@ -222,7 +222,7 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
                         const value = e.target.value;
                         field.onChange(value ? parseFloat(value) : null);
                         if (form.getValues("forma_calculo") === "%") {
-                          form.setValue("sueldo", null);
+                          form.setValue("sueldo", null, { shouldDirty: true });
                         }
                       }}
                     />
