@@ -38,8 +38,28 @@ test('historical invalid attempts with blocking flags no longer stop valid captu
   }
 });
 
-test('authorization failures and unknown rejections still stop later events', async () => {
-  for (const code of ['CLOCK_AUTH_EXPIRED', 'LOCAL_FACE_INVALID', undefined]) {
+test('expired capture authorizations stay in review while newer captures sync', async () => {
+  const reason = 'La autorización offline venció. El reloj necesita actualizar su conexión.';
+  for (const code of ['CLOCK_AUTH_EXPIRED', 'LOCAL_FACE_AUTH_EXPIRED', 'LOCAL_FACE_DATA_EXPIRED', undefined]) {
+    const historical = { ...entry, scope: 'company', status: 'review', blocksFollowing: true, errorCode: code, error: reason };
+    const pending = { ...exit, scope: 'company', id: 'second-old-capture', grant: 'old-grant' };
+    const recent = { ...pending, id: 'recent-capture', grant: 'current-grant', captured_at: '2026-11-24T15:00:00.000Z' };
+    const sent = [], saved = [];
+    await syncCompanyEvents([historical, pending, recent], async event => {
+      sent.push(event.id);
+      if (event.id === pending.id) throw { response: { status: 403, data: { code, error: reason } } };
+      return { id: event.id, status: 'synced' };
+    }, async event => saved.push(event));
+    assert.deepEqual(sent, [pending.id, recent.id]);
+    assert.equal(saved[0].status, 'review');
+    assert.equal(saved[0].grant, pending.grant);
+    assert.equal(saved[0].captured_at, pending.captured_at);
+    assert.equal(saved[1].status, 'synced');
+  }
+});
+
+test('other authorization failures and unknown rejections still stop later events', async () => {
+  for (const code of ['LOCAL_FACE_INVALID', undefined]) {
     const sent = [], saved = [];
     await syncEvents([entry, exit], async event => {
       sent.push(event.id);
