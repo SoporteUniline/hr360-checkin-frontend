@@ -129,7 +129,6 @@ export default function VacanteDetalle() {
   const {
     data: postulaciones,
     isLoading: loadingPostulaciones,
-    error: errorPostulaciones,
   } = useSWR(
     dataUser?.id_usuario ? `/postulaciones/by-correo/${dataUser.correo}` : null,
     fetcherWithToken,
@@ -143,7 +142,6 @@ export default function VacanteDetalle() {
   const {
     data: userDetail,
     isLoading: loadingUser,
-    error: errorUser,
   } = useSWR(
     dataUser?.id_usuario && dataUser?.tipo_usuario === "User"
       ? `/users/user/${dataUser.id_usuario}`
@@ -198,7 +196,9 @@ export default function VacanteDetalle() {
 
   if (isLoading || loadingPostulaciones || loadingUser) return <Cargando />;
 
-  if (error || errorPostulaciones || errorUser) {
+  // Solo la vacante decide si la página se puede mostrar. Las consultas de la sesión (mis postulaciones, mi perfil)
+  // son extras: si fallan (RH o empleado sin acceso, sesión vencida) la vacante se ve igual y se trata como no postulado.
+  if (error) {
     return (
       <SinVacante
         noExiste={error?.response?.status === 404}
