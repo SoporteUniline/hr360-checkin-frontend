@@ -1,4 +1,4 @@
-// Asistencias → Hoy: UN estado por persona a esta hora, en orden de prioridad.
+// Monitor: UN estado por persona a esta hora, en orden de prioridad. Tarjetas, grupos y textos de fila en monitor.mjs.
 // Funciones puras (sin React ni zona del navegador). Probado en scripts/test-asistencias-hoy.mjs.
 //
 // Escala de tiempo: «minutos absolutos» de la hora de pared en la zona de la empresa (fechaHora.minutosAbsolutos):
@@ -84,8 +84,20 @@ export function diaDesdeRegistro(r, aLocal = (v) => v) {
     comida: r?.comida_checada ? { salida: local(r.comida_checada.salida), regreso: local(r.comida_checada.regreso), minutos: r.comida_checada.minutos ?? null } : null,
     permisos: permisos
       .filter((p) => ["llega_tarde", "sale_antes", "sale_regresa"].includes(p?.tipo_horas))
-      .map((p) => ({ tipo: p.tipo_horas, inicio: hhmm(p.hora_inicio), fin: hhmm(p.hora_fin) })),
+      .map((p) => ({ tipo: p.tipo_horas, inicio: hhmm(p.hora_inicio), fin: hhmm(p.hora_fin), motivo: textoOpcional(p.motivo) })),
+    salidaExtra: salidaExtraDe(r?.horas_extra_autorizadas_dia),
   };
+}
+
+const textoOpcional = (v) => (typeof v === "string" && v.trim() ? v.trim() : null);
+
+// Horas extra autorizadas ANTES de que ocurran («se queda hasta las 20:00»). El backend aún no manda este campo:
+// sin él la persona no entra en «Saldrán tarde». Contrato esperado: { hasta: "HH:mm", minutos?, motivo? }.
+export function salidaExtraDe(valor) {
+  const hasta = hhmm(valor?.hasta);
+  if (!hasta) return null;
+  const minutos = Number(valor.minutos);
+  return { hasta, minutos: Number.isFinite(minutos) && minutos > 0 ? Math.round(minutos) : null, motivo: textoOpcional(valor.motivo) };
 }
 
 // Estado del día a la hora `ahora` (minutos absolutos en la zona de la empresa).
@@ -105,6 +117,9 @@ export function estadoHoy(dia, ahora) {
   const llegaTarde = normal ? dia.permisos.find((p) => p.tipo === "llega_tarde" && p.fin) : null;
   const llegaHasta = llegaTarde ? Math.max(entradaProg, enTurno(llegaTarde.fin)) : null;
   const entradaEsperada = llegaHasta ?? entradaProg;
+  let salidaExtraHasta = normal && dia.salidaExtra ? enTurno(dia.salidaExtra.hasta) : null;
+  if (salidaExtraHasta != null && salidaExtraHasta <= salidaProg) salidaExtraHasta += MIN_DIA; // pasa de medianoche
+  if (salidaExtraHasta != null && salidaExtraHasta - salidaProg >= MIN_DIA) salidaExtraHasta = null; // hora ilegible
 
   const tramos = dia.tramos
     .map((t) => ({ desde: marcaEnMinutos(t.entrada), hasta: marcaEnMinutos(t.salida) }))
@@ -112,7 +127,7 @@ export function estadoHoy(dia, ahora) {
     .sort((a, b) => a.desde - b.desde);
   const abierto = dia.hayAbierto ? marcaEnMinutos(dia.abierto) : null;
   const checo = tramos.length > 0 || dia.hayAbierto;
-  const base = { dia, entradaProg, salidaProg, programados, permisoLlegada: llegaHasta };
+  const base = { dia, entradaProg, salidaProg, programados, permisoLlegada: llegaHasta, salidaExtraHasta };
 
   if (!checo) {
     if (!normal) return { ...base, estado: dia.tipo?.clase !== "normal" ? dia.tipo.clase : "sin_horario", grupo: "no_laboran" };
@@ -133,7 +148,9 @@ export function estadoHoy(dia, ahora) {
   const conChecadas = { ...base, primeraEntrada: Number.isFinite(primeraEntrada) ? primeraEntrada : null, trabajados, llegoTarde };
 
   if (dia.hayAbierto) {
-    const debiaSalirHace = salidaProg != null && ahora > salidaProg + AVISO_SIN_SALIDA ? ahora - salidaProg : null;
+    // Con horas extra autorizadas, el aviso «debía salir» cuenta desde la hora autorizada y no desde su horario.
+    const limite = salidaExtraHasta ?? salidaProg;
+    const debiaSalirHace = limite != null && ahora > limite + AVISO_SIN_SALIDA ? ahora - limite : null;
     return { ...conChecadas, estado: "trabajando", grupo: "trabajando", debiaSalirHace, orden: primeraEntrada };
   }
 
@@ -285,51 +302,6 @@ export function describir(r) {
     avance = r.programados ? Math.min(1, Math.max(0, r.trabajados / r.programados)) : null;
   }
   return { chip, tono, detalle, detalleTono, resaltado, jornada, avance };
-}
-
-// Tarjetas de resumen = filtros. `es(r)` dice si la persona entra en la tarjeta.
-export const TARJETAS = [
-  { clave: "trabajando", titulo: "Trabajando", es: (r) => r.estado === "trabajando" },
-  { clave: "tarde", titulo: "Llegaron tarde", es: (r) => r.llegoTarde != null },
-  { clave: "no_ha_llegado", titulo: "No han llegado", es: (r) => r.estado === "no_ha_llegado" },
-  { clave: "en_comida", titulo: "En comida", es: (r) => r.estado === "en_comida" },
-  { clave: "ya_salio", titulo: "Ya salieron", es: (r) => r.estado === "ya_salio" },
-  { clave: "salio_antes", titulo: "Salieron antes", es: (r) => r.estado === "salio_antes" },
-  { clave: "falto", titulo: "Faltaron", es: (r) => r.estado === "falto" },
-];
-
-export function resumenHoy(resultados) {
-  const cuenta = Object.fromEntries(TARJETAS.map((t) => [t.clave, resultados.filter(t.es).length]));
-  const tardes = resultados.filter((r) => r.llegoTarde != null);
-  return {
-    cuenta,
-    programadosHoy: resultados.filter((r) => r.grupo !== "no_laboran").length,
-    promedioTarde: tardes.length ? Math.round(tardes.reduce((t, r) => t + r.llegoTarde, 0) / tardes.length) : null,
-    comidaExcedida: resultados.filter((r) => r.estado === "en_comida" && r.sePasoComida).length,
-    salieronConPermiso: resultados.filter((r) => r.estado === "ya_salio" && r.conPermiso).length,
-    atencion: resultados.filter((r) => r.grupo === "atencion").length,
-    noLaboran: resultados.filter((r) => r.grupo === "no_laboran").length,
-  };
-}
-
-export const GRUPOS = [
-  { clave: "atencion", titulo: "Requieren atención" },
-  { clave: "comida", titulo: "En comida" },
-  { clave: "trabajando", titulo: "Trabajando" },
-  { clave: "proximos", titulo: "Próximos" },
-  { clave: "salieron", titulo: "Ya salieron" },
-  { clave: "no_laboran", titulo: "No laboran hoy" },
-];
-
-// Grupos en orden (lo urgente primero); dentro de «Requieren atención»: Faltó, No ha llegado, Salió antes, comida pasada.
-export function agruparHoy(resultados, nombreDe = () => "") {
-  const porNombre = (a, b) => String(nombreDe(a)).localeCompare(String(nombreDe(b)), "es");
-  return GRUPOS.map((g) => ({
-    ...g,
-    filas: resultados
-      .filter((r) => r.grupo === g.clave)
-      .sort((a, b) => (a.prioridad ?? 0) - (b.prioridad ?? 0) || (a.orden ?? 0) - (b.orden ?? 0) || porNombre(a, b)),
-  })).filter((g) => g.filas.length);
 }
 
 // Hora actual en la zona de la empresa: { hoy: «YYYY-MM-DD», hora: «HH:mm», abs: minutos absolutos }.

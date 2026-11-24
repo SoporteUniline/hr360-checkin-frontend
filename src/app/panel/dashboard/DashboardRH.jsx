@@ -1671,7 +1671,7 @@ export default function DashboardRH() {
             description="Una sola lista con estado, horario y fecha de regreso. Usa los indicadores superiores para filtrar."
             icon={UsersRound}
             action={
-              <SectionLink href="/panel/registro-asistencia">
+              <SectionLink href={showingToday ? "/panel/monitor" : "/panel/registro-asistencia"}>
                 Ver detalle
               </SectionLink>
             }

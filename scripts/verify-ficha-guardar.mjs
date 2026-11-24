@@ -200,7 +200,7 @@ try {
   // 6) Menú lateral pregunta antes de navegar.
   await abrirDesdeTabla(pg);
   await nombre(pg).fill("Ana Lucía");
-  const inicio = pg.locator('[data-sidebar="menu-button"]', { hasText: "Inicio" }).first();
+  const inicio = pg.locator('[data-sidebar="menu-button"]', { hasText: "Resumen" }).first();
   await inicio.click();
   await preguntaVisible(pg);
   await dialogo(pg).getByRole("button", { name: "Seguir editando" }).click();
