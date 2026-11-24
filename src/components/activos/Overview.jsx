@@ -3,7 +3,7 @@ import { useActivos } from "./ActivosProvider";
 import { Heading, Panel, Stats, Badge, ResourceLink, Table, Empty } from "./ui";
 import { assigned, outstanding, today } from "@/lib/activos/model.mjs";
 import { ArrowUpRight } from "lucide-react";
-// Inicio de «Activos y uniformes» (20/11/2026): lo que requiere atención hoy y accesos a lo más usado.
+// Inicio de «Activos y uniformes»: lo que requiere atención hoy y accesos a lo más usado.
 export default function Overview() {
   const { state } = useActivos();
   const inventario = (p) => `/${p.type === "uniform" ? "uniformes" : "activos"}`;

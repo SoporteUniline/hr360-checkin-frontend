@@ -1,7 +1,7 @@
 "use client";
 
-// Catálogos de reclutamiento (03/12/2026: reales). Sucursales = catálogo «Sucursales» de la empresa (solo lectura
-// aquí); modalidades = las tres base de ADAMIA más las propias de la empresa.
+// Catálogos de reclutamiento. Sucursales = catálogo «Sucursales» de la empresa (solo lectura aquí); modalidades =
+// las tres base de ADAMIA más las propias de la empresa.
 import { useState } from "react";
 import Link from "next/link";
 import { Plus, MapPin, Layers, ExternalLink } from "lucide-react";

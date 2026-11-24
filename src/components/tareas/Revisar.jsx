@@ -1,8 +1,7 @@
 "use client";
 
-// Revisar checklists enviados (23/11/2026, conectado a la API). El revisor ve cada respuesta con su puntaje y foto, y
-// puede CORREGIRLA (decisión A del dueño): la calificación se recalcula al momento y queda «Respondió X → corregido a Y».
-// El servidor vuelve a calcular todo al aprobar o regresar.
+// Revisar checklists enviados: el revisor puede CORREGIR una respuesta y la calificación se recalcula al momento
+// («Respondió X → corregido a Y»). El servidor vuelve a calcular todo al aprobar o regresar.
 import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { Check, Pencil, RotateCcw } from "lucide-react";

@@ -1,9 +1,8 @@
 "use client";
 
-// Datos del módulo Tareas y Checklists (23/11/2026): conectado a la API /checador/tareas (antes, datos de ejemplo).
-// Dos modos: «panel» (RH / dueño, por empresa) y «empleado» (su app). Las pantallas usan la forma del prototipo
-// (lib/tareas/api.mjs traduce). Mover tarjetas y palomear pasos se ven al instante y luego se confirman con el servidor;
-// cualquier error se avisa y se recarga lo último.
+// Datos del módulo Tareas y Checklists (API /checador/tareas). Dos modos: «panel» (RH / dueño, por empresa) y
+// «empleado» (su app); lib/tareas/api.mjs traduce a la forma de las pantallas. Mover tarjetas y palomear pasos se
+// ven al instante y se confirman con el servidor; cualquier error se avisa y se recarga lo último.
 import { createContext, useCallback, useContext, useMemo } from "react";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";
@@ -89,7 +88,7 @@ export function TareasProvider({ modo = "panel", idEmpresa = null, children }) {
         return null;
       }
     },
-    // (23/11/2026) Pregunta «Firma» con el PIN: el servidor estampa la firma guardada. → { key } o { error } (se muestra
+    // Pregunta «Firma» con el PIN: el servidor estampa la firma guardada. → { key } o { error } (se muestra
     // junto al campo del PIN, no como aviso flotante).
     firmarConPinEnvio: async (idEnvio, pin) => {
       try {

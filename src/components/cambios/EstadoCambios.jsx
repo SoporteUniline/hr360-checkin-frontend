@@ -1,4 +1,4 @@
-// (23/11/2026) Estado junto al botón Guardar: punto + «Cambios sin guardar», o «Sin cambios» discreto.
+// Estado junto al botón Guardar: punto + «Cambios sin guardar», o «Sin cambios» discreto.
 // Lo usan la ficha del empleado (FormularioEmpleado) y Mi cuenta (panel/cuenta).
 // campos (opcional): qué cambió; se ve al pasar el mouse y ayuda a diagnosticar avisos inesperados.
 export default function EstadoCambios({ hayCambios, campos = [] }) {

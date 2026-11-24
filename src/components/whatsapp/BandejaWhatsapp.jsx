@@ -85,7 +85,7 @@ function ChipEstado({ estado }) {
   );
 }
 
-// Paquete de entrevistas (27/11/2026): con extras, aviso ámbar de que se cobran aparte. El agente sigue contestando.
+// Paquete de entrevistas: con extras, aviso ámbar de que se cobran aparte. El agente sigue contestando.
 function AvisoExtras({ estado }) {
   const texto = avisoExtras(estado);
   if (!texto) return null;
@@ -159,7 +159,7 @@ export default function BandejaWhatsapp() {
     permitido ? rutaEstado(idEmpresa) : null, obtener, { refreshInterval: 60000, refreshWhenHidden: false },
   );
   const activo = estado && estado.modo !== "apagado";
-  // «Enlaces de vacantes» también con WhatsApp apagado (27/11/2026): página de la vacante y bolsa de trabajo no dependen de él.
+  // «Enlaces de vacantes» también con WhatsApp apagado: página de la vacante y bolsa de trabajo no dependen de él.
   const conEnlaces = !!estado && !errorEstado;
 
   // Búsqueda con espera corta para no pedir en cada tecla.
@@ -173,7 +173,7 @@ export default function BandejaWhatsapp() {
   // (una conversación con actividad nueva sube a la página 1 y ahí se toma la versión fresca).
   // R2: el chip de filtro viaja como parámetro; al cambiar, la clave cambia y la paginación vuelve a la página 1.
   const [filtro, setFiltro] = useState("todos");
-  // 04/12/2026: filtro por etapa del proceso de selección (se combina con el chip).
+  // Filtro por etapa del proceso de selección (se combina con el chip).
   const [etapa, setEtapa] = useState("");
   const filtroParams = useMemo(() => ({ ...paramsFiltro(filtro), ...paramsEtapa(etapa) }), [filtro, etapa]);
   const claveLista = activo && vista === "conversaciones" ? rutaConversaciones(idEmpresa, { q, pagina: 1, limite: POR_PAGINA, filtro: filtroParams }) : null;
@@ -454,7 +454,7 @@ export default function BandejaWhatsapp() {
     cargando: ofreciendo,
     onOfrecer: ofrecer,
   } : null;
-  // 04/12/2026: proceso de selección del candidato (misma postulación que en Reclutamiento).
+  // Proceso de selección del candidato (misma postulación que en Reclutamiento).
   const alCambiarProceso = useCallback(async (texto) => {
     await recargarHilo();
     recargarLista();

@@ -1,9 +1,7 @@
 "use client";
 
-// Expediente del candidato (03/12/2026: datos reales). Postulaciones de la página y de WhatsApp (04/12/2026, mismo
-// proceso): respuestas, notas, historial, etapa y «Contratar» (crea o enlaza su ficha de empleado). Las de WhatsApp
-// agregan la entrevista del agente, «Abrir chat», la sugerencia de etapa del agente (un clic) y avisarle por WhatsApp al
-// contratar, descartar u ofrecer. Solo los de WhatsApp que aún no tienen proceso se ven en solo lectura.
+// Expediente del candidato (postulaciones de la página y de WhatsApp, mismo proceso): respuestas, notas, historial,
+// etapa y «Contratar». Los de WhatsApp sin proceso se ven en solo lectura.
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {

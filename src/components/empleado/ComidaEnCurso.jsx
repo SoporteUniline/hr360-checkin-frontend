@@ -1,6 +1,6 @@
 "use client";
 
-// Contador de la comida en la app del empleado (23/11/2026, maqueta aprobada «Salir a comer»). Si salió a comer con el
+// Contador de la comida en la app del empleado. Si salió a comer con el
 // botón del reloj y aún no regresa: anillo con el tiempo de comida, a qué hora debe regresar y aviso si se pasó.
 import { useEffect, useState } from "react";
 import Link from "next/link";

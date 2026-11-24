@@ -1,6 +1,6 @@
 "use client";
 
-// Campo de respuesta de una pregunta de checklist (23/11/2026). El MISMO componente sirve para llenar en la app, para la
+// Campo de respuesta de una pregunta de checklist. El MISMO componente sirve para llenar en la app, para la
 // vista previa al crear el checklist y para que el jefe corrija al revisar. Botones grandes (sin escribir) salvo en número
 // y texto; «No aplica» si la pregunta lo permite; foto de evidencia donde se pide.
 import { useState } from "react";
@@ -70,7 +70,7 @@ function Estrellas({ valor, onElegir, grande, deshabilitado, etiqueta }) {
   );
 }
 
-// (23/11/2026) Firmar con el PIN de Mi espacio: el servidor verifica el PIN (con su candado de intentos) y estampa la
+// Firmar con el PIN de Mi espacio: el servidor verifica el PIN (con su candado de intentos) y estampa la
 // firma guardada; aquí solo se pide el código. Los errores (PIN incorrecto, bloqueado) se muestran junto al campo.
 function FirmaConPin({ firmaPin, onFirmar }) {
   const [abierto, setAbierto] = useState(false);
@@ -115,7 +115,7 @@ function FirmaConPin({ firmaPin, onFirmar }) {
 
 // Firma con el dedo: se dibuja y se confirma con «Listo»; queda la imagen y se puede volver a firmar.
 function Firma({ valor, onFirmar, deshabilitado, etiqueta, subir, firmaPin = null }) {
-  // (23/11/2026) Se dibuja con FirmaGrande: en celular a pantalla completa en horizontal; en computadora, aquí mismo.
+  // Se dibuja con FirmaGrande: en celular a pantalla completa en horizontal; en computadora, aquí mismo.
   const firmar = async (png) => {
     if (!subir) { onFirmar(URL.createObjectURL(png)); return true; }
     const llave = await subir(png, { esFirma: true });

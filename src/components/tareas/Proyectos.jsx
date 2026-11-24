@@ -1,7 +1,6 @@
 "use client";
 
-// Proyectos (prototipo 23/11/2026): un proyecto agrupa tareas que se hacen una vez y tienen fin (p. ej. «Apertura sucursal
-// Norte»). Tarjetas con avance; al abrir uno se ve su propio tablero y se le agregan tareas.
+// Proyectos: agrupan tareas que se hacen una vez y tienen fin. Tarjetas con avance; al abrir uno se ve su tablero.
 import { useState } from "react";
 import { ArrowLeft, FolderKanban, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";

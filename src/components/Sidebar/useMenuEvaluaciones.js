@@ -1,5 +1,5 @@
 "use client";
-// (23/11/2026) Entradas del menú de Evaluación de desempeño según los permisos del servidor (/capabilities):
+// Entradas del menú de Evaluación de desempeño según los permisos del servidor (/capabilities):
 // quien no ve una pestaña del módulo tampoco ve su entrada. Se consulta la empresa con la que abre el módulo
 // (la misma que elige EvaluationProvider al entrar). Mientras carga o si falla, el menú usa solo el rol;
 // las rutas siguen protegidas dentro del módulo (EvaluationModule) y en el servidor.

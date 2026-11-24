@@ -1,6 +1,6 @@
 "use client";
 
-// «Quién firmó» (23/11/2026, decisión del dueño: solo RH y dueño). Muestra la foto que se tomó al firmar, la fecha, el
+// «Quién firmó». Muestra la foto que se tomó al firmar, la fecha, el
 // método (dibujada o PIN) y el dispositivo. Cada vez que se abre queda registrado en la bitácora de la firma y se ve
 // quién más la consultó. Un empleado nunca ve este botón.
 import { useState } from "react";
@@ -44,7 +44,7 @@ export default function EvidenciaFirma({ idSolicitud, idEmpresa, className = "" 
         <UserRoundCheck className="size-4 text-brand" /> Quién firmó
       </button>
       <Dialog open={abierto} onOpenChange={setAbierto}>
-        {/* (23/11/2026) Columna con minmax(0,1fr): un texto largo ya no ensancha la ventana (se desbordaba). */}
+        {/* Columna con minmax(0,1fr): un texto largo no ensancha la ventana. */}
         <DialogContent className="grid-cols-[minmax(0,1fr)] sm:max-w-md">
           <DialogTitle className="text-lg font-extrabold text-[#080d36]">Quién firmó</DialogTitle>
           <DialogDescription className="text-sm text-slate-500">

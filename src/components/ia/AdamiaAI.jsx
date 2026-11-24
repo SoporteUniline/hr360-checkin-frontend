@@ -1,6 +1,6 @@
 "use client";
 
-// Adamia AI en el panel (23/11/2026, R1 + R2). Botón en el encabezado que abre un panel lateral con el agente de la
+// Adamia AI en el panel. Botón en el encabezado que abre un panel lateral con el agente de la
 // Ley Federal del Trabajo para la empresa: solo RH y dueño (a un empleado no le aparece). Responde con el texto oficial
 // de la LFT guardado en el sistema y cita los artículos. El dueño la enciende y pone el tope de gasto del mes.
 import { useEffect, useRef, useState } from "react";

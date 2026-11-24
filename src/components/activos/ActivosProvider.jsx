@@ -28,7 +28,7 @@ export function ActivosProvider({
   const { dataUser, isAuthChecked } = useAuth();
   const search = useSearchParams();
   const pathname = usePathname();
-  // (20/11/2026) Un solo módulo: el tipo viene de ?tipo= (inventario y categorías); sin él se ven ambos.
+  // Un solo módulo: el tipo viene de ?tipo= (inventario y categorías); sin él se ven ambos.
   const resourceType =
     compact || self || !pathname.startsWith(RAIZ_ACTIVOS)
       ? null
@@ -215,7 +215,7 @@ function CompanyProvider({
         <>
           {!compact && (
             <div className="mb-4 flex flex-wrap items-end justify-end gap-3 text-xs text-slate-500">
-              {/* (20/11/2026) Empresa y «Actualizar» en una sola fila (antes dos filas y un título repetido). */}
+              {/* Empresa y «Actualizar» en una sola fila. */}
               {selectorEmpresa}
               <span aria-live="polite">
                 {busy ? "Guardando movimiento…" : ""}

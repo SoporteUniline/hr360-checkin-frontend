@@ -65,7 +65,7 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
       setGuardando(false);
     }
   };
-  // (22/11/2026) Asignar o quitar el bono a esta persona para las próximas nóminas (su ficha), sin salir del recibo.
+  // Asignar o quitar el bono a esta persona para las próximas nóminas (su ficha), sin salir del recibo.
   const asignarPersona = async (idConcepto, loTiene) => {
     try {
       await axios.put(`/checador/nomina/conceptos/${idConcepto}/personas`, { cambios: [{ id_empleado: recibo.id_empleado, lo_tiene: loTiene }] });

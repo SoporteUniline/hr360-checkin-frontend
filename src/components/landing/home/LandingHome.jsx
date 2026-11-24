@@ -1,10 +1,7 @@
 "use client";
 
-// Página de inicio (adamia.com.mx). Diseño aprobado por el dueño el 21/11/2026.
-// - El marcado vive aquí; los estilos en ./landing-home.css (todo bajo .lh para no tocar el resto de la app);
-//   el movimiento en ./animaciones.js (se detiene y se limpia al salir de la página).
-// - Las pantallas del producto están dibujadas con código y usan datos de ejemplo, no de clientes.
-// - Las fotos son ilustrativas (generadas con IA) y viven en /public/landing.
+// Página de inicio (adamia.com.mx). Estilos en ./landing-home.css (bajo .lh para no tocar el resto de la app);
+// movimiento en ./animaciones.js (se limpia al salir). Pantallas con datos de ejemplo; fotos ilustrativas en /public/landing.
 /* eslint-disable @next/next/no-img-element -- fotos ya optimizadas (webp) dentro de contenedores animados */
 import { useEffect, useRef } from "react";
 import Link from "next/link";

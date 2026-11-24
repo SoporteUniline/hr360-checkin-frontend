@@ -2,7 +2,7 @@
 
 // «Enlaces de vacantes» (R1): vacantes abiertas de la empresa con su enlace de WhatsApp para compartir.
 // En teléfono el diálogo se pega abajo como hoja; en escritorio es un diálogo centrado.
-// 27/11/2026: interruptor «Publicar mis vacantes en la bolsa de trabajo de ADAMIA» y «Copiar enlace de la vacante»
+// Interruptor «Publicar mis vacantes en la bolsa de trabajo de ADAMIA» y «Copiar enlace de la vacante»
 // (página con formulario). Ambos funcionan aunque WhatsApp esté apagado; los enlaces de WhatsApp muestran entonces su aviso.
 // R3: cada vacante tiene «Agenda» (dónde, cuándo, cupo, horario, bloqueos y reglas propias) junto a «Entrevista».
 import { useEffect, useMemo, useRef, useState } from "react";

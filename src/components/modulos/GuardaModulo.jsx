@@ -1,5 +1,5 @@
 "use client";
-// Puerta de rutas del panel y de la app del empleado (03/12/2026, «Módulos por empresa»). Si alguien entra con la dirección
+// Puerta de rutas del panel y de la app del empleado. Si alguien entra con la dirección
 // a un módulo apagado o sin derecho, ve «Este módulo no está activo para tu empresa» en lugar de la pantalla (que además
 // recibiría 403 MODULO_INACTIVO del servidor). Las rutas de la base pasan siempre, sin esperar nada.
 // En rutas de un módulo, mientras se verifica la sesión, se espera (no se muestra la pantalla para luego quitarla).
