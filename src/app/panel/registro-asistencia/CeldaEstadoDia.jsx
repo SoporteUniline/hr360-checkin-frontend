@@ -38,7 +38,8 @@ function Debajo({ registro }) {
   );
 }
 
-export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = false, onAbrirReloj, onGuardado, movil = false }) {
+// `soloNoVino`: dentro del reloj del día (sin checadas) solo se ofrece «No vino», con aspecto de campo.
+export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = false, onAbrirReloj, onGuardado, movil = false, soloNoVino = false }) {
   const { enqueueSnackbar } = useSnackbar();
   const [pendiente, setPendiente] = useState(null); // { tipo, req, opcion, texto, goce }
   const [guardando, setGuardando] = useState(false);
@@ -98,17 +99,21 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
   return (
     <span className="flex w-full min-w-[240px] flex-col gap-1.5" data-estado-fila data-no-row-click>
       {/* Se ve como texto (igual que el «Tipo» de antes); al tocarlo despliega las opciones. */}
-      <span className="group relative inline-flex w-fit max-w-full items-center">
+      <span className={`group relative inline-flex max-w-full items-center ${soloNoVino ? "w-full" : "w-fit"}`}>
         <select aria-label={`Estado de ${nombre}`} value={valor} disabled={guardando} onChange={(e) => elegir(e.target.value)}
-          className={`${alto} max-w-full cursor-pointer appearance-none truncate rounded-md border-0 bg-transparent py-0 pl-1 pr-6 text-slate-800 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30`}>
-          {!actual && !pendiente ? <option value="">{permiso?.tipo || textoConIcono(estado.texto, falta ? "falta" : estado.clave) || "Elige el estado…"}</option> : null}
+          className={soloNoVino
+            ? `${alto} w-full cursor-pointer appearance-none truncate rounded-lg border border-slate-200 bg-white py-0 pl-2.5 pr-7 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30`
+            : `${alto} max-w-full cursor-pointer appearance-none truncate rounded-md border-0 bg-transparent py-0 pl-1 pr-6 text-slate-800 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30`}>
+          {!actual && !pendiente ? <option value="">{soloNoVino ? "Elige el estado del día…" : permiso?.tipo || textoConIcono(estado.texto, falta ? "falta" : estado.clave) || "Elige el estado…"}</option> : null}
           <optgroup label="No vino">
             {tipos.map((t) => <option key={t.id} value={String(t.id)}>{t.nombre}{requisitoEstado(t) || puedeCambiar(t).goce ? "…" : ""}</option>)}
           </optgroup>
-          <optgroup label="Sí vino → poner sus horas en el reloj">
-            <option value={SI_VINO}>Sí vino (sin permiso)</option>
-            {siVino.map((t) => <option key={t.id} value={`tp:${t.id}`}>{t.nombre}</option>)}
-          </optgroup>
+          {soloNoVino ? null : (
+            <optgroup label="Sí vino → poner sus horas en el reloj">
+              <option value={SI_VINO}>Sí vino (sin permiso)</option>
+              {siVino.map((t) => <option key={t.id} value={`tp:${t.id}`}>{t.nombre}</option>)}
+            </optgroup>
+          )}
         </select>
         <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none absolute right-1.5 h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600" fill="currentColor"><path d="M5.5 7.5 10 12l4.5-4.5" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
       </span>

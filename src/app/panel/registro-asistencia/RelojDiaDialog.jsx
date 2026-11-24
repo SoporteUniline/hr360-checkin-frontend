@@ -24,6 +24,8 @@ import {
 } from "@/lib/asistencia/relojDia.mjs";
 import { cuerpoPermisoDia, errorPermiso, normalizarTipo, permisoInicial } from "@/lib/asistencia/tiposGoce.mjs";
 import PermisoDelDia from "./PermisoDelDia";
+import CeldaEstadoDia from "./CeldaEstadoDia";
+import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import { avisosRespuesta } from "@/lib/actasEstatus.mjs";
 
 const CAMPO = "h-9 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 text-[13.5px] text-slate-900 "
@@ -133,6 +135,7 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   const [guardando, setGuardando] = useState(false);
   // «Permiso del día»: undefined = aún no se carga; null = sin permiso.
   const [permiso, setPermiso] = useState(undefined);
+  const { data: tiposPermiso } = useTiposPermisoData();
   const tiposParciales = useMemo(() => (Array.isArray(data?.tipos_parciales) ? data.tipos_parciales : []), [data]);
   const permisoGuardado = useMemo(() => permisoInicial(data?.permiso_dia, tiposParciales), [data, tiposParciales]);
   useEffect(() => {
@@ -259,6 +262,13 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                         <button type="button" disabled={!h} onClick={() => cambiar((p) => [...p, ...horarioNormal(horario, motivoCarga)])}
                           className={cn(BOTON, "border-blue-600 bg-blue-600 text-white hover:bg-blue-700")}>Cargar su horario normal</button>
                         <button type="button" onClick={() => cambiar((p) => agregarRegistro(p, horario))} className={BOTON}>Escribir las horas</button>
+                      </div>
+                      {/* Si no vino: el estado del día aquí mismo (igual que en la fila de Asistencias). */}
+                      <div data-reloj-no-vino className="flex flex-col gap-2 border-t border-amber-200 pt-3">
+                        <b className="text-[14px] text-amber-900">¿No vino?</b>
+                        <span className="text-[12.5px] text-amber-900/80">Marca el día: falta justificada o injustificada, vacaciones, incapacidad… Pide motivo o folio cuando el tipo lo necesita.</span>
+                        <CeldaEstadoDia registro={registro} tiposPermiso={tiposPermiso} soloNoVino
+                          onGuardado={async (a) => { await onGuardado?.(a); onCerrar?.(true); }} />
                       </div>
                     </div>
                   ) : null}
