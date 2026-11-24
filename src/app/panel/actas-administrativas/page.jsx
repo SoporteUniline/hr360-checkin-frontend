@@ -18,7 +18,10 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import useSWR from "swr";
+import { fetcherWithToken } from "@/lib/fetcher";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { AdministrativeDetailsModal } from "@/components/AdministrativeDetailsModal";
 import {
@@ -34,7 +37,7 @@ import {
 import { administrativeMinutesApi } from "@/lib/administrativeMinutesApi";
 import { useSnackbar } from "notistack";
 
-const page = () => {
+const ActasAdministrativasPage = () => {
   const { enqueueSnackbar } = useSnackbar();
   const [empresaSeleccionada] = useState("all");
   const [page, setPage] = useState(1);
@@ -51,6 +54,19 @@ const page = () => {
   const [openView, setOpenView] = useState(false);
   const [deleteRow, setDeleteRow] = useState(null);
   const { dataUser } = useAuth();
+  // Enlace desde Asistencias («📄 Acta en borrador»): ?acta=<id_acta> abre su detalle.
+  const searchParams = useSearchParams();
+  const actaEnlace = searchParams.get("acta");
+  const [enlaceAbierto, setEnlaceAbierto] = useState(null);
+  const { data: dataEnlace } = useSWR(
+    actaEnlace ? `/checador/administrativeMinutes?page=1&limit=500&id_acta=${encodeURIComponent(actaEnlace)}` : null,
+    fetcherWithToken,
+  );
+  useEffect(() => {
+    if (!actaEnlace || enlaceAbierto === actaEnlace) return;
+    const acta = (dataEnlace?.data ?? []).find((a) => String(a.id_acta) === String(actaEnlace));
+    if (acta) { setActaToView(acta); setOpenView(true); setEnlaceAbierto(actaEnlace); }
+  }, [actaEnlace, dataEnlace, enlaceAbierto]);
   const {
     data,
     mutate: mutateActas,
@@ -138,11 +154,18 @@ const page = () => {
         />
 
         {/* Estadísticas - Diseño ADAMIA */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <StatCard
             title="Total actas"
             value={stats?.totalActas ?? 0}
             icon={FileText}
+            accent="gray"
+          />
+
+          <StatCard
+            title="Borradores"
+            value={stats?.totalBorradores ?? 0}
+            icon={ScrollText}
             accent="gray"
           />
 
@@ -272,4 +295,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default ActasAdministrativasPage;

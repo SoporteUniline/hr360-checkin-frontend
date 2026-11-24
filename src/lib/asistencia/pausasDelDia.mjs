@@ -1,4 +1,4 @@
-// (23/11/2026, pedido del dueño) Ventana del día: ver fácil cuál hueco entre checadas fue la COMIDA.
+// Ventana del día: ver fácil cuál hueco entre checadas fue la COMIDA.
 // Entre dos tramos del reloj hay una pausa; es «comida» si la salida del tramo se marcó con «Salir a comer»
 // (tipo_cierre = 'comida') o coincide con la salida de la comida checada del día. Si la persona sigue comiendo (el tramo
 // de comida es el último y no ha regresado), la pausa queda abierta y cuenta hasta «ahora».

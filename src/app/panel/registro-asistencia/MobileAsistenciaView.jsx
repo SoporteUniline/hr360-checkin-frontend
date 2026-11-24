@@ -19,6 +19,9 @@ import MobileFiltersDrawer from "./MobileFiltersDrawer";
 import MobileEmpleadoDetalle from "./MobileEmpleadoDetalle";
 import EtiquetaPermisoHoras from "./EtiquetaPermisoHoras";
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
+import { permisoFila } from "@/lib/asistencia/tiposGoce.mjs";
+import { estadoMotivo } from "@/lib/asistencia/quePasoMotivo.mjs";
+import { actaFila } from "@/lib/actasEstatus.mjs";
 import { formatearMinutos, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 import ClockNavigation from '@/components/Clock/ClockNavigation';
 import LocalClockCaptures from '@/components/Clock/LocalClockCaptures';
@@ -120,6 +123,10 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
 
   const esTarde = registro.estadoAsistencia === "Tardanza";
   const extra = infoExtra(registro);
+  // «⌚ Entrada tarde · Visita al médico · 2 h · las repone» / «📝 Inasistencia · Permiso personal · sin goce».
+  const linea = estadoMotivo(registro, null, { ley: false });
+  const permiso = linea ? null : permisoFila(registro);
+  const acta = actaFila(registro);
 
   return (
     <button
@@ -149,6 +156,14 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
           <p className="mt-0.5 truncate text-[11px] font-semibold text-amber-700">⚠ No marcó salida a comer</p>
         )}
         {registro.permiso_horas && <EtiquetaPermisoHoras permiso={registro.permiso_horas} className="mt-1" />}
+        {linea ? <p data-permiso-movil className="mt-0.5 whitespace-normal break-words text-[12px] font-medium leading-snug text-slate-700">{linea}</p> : null}
+        {permiso ? (
+          <p data-permiso-movil className="mt-0.5 whitespace-normal break-words text-[12px] leading-snug text-slate-500">
+            {permiso.tipo ? <span className="font-medium text-slate-700">{permiso.tipo}</span> : null}
+            {permiso.tipo && permiso.detalle ? " · " : ""}{permiso.detalle}
+          </p>
+        ) : null}
+        {acta ? <p data-acta-movil className="mt-0.5 text-[12px] font-medium text-blue-700">{acta.texto}</p> : null}
       </div>
 
       {/* Times */}
@@ -768,6 +783,7 @@ export default function MobileAsistenciaView({
             </div>
           )}
         </div>
+        {abrirFormulario ? (
         <button
           onClick={abrirFormulario}
           className="flex items-center gap-1.5 bg-brand text-white text-xs font-semibold px-4 min-h-[44px] rounded-xl shadow-[0_8px_20px_rgba(37,99,235,0.32)] shrink-0 active:opacity-90"
@@ -775,6 +791,7 @@ export default function MobileAsistenciaView({
           <Plus className="w-3.5 h-3.5" />
           Masivo
         </button>
+        ) : null}
       </div>
 
       {/* ─── Drawers ─── */}

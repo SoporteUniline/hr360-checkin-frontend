@@ -1,6 +1,6 @@
 import { RESPONSABLE as R, pendiente } from "./responsable";
 
-// Documentos legales de ADAMIA (borrador del 21/11/2026 para revisión de un abogado antes de producción).
+// Documentos legales de ADAMIA (borrador para revisión de un abogado antes de producción).
 // `version` se guarda con cada aceptación: si un texto cambia de fondo, cambia la versión.
 // Marco: Ley Federal de Protección de Datos Personales en Posesión de los Particulares (DOF 20/03/2025).
 

@@ -1,6 +1,6 @@
 "use client";
 
-// Piezas comunes del módulo Tareas (prototipo 23/11/2026).
+// Piezas comunes del módulo Tareas.
 import { useEffect, useState } from "react";
 import axios from "@/lib/axios";
 

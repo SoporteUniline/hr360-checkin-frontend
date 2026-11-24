@@ -1,4 +1,4 @@
-// Verificación en navegador: Empleados → «Cambiar contraseña» (23/11/2026) y títulos de módulo del menú. Backend simulado.
+// Verificación en navegador: Empleados → «Cambiar contraseña» y títulos de módulo del menú. Backend simulado.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-contrasena-empleado.mjs
 import assert from "node:assert/strict";
 import { createHmac, randomUUID } from "node:crypto";
@@ -51,7 +51,7 @@ try {
     if (p.endsWith("/users/verify/token")) return json({ user: usuario });
     if (p === "/checador/empleados/15/contrasena" && req.method() === "PUT") {
       puts.push(req.postDataJSON());
-      // (23/11/2026) La primera vez el servidor no está disponible (503): no debe quedarse en «Guardando…».
+      // La primera vez el servidor no está disponible (503): no debe quedarse en «Guardando…».
       if (puts.length === 1) return route.fulfill({ status: 503, contentType: "text/html", headers: cors, body: "<html>503</html>" });
       return json({ ok: true, correo: "ana@prueba.mx" });
     }

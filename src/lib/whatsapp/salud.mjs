@@ -1,6 +1,5 @@
-// Salud del agente de WhatsApp y cobro (P7, 01/12/2026). Lógica pura: textos en español claro (sin códigos crudos),
-// formatos, aviso de la bandeja, escala de la gráfica y semáforo. El backend cuenta; aquí solo se presenta.
-// API: GET /salud, GET /salud/eventos, GET /admin/salud y `salud` dentro de GET /estado (ver docs del backend, «P7»).
+// Salud del agente de WhatsApp y cobro. Lógica pura: textos claros (sin códigos crudos), formatos y semáforo; el
+// backend cuenta. API: GET /salud, GET /salud/eventos, GET /admin/salud y `salud` dentro de GET /estado.
 
 const entero = (v) => {
   const n = Number(v);

@@ -315,7 +315,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
     const marginLeft = 20;
     const marginRight = 20;
     const contentWidth = pageWidth - marginLeft - marginRight;
-    const systemLabel = "ADAMIA HR360";
+    const systemLabel = "ADAMIA";
     let y = marginLeft;
 
     const empresaNombre =

@@ -1,5 +1,6 @@
 "use client";
 
+import { AVISO_AUDIENCIA, ESTATUS_ACTA, claseEstatus, etiquetaEstatus } from "@/lib/actasEstatus.mjs";
 import {
   Dialog,
   DialogContent,
@@ -190,24 +191,11 @@ export const AdministrativeDetailsModal = ({
   // Mantener el guard clause DESPUÉS de TODOS los hooks (para no romper el orden).
   if (!acta) return null;
 
-  const estatusOptions = [
-    { value: "elaborada", label: "Elaborada" },
-    { value: "notificada", label: "Notificada" },
-    { value: "cerrada", label: "Cerrada" },
-  ];
+  // Borrador (lo crea el sistema con una falta injustificada) → elaborada con este mismo control; cancelada si no procede.
+  const estatusOptions = ESTATUS_ACTA;
+  const esBorrador = String(estatusLocal || "").toLowerCase() === "borrador";
 
-  const badgeClassByEstatus = (estatus) => {
-    const e = String(estatus || "").toLowerCase();
-    return `capitalize px-3 py-1 rounded-2xl text-xs font-semibold ${
-      e === "elaborada"
-        ? "bg-blue-200 text-blue-800"
-        : e === "cerrada"
-        ? "bg-red-200 text-red-800"
-        : e === "notificada"
-        ? "bg-emerald-200 text-emerald-800"
-        : "bg-purple-200 text-purple-800"
-    }`;
-  };
+  const badgeClassByEstatus = (estatus) => `px-3 py-1 rounded-2xl text-xs font-semibold ${claseEstatus(estatus)}`;
 
   const onGuardarEstatus = async () => {
     try {
@@ -275,7 +263,7 @@ export const AdministrativeDetailsModal = ({
     const marginLeft = 20;
     const marginRight = 20;
     const contentWidth = pageWidth - marginLeft - marginRight;
-    const systemLabel = "ADAMIA HR360";
+    const systemLabel = "ADAMIA";
     let y = marginLeft;
 
     const safe = (value) =>
@@ -943,8 +931,8 @@ export const AdministrativeDetailsModal = ({
             <div className="flex justify-between pt-1 pb-2 border-b-1">
               <p className="text-gray-500">Estatus:</p>
               <div className="flex items-center gap-2">
-                <span className={badgeClassByEstatus(estatusLocal)}>
-                  {estatusLocal}
+                <span data-estatus-detalle className={badgeClassByEstatus(estatusLocal)}>
+                  {etiquetaEstatus(estatusLocal)}
                 </span>
 
                 {/* Botón rápido: cambiar estatus sin entrar a "Editar". */}
@@ -963,6 +951,11 @@ export const AdministrativeDetailsModal = ({
                 </Button>
               </div>
             </div>
+            {esBorrador ? (
+              <p data-aviso-audiencia className="my-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
+                Borrador creado por una falta injustificada. {AVISO_AUDIENCIA}
+              </p>
+            ) : null}
             <div className="flex justify-between pt-2 pb-2 border-b-1">
               <p className="text-gray-500">Reincidencia:</p>
               <p className="font-semibold">
@@ -1167,6 +1160,7 @@ export const AdministrativeDetailsModal = ({
                 <AlertDialogDescription className="text-sm">
                   Selecciona el nuevo estatus para el acta{" "}
                   <span className="font-semibold">{acta.folio}</span>.
+                  {esBorrador ? <span className="mt-2 block">{AVISO_AUDIENCIA}</span> : null}
                 </AlertDialogDescription>
               </div>
 

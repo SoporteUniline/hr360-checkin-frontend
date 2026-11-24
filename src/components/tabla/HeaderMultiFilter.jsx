@@ -14,6 +14,7 @@ export default function HeaderMultiFilter({
   onChange,
   options = [],
   placeholder,
+  formatOption = (option) => option,
 }) {
   const [search, setSearch] = useState("");
 
@@ -21,9 +22,9 @@ export default function HeaderMultiFilter({
     const normalizedSearch = search.toLowerCase().trim();
     if (!normalizedSearch) return options;
     return options.filter((option) =>
-      option.toLowerCase().includes(normalizedSearch),
+      String(formatOption(option)).toLowerCase().includes(normalizedSearch),
     );
-  }, [options, search]);
+  }, [options, search, formatOption]);
 
   const toggleOption = (value) => {
     if (selected.includes(value)) {
@@ -87,7 +88,7 @@ export default function HeaderMultiFilter({
               className="flex items-center gap-2 w-full px-2 py-1.5 text-xs hover:bg-gray-100 rounded text-left cursor-pointer"
             >
               <Checkbox checked={selected.includes(option)} />
-              <span>{option}</span>
+              <span>{formatOption(option)}</span>
             </div>
           ))}
 

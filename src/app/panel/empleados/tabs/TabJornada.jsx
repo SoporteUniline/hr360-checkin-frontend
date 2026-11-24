@@ -32,7 +32,12 @@ const DIAS_SEMANA = [
   "Domingo",
 ];
 
-export default function TabJornada({ renderCampos = () => null, form, soloLectura, empleadoId }) {
+
+// El turno asignado se pide UNA vez por ficha abierta: la pestaña se desmonta al cambiar y, si se volviera a pedir,
+// pisaría el turno que RH eligió sin guardar.
+const turnoYaCargado = new WeakMap(); // form.control → id del empleado cuyo turno ya se cargó
+
+export default function TabJornada({ renderCampos = () => null, form, soloLectura, empleadoId, sincronizarCampo }) {
   const [diasSeleccionados, setDiasSeleccionados] = useState([]);
   const [entradaComun, setEntradaComun] = useState("");
   const [salidaComun, setSalidaComun] = useState("");
@@ -132,7 +137,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
     });
 
     // Actualiza los horarios en el formulario
-    form.setValue("horarios", actualizados, { shouldValidate: true });
+    form.setValue("horarios", actualizados, { shouldValidate: true, shouldDirty: true });
 
     // 🔄 Limpiar campos comunes
     setEntradaComun("");
@@ -148,7 +153,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
     const actualizados = horarios.map((h) =>
       h.dia === dia ? { ...h, [campo]: valor } : h,
     );
-    form.setValue("horarios", actualizados, { shouldValidate: true });
+    form.setValue("horarios", actualizados, { shouldValidate: true, shouldDirty: true });
   };
 
   useEffect(() => {
@@ -203,6 +208,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
 
   useEffect(() => {
     if (!empleadoId) return;
+    if (turnoYaCargado.get(form.control) === empleadoId) return;
 
     // Si el usuario ya cambió manualmente el tipo de horario
     // durante esta edición, no pisamos su selección.
@@ -213,6 +219,18 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
     if (tipoModificado) return;
 
     let cancelado = false;
+
+    // El turno que ya tiene asignado viene del servidor: es la base de la ficha, no un cambio sin guardar.
+    const fijarTurno = (tipo, idTurno) => {
+      turnoYaCargado.set(form.control, empleadoId);
+      if (sincronizarCampo) {
+        sincronizarCampo("tipo_horario", tipo);
+        sincronizarCampo("id_turno", idTurno);
+        return;
+      }
+      form.setValue("tipo_horario", tipo, { shouldDirty: false, shouldValidate: false });
+      form.setValue("id_turno", idTurno, { shouldDirty: false, shouldValidate: false });
+    };
 
     const cargarTurnoEmpleado = async () => {
       try {
@@ -232,39 +250,15 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
         const turnoId = turno?.id_turno;
 
         if (turnoId) {
-          form.setValue("tipo_horario", "turno", {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
-
-          form.setValue("id_turno", String(turnoId), {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
+          fijarTurno("turno", String(turnoId));
         } else {
-          form.setValue("tipo_horario", "personalizado", {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
-
-          form.setValue("id_turno", null, {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
+          fijarTurno("personalizado", null);
         }
       } catch (error) {
         if (cancelado) return;
 
         if (error?.response?.status === 404) {
-          form.setValue("tipo_horario", "personalizado", {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
-
-          form.setValue("id_turno", null, {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
+          fijarTurno("personalizado", null);
         } else {
           console.error("Error cargando turno del empleado:", error);
         }
@@ -280,7 +274,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
     return () => {
       cancelado = true;
     };
-  }, [empleadoId, form]);
+  }, [empleadoId, form, sincronizarCampo]);
 
   const seleccionarTurno = async (valor) => {
     try {

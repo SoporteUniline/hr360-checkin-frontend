@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import dayjs from "dayjs";
 import {
   Dialog,
@@ -31,6 +31,11 @@ import PermisoCancelacionDiasPasadosDialog from "./PermisoCancelacionDiasPasados
 import { CalendarCheck2, Save } from "lucide-react";
 import CamposPermisoHoras, { datosPermisoHoras, erroresPermisoHoras } from "./CamposPermisoHoras";
 import { hhmm } from "@/lib/fechaHora.mjs";
+import useSWR from "swr";
+import { fetcherWithToken } from "@/lib/fetcher";
+import CamposQuePaso from "./CamposQuePaso";
+import { tipoHorasDe } from "@/lib/asistencia/tiposGoce.mjs";
+import { aplicado, camposSolicitud, claseDe, faltaPar, parDesdeSolicitud, parVacio } from "@/lib/asistencia/quePasoMotivo.mjs";
 
 const esPorHoras = (item) => item?.modalidad === "horas";
 
@@ -58,14 +63,33 @@ export default function PermisoDialog({
     fecha_fin: "",
     motivo: "",
     estado: "Pendiente",
-    // Permisos por horas (20/11/2026)
+    // Permisos por horas
     modalidad: "dias",
     tipo_horas: "",
     tratamiento: "",
     hora_inicio: "",
     hora_fin: "",
+    // «Qué pasó» (id_tipo_permiso) + «Motivo»: el goce y las horas vienen del motivo (lib/asistencia/quePasoMotivo.mjs).
+    par: parVacio(),
   });
-  const porHoras = form.modalidad === "horas";
+  const tipoSel = (Array.isArray(tiposPermiso) ? tiposPermiso : []).find((t) => String(t.id) === String(form.id_tipo_permiso)) ?? null;
+  // Un tipo que abarca parte del día (entrada, salida o en medio) siempre es por horas y ya dice cuál; con los demás se
+  // elige «Días completos» o «Por horas» como siempre.
+  const parcial = Boolean(tipoSel && claseDe(tipoSel) === "parcial");
+  const porHoras = parcial || form.modalidad === "horas";
+  const { data: dataMotivos } = useSWR(open ? "/checador/motivos-permiso" : null, fetcherWithToken, { revalidateOnFocus: false });
+  const nuevos = () => camposSolicitud(form.par, tipoSel, dataMotivos, { rh: true });
+  const ap = aplicado(form.par, tipoSel, dataMotivos);
+  // El motivo guardado se lee otra vez cuando llega el catálogo de motivos, mientras no se haya tocado.
+  const parTocado = useRef(false);
+  useEffect(() => {
+    if (open && isEdit && dataMotivos && !parTocado.current) setForm((f) => ({ ...f, par: parDesdeSolicitud(editItem, dataMotivos) }));
+  }, [open, isEdit, editItem, dataMotivos]);
+  const elegirTipo = (v) => {
+    const t = (Array.isArray(tiposPermiso) ? tiposPermiso : []).find((x) => String(x.id) === v);
+    setForm((f) => ({ ...f, id_tipo_permiso: v, par: { ...f.par, goce: null, horas: null },
+      ...(t && claseDe(t) === "parcial" ? { modalidad: "horas", tipo_horas: tipoHorasDe(t) } : {}) }));
+  };
 
   // Catálogo y selección de empleados
   const [empleados, setEmpleados] = useState([]); // [{ id, nombre }]
@@ -155,12 +179,17 @@ export default function PermisoDialog({
       tratamiento: editItem?.tratamiento || "",
       hora_inicio: hhmm(editItem?.hora_inicio) ?? "",
       hora_fin: hhmm(editItem?.hora_fin) ?? "",
+      par: parDesdeSolicitud(editItem, dataMotivos),
     });
+    parTocado.current = false;
     setErrors([]);
     // Evitar fugas de estado entre ediciones (cancelación con días pasados).
     setDiasPasadosPayload(null);
     setFechasPasadasPendientes([]);
     setOpenCancelDiasPasados(false);
+    // Solo al abrir o cambiar de registro: si el catálogo de motivos llega después, el motivo guardado se vuelve a leer
+    // abajo (sin reiniciar lo que el usuario ya cambió).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editItem, open, idEmpresa, isEdit]);
 
   // Nota: antes se bloqueaba la edición cuando el periodo ya había finalizado.
@@ -170,8 +199,10 @@ export default function PermisoDialog({
     // Validaciones de formulario con mensajes amigables
     const errs = [];
     if (!form.id_tipo_permiso) errs.push("Selecciona el tipo de permiso.");
+    const faltaMotivo = tipoSel ? faltaPar(form.par, tipoSel, dataMotivos, { motivoObligatorio: true }) : "";
+    if (faltaMotivo) errs.push(faltaMotivo);
     if (porHoras) {
-      errs.push(...erroresPermisoHoras(form));
+      errs.push(...erroresPermisoHoras(form, { conTipo: parcial }));
     } else {
       if (!form.fecha_inicio) errs.push("La fecha de inicio es obligatoria.");
       if (!form.fecha_fin) errs.push("La fecha fin es obligatoria.");
@@ -213,6 +244,7 @@ export default function PermisoDialog({
             ? dayjs(editItem.fecha_fin).format("YYYY-MM-DD")
             : "") !== (form.fecha_fin || "") ||
           String(editItem.motivo || "") !== String(form.motivo || "") ||
+          JSON.stringify(nuevos()) !== JSON.stringify(camposSolicitud(parDesdeSolicitud(editItem, dataMotivos), tipoSel, dataMotivos, { rh: true })) ||
           (esPorHoras(editItem) ? "horas" : "dias") !== form.modalidad ||
           (porHoras && (
             String(editItem.tipo_horas || "") !== form.tipo_horas ||
@@ -230,15 +262,19 @@ export default function PermisoDialog({
             motivo: form.motivo || null,
             id_empresa: Number(idEmpresaSeleccionada),
             ...(porHoras ? datosPermisoHoras(form) : { modalidad: "dias" }),
+            ...nuevos(),
           });
         }
         // Si el estado cambió respecto al original, actualizar estado
         if (form.estado && form.estado !== editItem?.estado) {
           // Si se cancela y hay días pasados, mandamos el payload `dias_pasados` (si existe).
+          // Al aprobar, RH decide el goce (si el tipo lo deja cambiar): viaja con el cambio de estado.
           const extra =
             form.estado === "Cancelado" && Array.isArray(diasPasadosPayload)
               ? { dias_pasados: diasPasadosPayload }
-              : null;
+              : form.estado === "Aprobado" && ap.r.goceCambia && ap.goce && !parcial
+                ? { goce: ap.goce }
+                : null;
           await permisosApi.actualizarEstado(
             editItem.id,
             form.estado,
@@ -257,6 +293,7 @@ export default function PermisoDialog({
             id_tipo_permiso: Number(form.id_tipo_permiso),
             motivo: form.motivo || null,
             ...datosPermisoHoras(form),
+            ...nuevos(),
           });
         }
         enqueueSnackbar(idsTarget.length === 1 ? "Permiso por horas creado." : `${idsTarget.length} permisos por horas creados.`, {
@@ -269,6 +306,7 @@ export default function PermisoDialog({
           fecha_inicio: form.fecha_inicio,
           fecha_fin: form.fecha_fin || null,
           motivo: form.motivo || null,
+          ...nuevos(),
         });
 
         enqueueSnackbar("Permiso(s) creado(s) correctamente.", {
@@ -292,10 +330,6 @@ export default function PermisoDialog({
 
   const filteredEmpleados = empleados.filter((e) =>
     e.nombre.toLowerCase().includes(empleadosBusqueda.trim().toLowerCase()),
-  );
-
-  const arrayFiltered = tiposPermiso.filter(
-    (permiso) => permiso.es_permiso === 1,
   );
 
   // Tipos de registro para reclasificación (se usa el mismo catálogo `tiposPermiso`).
@@ -431,35 +465,9 @@ export default function PermisoDialog({
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Tipo de permiso */}
-              <div className="space-y-2">
-                <Label>Tipo de Permiso</Label>
-
-                <Select
-                  value={form.id_tipo_permiso}
-                  onValueChange={(v) =>
-                    setForm((f) => ({ ...f, id_tipo_permiso: v }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar tipo..." />
-                  </SelectTrigger>
-                  <SelectContent
-                    className="max-h-64 overflow-y-auto"
-                    position="popper"
-                    align="start"
-                  >
-                    {Array.isArray(arrayFiltered) &&
-                      arrayFiltered.map((t) => (
-                        <SelectItem key={t.id} value={String(t.id)}>
-                          {t.nombre}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            {/* Qué pasó + Motivo (el goce y las horas vienen del motivo). */}
+            <CamposQuePaso tipos={tiposPermiso} idTipo={form.id_tipo_permiso} onTipo={elegirTipo} motivos={dataMotivos}
+              par={form.par} onPar={(par) => { parTocado.current = true; setForm((f) => ({ ...f, par })); }} errorMotivo={errors.length > 0} />
 
             {/* Selección de empleado en edición (simple) */}
             {isEdit ? (
@@ -526,7 +534,8 @@ export default function PermisoDialog({
               </div>
             ) : null}
 
-            {/* Días completos o por horas (20/11/2026) */}
+            {/* Días completos o por horas (si el tipo abarca parte del día, ya lo dice el tipo). */}
+            {parcial ? null : (
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Duración</Label>
               <div className="inline-flex w-full overflow-hidden rounded-lg border border-slate-200 sm:w-auto" role="radiogroup" aria-label="Duración del permiso">
@@ -539,8 +548,13 @@ export default function PermisoDialog({
                 ))}
               </div>
             </div>
+            )}
 
-            {porHoras && <CamposPermisoHoras form={form} setForm={setForm} />}
+            {porHoras && (
+              <CamposPermisoHoras form={form} setForm={setForm} tipoFijo={parcial}
+                horas={parcial && ap.motivo ? { valor: ap.horas ?? "reponen", bloqueado: !ap.r.horasCambian,
+                  onChange: (v) => { parTocado.current = true; setForm((f) => ({ ...f, par: { ...f.par, horas: v } })); } } : null} />
+            )}
 
             {/* Fechas */}
             {!porHoras && (
@@ -637,7 +651,7 @@ export default function PermisoDialog({
             {/* Motivo y notas */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">
-                Motivo / Observaciones
+                Observaciones
               </Label>
               <Textarea
                 rows={4}

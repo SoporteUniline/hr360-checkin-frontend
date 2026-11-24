@@ -1,6 +1,6 @@
 "use client";
 
-// Cumplimiento de checklists (23/11/2026, conectado a la API): % promedio por persona en el periodo (lo que aprobó el
+// Cumplimiento de checklists: % promedio por persona en el periodo (lo que aprobó el
 // revisor, según el peso de cada pregunta; no enviado = 0 %; no aplica y por revisar no cuentan), a tiempo y tarde, y si
 // gana el bono. Abajo, productividad: las preguntas que más fallan. Todo lo calcula el servidor; se exporta a Excel.
 import { useState } from "react";

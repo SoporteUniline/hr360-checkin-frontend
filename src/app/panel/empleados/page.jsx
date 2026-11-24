@@ -64,7 +64,6 @@ export default function RegistroEmpleados() {
   const [limit, setLimit] = useState(10);
   const [modoFormulario, setModoFormulario] = useState(false);
   const [editar, setEditar] = useState(false);
-  const [soloLectura, setSoloLectura] = useState(false);
   const [values, setValues] = useState(null);
   const [sincronizandoEmpleados, setSincronizandoEmpleados] = useState(false);
   const [modalImportacionAbierto, setModalImportacionAbierto] = useState(false);
@@ -117,9 +116,8 @@ export default function RegistroEmpleados() {
   useEffect(() => {
     const idParam = searchParams.get("id");
     if (!idParam) return;
-    // modo=editar abre en edición; por defecto, solo lectura.
-    const editarParam = searchParams.get("modo") === "editar";
-    abrirFormulario({ id_empleado: idParam }, editarParam, !editarParam);
+    // Siempre abre editable (también con ?modo=editar, que sigue funcionando).
+    abrirFormulario({ id_empleado: idParam });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -191,11 +189,9 @@ export default function RegistroEmpleados() {
   };
   // console.log(dataUser);
 
-  const abrirFormulario = async (
-    empleado = null,
-    modoEditar = false,
-    lectura = false,
-  ) => {
+  // «En cuanto entre ya pueda editar»: un empleado existente abre directo en edición (sin el paso de solo
+  // lectura con botón «Editar»); sin empleado, abre el alta.
+  const abrirFormulario = async (empleado = null) => {
     if (!empleado) {
       if (!idEmpresa || idEmpresa === "all") {
         setMensajeCapacidad(
@@ -221,9 +217,8 @@ export default function RegistroEmpleados() {
     console.log(empleado);
 
     setValues(empleado);
-    setEditar(modoEditar);
+    setEditar(Boolean(empleado));
     setModoFormulario(true);
-    setSoloLectura(lectura);
   };
 
   const resetFilters = () => {
@@ -336,9 +331,6 @@ export default function RegistroEmpleados() {
             limit={limit}
             setModoFormulario={setModoFormulario}
             modoFormulario={modoFormulario}
-            soloLectura={soloLectura}
-            setEditar={setEditar}
-            setSoloLectura={setSoloLectura}
             mutate={mutate}
           />
         </div>
@@ -391,9 +383,6 @@ export default function RegistroEmpleados() {
             limit={limit}
             setModoFormulario={setModoFormulario}
             modoFormulario={modoFormulario}
-            soloLectura={soloLectura}
-            setEditar={setEditar}
-            setSoloLectura={setSoloLectura}
             mutate={mutate}
           />
         ) : (

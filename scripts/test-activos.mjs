@@ -1,6 +1,5 @@
-// Cálculos de pantalla del módulo de activos y uniformes (src/lib/activos/model.mjs).
-// (20/11/2026) Antes este archivo probaba el modelo de demostración, que ya no existe; las reglas de
-// inventario reales se prueban contra MySQL en scripts/test-activos-api.mjs.
+// Cálculos de pantalla del módulo de activos y uniformes (src/lib/activos/model.mjs). Las reglas de inventario
+// reales se prueban contra MySQL en scripts/test-activos-api.mjs.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { assigned, companiesFor, employeeLines, kitLines, outstanding, today } from "../src/lib/activos/model.mjs";

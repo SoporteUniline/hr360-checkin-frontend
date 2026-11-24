@@ -229,8 +229,8 @@ export default function TabPersonales({ renderCampos = () => null, form, soloLec
             )}
           />
           {renderCampos("nss")}
-          {/* (23/11/2026) CURP, RFC y NSS salían dos veces (aquí y en «Documentos oficiales»). Quedan una sola vez; los campos
-              personalizados que estaban colocados en aquella sección se muestran aquí. */}
+          {/* CURP, RFC y NSS van solo aquí (no en «Documentos oficiales»); los campos personalizados de aquella
+              sección se muestran aquí. */}
           {renderCampos("documento_curp")}
           {renderCampos("documento_rfc")}
           {renderCampos("documento_nss")}
@@ -245,7 +245,7 @@ export default function TabPersonales({ renderCampos = () => null, form, soloLec
                 </FormLabel>
                 <Select
                   onValueChange={field.onChange}
-                  value={field.value !== "" ? field.value : "sin-seleccion"}
+                  value={field.value ? String(field.value) : "sin-seleccion"}
                   disabled={soloLectura}
                 >
                   <FormControl>
@@ -260,6 +260,10 @@ export default function TabPersonales({ renderCampos = () => null, form, soloLec
                     <SelectItem value="Masculino">Masculino</SelectItem>
                     <SelectItem value="Femenino">Femenino</SelectItem>
                     <SelectItem value="Otro">Otro</SelectItem>
+                    {/* Dato guardado con otro texto (p. ej. «F»): se muestra tal cual para no perderlo. */}
+                    {field.value && !["sin-seleccion", "Masculino", "Femenino", "Otro"].includes(field.value) ? (
+                      <SelectItem value={String(field.value)}>{String(field.value)}</SelectItem>
+                    ) : null}
                   </SelectContent>
                 </Select>
                 <FormMessage />

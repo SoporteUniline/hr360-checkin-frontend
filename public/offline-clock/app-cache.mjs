@@ -115,7 +115,7 @@ export function installOfflineFetch(base) {
     const isApi = eligibleApi(url);
     const authorization = request.headers.get('authorization');
     const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : cookieToken();
-    // (23/11/2026) Si el navegador bloquea el almacenamiento (Safari privado, sitio sin permisos), seguir sin caché en
+    // Si el navegador bloquea el almacenamiento (Safari privado, sitio sin permisos), seguir sin caché en
     // lugar de rechazar la petición con un DOMException.
     let owner = null, publicKey = null;
     try { owner = await ownerKey(token); publicKey = await publicOwner(url); } catch { owner = null; publicKey = null; }

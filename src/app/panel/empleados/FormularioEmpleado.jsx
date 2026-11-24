@@ -1,9 +1,10 @@
 "use client";
 
 import useCamposPersonalizados from "@/hooks/useCamposPersonalizados";
+import Link from "next/link";
 import { CamposEmpleado } from "@/components/CamposEmpleado";
 import { parseCampos } from "@/lib/camposPersonalizados.mjs";
-import React, { Fragment, useEffect, useRef, useState } from "react";
+import React, { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   Form,
@@ -51,6 +52,15 @@ import TabGPS from "./tabs/TabGPS";
 import PanelEmpleadoDocumentos from "@/app/panel/panel-empleado/components/PanelEmpleadoDocumentos";
 import BotonCredencial from "@/components/BotonCredencial";
 import { toPng } from "html-to-image";
+import { qrComoDataUrl } from "@/lib/qrImagen.mjs";
+import { camposCambiados, copiarValores, hayCambiosPendientes, valoresIguales } from "@/lib/cambiosPendientes.mjs";
+import { useGuardiaSalida } from "@/components/cambios/CambiosPendientes";
+import EstadoCambios from "@/components/cambios/EstadoCambios";
+import { fechaParaInput } from "@/lib/fechaInput.mjs";
+
+// Campos que no cuentan como «cambios sin guardar»: las horas por día y de comida se recalculan solas a
+// partir de los horarios (que sí cuentan) y el rostro se revisa aparte (solo cuenta si RH capturó uno nuevo).
+const NO_CUENTAN_COMO_CAMBIO = ["hrs_por_dia", "hrs_de_comida", "descriptor_facial"];
 
 export default function FormularioEmpleado({
   modoFormulario,
@@ -59,12 +69,12 @@ export default function FormularioEmpleado({
   values = null,
   page,
   limit,
+  // Solo para mostrar la ficha sin editar: la ficha abre siempre editable y no hay permiso de «ver sin editar» en el
+  // panel (lo decide el servidor al guardar).
   soloLectura = false,
-  setEditar,
-  setSoloLectura,
   onClose,
   mutate,
-  // (21/11/2026) Ficha flotante desde otras pantallas (components/empleado/FichaEmpleado.jsx).
+  // Ficha flotante desde otras pantallas (components/empleado/FichaEmpleado.jsx).
   textoRegresar = "Regresar a la tabla",
   enVentana = false,
 }) {
@@ -94,12 +104,16 @@ export default function FormularioEmpleado({
   );
 
   const [contactosEmergencia, setContactosEmergencia] = useState([]);
-  // (23/11/2026) 5 pestañas: personal · trabajo · checador · pago · documentos.
+  // 5 pestañas: personal · trabajo · checador · pago · documentos.
   const [tab, setTab] = useState("personal");
-  const fueDesdeLectura = useRef(false);
-  // (22/11/2026) Al editar, el rostro solo se envía si RH capturó uno nuevo: así guardar la ficha no pisa el rostro que la
-  // persona haya actualizado desde su app mientras la ficha estaba abierta.
-  const rostroCapturado = useRef(false);
+  // Al editar, el rostro solo se envía si RH capturó uno nuevo: así guardar la ficha no pisa el rostro que la
+  // persona haya actualizado desde su app mientras la ficha estaba abierta. También cuenta como cambio sin
+  // guardar.
+  const [rostroNuevo, setRostroNuevo] = useState(false);
+  // Valores con los que abrió la ficha (o con los que se guardó por última vez): contra ellos se decide si
+  // hay cambios sin guardar. Lo que llega del servidor después de abrir (turno asignado, áreas) se suma con
+  // sincronizarCampo para no contarlo como cambio.
+  const [base, setBase] = useState(null);
   const nombreInputRef = useRef(null);
 
   const { enqueueSnackbar } = useSnackbar();
@@ -165,6 +179,19 @@ export default function FormularioEmpleado({
     },
   });
 
+  const fijarBase = useCallback(() => setBase(copiarValores(form.getValues())), [form]);
+  const sincronizarCampo = useCallback((campo, valor) => {
+    // También es el nuevo «valor original» del formulario, para que solo cuente lo que la persona toque.
+    // resetField solo actúa sobre campos registrados: tipo_horario, id_turno o areasAsignadas no tienen input propio.
+    form.register(campo);
+    form.resetField(campo, { defaultValue: copiarValores(valor) });
+    setBase((b) => (b ? { ...b, [campo]: copiarValores(valor) } : b));
+  }, [form]);
+  // Empleado nuevo: la base son los valores vacíos con los que abre.
+  useEffect(() => {
+    if (!values) fijarBase();
+  }, [values, fijarBase]);
+
   const empresaCampos = form.watch("id_empresa");
   const { campos: camposConfigurados, error: errorCampos, isLoading: cargandoCampos } = useCamposPersonalizados(empresaCampos);
   const empresaCamposAnterior = useRef(null);
@@ -201,9 +228,9 @@ export default function FormularioEmpleado({
   // }, [valores]);
   useEffect(() => {
     if (!editar && dataUser?.empresas?.length === 1) {
-      form.setValue("id_empresa", dataUser.empresas[0]);
+      sincronizarCampo("id_empresa", dataUser.empresas[0]);
     }
-  }, [dataUser, editar]);
+  }, [dataUser, editar, sincronizarCampo]);
 
   useEffect(() => {
     if ((editar || soloLectura) && values) {
@@ -241,6 +268,8 @@ export default function FormularioEmpleado({
       form.reset({
         ...restoEmpleado,
         campos_personalizados: parseCampos(restoEmpleado.campos_personalizados),
+        fecha_nacimiento: fechaParaInput(restoEmpleado.fecha_nacimiento),
+        fecha_ingreso: fechaParaInput(restoEmpleado.fecha_ingreso),
 
         nip: restoEmpleado.nip ?? "",
         periodo_pago: restoEmpleado.periodo_pago ?? "sin-seleccion",
@@ -288,29 +317,26 @@ export default function FormularioEmpleado({
         new_pass: "",
         confirm_pass: "",
 
-        tipo_horario: fueDesdeLectura.current
-          ? form.getValues("tipo_horario") || "personalizado"
-          : "personalizado",
-
-        id_turno: fueDesdeLectura.current ? form.getValues("id_turno") : null,
+        tipo_horario: "personalizado",
+        id_turno: null,
       });
-
-      if (!fueDesdeLectura.current) {
-        setTab("personal");
-      }
-
-      fueDesdeLectura.current = false;
+      fijarBase();
+      setTab("personal");
     }
   }, [editar, values, soloLectura]);
 
   const formaCalculo = form.watch("forma_calculo");
 
   useEffect(() => {
-    if (formaCalculo === "$") {
-      form.setValue("porcentaje", null, { shouldValidate: false });
-    } else if (formaCalculo === "%") {
-      form.setValue("sueldo", null, { shouldValidate: false });
-    }
+    // Si la forma de cálculo es la guardada, limpiar el otro campo es parte de abrir la ficha, no un cambio.
+    const limpiar = (campo) => {
+      if (base && valoresIguales(base.forma_calculo, formaCalculo)) sincronizarCampo(campo, null);
+      else form.setValue(campo, null, { shouldValidate: false });
+    };
+    if (formaCalculo === "$") limpiar("porcentaje");
+    else if (formaCalculo === "%") limpiar("sueldo");
+    // Solo al cambiar la forma de cálculo: con `base` en las dependencias se volvería a correr en cada sincronización.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formaCalculo]);
 
   // const onInvalidSubmit = (errors) => {
@@ -442,7 +468,7 @@ export default function FormularioEmpleado({
         variant: "warning",
       });
       setTab("trabajo");
-      return;
+      return false;
     }
 
     try {
@@ -468,33 +494,33 @@ export default function FormularioEmpleado({
         enqueueSnackbar("Ya existe un empleado con ese correo", {
           variant: "warning",
         });
-        return;
+        return false;
       }
 
       if (existeCurp) {
         enqueueSnackbar("Ya existe un empleado con esa CURP", {
           variant: "warning",
         });
-        return;
+        return false;
       }
       if (existeRfc) {
         enqueueSnackbar("Ya existe un empleado con ese RFC", {
           variant: "warning",
         });
-        return;
+        return false;
       }
       if (existeNss) {
         enqueueSnackbar("Ya existe un empleado con ese NSS", {
           variant: "warning",
         });
-        return;
+        return false;
       }
 
       if (existeNip) {
         enqueueSnackbar("Ya existe un empleado con ese NIP", {
           variant: "warning",
         });
-        return;
+        return false;
       }
 
       if (tipoHorario === "turno" && !idTurno) {
@@ -502,17 +528,17 @@ export default function FormularioEmpleado({
           variant: "warning",
         });
         setTab("trabajo");
-        return;
+        return false;
       }
 
       if (errorCampos || cargandoCampos) {
         enqueueSnackbar("Espera a que se carguen los campos personalizados antes de guardar.", { variant: "warning" });
-        return;
+        return false;
       }
       const formData = new FormData();
 
       delete data.nombre_empresa;
-      if (editar && !rostroCapturado.current) delete data.descriptor_facial;
+      if (editar && !rostroNuevo) delete data.descriptor_facial;
 
       [
         "id_jefe_inmediato",
@@ -530,7 +556,7 @@ export default function FormularioEmpleado({
 
       Object.keys(data).forEach((key) => {
         if (data[key] === null || data[key] === undefined) {
-          return;
+          return false;
         }
 
         if (Array.isArray(data[key]) || typeof data[key] === "object") {
@@ -637,11 +663,16 @@ export default function FormularioEmpleado({
       }
 
       if (editar) {
-        enqueueSnackbar("Empleado actualizado", {
+        enqueueSnackbar("Cambios guardados", {
           variant: "success",
         });
 
-        setTab("personal");
+        // Lo guardado es la nueva base: ya no hay cambios pendientes. Se queda en la pestaña donde estaba.
+        setSelectedFile(null);
+        setRostroNuevo(false);
+        // Lo guardado pasa a ser el «valor original» (base y valores por omisión del formulario).
+        form.reset(form.getValues());
+        fijarBase();
       } else {
         enqueueSnackbar("Empleado registrado", {
           variant: "success",
@@ -653,6 +684,7 @@ export default function FormularioEmpleado({
       }
 
       mutate();
+      return true;
     } catch (error) {
       console.log(error);
       const status = error.response?.status;
@@ -669,9 +701,9 @@ export default function FormularioEmpleado({
           ) : (
             <span>
               {mensaje}{" "}
-              <a href="/panel/mi-suscripcion" className="underline font-semibold">
+              <Link href="/panel/mi-suscripcion" className="underline font-semibold">
                 Mejorar plan →
-              </a>
+              </Link>
             </span>
           ),
           { variant: "warning", autoHideDuration: 6000 },
@@ -679,6 +711,7 @@ export default function FormularioEmpleado({
       } else {
         enqueueSnackbar(mensaje, { variant: "error" });
       }
+      return false;
     }
   };
 
@@ -691,6 +724,38 @@ export default function FormularioEmpleado({
       return () => clearTimeout(timer);
     }
   }, [modoFormulario, editar, soloLectura]);
+
+  // ¿Hay algo que se perdería al salir? Valores del formulario contra la base, más lo que se guarda con la
+  // ficha sin vivir en el formulario: foto nueva, rostro capturado con la cámara y, en un empleado nuevo, los contactos de
+  // emergencia en borrador. No cuentan: «Continuar desde el celular», firma y PIN, consentimiento del rostro, contactos
+  // de un empleado ya guardado, bonos y conceptos de pago (se guardan solos en el servidor).
+  const valoresActuales = form.watch();
+  // Solo cuenta lo que la persona tocó (y quedó distinto): abrir la ficha nunca marca cambios aunque el
+  // sistema acomode datos al cargar (pasaba con datos reales: «no he movido nada y dice cambios sin guardar»).
+  const { dirtyFields } = form.formState;
+  const hayCambios = !soloLectura && Boolean(base) && hayCambiosPendientes({
+    base,
+    actual: valoresActuales,
+    ignorar: NO_CUENTAN_COMO_CAMBIO,
+    extras: [selectedFile, rostroNuevo, !editar && contactosEmergencia.length > 0],
+    tocados: dirtyFields,
+  });
+  // Qué campos cuentan como cambio (se ve al pasar el mouse por «Cambios sin guardar» y ayuda a diagnosticar).
+  const cambiados = base ? camposCambiados(base, valoresActuales, NO_CUENTAN_COMO_CAMBIO, dirtyFields) : [];
+  const { isSubmitting } = form.formState;
+  // «Guardar y salir» usa exactamente lo mismo que el botón Guardar (validación + servidor); true solo si se guardó.
+  const guardar = () => new Promise((resolve) => {
+    form.handleSubmit(
+      async (datos) => resolve(await onValidSubmit(datos)),
+      (errores) => { onInvalidSubmit(errores); resolve(false); },
+    )().catch(() => resolve(false));
+  });
+  const confirmarSalida = useGuardiaSalida({ hayCambios, guardar });
+  const regresar = () => confirmarSalida(() => {
+    setModoFormulario(false);
+    setTab("personal");
+  });
+  const botonGuardarActivo = !editar || hayCambios;
 
   const { data, isLoading, error } = useSWR(
     dataUser?.id_usuario ? `/users/${dataUser.id_usuario}` : null,
@@ -710,7 +775,7 @@ export default function FormularioEmpleado({
   if (error) return <ErrorPage message={error?.message} />;
 
   // Los campos personalizados siguen guardados con su pestaña original (personales, laborales, jornada…): cada sección
-  // los pinta con su clave aunque ahora viva dentro de otra pestaña. Así no se mueve ningún dato.
+  // los pinta con su clave aunque viva dentro de otra pestaña, así no se mueve ningún dato.
   const renderCamposDe = (pestana) => function camposDePestana(despuesDe, agrupar = false) {
     return <CamposEmpleado form={form} campos={camposConfigurados} soloLectura={soloLectura} pestana={pestana} despuesDe={despuesDe} agrupar={agrupar} />;
   };
@@ -735,10 +800,7 @@ export default function FormularioEmpleado({
             <button
               type="button"
               className="flex min-h-11 items-center gap-2 text-[#080d36] active:opacity-70 min-w-0"
-              onClick={() => {
-                setModoFormulario(false);
-                setTab("personal");
-              }}
+              onClick={regresar}
             >
               <Icon
                 icon="material-symbols:arrow-back"
@@ -754,19 +816,7 @@ export default function FormularioEmpleado({
                   : "Nuevo empleado"}
               </span>
             </button>
-            {soloLectura && (
-              <button
-                type="button"
-                className="shrink-0 min-h-10 border border-brand text-brand active:bg-blue-50 text-sm font-semibold px-3.5 rounded-xl"
-                onClick={() => {
-                  fueDesdeLectura.current = true;
-                  setEditar(true);
-                  setSoloLectura(false);
-                }}
-              >
-                Editar
-              </button>
-            )}
+            {editar && !soloLectura && <EstadoCambios hayCambios={hayCambios} campos={cambiados} />}
           </div>
         </div>
 
@@ -776,37 +826,25 @@ export default function FormularioEmpleado({
             <button
               type="button"
               className="flex items-center gap-2 text-[#2563EB] hover:text-[#1d4ed8] transition-colors font-medium"
-              onClick={() => {
-                setModoFormulario(false);
-                setTab("personal");
-              }}
+              onClick={regresar}
             >
               <Icon icon="material-symbols:arrow-back" width={20} height={20} />
               <span className="text-sm">{textoRegresar}</span>
             </button>
 
             <div className="flex items-center gap-3">
-              {soloLectura && (
-                <Button
-                  variant="outline"
-                  className="border-[#2563EB] text-[#2563EB] hover:bg-blue-50"
-                  onClick={() => {
-                    fueDesdeLectura.current = true;
-                    setEditar(true);
-                    setSoloLectura(false);
-                  }}
-                >
-                  Editar
-                </Button>
-              )}
-
+              {editar && !soloLectura && <EstadoCambios hayCambios={hayCambios} campos={cambiados} />}
               {soloLectura ? null : (
                 <Button
                   type="submit"
                   form="formulario-empleado"
-                  className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+                  data-boton-guardar
+                  disabled={!botonGuardarActivo || isSubmitting}
+                  className={botonGuardarActivo
+                    ? "bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+                    : "bg-gray-100 text-gray-400 font-medium shadow-none disabled:opacity-100"}
                 >
-                  {editar ? "Actualizar" : "Registrar"}
+                  {isSubmitting ? "Guardando…" : editar ? "Guardar" : "Registrar"}
                 </Button>
               )}
             </div>
@@ -866,7 +904,7 @@ export default function FormularioEmpleado({
                       Acceso QR
                     </span>
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?data=${nipActual}&size=150x150`}
+                      src={qrComoDataUrl(nipActual, { celda: 6 })}
                       alt="QR Empleado"
                       className="w-24 h-24 lg:w-32 lg:h-32 object-contain"
                       key={nipActual}
@@ -887,7 +925,7 @@ export default function FormularioEmpleado({
               {(editar || soloLectura) && nipActual && (
                 <div className="md:hidden mt-3 flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?data=${nipActual}&size=80x80`}
+                    src={qrComoDataUrl(nipActual, { celda: 4 })}
                     alt="QR Empleado"
                     className="w-12 h-12 object-contain shrink-0"
                     key={nipActual}
@@ -964,13 +1002,13 @@ export default function FormularioEmpleado({
                       {tab === "trabajo" && (
                         <div className="space-y-6">
                           <BajaEmpleadoInfo empleado={values} />
-                          <TabLaborales seccion="trabajo" renderCampos={renderCamposDe("laborales")} form={form} soloLectura={soloLectura} dataUser={dataUser} />
-                          <TabJornada renderCampos={renderCamposDe("jornada")} form={form} soloLectura={soloLectura} empleadoId={values?.id_empleado} />
+                          <TabLaborales seccion="trabajo" renderCampos={renderCamposDe("laborales")} form={form} soloLectura={soloLectura} dataUser={dataUser} sincronizarCampo={sincronizarCampo} />
+                          <TabJornada renderCampos={renderCamposDe("jornada")} form={form} soloLectura={soloLectura} empleadoId={values?.id_empleado} sincronizarCampo={sincronizarCampo} />
                         </div>
                       )}
                       {tab === "checador" && (
                         <div className="space-y-6">
-                          <TabLaborales seccion="checador" renderCampos={renderCamposDe("laborales")} form={form} soloLectura={soloLectura} dataUser={dataUser}
+                          <TabLaborales seccion="checador" renderCampos={renderCamposDe("laborales")} form={form} soloLectura={soloLectura} dataUser={dataUser} sincronizarCampo={sincronizarCampo}
                             cambiarContrasena={values?.id_empleado && !soloLectura ? <CambiarContrasenaEmpleado empleado={values} conTexto /> : null} />
                           <TabReconocimiento
                             renderCampos={renderCamposDe("reconocimiento")}
@@ -978,7 +1016,7 @@ export default function FormularioEmpleado({
                             soloLectura={soloLectura}
                             active={tab === "checador"}
                             setDescriptor={(descriptor) => {
-                              rostroCapturado.current = true;
+                              setRostroNuevo(true);
                               form.setValue("descriptor_facial", descriptor);
                             }}
                           />
@@ -1019,9 +1057,13 @@ export default function FormularioEmpleado({
             <button
               type="submit"
               form="formulario-empleado"
-              className="w-full bg-brand active:bg-blue-800 text-white text-sm font-bold py-3 rounded-xl"
+              data-boton-guardar
+              disabled={!botonGuardarActivo || isSubmitting}
+              className={`w-full min-h-[44px] text-sm font-bold py-3 rounded-xl ${botonGuardarActivo
+                ? "bg-brand active:bg-blue-800 text-white"
+                : "bg-gray-100 text-gray-400"}`}
             >
-              {editar ? "Actualizar empleado" : "Registrar empleado"}
+              {isSubmitting ? "Guardando…" : editar ? "Guardar" : "Registrar empleado"}
             </button>
           )}
         </div>

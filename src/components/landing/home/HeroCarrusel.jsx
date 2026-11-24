@@ -2,19 +2,34 @@
 
 // Carrusel de la portada a todo lo ancho: fondo de color sólido, frase + botones a la izquierda y la foto
 // en la mitad derecha fundiéndose con el fondo. Pasa solo cada 6 s, se pausa al pasar el cursor o con el
-// botón (WCAG 2.2.2) y se mueve con las flechas o el teclado. Con «reducir movimiento» no avanza solo.
+// botón (WCAG 2.2.2) y se mueve con las flechas, el teclado o deslizando el dedo. Con «reducir movimiento» no avanza solo.
+// Lo usan la portada (DIAPOSITIVAS, cambio con fundido) y la bolsa de trabajo (`desliza`: las diapositivas se recorren
+// de lado a lado). Cada diapositiva puede traer `secundario` (botón claro); `null` lo quita.
 /* eslint-disable @next/next/no-img-element -- fotos ya optimizadas (webp) con efecto de acercamiento */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { DIAPOSITIVAS } from "./diapositivas";
 
 const CADA_MS = 6000;
+const SECUNDARIO = { texto: "Ver cómo funciona", href: "#producto" };
+const UMBRAL_DEDO = 40; // px de deslizamiento horizontal para cambiar de diapositiva
 
-export default function HeroCarrusel() {
+export default function HeroCarrusel({
+  diapositivas = DIAPOSITIVAS,
+  etiqueta = "ADAMIA en pocas palabras",
+  className = "",
+  primerTitulo = "h1",
+  desliza = false,
+}) {
   const [actual, setActual] = useState(0);
-  const [pausado, setPausado] = useState(false);
+  // Tres motivos para detenerse: el botón (o tocar en celular), el cursor encima y el foco del teclado dentro.
+  const [manual, setManual] = useState(false);
+  const [sobre, setSobre] = useState(false);
+  const [foco, setFoco] = useState(false);
+  const pausado = manual || sobre || foco;
   const [quieto, setQuieto] = useState(false);
-  const total = DIAPOSITIVAS.length;
+  const dedo = useRef(null);
+  const total = diapositivas.length;
   const ir = useCallback((n) => setActual((n + total) % total), [total]);
 
   useEffect(() => {
@@ -36,23 +51,50 @@ export default function HeroCarrusel() {
     if (e.key === "ArrowLeft") ir(actual - 1);
   };
 
+  // Tocar pausa el avance; deslizar a un lado cambia de diapositiva (solo si el gesto es más horizontal que vertical).
+  const tocar = (e) => {
+    const t = e.touches[0];
+    dedo.current = { x: t.clientX, y: t.clientY };
+    setManual(true);
+  };
+  const enfocar = (e) => {
+    let teclado = true;
+    try { teclado = e.target.matches(":focus-visible"); } catch { /* navegador sin :focus-visible */ }
+    if (teclado) setFoco(true);
+  };
+  const desenfocar = (e) => {
+    if (!e.currentTarget.contains(e.relatedTarget)) setFoco(false);
+  };
+  const soltar = (e) => {
+    const ini = dedo.current;
+    dedo.current = null;
+    const t = e.changedTouches[0];
+    if (!ini || !t) return;
+    const dx = t.clientX - ini.x;
+    if (Math.abs(dx) >= UMBRAL_DEDO && Math.abs(dx) > Math.abs(t.clientY - ini.y)) ir(actual + (dx < 0 ? 1 : -1));
+  };
+
   return (
     <section
-      className={`carr${pausado || quieto ? " parado" : ""}`}
+      className={`carr${desliza ? " desliza" : ""}${pausado || quieto ? " parado" : ""}${className ? ` ${className}` : ""}`}
       aria-roledescription="carrusel"
-      aria-label="ADAMIA en pocas palabras"
-      onMouseEnter={() => setPausado(true)}
-      onMouseLeave={() => setPausado(false)}
-      onFocus={() => setPausado(true)}
+      aria-label={etiqueta}
+      onMouseEnter={() => setSobre(true)}
+      onMouseLeave={() => setSobre(false)}
+      onFocus={enfocar}
+      onBlur={desenfocar}
       onKeyDown={teclas}
+      onTouchStart={tocar}
+      onTouchEnd={soltar}
     >
-      {DIAPOSITIVAS.map((d, i) => {
-        const Titulo = i === 0 ? "h1" : "h2";
+      {diapositivas.map((d, i) => {
+        const Titulo = i === 0 ? primerTitulo : "h2";
+        const sec = d.secundario === undefined ? SECUNDARIO : d.secundario;
         return (
           <div
-            key={d.foto}
+            key={d.id ?? d.foto}
             className={`slide${i === actual ? " on" : ""}`}
-            style={{ "--fondo": d.fondo }}
+            style={{ "--fondo": d.fondo, "--pos": i - actual }}
             role="group"
             aria-roledescription="diapositiva"
             aria-label={`${i + 1} de ${total}`}
@@ -106,13 +148,15 @@ export default function HeroCarrusel() {
                       <path d="M5 12h14M13 6l6 6-6 6" />
                     </svg>
                   </Link>
-                  <a
-                    className="btn btn-claro"
-                    href="#producto"
-                    tabIndex={i === actual ? 0 : -1}
-                  >
-                    Ver cómo funciona
-                  </a>
+                  {sec ? (
+                    <Link
+                      className="btn btn-claro"
+                      href={sec.href}
+                      tabIndex={i === actual ? 0 : -1}
+                    >
+                      {sec.texto}
+                    </Link>
+                  ) : null}
                 </div>
               </div>
             </div>
@@ -125,9 +169,9 @@ export default function HeroCarrusel() {
           role="tablist"
           aria-label="Elegir diapositiva"
         >
-          {DIAPOSITIVAS.map((d, i) => (
+          {diapositivas.map((d, i) => (
             <button
-              key={d.foto}
+              key={d.id ?? d.foto}
               type="button"
               role="tab"
               aria-selected={i === actual}
@@ -142,10 +186,10 @@ export default function HeroCarrusel() {
         <button
           type="button"
           className="carr-btn pausa"
-          aria-label={pausado ? "Reanudar" : "Pausar"}
-          onClick={() => setPausado((p) => !p)}
+          aria-label={manual ? "Reanudar" : "Pausar"}
+          onClick={() => setManual((p) => !p)}
         >
-          {pausado ? "▶" : "❚❚"}
+          {manual ? "▶" : "❚❚"}
         </button>
         <button
           type="button"

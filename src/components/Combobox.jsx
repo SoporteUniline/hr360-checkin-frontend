@@ -27,6 +27,7 @@ export function Combobox({
   name,
   disabled = false,
   multiple = false,
+  className,
 }) {
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
@@ -60,6 +61,7 @@ export function Combobox({
           className={cn(
             "w-full justify-between",
             disabled && "opacity-50 cursor-not-allowed",
+            className,
           )}
         >
           <span className="truncate">

@@ -1,6 +1,5 @@
-// «Control de horas extra» por fechas (maqueta aprobada 19/11/2026): días arriba, horas abajo.
-// Periodos (semana legal, quincena, mes, rango) y la matriz persona × día con el estado de cada celda.
-// Probado en scripts/test-matriz-horas-extra.mjs.
+// «Control de horas extra» por fechas: periodos (semana legal, quincena, mes, rango) y la matriz persona × día con el
+// estado de cada celda. Probado en scripts/test-matriz-horas-extra.mjs.
 import { DB_TZ, estadoHorasExtra } from "./horasExtra.mjs";
 import { DIA_MS, lunesDe, sumarDias } from "../fechaHora.mjs";
 const finDeMes = (fecha) => {
@@ -63,9 +62,8 @@ export function matrizHorasExtra(registros, { dias, zonaDe = () => DB_TZ, estado
     if (PRIORIDAD[info.estado] < PRIORIDAD[celda.estado]) celda.estado = info.estado;
     if (info.estado === "pendiente") fila.pendientes += 1;
   }
-  // Minutos de la celda al final, ya con todos sus registros: si alguno cuenta, solo los que cuentan;
-  // si ninguno cuenta (p. ej. todos pendientes), la suma de todos para que se vea cuánto hay en juego.
-  // Antes dependía del orden: un pendiente leído antes que un aprobado inflaba la celda.
+  // Minutos de la celda al final, ya con todos sus registros, para no depender del orden: si alguno cuenta, solo los
+  // que cuentan; si ninguno (p. ej. todos pendientes), la suma de todos para que se vea cuánto hay en juego.
   for (const fila of porEmpleado.values()) {
     for (const c of Object.values(fila.celdas)) {
       const cuentan = c.registros.filter((x) => suma(x.info.estado));

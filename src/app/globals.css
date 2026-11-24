@@ -4,6 +4,11 @@
 @import "./employee-fields.css";
 
 @custom-variant dark (&:is(.dark *));
+/* Reloj checador en modo kiosco (src/components/Clock/PantallaKiosco.jsx): acomodo según el alto disponible
+   para que siempre quepa en una pantalla, también con el celular acostado. */
+@custom-variant kiosco-horizontal (@media (orientation: landscape) and (min-height: 32rem));
+@custom-variant kiosco-bajo (@media (orientation: landscape) and (max-height: 31.99rem));
+@custom-variant kiosco-grande (@media (min-width: 48rem) and (min-height: 32rem));
 
 @theme inline {
   /* Marca ADAMIA: habilita utilidades bg-brand / text-brand / from-brand /
@@ -446,4 +451,18 @@ html.adamia-native .adamia-web-only {
     max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem) !important;
     overflow-y: auto;
   }
+}
+
+/* Encabezados de tabla en letra normal en todo el sistema («Entrada», no «ENTRADA»): se leen mejor.
+   Fuera de @layer a propósito: le gana a las clases `uppercase`/`tracking-*`/`text-[10px]` de cada tabla. */
+th,
+[data-slot="table-head"] {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 12.5px;
+}
+th *,
+[data-slot="table-head"] * {
+  text-transform: none;
+  letter-spacing: normal;
 }

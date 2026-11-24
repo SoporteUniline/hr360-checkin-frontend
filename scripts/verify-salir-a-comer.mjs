@@ -1,4 +1,4 @@
-// Verificación en navegador del botón «Salir a comer» (23/11/2026). Backend simulado.
+// Verificación en navegador del botón «Salir a comer». Backend simulado.
 // 1) Reloj del empleado por código: el servidor pide decisión → «¿Sales a comer?» con «Salir a comer» / «Registrar salida»;
 //    al elegir comida se manda action=salida_comida y se ve «Salida a comer registrada».
 // 2) Inicio de la app: si está en comida, anillo con el contador, hora de regreso y «Regresé de comer».

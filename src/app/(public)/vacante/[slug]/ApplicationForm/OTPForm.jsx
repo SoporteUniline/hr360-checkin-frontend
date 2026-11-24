@@ -9,9 +9,17 @@ import { Button } from "@/components/ui/button";
 import { enqueueSnackbar } from "notistack";
 import axios from "axios";
 
-export default function OTPForm({ onSubmit, form }) {
+export default function OTPForm({ onSubmit, form, onCambiarTelefono }) {
   const [loading, setLoading] = React.useState(false);
   const [code, setCode] = React.useState("");
+  const caja = React.useRef(null);
+  // Al pedir el código, la verificación queda al final de un formulario largo: se lleva a la vista y se enfoca.
+  React.useEffect(() => {
+    const el = caja.current;
+    if (!el) return;
+    el.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    el.querySelector("input")?.focus({ preventScroll: true });
+  }, []);
 
   const verifyOTP = async () => {
     try {
@@ -26,7 +34,7 @@ export default function OTPForm({ onSubmit, form }) {
           variant: "success",
         }
       );
-      // (24/11/2026, INC-REC-002) El backend entrega un token de un solo uso que /postulaciones/create exige.
+      // (INC-REC-002) El backend entrega un token de un solo uso que /postulaciones/create exige.
       onSubmit(form.getValues(), response?.data?.verification_token || "");
       setLoading(false);
     } catch (error) {
@@ -40,33 +48,39 @@ export default function OTPForm({ onSubmit, form }) {
   };
 
   return (
-    <section className="flex flex-col justify-center gap-4">
-      <h4>
-        Se envío un mensaje de texto con un código de verificación a tu telefono{" "}
-        <span className="font-bold">({form.getValues("telefono")})</span>,
-        ingresa el codigo para continuar con tu solicitud
-      </h4>
-      <div className="flex justify-center">
-        <InputOTP maxLength={6} onChange={(value) => setCode(value)}>
+    <section ref={caja} className="vc-otp" aria-labelledby="vc-otp-titulo">
+      <h3 id="vc-otp-titulo">Verifica tu teléfono</h3>
+      <p>
+        Te enviamos un SMS con un código de 6 dígitos al{" "}
+        <b>{form.getValues("telefono")}</b>. Ingresa el código para continuar con tu solicitud.
+      </p>
+      <div className="vc-otp-casillas">
+        <InputOTP maxLength={6} onChange={(value) => setCode(value)} aria-label="Código de verificación">
           <InputOTPGroup>
-            <InputOTPSlot index={0} />
-            <InputOTPSlot index={1} />
-            <InputOTPSlot index={2} />
-            <InputOTPSlot index={3} />
-            <InputOTPSlot index={4} />
-            <InputOTPSlot index={5} />
+            <InputOTPSlot index={0} className="h-12 w-11 bg-white text-lg font-semibold border-[#c9cde0]" />
+            <InputOTPSlot index={1} className="h-12 w-11 bg-white text-lg font-semibold border-[#c9cde0]" />
+            <InputOTPSlot index={2} className="h-12 w-11 bg-white text-lg font-semibold border-[#c9cde0]" />
+            <InputOTPSlot index={3} className="h-12 w-11 bg-white text-lg font-semibold border-[#c9cde0]" />
+            <InputOTPSlot index={4} className="h-12 w-11 bg-white text-lg font-semibold border-[#c9cde0]" />
+            <InputOTPSlot index={5} className="h-12 w-11 bg-white text-lg font-semibold border-[#c9cde0]" />
           </InputOTPGroup>
         </InputOTP>
       </div>
 
       <Button
         type="button"
-        className="bg-slate-700 w-full mt-10"
+        className="vc-btn-enviar"
         loading={loading}
+        disabled={code.length < 6}
         onClick={() => verifyOTP()}
       >
-        Verificar Código
+        Verificar código
       </Button>
+      {onCambiarTelefono ? (
+        <button type="button" className="vc-texto-btn" onClick={onCambiarTelefono} disabled={loading}>
+          Cambiar teléfono
+        </button>
+      ) : null}
     </section>
   );
 }

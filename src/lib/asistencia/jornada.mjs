@@ -2,7 +2,7 @@
 // Lo usan Asistencias (escritorio y celular), Centro de incidencias y Reportes.
 // Duraciones (formatearMinutos, duracionCorta) viven aquí; fechas y horas del día en ../fechaHora.mjs.
 //
-// Reglas del dueño (18/11/2026). La comida no se paga en ningún caso (Adamia no maneja nómina).
+// Reglas de negocio. La comida no se paga en ningún caso (Adamia no maneja nómina).
 // - Programadas = salida programada − entrada programada (+24 h si cruza medianoche)
 //   − comida del horario (salida → regreso de comida). Sin comida en el horario: `hrs_comida`.
 // - Trabajadas = SUMA de los tramos checados en el reloj (entrada → salida); los huecos
@@ -13,7 +13,7 @@
 //   tramos: salida − entrada, sin descontar comida.
 // - Si falta entrada o salida, trabajadas y diferencia quedan en null (no se inventan).
 
-import { horaAMinutos, marcaEnMinutos } from "../fechaHora.mjs";
+import { horaAMinutos, marcaEnMinutos, minutosAbsolutos } from "../fechaHora.mjs";
 
 const MIN_DIA = 24 * 60;
 
@@ -44,11 +44,10 @@ function tramosVigentes(registro) {
   return tramos;
 }
 
-// Alerta: su horario tiene comida pero solo checó un tramo (no marcó salida a comer).
-// (23/11/2026) Si checó su comida (está en comida ahora o ya regresó), no hay alerta: antes salía mientras comía,
-// porque en ese momento solo existe el tramo de la mañana.
+// Alerta: su horario tiene comida pero solo checó un tramo (no marcó salida a comer). Si está en comida o ya
+// regresó no hay alerta: mientras come solo existe el tramo de la mañana.
 export function sinSalidaAComer(registro) {
-  if (registro?.comida_checada?.salida) return false;
+  if (hayComidaChecada(registro)) return false;
   const tramos = tramosVigentes(registro);
   return Boolean(tramos && tramos.length === 1 && minutosComidaHorario(registro));
 }
@@ -124,3 +123,34 @@ export function salidaEsDiaSiguiente(horaEntrada, horaSalida) {
   return e != null && s != null && s <= e;
 }
 
+
+// El día ya tiene comida: checada con «Salir a comer» en el reloj o agregada a mano desde el panel (comida_checada).
+export function hayComidaChecada(registro) {
+  return Boolean(registro?.comida_checada?.salida);
+}
+
+// Pausa real entre tramos del reloj que cae dentro de la comida de su horario (sin comida en el horario, cualquiera).
+// Así se vio en un caso real: salió 11:03 y regresó 11:25 sin marcarlo (comida 11:00–11:30) y se le agregó otra comida.
+export function pausaEnHorarioComida(registro) {
+  const tramos = Array.isArray(registro?.tramos_checadas) ? registro.tramos_checadas : [];
+  const sale = horaAMinutos(registro?.hora_salida_comida_programada);
+  const regresa = horaAMinutos(registro?.hora_regreso_comida_programada);
+  const conHorario = sale != null && regresa != null && regresa > sale;
+  for (let i = 1; i < tramos.length; i++) {
+    const desde = marcaEnMinutos(tramos[i - 1].salida);
+    const hasta = marcaEnMinutos(tramos[i].entrada);
+    if (desde == null || hasta == null || hasta <= desde) continue;
+    if (!conHorario) return true;
+    const dia = String(tramos[i - 1].salida).slice(0, 10);
+    if (desde < minutosAbsolutos(dia, registro.hora_regreso_comida_programada) && hasta > minutosAbsolutos(dia, registro.hora_salida_comida_programada)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// «+ Agregar comida» solo si el día tiene entrada y salida, no tiene comida y no hay una pausa real en su comida.
+// El servidor aplica la misma regla (409 COMIDA_YA_REGISTRADA).
+export function puedeAgregarComida(registro) {
+  return Boolean(registro?.entrada && registro?.salida) && !hayComidaChecada(registro) && !pausaEnHorarioComida(registro);
+}

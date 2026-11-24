@@ -1,15 +1,16 @@
-// Verificación DE PUNTA A PUNTA de Reclutamiento real (03/12/2026): navegador → frontend → backend real
+// Verificación DE PUNTA A PUNTA de Reclutamiento real: navegador → frontend → backend real
 // (rutas de panel, vacantes, postulaciones, OTP y WhatsApp contra MariaDB de prueba; ver backend
 // scripts/servidor-prueba-reclutamiento.cjs: solo sesión, S3, correo, SMS y efectos externos del alta simulados).
 // Recorrido: crear vacante con el asistente → lista y detalle → bolsa de trabajo → un candidato se postula (celular,
 // con código de verificación) → moverlo de etapa → nota → contratarlo y verlo como empleado. Después, cada pantalla
 // a 390 px: sin desborde horizontal y controles de al menos 44 px.
-// 04/12/2026 · Candidato de WhatsApp con el mismo proceso: desde el chat (ver la etapa, moverla, nota, agendar y aceptar
+// Candidato de WhatsApp con el mismo proceso: desde el chat (ver la etapa, moverla, nota, agendar y aceptar
 // la sugerencia «Entrevista», contratar con aviso por WhatsApp y ver al empleado) y lo mismo desde Reclutamiento →
 // Candidatos; el chat también a 390 px (hoja inferior con las acciones).
 // Uso:
 //   NEXT_PUBLIC_RUTA_BACKEND=http://127.0.0.1:4020/api NEXT_PUBLIC_RECRUITMENT_ENABLED=true npm run build
-//   BACKEND_DIR=../hr360-checkin-backend RECLUTAMIENTO_TEST_DB=reclutamiento_prueba NOMINA_TEST_USER=u NOMINA_TEST_PASSWORD=p node scripts/verify-reclutamiento-real.mjs
+//   BACKEND_DIR=../hr360-checkin-backend RECLUTAMIENTO_TEST_DB=reclutamiento_prueba NOMINA_TEST_USER=u NOMINA_TEST_PASSWORD=p \
+//     node scripts/verify-reclutamiento-real.mjs
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
@@ -119,12 +120,14 @@ try {
   ultima = pc;
   pc.on("pageerror", (e) => errores.push(e.message));
   await pc.goto(`${base}/vacante/${encodeURIComponent(slug)}`, { waitUntil: "domcontentloaded" });
+  // En celular «Postularme ahora» va fijo abajo y el aviso de cookies lo tapa hasta
+  // contestarlo; se espera a que la página cargue para cerrarlo. La solicitud ya no va en acordeón.
+  await pc.getByRole("button", { name: "Postularme ahora" }).waitFor({ timeout: 30000 });
   const avisoCookies = pc.getByRole("button", { name: "Solo necesarias" });
-  if (await avisoCookies.isVisible({ timeout: 3000 }).catch(() => false)) await avisoCookies.click();
-  await pc.getByRole("button", { name: "Postularme Ahora" }).click();
+  if (await avisoCookies.waitFor({ timeout: 3000 }).then(() => true, () => false)) await avisoCookies.click();
+  await pc.getByRole("button", { name: "Postularme ahora" }).click();
   const hoja = pc.getByRole("dialog");
   const llenar = (nombre, valor) => hoja.locator(`[name="${nombre}"]`).fill(valor);
-  await hoja.getByRole("button", { name: "Información Personal" }).click();
   await llenar("nombre_completo", "Ana María García López");
   await llenar("correo", "ana.g@x.mx");
   await llenar("telefono", "5511112222");
@@ -132,22 +135,20 @@ try {
   await hoja.getByRole("combobox").filter({ hasText: "Selecciona uno" }).click();
   await pc.getByRole("option", { name: "Soltero(a)" }).click();
   await llenar("curp", "GAPA900101MJCRRN09");
-  await hoja.getByRole("button", { name: "Formación Académica" }).click();
   await hoja.getByRole("combobox").filter({ hasText: "Selecciona un nivel" }).click();
   await pc.getByRole("option", { name: "Licenciatura" }).click();
   await llenar("institucion", "UdeG");
   await llenar("carrera", "Administración");
-  await hoja.getByRole("button", { name: "Experiencia Laboral" }).click();
   for (const [n, v] of [["ultimo_puesto", "Repartidora"], ["empresa_anterior", "Tienda"], ["duracion_puesto", "2 años"], ["ultimo_salario", "10000"], ["motivo_salida", "Crecer"]]) await llenar(n, v);
   await hoja.getByLabel("¿Cuánta experiencia tienes en un puesto similar? *").selectOption("1 a 3 años");
   await hoja.locator('input[type="file"]').setInputFiles({ name: "cv.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 prueba") });
   await hoja.getByRole("checkbox").last().click();
-  await hoja.getByRole("button", { name: "Enviar Solicitud" }).click();
-  await hoja.getByText("ingresa el codigo para continuar").waitFor({ timeout: 15000 });
+  await hoja.getByRole("button", { name: "Enviar solicitud" }).click();
+  await hoja.getByText("Ingresa el código para continuar").waitFor({ timeout: 15000 });
   await hoja.locator('input[autocomplete="one-time-code"], input[data-input-otp]').first().fill("123456");
   // El aviso «Código de verificación enviado» (pantalla pública de siempre) queda encima del botón a 390 px:
   // se dispara el clic directamente en el botón.
-  await hoja.getByRole("button", { name: "Verificar Código" }).dispatchEvent("click");
+  await hoja.getByRole("button", { name: "Verificar código" }).dispatchEvent("click");
   await pc.getByText(/Postulación enviada exitosamente/).waitFor({ timeout: 20000 });
   await captura(pc, "rec-postulacion-movil");
 

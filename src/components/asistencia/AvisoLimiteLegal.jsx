@@ -1,6 +1,6 @@
 "use client";
-// (23/11/2026) Aviso al capturar un turno u horario que pasa del límite legal de la semana del año en que aplica
-// (desde hoy). Usa el catálogo de jornadas legales de Luis. Solo informa; no bloquea el guardado.
+// Aviso al capturar un turno u horario que pasa del límite legal de la semana del año en que aplica (desde hoy).
+// Usa el catálogo de jornadas legales del backend. Solo informa; no bloquea el guardado.
 import useSWR from "swr";
 import { AlertTriangle } from "lucide-react";
 import { fetcherWithToken } from "@/lib/fetcher";

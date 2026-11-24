@@ -1,15 +1,13 @@
 "use client";
 
-// Ficha del empleado en ventana flotante, desde cualquier pantalla del panel (pedido del 21/11/2026: «donde sea que vea
-// al empleado, darle clic y que abra su ficha ahí mismo, y que me deje editar»). Reutiliza la MISMA ficha de Empleados
-// (FormularioEmpleado): se abre en lectura, «Editar» la vuelve editable y «Actualizar» guarda con las mismas reglas.
-// <NombreEmpleado> es un enlace real a /panel/empleados?id=…: clic normal = ventana aquí mismo; Ctrl/⌘+clic o clic con la
-// rueda = otra pestaña. Al guardar se refrescan las listas abiertas (empleados, asistencias, nómina…).
+// Ficha del empleado en ventana flotante desde cualquier pantalla: reutiliza FormularioEmpleado (mismas reglas) y, con
+// cambios sin guardar, cerrarla pregunta antes. <NombreEmpleado> es un enlace real (Ctrl/⌘+clic abre otra pestaña).
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSWRConfig } from "swr";
 import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
+import { useConfirmarSalida } from "@/components/cambios/CambiosPendientes";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 // La ficha es grande: se descarga solo la primera vez que alguien la abre (no pesa en el resto del panel).
@@ -24,12 +22,13 @@ const REFRESCAR = /\/checador\/(empleados|asistencias|nomina|horas|incidencias|r
 export function FichaEmpleadoProvider({ children }) {
   const { mutate } = useSWRConfig();
   const { enqueueSnackbar } = useSnackbar();
-  const [ficha, setFicha] = useState(null); // { values, editar, soloLectura }
+  const [ficha, setFicha] = useState(null); // { values }
+  const confirmarSalida = useConfirmarSalida();
 
   const abrirFicha = useCallback(async (idEmpleado) => {
     try {
       const { data } = await axios.get(`/checador/empleados/${idEmpleado}`);
-      setFicha({ values: data, editar: false, soloLectura: true });
+      setFicha({ values: data });
     } catch (e) {
       enqueueSnackbar(e?.response?.status === 403 ? "No tienes permiso para ver a esta persona." : "No se pudo abrir la ficha del empleado.", { variant: "error" });
     }
@@ -42,7 +41,7 @@ export function FichaEmpleadoProvider({ children }) {
   return (
     <Contexto.Provider value={valor}>
       {children}
-      <Dialog open={Boolean(ficha)} onOpenChange={(v) => !v && cerrar()}>
+      <Dialog open={Boolean(ficha)} onOpenChange={(v) => { if (!v) confirmarSalida(cerrar); }}>
         <DialogContent className="block h-[100dvh] max-h-[100dvh] w-screen max-w-none overflow-y-auto overflow-x-hidden rounded-none bg-[#F9FAFB] p-0 sm:h-auto sm:max-h-[92vh] sm:w-[min(1180px,96vw)] sm:max-w-none sm:rounded-xl sm:p-5 sm:pt-11" aria-describedby={undefined}>
           <DialogTitle className="sr-only">Ficha de {nombre}</DialogTitle>
           {ficha ? (
@@ -50,12 +49,9 @@ export function FichaEmpleadoProvider({ children }) {
             <FormularioEmpleado
               key={`ficha-${ficha.values?.id_empleado}`}
               values={ficha.values}
-              editar={ficha.editar}
-              soloLectura={ficha.soloLectura}
+              editar
               modoFormulario
               setModoFormulario={(v) => { if (!v) cerrar(); }}
-              setEditar={(editar) => setFicha((f) => (f ? { ...f, editar } : f))}
-              setSoloLectura={(soloLectura) => setFicha((f) => (f ? { ...f, soloLectura } : f))}
               mutate={() => mutate((clave) => typeof clave === "string" && REFRESCAR.test(clave))}
               textoRegresar="Cerrar"
               enVentana

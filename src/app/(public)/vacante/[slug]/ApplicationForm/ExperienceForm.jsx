@@ -15,7 +15,7 @@ export default function ExperienceForm({ form, loading }) {
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
         <FormItem>
-          <FormLabel required>Último Puesto:</FormLabel>
+          <FormLabel required>Último puesto</FormLabel>
           <FormControl>
             <Input
               disabled={loading}
@@ -27,7 +27,7 @@ export default function ExperienceForm({ form, loading }) {
           <FormMessage>{formState.errors.ultimo_puesto?.message}</FormMessage>
         </FormItem>
         <FormItem>
-          <FormLabel required>Empresa Anterior</FormLabel>
+          <FormLabel required>Empresa anterior</FormLabel>
           <FormControl>
             <Input
               disabled={loading}
@@ -41,7 +41,7 @@ export default function ExperienceForm({ form, loading }) {
           </FormMessage>
         </FormItem>
         <FormItem>
-          <FormLabel required>Duración del Puesto:</FormLabel>
+          <FormLabel required>Tiempo en el puesto</FormLabel>
           <FormControl>
             <Input
               disabled={loading}
@@ -53,7 +53,7 @@ export default function ExperienceForm({ form, loading }) {
           <FormMessage>{formState.errors.duracion_puesto?.message}</FormMessage>
         </FormItem>
         <FormItem>
-          <FormLabel>Actividades Principales:</FormLabel>
+          <FormLabel>Actividades principales</FormLabel>
           <FormControl>
             <Input
               disabled={loading}
@@ -65,7 +65,7 @@ export default function ExperienceForm({ form, loading }) {
           </FormMessage>
         </FormItem>
         <FormItem>
-          <FormLabel required>Último Salario (MXN):</FormLabel>
+          <FormLabel required>Último sueldo (MXN)</FormLabel>
           <FormControl>
             <Input
               disabled={loading}
@@ -77,7 +77,7 @@ export default function ExperienceForm({ form, loading }) {
           <FormMessage>{formState.errors.ultimo_salario?.message}</FormMessage>
         </FormItem>
         <FormItem>
-          <FormLabel required>Motivo de Salida:</FormLabel>
+          <FormLabel required>Motivo de salida</FormLabel>
           <FormControl>
             <Input
               disabled={loading}

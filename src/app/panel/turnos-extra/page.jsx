@@ -1,8 +1,7 @@
 "use client";
 
-// Turnos extra (fase 1): RH arma quién viene a trabajar tiempo extra un día, con avisos de ley,
-// y ve el turno en vivo con las checadas del reloj. Backend: /checador/turnos-extra
-// (hr360-checkin-backend/docs/turnos-extra.md). El reloj todavía no cambia (fase 2 con Luis).
+// Turnos extra: RH arma quién viene a trabajar tiempo extra un día, con avisos de ley, y ve el turno en vivo.
+// Backend: /checador/turnos-extra (hr360-checkin-backend/docs/turnos-extra.md).
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";

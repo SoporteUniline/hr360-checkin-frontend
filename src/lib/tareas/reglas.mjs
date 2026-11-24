@@ -1,4 +1,4 @@
-// Tareas y Checklists (23/11/2026, pedido del dueño). Reglas puras: sirven al prototipo con datos de ejemplo y servirán
+// Tareas y Checklists. Reglas puras: sirven al prototipo con datos de ejemplo y servirán
 // igual cuando haya base de datos. Pruebas: scripts/test-tareas.mjs.
 //
 // - TAREA: se hace una vez, puede pertenecer a un PROYECTO (o ir suelta), tiene pasos, fecha y responsable, y puede pedir
@@ -73,7 +73,7 @@ export function cumplimientoPorPersona(envios = [], { desde, hasta } = {}) {
 // ¿Gana el bono de checklists? (solo si la empresa tiene también Nómina). minimo en %.
 export const ganaBono = (promedio, minimo = 90) => promedio != null && promedio >= minimo;
 
-// Las fotos se guardan 3 meses (decisión del dueño, 23/11/2026); después solo queda la calificación.
+// Las fotos se guardan 3 meses; después solo queda la calificación.
 export const DIAS_FOTOS = 90;
 export function fotoVigente(fechaEnvio, hoy) {
   const d = (Date.parse(`${hoy}T00:00:00Z`) - Date.parse(`${fechaEnvio}T00:00:00Z`)) / 86400000;

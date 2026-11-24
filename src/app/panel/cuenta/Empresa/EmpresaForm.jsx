@@ -1,4 +1,8 @@
 "use client";
+
+// Pestaña «Mi empresa»: a la izquierda el logo (y lo que la página ponga en `lateral`, como el
+// acceso a Módulos); a la derecha los datos en secciones: datos generales, contacto, redes sociales y registro automático
+// de asistencias, con barra «Sin cambios» / «Guardar». Mismos campos y mismo guardado: PUT /empresas/:id.
 import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
@@ -8,9 +12,9 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import { Button } from "@/components/ui/button";
 import { useSnackbar } from "notistack";
 import axios from "axios";
+import { Building2, ImageIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/context/AuthContext";
 import useSWR, { mutate } from "swr";
@@ -27,11 +31,15 @@ import {
   getTimeZoneOptions,
 } from "@/lib/timezones";
 import { Switch } from "@/components/ui/switch";
+import { copiarValores, hayCambiosPendientes } from "@/lib/cambiosPendientes.mjs";
+import { BarraGuardar, Grupo, Tarjeta, claseCampo, claseEtiqueta } from "../Piezas";
+import { useCambiosCuenta } from "../GuardiaCuenta";
 
-export default function EmpresaForm({ idEmpresa }) {
+export default function EmpresaForm({ idEmpresa, lateral = null }) {
   const { dataUser } = useAuth();
   const token = Cookies.get("token");
   const [loading, setLoading] = React.useState(false);
+  const [base, setBase] = React.useState(null);
   const { enqueueSnackbar } = useSnackbar();
 
   const empresaId = idEmpresa ?? dataUser?.id_empresa;
@@ -59,27 +67,18 @@ export default function EmpresaForm({ idEmpresa }) {
     if (data) {
       const setDataGiro = async () => {
         const giro = await getOptionGiros(data.giro);
-        reset({
+        const valores = {
           ...data,
           giro: giro ?? data.giro,
           zona_horaria: data.zona_horaria || DEFAULT_COMPANY_TIMEZONE,
           cron_asistencias_activo: data.cron_asistencias_activo ?? 1,
-        });
+        };
+        reset(valores);
+        setBase(copiarValores(valores));
       };
       setDataGiro();
     }
   }, [data, reset]);
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col justify-center items-center gap-3 h-100">
-        <Icon icon="line-md:loading-loop" width="40" height="40" />
-        <p>Cargando...</p>
-      </div>
-    );
-  }
-
-  if (error) return <ErrorPage message={error?.message} />;
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -95,7 +94,7 @@ export default function EmpresaForm({ idEmpresa }) {
           message: "Selecciona una zona horaria",
         });
         setLoading(false);
-        return;
+        return false;
       }
       const { createdAt, updatedAt, giro, ...input } = data;
 
@@ -110,262 +109,251 @@ export default function EmpresaForm({ idEmpresa }) {
       enqueueSnackbar("Se guardaron los cambios exitosamente!", {
         variant: "success",
       });
-      form.reset();
+      // Se deja lo guardado en el formulario para no vaciarlo mientras vuelve a llegar la empresa.
+      form.reset(data);
+      setBase(copiarValores(data));
       setLoading(false);
       await mutate(`/empresas/${empresaId}`);
+      return true;
     } catch (error) {
-      console.log(error);
       setLoading(false);
       const errorMessage =
         error.response?.data?.error ||
         error?.message ||
         "Error al guardar empresa";
       enqueueSnackbar(errorMessage, { variant: "error" });
+      return false;
     }
   };
+
+  const valores = watch();
+  const hayCambios = Boolean(base) && hayCambiosPendientes({ base, actual: valores });
+  const guardar = () => new Promise((resolve) => {
+    handleSubmit(async (datos) => resolve(await onSubmit(datos)), () => resolve(false))().catch(() => resolve(false));
+  });
+  useCambiosCuenta(`empresa-${empresaId}`, { hayCambios, guardar });
+
+  if (isLoading) {
+    return (
+      <div role="status" className="flex flex-col justify-center items-center gap-3 h-100">
+        <Icon icon="line-md:loading-loop" width="40" height="40" />
+        <p>Cargando...</p>
+      </div>
+    );
+  }
+
+  if (error) return <ErrorPage message={error?.message} />;
 
   const handleOnSelect = (selectedOption) => {
     form.setValue("giro", selectedOption);
   };
 
   return (
-    <div className="max-w-4xl space-y-6">
-      {/* Sección de logo con diseño ADAMIA */}
-      <div className="bg-cyan-50/60 border-2 border-cyan-100 rounded-xl p-6">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="bg-cyan-600 p-3 rounded-lg shadow-md">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Logo de empresa</h3>
-            <p className="text-sm text-gray-600">Personaliza la imagen de tu empresa</p>
-          </div>
-        </div>
-        <ImageEmpresa empresa={data} />
+    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="min-w-0 space-y-5">
+        <Tarjeta titulo="Logo" descripcion="La imagen de tu empresa." icono={ImageIcon}>
+          <ImageEmpresa empresa={data} />
+        </Tarjeta>
+        {lateral}
       </div>
 
-      {/* Información de empresa con diseño ADAMIA */}
-      <div className="bg-orange-50/60 border-2 border-orange-100 rounded-xl p-6">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="bg-orange-500 p-3 rounded-lg shadow-md">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Información de la empresa</h3>
-            <p className="text-sm text-gray-600">Datos generales y de contacto</p>
-          </div>
-        </div>
+      <Form {...form}>
+        <form id="form-empresa" onSubmit={handleSubmit(onSubmit)} noValidate className="min-w-0">
+          <Tarjeta
+            titulo="Información de la empresa"
+            descripcion="Datos generales, contacto y preferencias."
+            icono={Building2}
+            // Formulario largo: en escritorio «Guardar» también arriba, sin tener que bajar (como la ficha del empleado).
+            acciones={<div className="hidden md:block"><BarraGuardar arriba hayCambios={hayCambios} guardando={formState.isSubmitting} /></div>}
+            pie={<BarraGuardar hayCambios={hayCambios} guardando={formState.isSubmitting} />}
+          >
+            <div className="space-y-7">
+              <Grupo titulo="Datos generales">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormItem>
+                    <FormLabel className={claseEtiqueta}>Empresa</FormLabel>
+                    <FormControl>
+                      <Input
+                        disabled={loading}
+                        className={claseCampo}
+                        {...register("nombre_empresa", {
+                          required: "Empresa obligatorio",
+                        })}
+                      />
+                    </FormControl>
+                    <FormMessage>{formState.errors.nombre_empresa?.message}</FormMessage>
+                  </FormItem>
 
-        <Form {...form}>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="flex flex-col gap-4">
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">Empresa</FormLabel>
-                <FormControl>
-                  <Input
+                  <FormItem>
+                    <FormLabel className={claseEtiqueta}>Nombre del dueño</FormLabel>
+                    <FormControl>
+                      <Input
+                        disabled={loading}
+                        className={claseCampo}
+                        {...register("nombre_duenio", {
+                          required: "Nombre del dueño obligatorio",
+                        })}
+                      />
+                    </FormControl>
+                    <FormMessage>
+                      {formState.errors.nombre_duenio?.message}
+                    </FormMessage>
+                  </FormItem>
+
+                  <FormItem>
+                    <FormLabel className={claseEtiqueta} htmlFor="giro_autocomplete">Giro</FormLabel>
+                    {/* 44 px en teléfono también para el selector de giro (react-select). */}
+                    <div className="[&_[class*=-control]]:min-h-11 sm:[&_[class*=-control]]:min-h-10">
+                      <AutocompleteInput
+                        form={form}
+                        name="giro"
+                        loadOptions={loadOptionsGiros}
+                        handleChange={handleOnSelect}
+                        id="giro_autocomplete"
+                      />
+                    </div>
+                    <FormMessage>{formState.errors.giro?.message}</FormMessage>
+                  </FormItem>
+
+                  <FormItem>
+                    <FormLabel className={claseEtiqueta} htmlFor="zona_horaria">Zona horaria</FormLabel>
+                    <Combobox
+                      name="zona_horaria"
+                      options={timeZoneOptions}
+                      value={selectedTimeZone || DEFAULT_COMPANY_TIMEZONE}
+                      placeholder="Selecciona la zona horaria"
+                      emptyText="No se encontraron zonas horarias"
+                      onChange={(value) => {
+                        setValue("zona_horaria", value || DEFAULT_COMPANY_TIMEZONE);
+                        form.clearErrors("zona_horaria");
+                      }}
+                      disabled={loading}
+                      className="min-h-11 bg-white font-normal sm:min-h-10"
+                    />
+                    <FormMessage>{formState.errors.zona_horaria?.message}</FormMessage>
+                  </FormItem>
+                </div>
+              </Grupo>
+
+              <Grupo titulo="Contacto">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <FormItem>
+                    <FormLabel className={claseEtiqueta}>Correo</FormLabel>
+                    <FormControl>
+                      <Input
+                        disabled={loading}
+                        type="email"
+                        autoComplete="email"
+                        className={claseCampo}
+                        {...register("correo_empresa", {
+                          required: "Correo obligatorio",
+                        })}
+                      />
+                    </FormControl>
+                    <FormMessage>
+                      {formState.errors.correo_empresa?.message}
+                    </FormMessage>
+                  </FormItem>
+
+                  <FormItem>
+                    <FormLabel className={claseEtiqueta}>Teléfono</FormLabel>
+                    <FormControl>
+                      <Input
+                        disabled={loading}
+                        type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
+                        className={claseCampo}
+                        {...register("celular", {
+                          required: "Teléfono obligatorio",
+                          pattern: {
+                            value: /^(52\d{10}|\d{10})$/,
+                            message: "Teléfono no válido",
+                          },
+                        })}
+                      />
+                    </FormControl>
+                    <FormMessage>{formState.errors.celular?.message}</FormMessage>
+                  </FormItem>
+
+                  <FormItem className="md:col-span-2">
+                    <FormLabel className={claseEtiqueta}>Dirección</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        disabled={loading}
+                        autoComplete="street-address"
+                        className={claseCampo}
+                        {...register("direccion", {
+                          required: "Dirección obligatorio",
+                        })}
+                        placeholder="Dirección completa de la empresa"
+                      />
+                    </FormControl>
+                    <FormMessage>{formState.errors.direccion?.message}</FormMessage>
+                  </FormItem>
+                </div>
+              </Grupo>
+
+              <Grupo titulo="Redes sociales" descripcion="Opcionales.">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <FormItem>
+                    <FormLabel className={claseEtiqueta}>Facebook</FormLabel>
+                    <FormControl>
+                      <Input disabled={loading} inputMode="url" className={claseCampo} {...register("facebook")} placeholder="URL de Facebook" />
+                    </FormControl>
+                    <FormMessage>{formState.errors.facebook?.message}</FormMessage>
+                  </FormItem>
+                  <FormItem>
+                    <FormLabel className={claseEtiqueta}>Instagram</FormLabel>
+                    <FormControl>
+                      <Input disabled={loading} inputMode="url" className={claseCampo} {...register("instagram")} placeholder="URL de Instagram" />
+                    </FormControl>
+                    <FormMessage>{formState.errors.instagram?.message}</FormMessage>
+                  </FormItem>
+                  <FormItem>
+                    <FormLabel className={claseEtiqueta}>Página web</FormLabel>
+                    <FormControl>
+                      <Input disabled={loading} inputMode="url" className={claseCampo} {...register("pagina_web")} placeholder="URL del sitio web" />
+                    </FormControl>
+                    <FormMessage>{formState.errors.pagina_web?.message}</FormMessage>
+                  </FormItem>
+                </div>
+              </Grupo>
+
+              <Grupo titulo="Registro automático de asistencias">
+                <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50/60 p-4">
+                  <Switch
+                    id="cron_asistencias_activo"
+                    checked={!!cronActivo}
+                    onCheckedChange={(checked) =>
+                      setValue("cron_asistencias_activo", checked ? 1 : 0, {
+                        shouldDirty: true,
+                      })
+                    }
                     disabled={loading}
-                    {...register("nombre_empresa", {
-                      required: "Empresa obligatorio",
-                    })}
+                    className="mt-0.5 shrink-0"
                   />
-                </FormControl>
-                <FormMessage>{formState.errors.empresa?.message}</FormMessage>
-              </FormItem>
-
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">Correo</FormLabel>
-                <FormControl>
-                  <Input
-                    disabled={loading}
-                    type="email"
-                    {...register("correo_empresa", {
-                      required: "Correo obligatorio",
-                    })}
-                  />
-                </FormControl>
-                <FormMessage>
-                  {formState.errors.correo_empresa?.message}
-                </FormMessage>
-              </FormItem>
+                  <div className="flex min-w-0 flex-col gap-1">
+                    <label
+                      htmlFor="cron_asistencias_activo"
+                      className="cursor-pointer select-none text-sm font-semibold text-[#080d36]"
+                    >
+                      {cronActivo ? "Activo" : "Inactivo"}
+                    </label>
+                    <p className="text-[12.5px] leading-relaxed text-slate-600">
+                      Cuando está <strong>activo</strong>, el sistema genera y cierra automáticamente los registros de asistencia cada día para todos los empleados de esta empresa.
+                    </p>
+                    <p className="text-[12.5px] font-medium leading-relaxed text-amber-700">
+                      Desactívalo mientras das de alta a tus empleados y vuelve a activarlo cuando estés listo para comenzar el registro diario.
+                    </p>
+                  </div>
+                </div>
+              </Grupo>
             </div>
-            <div className="flex flex-col gap-4">
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">Nombre del dueño</FormLabel>
-                <FormControl>
-                  <Input
-                    disabled={loading}
-                    {...register("nombre_duenio", {
-                      required: "Nombre del dueño obligatorio",
-                    })}
-                  />
-                </FormControl>
-                <FormMessage>
-                  {formState.errors.nombre_duenio?.message}
-                </FormMessage>
-              </FormItem>
-
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">Teléfono</FormLabel>
-                <FormControl>
-                  <Input
-                    disabled={loading}
-                    type="tel"
-                    {...register("celular", {
-                      required: "Teléfono obligatorio",
-                      pattern: {
-                        value: /^(52\d{10}|\d{10})$/,
-                        message: "Teléfono no válido",
-                      },
-                    })}
-                  />
-                </FormControl>
-                <FormMessage>{formState.errors.celular?.message}</FormMessage>
-              </FormItem>
-            </div>
-          </div>
-          <FormItem>
-            <FormLabel className="text-sm font-medium text-gray-700">
-              Zona horaria
-            </FormLabel>
-            <Combobox
-              name="zona_horaria"
-              options={timeZoneOptions}
-              value={selectedTimeZone || DEFAULT_COMPANY_TIMEZONE}
-              placeholder="Selecciona la zona horaria"
-              emptyText="No se encontraron zonas horarias"
-              onChange={(value) => {
-                setValue("zona_horaria", value || DEFAULT_COMPANY_TIMEZONE);
-                form.clearErrors("zona_horaria");
-              }}
-              disabled={loading}
-            />
-            <FormMessage>{formState.errors.zona_horaria?.message}</FormMessage>
-          </FormItem>
-          {/* <FormItem>
-            <FormLabel>Giro</FormLabel>
-            <FormControl>
-              <Input
-                disabled={loading}
-                {...register("giro", {
-                  required: "Giro obligatorio",
-                })}
-              />
-            </FormControl>
-            <FormMessage>{formState.errors.giro?.message}</FormMessage>
-          </FormItem> */}
-          <FormItem>
-            <FormLabel className="text-sm font-medium text-gray-700">Giro</FormLabel>
-            <AutocompleteInput
-              form={form}
-              name="giro"
-              loadOptions={loadOptionsGiros}
-              handleChange={handleOnSelect}
-              id="giro_autocomplete"
-            />
-            <FormMessage>{formState.errors.giro?.message}</FormMessage>
-          </FormItem>
-          <FormItem>
-            <FormLabel className="text-sm font-medium text-gray-700">Dirección</FormLabel>
-            <FormControl>
-              <Input
-                type="text"
-                disabled={loading}
-                {...register("direccion", {
-                  required: "Dirección obligatorio",
-                })}
-                placeholder="Dirección completa de la empresa"
-              />
-            </FormControl>
-            <FormMessage>{formState.errors.direccion?.message}</FormMessage>
-          </FormItem>
-
-          {/* Sección de Registro Automático de Asistencias */}
-          <div className="border-t-2 border-orange-200 pt-6 mt-6">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Registro automático de asistencias
-            </h4>
-            <div className="flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <Switch
-                id="cron_asistencias_activo"
-                checked={!!cronActivo}
-                onCheckedChange={(checked) =>
-                  setValue("cron_asistencias_activo", checked ? 1 : 0, {
-                    shouldDirty: true,
-                  })
-                }
-                disabled={loading}
-                className="mt-0.5 shrink-0"
-              />
-              <div className="flex flex-col gap-1">
-                <label
-                  htmlFor="cron_asistencias_activo"
-                  className="text-sm font-semibold text-gray-900 cursor-pointer select-none"
-                >
-                  {cronActivo ? "Activo" : "Inactivo"}
-                </label>
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  Cuando está <strong>activo</strong>, el sistema genera y cierra automáticamente los registros de asistencia cada día para todos los empleados de esta empresa.
-                  <br />
-                  <span className="text-amber-700 font-medium">
-                    Desactívalo mientras das de alta a tus empleados y vuelve a activarlo cuando estés listo para comenzar el registro diario.
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Sección de Redes Sociales */}
-          <div className="border-t-2 border-orange-200 pt-6 mt-6">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-              </svg>
-              Redes sociales
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">Facebook</FormLabel>
-                <FormControl>
-                  <Input disabled={loading} {...register("facebook")} placeholder="URL de Facebook" />
-                </FormControl>
-                <FormMessage>{formState.errors.facebook?.message}</FormMessage>
-              </FormItem>
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">Instagram</FormLabel>
-                <FormControl>
-                  <Input disabled={loading} {...register("instagram")} placeholder="URL de Instagram" />
-                </FormControl>
-                <FormMessage>{formState.errors.instagram?.message}</FormMessage>
-              </FormItem>
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">Página web</FormLabel>
-                <FormControl>
-                  <Input disabled={loading} {...register("pagina_web")} placeholder="URL del sitio web" />
-                </FormControl>
-                <FormMessage>{formState.errors.pagina_web?.message}</FormMessage>
-              </FormItem>
-            </div>
-          </div>
-          <div className="flex justify-end pt-4">
-            <Button 
-              type="submit" 
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm px-8" 
-              loading={loading}
-            >
-              Guardar cambios
-            </Button>
-          </div>
+          </Tarjeta>
         </form>
       </Form>
-      </div>
     </div>
   );
 }

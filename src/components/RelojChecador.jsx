@@ -10,6 +10,8 @@ import {
   AlertTriangle,
   Camera,
   Menu,
+  Pin,
+  PinOff,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -25,6 +27,9 @@ import ClockDisplay from "./Clock/ClockDisplay";
 import EmployeeInput from "./Clock/EmployeeInput";
 import StatsCards from "./Clock/StatsCards";
 import RecordsTable from "./Clock/RecordsTable";
+import PantallaKiosco from "./Clock/PantallaKiosco";
+import UltimosRegistros from "./Clock/UltimosRegistros";
+import { estadoConexion } from "./Clock/IndicadorConexion";
 import { useGPS } from "@/hooks/Capacitor/useGPS";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -39,7 +44,7 @@ import { hora12 } from "@/lib/hora12.mjs";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// (23/11/2026, INC-RELOJ-COMIDA-001) Si una checada guardada no trae las opciones del servidor, se ofrecen las que el
+// (INC-RELOJ-COMIDA-001) Si una checada guardada no trae las opciones del servidor, se ofrecen las que el
 // servidor acepta para cualquier tipo de cierre (con cierre automático, temporal/cerrar turno cuentan como salida).
 const OPCIONES_SIN_DATOS = ["salida_comida", "salida_temporal", "cerrar_turno"];
 
@@ -52,8 +57,8 @@ export default function RelojChecador({
 }) {
   const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [metodo, setMetodo] = useState("facial");
-  // Celular (maqueta aprobada 19/11/2026): la cámara ocupa el alto que queda entre la franja de
-  // arriba y la barra de abajo. Se mide porque arriba puede haber navegación (reloj del empleado).
+  // Celular: la cámara ocupa el alto que queda entre la franja de arriba y la barra de abajo. Se mide porque
+  // arriba puede haber navegación (reloj del empleado).
   const areaRef = useRef(null);
   const [altoArea, setAltoArea] = useState(null);
   const [ajustesCamara, setAjustesCamara] = useState(false);
@@ -95,7 +100,7 @@ export default function RelojChecador({
   const [mostrarCamara, setMostrarCamara] = useState(true);
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
-  // Candado de 5 min (19/11/2026): «Acabas de registrar tu salida a las 4:49 p.m. ¿Registrar otra vez?».
+  // Candado de 5 min: «Acabas de registrar tu salida a las 4:49 p.m. ¿Registrar otra vez?».
   const [pregunta, setPregunta] = useState(null);
   const [repitiendo, setRepitiendo] = useState(false);
   const [registrando, setRegistrando] = useState(false);
@@ -223,14 +228,14 @@ export default function RelojChecador({
     setCodigoEmpleado("");
   }, [metodo]);
 
-  // Tarjeta del resultado. Un solo temporizador: con el reloj fijo, el aviso de la persona siguiente ya no
-  // se cierra antes de tiempo por el temporizador de la anterior. Con motivo de «pendiente», más tiempo.
+  // Un solo temporizador para la tarjeta del resultado: con varios, el de la persona anterior cerraba el aviso
+  // de la siguiente antes de tiempo. Con motivo de «pendiente», más tiempo.
   const temporizadorPopup = useRef(null);
   const router = useRouter();
   useEffect(() => () => clearTimeout(temporizadorPopup.current), []);
   const mostrarResultado = (data) => {
     clearTimeout(temporizadorPopup.current);
-    // (21/11/2026) App del empleado: al checar regresa a su Inicio (ahí ve su jornada actualizada). Con error del
+    // App del empleado: al checar regresa a su Inicio (ahí ve su jornada actualizada). Con error del
     // servidor se queda para que lo vea y avise a RH; los errores al registrar no pasan por aquí (se quedan en el reloj).
     const volverAInicio = modoEmpleado && !data.errorServidor;
     setPopupInfo({
@@ -421,7 +426,7 @@ export default function RelojChecador({
   useEffect(() => {
     const validarSuscripcion = async () => {
       if (!idEmpresa) return;
-      // (21/11/2026) Una vez al día: si hoy ya se validó en este dispositivo, entra directo sin preguntar al servidor.
+      // Una vez al día: si hoy ya se validó en este dispositivo, entra directo sin preguntar al servidor.
       if (validadaHoy(`empresa:${idEmpresa}`)) {
         setSubscriptionActive(true);
         setSubscriptionLoading(false);
@@ -472,7 +477,7 @@ export default function RelojChecador({
     return () => window.removeEventListener("resize", medir);
   }, [subscriptionLoading, subscriptionActive, menuMovil]);
 
-  // 12 horas con a.m./p.m. (19/11/2026): «4:49 p.m.».
+  // 12 horas con a.m./p.m.: «4:49 p.m.».
   const horaCorta = horaActual ? horaActual.replace(/:\d{2} /, " ") : "";
 
   if (subscriptionLoading) {
@@ -510,35 +515,72 @@ export default function RelojChecador({
   if (error && !offline)
     return <ErrorPage message="No se pudieron cargar los registros." />;
 
+  // Reloj de la empresa (/<slug>): kiosco a pantalla completa, sin desplazar. El del empleado conserva su diseño.
+  const kiosco = !modoEmpleado;
+  const conexion = estadoConexion({ offline, localFacesReady });
+  const panelRostro = (
+    <FacialRecognitionPanel
+      isOpen={mostrarCamara}
+      onOpen={() => setMostrarCamara(true)}
+      onClose={() => setMostrarCamara(false)}
+      onSuccess={handleFacialResponse}
+      idEmpresa={idEmpresa}
+      submitMovement={submitMovement}
+      handleOpenFacialModal={() => setMostrarCamara(false)}
+      continuo={camaraFija}
+      pantallaCompleta={kiosco || isMobile}
+      pausado={Boolean(pregunta)}
+    />
+  );
+
   return (
     <>
-      <main className="bg-slate-50 md:min-h-screen md:p-4">
+      <main className={kiosco ? "h-dvh overflow-hidden bg-slate-50" : "bg-slate-50 md:min-h-screen md:p-4"}>
+        {kiosco ? (
+          <PantallaKiosco
+            horaActual={horaActual}
+            fechaActual={fechaActual}
+            onTocarHora={tocarHora}
+            conexion={conexion}
+            menu={dataUser ? <ClockNavigation companyId={idEmpresa} companySlug={companySlug} /> : null}
+            codigo={codigoEmpleado}
+            setCodigo={setCodigoEmpleado}
+            onRegistrar={registrarMovimiento}
+            onAbrirQR={handleOpenQR}
+            registrando={registrando || loadingGPS}
+            enqueueSnackbar={enqueueSnackbar}
+            avisoUbicacion={ubicacionGPS ? `Última lectura: precisión ±${Math.ceil(ubicacionGPS.accuracy)} m. Usa ubicación precisa para checar.` : null}
+            camara={(!offline || localFacesReady) ? (
+              <>
+                {panelRostro}
+                {/* Ajuste del aparato: discreto sobre el video (antes era una franja «Cámara siempre encendida»). */}
+                {mostrarCamara && (
+                  <button type="button" onClick={cambiarCamaraFija} aria-pressed={camaraFija}
+                    aria-label="Cámara siempre encendida" title={camaraFija ? "Cámara siempre encendida: queda lista para la siguiente persona" : "La cámara se apaga al checar"}
+                    className={`absolute left-3 top-3 z-10 grid size-10 place-items-center rounded-full bg-slate-900/55 text-white ${camaraFija ? "" : "opacity-70"}`}>
+                    {camaraFija ? <Pin className="size-5" aria-hidden="true" /> : <PinOff className="size-5" aria-hidden="true" />}
+                  </button>
+                )}
+              </>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 bg-slate-100 p-6 text-center">
+                <Camera className="size-10 text-slate-400" aria-hidden="true" />
+                <p className="font-semibold text-slate-700">Rostro no disponible sin conexión</p>
+                <p className="text-sm text-slate-500">Registra con tu código o QR.</p>
+              </div>
+            )}
+            recientes={<UltimosRegistros movimientos={movimientos} isLoading={isLoading} formatearHora={formatearHora} empleadosActivos={empleadosActivos} totalRegistros={totalRegistros} />}
+          />
+        ) : (
         <div className="mx-auto max-w-7xl md:space-y-6">
           <div className="hidden md:block"><ClockNavigation companyId={idEmpresa} companySlug={companySlug} /></div>
-          <div className="hidden md:block rounded-xl border border-blue-100 bg-indigo-50/60 p-6">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-600 p-2.5">
-                <Clock4 className="w-5 h-5 text-white" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-lg font-bold text-slate-900">
-                  Reloj checador
-                </h1>
-                <p className="text-sm text-slate-600">
-                  Registro de entradas y salidas con validación por código, QR y
-                  reconocimiento facial.
-                </p>
-                <p role="status" className="mt-2 inline-flex rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{offline ? localFacesReady ? 'Sin conexión · Reconocimiento local listo · Pendiente de subir' : 'Sin conexión · Código / QR · Rostro sin preparar' : localFacesReady ? 'Reconocimiento offline preparado en este dispositivo' : 'Los rostros de la empresa se descargan automáticamente con internet, sin iniciar sesión.'}</p>
-              </div>
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-12 md:gap-6">
             <div className="hidden md:block lg:col-span-4 md:col-span-5 space-y-6">
               <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
                 <ClockDisplay
                   horaActual={horaActual}
                   fechaActual={fechaActual}
+                  conexion={conexion}
                 />
                 {ubicacionGPS && <p className="text-sm text-slate-600" role="status">Última lectura: precisión ±{Math.ceil(ubicacionGPS.accuracy)} m. Usa ubicación precisa para checar.</p>}
                 <EmployeeInput
@@ -557,7 +599,7 @@ export default function RelojChecador({
             </div>
 
             <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
-              {/* Franja con la marca ADAMIA (19/11/2026): logo y colores de marca, sin nombre de la empresa.
+              {/* Franja con la marca ADAMIA: logo y colores de marca, sin nombre de la empresa.
                   (21/11/2026) En la app del iPhone la hora y la batería del sistema quedaban encima: deja el espacio de la
                   muesca (safe area) y se queda fija arriba al desplazar. */}
               <div className="md:hidden sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)]">
@@ -664,18 +706,7 @@ export default function RelojChecador({
                         : "hidden md:block"
                     }
                   >
-                    <FacialRecognitionPanel
-                      isOpen={mostrarCamara}
-                      onOpen={() => setMostrarCamara(true)}
-                      onClose={() => setMostrarCamara(false)}
-                      onSuccess={handleFacialResponse}
-                      idEmpresa={idEmpresa}
-                      submitMovement={submitMovement}
-                      handleOpenFacialModal={() => setMostrarCamara(false)}
-                      continuo={camaraFija}
-                      pantallaCompleta={isMobile}
-                      pausado={Boolean(pregunta)}
-                    />
+                    {panelRostro}
                   </div>
                 )}
 
@@ -739,6 +770,7 @@ export default function RelojChecador({
             </div>
           </div>
         </div>
+        )}
         {mostrarQR && (
           <QRScanner
             onScan={handleQRScan}
@@ -749,7 +781,7 @@ export default function RelojChecador({
         )}
 
         {pregunta && (
-          <div className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-100 md:inset-0 md:flex md:items-center md:justify-center md:bg-slate-900/40 md:p-4">
+          <div className={kiosco ? "fixed inset-0 z-100 flex items-center justify-center bg-slate-900/40 p-4" : "fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-100 md:inset-0 md:flex md:items-center md:justify-center md:bg-slate-900/40 md:p-4"}>
             <div role="alertdialog" aria-labelledby="pregunta-repetida" className="mx-auto w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-200">
               <p className="text-base font-bold text-slate-900">{pregunta.empleado?.nombre} {pregunta.empleado?.apellido_paterno}</p>
               <p id="pregunta-repetida" className="mt-1 text-sm text-slate-700">{String(pregunta.pregunta).replace(/\.?$/, ".")} ¿Registrar otra vez?</p>
@@ -764,7 +796,7 @@ export default function RelojChecador({
           </div>
         )}
 
-        {popupInfo && (() => {
+        {popupInfo && !kiosco && (() => {
           const tono = popupInfo.pending ? (popupInfo.errorServidor ? "amber" : "blue") : popupInfo.success ? "green" : "red";
           const colores = { amber: "text-amber-700 bg-amber-50", blue: "text-blue-700 bg-blue-50", green: "text-green-700 bg-green-50", red: "text-red-700 bg-red-50" }[tono];
           const estado = popupInfo.pending ? (popupInfo.errorServidor ? "Error del servidor · avisa a RH" : "Pendiente de subir") : popupInfo.success ? (popupInfo.movimiento || "Registrada") : "No se registró · avisa a RH";
@@ -790,8 +822,8 @@ export default function RelojChecador({
         })()}
 
         {popupInfo && (
-          <div className="fixed inset-0 z-100 hidden md:flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
-            <div className="bg-white rounded-[3rem] shadow-2xl p-10 text-center max-w-sm w-full transform animate-bounce-in border border-slate-100">
+          <div className={`fixed inset-0 z-100 items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 ${kiosco ? "flex" : "hidden md:flex"}`}>
+            <div className="bg-white rounded-[3rem] shadow-2xl p-8 md:p-10 text-center max-w-sm w-full transform animate-bounce-in border border-slate-100">
               <div className="relative mb-6">
                 <img
                   src={popupInfo.foto_perfil}
@@ -842,7 +874,7 @@ export default function RelojChecador({
           <div className="fixed inset-0 z-110 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
             <div className="bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl p-8 w-full max-w-sm animate-in slide-in-from-bottom-10 duration-300">
               <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden" />
-              {/* (23/11/2026) Opciones que manda el servidor: «Salir a comer» / «Registrar salida» o las de cierre manual. */}
+              {/* Opciones que manda el servidor: «Salir a comer» / «Registrar salida» o las de cierre manual. */}
               <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">
                 {pendiente?.opciones?.includes("salida_comida") ? "¿Sales a comer?" : "Turno abierto"}
               </h2>

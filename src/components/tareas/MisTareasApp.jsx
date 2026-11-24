@@ -1,6 +1,6 @@
 "use client";
 
-// App del empleado → Tareas (23/11/2026, conectado a la API). Arriba sus checklists de hoy (y los que su jefe le regresó);
+// App del empleado → Tareas. Arriba sus checklists de hoy (y los que su jefe le regresó);
 // abajo sus tareas por estado. Detalle con pasos, foto y comentarios, y «Mandar a revisión». El checklist se llena
 // pregunta por pregunta, con fotos y firma que se suben al momento; el servidor califica.
 import { useState } from "react";

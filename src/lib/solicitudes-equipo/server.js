@@ -270,7 +270,7 @@ export async function vacationDetails(current, row) {
     empresa: current.company,
     id_empresa: current.company,
   });
-  // (23/11/2026) Saldo de esa persona (antes se pedía el reporte de toda la empresa, que al jefe le salía vacío).
+  // Saldo de esa persona: el reporte de toda la empresa le sale vacío al jefe.
   const results = await Promise.allSettled([
     current.api(`/checador/vacaciones/saldo/${row.id_empleado}`),
     current.api(`/checador/vacaciones/cargados/${row.id_empleado}?${query}`),
@@ -372,9 +372,8 @@ export async function resolveRequest(current, row, state) {
       "La solicitud ya fue resuelta. Actualiza para consultar su estado.",
       409,
     );
-  // (23/11/2026) «Aprobé y no se actualiza»: «por-autorizar» solo responde a sesiones de empleado (jefe/responsable);
-  // para el dueño o RH vinculado a su registro de empleado venía vacío y se rechazaba la aprobación. Para ellos basta que
-  // la solicitud siga pendiente (findRequest la acaba de leer) y el backend valida el permiso al cambiar el estado.
+  // «por-autorizar» solo responde a sesiones de empleado: para el dueño o RH vinculado a su empleado basta que la
+  // solicitud siga pendiente (findRequest la acaba de leer); el backend valida el permiso al cambiar el estado.
   const esEmpleado = current.user.tipo_usuario === "Empleado";
   const pending = esEmpleado
     ? await allPages(current.api, "/checador/solicitudes-permiso/por-autorizar", "results")

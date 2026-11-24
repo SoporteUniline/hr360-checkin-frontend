@@ -1,6 +1,6 @@
 "use client";
 
-// Ficha → Checador y acceso (23/11/2026, pedido del dueño): «Firma y PIN» de la persona para RH.
+// Ficha → Checador y acceso: «Firma y PIN» de la persona para RH.
 // RH nunca ve ni escribe el PIN: ve si tiene firma guardada y PIN, si está bloqueado, y puede DESBLOQUEAR (quita el
 // candado de intentos) o RESTABLECER (borra el PIN; la persona crea uno nuevo en su app). Cada acción queda registrada.
 // Reglas de qué mostrar: src/lib/firma/pinRh.mjs (scripts/test-pin-rh.mjs).
@@ -59,7 +59,7 @@ export default function FirmaPinRh({ idEmpleado }) {
   };
 
   return (
-    <section aria-labelledby="firma-pin-rh" className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-4 text-sm" data-firma-pin-rh>
+    <section aria-labelledby="firma-pin-rh" className="w-full rounded-xl border border-slate-200 bg-white p-4 text-sm" data-firma-pin-rh>
       <h3 id="firma-pin-rh" className="flex items-center gap-2 font-semibold text-slate-900"><KeyRound className="size-4 text-brand" /> Firma y PIN</h3>
       <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2">
         <dt className="text-slate-500">Firma</dt>

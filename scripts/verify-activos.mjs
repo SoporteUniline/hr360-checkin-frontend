@@ -1,4 +1,4 @@
-// Verificación en navegador del módulo único «Activos y uniformes» (20/11/2026): una entrada en el menú,
+// Verificación en navegador del módulo único «Activos y uniformes»: una entrada en el menú,
 // pestañas Inicio · Inventario · Personas, Ajustes, filtro Activos | Uniformes y redirección de las rutas
 // viejas. Backend simulado (nada sale a internet). Uso: npm run build && node scripts/verify-activos.mjs
 import assert from "node:assert/strict";

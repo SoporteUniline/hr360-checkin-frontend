@@ -309,8 +309,8 @@ export const rangoNuevo = (anterior) => {
   return { clave: claveLocal(), desde: "09:00", hasta: "13:00" };
 };
 
-// El servidor real (GET /vacantes/:id/agenda) responde `horario_json` y `bloqueos_json`; los mocks de antes, `horario` y
-// `bloqueos`. Se aceptan los dos (04/12/2026: con el servidor real la agenda se veía vacía y «sin configurar»).
+// El servidor (GET /vacantes/:id/agenda) responde `horario_json` y `bloqueos_json`; los mocks, `horario` y `bloqueos`.
+// Se aceptan los dos.
 const horarioDeApi = (a) => a?.horario ?? a?.horario_json ?? null;
 const bloqueosDeApi = (a) => a?.bloqueos ?? a?.bloqueos_json ?? null;
 
@@ -584,9 +584,8 @@ export function textoPlantillasMes(estado) {
   return n === 1 ? "1 plantilla enviada este mes" : `${t} plantillas enviadas este mes`;
 }
 
-// Selector de horarios (pedido del dueño 23/11/2026): ¿por qué no hay horarios? Se distingue la causa para no dejar a la
-// persona ante una lista vacía. Precedencia: falta la migración (503 SIN_MIGRACION) → agenda sin configurar
-// (activa=false u horario sin rangos) → días sin horarios (se puede ver «Siguientes»).
+// Selector de horarios: se distingue por qué no hay horarios para no dejar a la persona ante una lista vacía.
+// Precedencia: falta la migración (503 SIN_MIGRACION) → agenda sin configurar → días sin horarios («Siguientes»).
 export const MENSAJE_SIN_MIGRACION_AGENDA = "Falta correr la migración de la agenda (R3)";
 export const MENSAJE_AGENDA_SIN_CONFIGURAR = "La agenda de esta vacante no está configurada";
 export function agendaConfigurada(agenda) {

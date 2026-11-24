@@ -1,16 +1,19 @@
 import { Clock } from "lucide-react";
+import IndicadorConexion from "./IndicadorConexion";
 
-export default function ClockDisplay({ horaActual, fechaActual }) {
+export default function ClockDisplay({ horaActual, fechaActual, conexion }) {
   return (
     <div className="text-center">
       <div className="relative mb-4">
         <div className="w-18 h-18 mx-auto bg-brand rounded-full flex items-center justify-center shadow-md">
           <Clock className="w-8 h-8 text-white" />
         </div>
-        <div className="absolute -top-2 -right-2 w-3 h-3 bg-green-500 rounded-full"></div>
+        {conexion
+          ? <IndicadorConexion {...conexion} className="absolute -top-3 -right-3" />
+          : <div className="absolute -top-2 -right-2 w-3 h-3 bg-green-500 rounded-full"></div>}
       </div>
       <h2 className="text-5xl font-bold text-slate-900 mb-2 tracking-tight font-mono flex items-end justify-center gap-2">
-        {/* 12 horas (19/11/2026): «4:49:22» y «p.m.» aparte. */}
+        {/* 12 horas: «4:49:22» y «p.m.» aparte. */}
         <span className="tabular-nums">{horaActual.replace(/ [ap]\.m\.$/, "")}</span>
         <span className="text-xl text-blue-600 font-black tracking-wide">{/a\.m\.$/.test(horaActual) ? "a.m." : "p.m."}</span>
       </h2>

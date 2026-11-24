@@ -6,7 +6,7 @@ Contacto comercial: sistema@adamia.mx y WhatsApp +52 317 128 8029.
 Funciones clave: reloj checador facial + GPS, gestion de empleados, asistencias, vacaciones y permisos, reportes, contratos digitales, actas, notificaciones y portal web empresarial.
 Planes: mensual (0%), semestral (10% off), anual (20% off).
 Contratacion: disponible en linea.
-Enlaces: contratar https://planes.hr360.mx/contratar-plan y cotizar https://planes.hr360.mx/cotiza.
+Enlaces: contratar https://adamia.com.mx/contratar-plan y cotizar https://adamia.com.mx/cotiza.
 `;
 
 function normalizeText(value) {
@@ -372,7 +372,7 @@ function buildQuoteResponse({ empleados, nombre }) {
       q.ahorro12,
     )})`,
     "Incluye reloj checador facial + GPS, asistencias, vacaciones, contratos y reportes.",
-    "Cotiza formalmente en https://planes.hr360.mx/cotiza o contrata en https://planes.hr360.mx/contratar-plan.",
+    "Cotiza formalmente en https://adamia.com.mx/cotiza o contrata en https://adamia.com.mx/contratar-plan.",
   ].join("\n");
 }
 

@@ -1,9 +1,7 @@
 "use client";
 
-// «Control de horas extra» por fechas (maqueta aprobada 19/11/2026): días arriba, horas abajo.
-// Clic en un día: sus registros (horario, checadas, tiempo de más, alertas), decidir Sí/No y
-// «Abrir en Asistencias» (esa persona, ese día, con su ventana de edición abierta).
-// Lógica: lib/asistencia/matrizHorasExtra.mjs.
+// «Control de horas extra» por fechas: días arriba, horas abajo; clic en un día abre sus registros y «Abrir en
+// Asistencias». Lógica: lib/asistencia/matrizHorasExtra.mjs.
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import dayjs from "dayjs";

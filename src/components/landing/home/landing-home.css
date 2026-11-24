@@ -47,26 +47,27 @@
 .lh .tags li + li::before { content: "·"; color: #b7aef7; margin-right: 10px; display: inline-block; text-decoration: none; }
 .lh .tags li { transition: color .3s ease; } .lh .tags li.on { color: var(--ink); text-decoration: underline 3px var(--violet); text-underline-offset: 6px; }
 
-/* Entradas al hacer scroll: solo para lo que empieza fuera de la pantalla (lo visible al cargar ya está completo). */
-.lh .pre { opacity: 0; transform: translateY(30px); }
-.lh .reveal { transition: opacity .7s var(--ease), transform .7s var(--ease); transition-delay: var(--d, 0s); }
+/* Entradas al hacer scroll: solo para lo que empieza fuera de la pantalla (lo visible al cargar ya está completo).
+   Con `translate` y no `transform` para no pelear con el transform del hover o del flotado; --d escalona (animaciones.js). */
+.lh .pre { opacity: 0; translate: 0 20px; }
+.lh .reveal { transition: opacity .7s var(--ease), translate .7s var(--ease); transition-delay: var(--d, 0s); }
 
 /* ——— Encabezado ——— */
 .lh .top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 30; background: rgba(255, 255, 255, .88); backdrop-filter: saturate(1.6) blur(16px); border-bottom: 1px solid var(--line); }
-.lh .top .wrap { display: flex; align-items: center; gap: 36px; min-height: 70px; }
+.lh .top .wrap { display: flex; align-items: center; gap: 28px; min-height: 70px; }
 .lh .brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; }
 .lh .brand img { height: 28px; width: auto; display: block; }
 .lh .brand span { font: 800 1.3rem/1 var(--fh); letter-spacing: .16em; color: var(--ink); }
-.lh .nav { display: flex; gap: 28px; }
-.lh .nav a { color: var(--ink); text-decoration: none; font-weight: 500; font-size: .95rem; }
+.lh .nav { display: flex; gap: 22px; }
+.lh .nav a { color: var(--ink); text-decoration: none; font-weight: 500; font-size: .95rem; white-space: nowrap; }
 .lh .nav a:hover { color: var(--blue); }
 .lh .top-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-.lh .top-actions .login { color: var(--ink); font-weight: 600; text-decoration: none; padding: 12px 8px; font-size: .95rem; }
-.lh .top .btn { min-height: 44px; padding: 0 18px; font-size: .94rem; }
+.lh .top-actions .login { color: var(--ink); font-weight: 600; text-decoration: none; padding: 12px 8px; font-size: .95rem; white-space: nowrap; }
+.lh .top .btn { min-height: 44px; padding: 0 18px; font-size: .94rem; white-space: nowrap; }
 .lh .nav a[aria-current="page"] { color: var(--blue); }
 .lh .menu-btn { display: none; width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid #c9cde0; background: #fff; color: var(--ink); font-size: 1.2rem; cursor: pointer; }
 .lh .menu-movil { display: none; }
-@media (max-width: 1100px) { .lh .top .wrap { gap: 22px; } .lh .nav { gap: 18px; } .lh .top-actions .contratar { display: none; } }
+@media (max-width: 1100px) { .lh .top .wrap { gap: 18px; } .lh .nav { gap: 16px; } .lh .nav a { font-size: .9rem; } .lh .top-actions .contratar { display: none; } }
 @media (max-width: 980px) {
   .lh .menu-btn { display: inline-grid; place-items: center; }
   .lh .menu-movil { display: grid; border-top: 1px solid var(--line); background: #fff; padding: 8px max(20px, env(safe-area-inset-left, 0px)) 16px; }
@@ -506,7 +507,7 @@
 .lh .slide .btn-primary:hover { background: #eef1ff; }
 .lh .slide .btn-claro { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .6); }
 .lh .slide .btn-claro:hover { background: rgba(255, 255, 255, .12); }
-.lh .slide-txt .ctas { justify-content: flex-start; }
+.lh .slide-txt .ctas { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-start; }
 .lh .btn-claro { background: #fff; color: var(--ink); border-color: #c9cde0; }
 .lh .btn-claro:hover { border-color: var(--blue); color: var(--blue); }
 .lh .carr-ctl { position: absolute; bottom: 30px; left: max(20px, calc((100% - 1120px) / 2)); right: max(20px, calc((100% - 1120px) / 2)); display: flex; align-items: center; gap: 10px; }
@@ -671,7 +672,11 @@
 .lh .mz-cara::after { content: ""; position: absolute; inset: 9px 13px 12px; border-radius: 50% 50% 45% 45%; background: #6366f1; opacity: .35; }
 .lh .mz-ok { color: var(--green); font-weight: 600; }
 .lh .mz-barra { height: 8px; overflow: hidden; border-radius: 999px; background: var(--soft); }
-.lh .mz-barra > i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--violet)); }
+.lh .mz-barra > i {
+  display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--violet));
+  transform: scaleX(var(--v, 1)); transform-origin: left; transition: transform 1.3s var(--ease) .15s;
+}
+.lh .mz-barra > i.mz-vacia { transform: scaleX(0); transition: none; }
 .lh .mz-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .lh .mz-chip { padding: 3px 8px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink) !important; font-size: 11px; font-weight: 600; }
 .lh .mz-firma { display: grid; place-items: center; height: 54px; border: 1px dashed var(--line); border-radius: 10px; color: var(--ink); }
@@ -702,9 +707,48 @@
 /* Movimiento del mosaico: la tarjeta se eleva y su mini pantalla se acerca al pasar el cursor (como en Crehana:
    transform + sombra con la curva .2,.7,.2,1). Sin movimiento si la persona lo pidió. */
 @media (prefers-reduced-motion: no-preference) and (hover: hover) {
-  .lh .mz-m { transition: transform .25s cubic-bezier(.2, .7, .2, 1), box-shadow .25s cubic-bezier(.2, .7, .2, 1); }
+  /* Repite la entrada de .reveal: esta regla la reemplazaría y la tarjeta aparecería de golpe. */
+  .lh .mz-m {
+    transition: opacity .7s var(--ease) var(--d, 0s), translate .7s var(--ease) var(--d, 0s),
+      transform .25s cubic-bezier(.2, .7, .2, 1), box-shadow .25s cubic-bezier(.2, .7, .2, 1);
+  }
   .lh .mz-mini, .lh .mz-chat { transition: transform .45s cubic-bezier(.16, 1, .3, 1); }
   .lh .mz-m:hover { transform: translateY(-4px); box-shadow: 0 24px 48px -28px rgba(11, 16, 51, .35); }
   .lh .mz-m:hover .mz-mini { transform: translateY(-6px) scale(1.02); }
   .lh .mz-m:hover .mz-chat { transform: translateY(-3px); }
+}
+
+/* ——— Pantallas que flotan ———
+   `translate` se suma al scale de .with-photo y al transform del hover sin pisarlos. Cada pantalla trae su --ft/--fd
+   para no ir sincronizadas; corre solo con .en-vista (animaciones.js la quita fuera de pantalla). En celular, la mitad. */
+.lh .flota { animation: lh-flota var(--ft, 6s) ease-in-out var(--fd, 0s) infinite paused; }
+.lh .flota.en-vista { animation-play-state: running; }
+.lh .mz-mini.flota, .lh .mz-chat.flota { --fy: 4px; }
+/* Lo que flota crea su propio contexto de apilado: la flecha del módulo debe quedar encima y sin tapar el chat. */
+.lh .mz-flecha { z-index: 2; }
+@media (min-width: 961px) { .lh .mz-ia .mz-chat { padding-right: 52px; } }
+@keyframes lh-flota { 50% { translate: 0 calc(var(--fy, 6px) * var(--fk, -1)); } }
+@media (max-width: 600px) { .lh { --fk: -.5; } }
+
+/* ——— Datos vivos del mosaico (DatosVivos.jsx) ——— */
+.lh .mz-num, .lh .mz-reloj { display: inline-block; min-width: 3ch; text-align: right; font-variant-numeric: tabular-nums; }
+.lh .mz-jornada span { display: inline-flex; align-items: center; gap: 7px; }
+.lh .mz-punto { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+.lh .mz-reloj { color: var(--blue-ink); }
+.lh .mz-escribe { display: grid; gap: 6px; }
+.lh .mz-capas { display: grid; }
+.lh .mz-capas > * { grid-area: 1 / 1; }
+.lh .mz-tecleando .mz-completo { opacity: 0; }
+.lh .mz-parcial::after {
+  content: ""; display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -2px;
+  background: #a5b4fc; animation: lh-cursor 1s steps(1) infinite;
+}
+@keyframes lh-cursor { 50% { opacity: 0; } }
+.lh .mz-pie { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; transition: opacity .5s var(--ease); }
+.lh .mz-pie .mz-cita { margin-top: 0; }
+.lh .mz-tecleando .mz-pie { opacity: 0; }
+.lh .mz-listo { color: #86efac; font-size: 11.5px; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+  .lh .flota { animation: none; }
+  .lh .mz-barra > i { transition: none; }
 }

@@ -40,6 +40,7 @@ import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import ResumenLey, { Chip } from "./ResumenLey";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 import { textoComida, resumenComida } from "@/lib/reporte/comida.mjs";
+import { lineasHorasExtra, totalDelDia } from "@/lib/asistencia/horasExtraReporte.mjs";
 
 function fmtDate(d) {
   const dd = new Date(d);
@@ -321,8 +322,7 @@ export default function ReporteHorasPage() {
       const auth = {
         headers: { Authorization: `Bearer ${Cookies.get("token") || ""}` },
       };
-      // Una sola llamada para todos los empleados, con el cálculo de la LFT por semana
-      // (antes: una llamada por empleado).
+      // Una sola llamada para todos los empleados, con el cálculo de la LFT por semana.
       const { data: respuesta } = await axios.get(`/checador/reportes/horas-ley`, {
         params: { fechaInicio, fechaFin, empleados: ids.join(",") },
         ...auth,
@@ -468,7 +468,7 @@ export default function ReporteHorasPage() {
               <td>${humanDate(d.fecha)}</td>
               <td style="text-align:center">${e}</td>
               <td style="text-align:center">${s}</td>
-              <td style="text-align:center">${totalHorasTrabajadas}</td>
+              <td style="text-align:center">${totalDelDia(d, totalHorasTrabajadas)}</td>
               <td style="text-align:center${d.comida?.excedente > 0 ? ';color:#dc2626' : ''}">${textoComida(d.comida)}</td>
               <td style="text-align:center"><span class="badge ${badge}">${
                 d.estado || ""
@@ -505,6 +505,7 @@ export default function ReporteHorasPage() {
             `
                 : ""
             }
+            ${lineasHorasExtra(d).length ? `<tr><td colspan="8" class="details">${lineasHorasExtra(d).join("\n")}</td></tr>` : ""}
           `;
           })
           .join("");
@@ -916,7 +917,7 @@ export default function ReporteHorasPage() {
             humanDate(d.fecha),
             fmtHora(primeraEntrada),
             fmtHora(ultimaSalida),
-            totalHorasTrabajadas || "0:00",
+            totalDelDia(d, totalHorasTrabajadas) || "0:00",
             textoComida(d.comida) || "—",
             estado,
             stripEmojis(d.motivo) || "—",
@@ -950,6 +951,12 @@ export default function ReporteHorasPage() {
                 },
               ]);
             }
+          }
+          // Horas extra registradas con su horario: la ley pide a qué hora se trabajaron.
+          if (lineasHorasExtra(d).length) {
+            rows.push([{ content: lineasHorasExtra(d).join("\n"), colSpan: 8,
+              styles: { font: FONT, fontStyle: "normal", fontSize: 6.8, textColor: MUTED, cellPadding: { top: 4, bottom: 5, left: 16, right: 6 },
+                lineWidth: { bottom: 0.6 }, lineColor: HAIRLINE } }]);
           }
         });
         return rows;
@@ -1502,7 +1509,7 @@ export default function ReporteHorasPage() {
                                     : "-"}
                                 </td>
                                 <td className="p-2 border text-center align-top">
-                                  {totalHorasTrabajadas}
+                                  {totalDelDia(d, totalHorasTrabajadas)}
                                 </td>
                                 <td className={`p-2 border text-center align-top text-xs ${d.comida?.excedente > 0 ? "font-semibold text-red-600" : "text-zinc-600"}`}>
                                   {textoComida(d.comida) || <span className="text-zinc-400">—</span>}
@@ -1593,6 +1600,13 @@ export default function ReporteHorasPage() {
                                   </td>
                                 </tr>
                               ) : null}
+                              {lineasHorasExtra(d).length ? (
+                                <tr className="bg-emerald-50/40" data-horas-extra-row="true">
+                                  <td colSpan={reporte.ley ? 9 : 8} className="border-t p-2 pl-6 text-xs text-emerald-900">
+                                    {lineasHorasExtra(d).map((linea) => <p key={linea}>{linea}</p>)}
+                                  </td>
+                                </tr>
+                              ) : null}
                             </Fragment>
                           );
                         })}
@@ -1619,7 +1633,7 @@ export default function ReporteHorasPage() {
                           <tr>
                             <td colSpan={9} className="p-2 text-left text-[11px] text-slate-500">
                               {reporte.ley.dias_sin_historial > 0 && (
-                                // (23/11/2026, opción A) Días anteriores al historial de horarios: se midieron con el horario actual.
+                                // Días anteriores al historial de horarios: se midieron con el horario actual.
                                 <span className="mb-1 block font-semibold text-amber-700" data-sin-historial="true">
                                   {reporte.ley.dias_sin_historial === 1 ? "1 día se midió" : `${reporte.ley.dias_sin_historial} días se midieron`} con el horario actual
                                   (sin historial de horarios para esas fechas).

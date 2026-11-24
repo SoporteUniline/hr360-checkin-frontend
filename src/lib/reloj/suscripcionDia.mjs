@@ -1,7 +1,5 @@
-// Validación de suscripción del reloj una vez al día (pedido del 21/11/2026: «que valide una vez al día y ya entre directo»).
-// Se guarda en el dispositivo solo un resultado ACTIVO y solo para hoy (día en Ciudad de México): mañana vuelve a validar.
-// Un resultado inactivo no se guarda, así que al reactivar la suscripción el reloj funciona de inmediato.
-// Si el almacenamiento no está disponible (modo privado), simplemente se valida como antes.
+// Validación de suscripción del reloj una vez al día: se guarda en el dispositivo solo un resultado ACTIVO y solo
+// para hoy (día en CDMX), así que reactivar la suscripción surte efecto de inmediato. Sin almacenamiento, valida siempre.
 const PREFIJO = "adamia-reloj-suscripcion:";
 
 export function hoyMx(ahora = new Date()) {
@@ -22,7 +20,7 @@ export function validadaHoy(clave, { ahora = new Date(), storage } = {}) {
   }
 }
 
-// (22/11/2026) Para no esperar: si este aparato la validó ACTIVA en los últimos `dias` días, el reloj abre de inmediato
+// Para no esperar: si este aparato la validó ACTIVA en los últimos `dias` días, el reloj abre de inmediato
 // y se vuelve a validar en segundo plano (si resultó inactiva, se bloquea en ese momento). Devuelve lo guardado o null.
 export function validadaReciente(clave, { dias = 7, ahora = new Date(), storage } = {}) {
   try {

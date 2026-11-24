@@ -71,8 +71,8 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
       await page.goto(base + path, { waitUntil: 'domcontentloaded' });
       await page.getByText(marker, { exact: false }).first().waitFor({ timeout: 30000 });
       await page.waitForFunction(async () => {
-        const module = await import('/offline-clock/app-cache.mjs');
-        return !!await module.readResponse(await module.ownerKey(), 'page', location.href);
+        const cache = await import('/offline-clock/app-cache.mjs');
+        return !!await cache.readResponse(await cache.ownerKey(), 'page', location.href);
       }, { timeout: 60000 });
       await sleep(1500);
     }

@@ -4,7 +4,7 @@ import SitioEncabezado from "@/components/landing/home/SitioEncabezado";
 import SitioPie from "@/components/landing/home/SitioPie";
 
 // Páginas públicas (funciones, cotizar, contratar, contacto, legales…) con el mismo encabezado y pie que el
-// inicio y el blog (21/11/2026). El contenido de cada página conserva sus estilos.
+// inicio y el blog. El contenido de cada página conserva sus estilos.
 
 export default function LayoutPublico({ children }) {
   return (

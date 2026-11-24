@@ -1,10 +1,7 @@
 "use client";
 
-// Página de inicio (adamia.com.mx). Diseño aprobado por el dueño el 21/11/2026.
-// - El marcado vive aquí; los estilos en ./landing-home.css (todo bajo .lh para no tocar el resto de la app);
-//   el movimiento en ./animaciones.js (se detiene y se limpia al salir de la página).
-// - Las pantallas del producto están dibujadas con código y usan datos de ejemplo, no de clientes.
-// - Las fotos son ilustrativas (generadas con IA) y viven en /public/landing.
+// Página de inicio (adamia.com.mx). Estilos en ./landing-home.css (bajo .lh para no tocar el resto de la app);
+// movimiento en ./animaciones.js (se limpia al salir). Pantallas con datos de ejemplo; fotos ilustrativas en /public/landing.
 /* eslint-disable @next/next/no-img-element -- fotos ya optimizadas (webp) dentro de contenedores animados */
 import { useEffect, useRef } from "react";
 import Link from "next/link";
@@ -29,7 +26,7 @@ export default function LandingHome() {
             <div className="wrap">
               <p className="sync-tit">Así se ve en vivo: <b>tu gente checa y RH lo recibe al instante.</b></p>
               <div className="sync" aria-label="Ejemplo: una persona checa en su celular y la entrada aparece al instante en el panel de RH">
-                <div className="phone">
+                <div className="phone flota" style={{"--ft": '6.2s', "--fd": '-2.4s'}}>
                   <div className="scr" id="h-scr">
                     <div className="sbar"><span id="h-sbar">08:57</span><span>●●● 100%</span></div>
                     <div className="app-in">
@@ -66,7 +63,7 @@ export default function LandingHome() {
                   </div>
                 </div>
                 <span className="sync-pill" id="h-pill"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>Sincronizando</span>
-                <div className="dash">
+                <div className="dash flota" style={{"--ft": '7.4s', "--fy": '5px'}}>
                   <div className="dbar"><i /><i /><i /><span>adamia.com.mx/panel</span><b className="live">EN VIVO</b></div>
                   <div className="dbody">
                     <div className="dhead"><b>Resumen del día</b><small>Viernes 20 de noviembre</small></div>

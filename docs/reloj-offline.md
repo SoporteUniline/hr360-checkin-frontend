@@ -14,7 +14,7 @@ La descarga incluye además referencias de nombres y huellas SHA-256 de códigos
 
 ## Reloj de empresa abierto durante el día
 
-Abrir el enlace público con internet descarga automáticamente las referencias faciales de la empresa, sin iniciar sesión ni usar botones de preparación. La autorización firmada del enlace limita la descarga a esa empresa y a la clave del dispositivo. Antes de depender del reconocimiento sin red, comprobar en el reloj el mensaje **Reconocimiento offline preparado en este dispositivo**. La primera descarga necesita conexión; un enlace nunca abierto no puede descargar rostros cuando ya no hay internet.
+Abrir el enlace público con internet descarga automáticamente las referencias faciales de la empresa, sin iniciar sesión ni usar botones de preparación. La autorización firmada del enlace limita la descarga a esa empresa y a la clave del dispositivo. Antes de depender del reconocimiento sin red, comprobar en el reloj el estado **Reconocimiento offline preparado en este dispositivo** (desde el 24/11/2026 es el punto verde junto al logo: el texto aparece al pasar el cursor y para lectores de pantalla). La primera descarga necesita conexión; un enlace nunca abierto no puede descargar rostros cuando ya no hay internet.
 
 Con referencias preparadas y vigentes, el reloj identifica localmente a los empleados descargados aunque se pierda internet mientras permanece abierto. Cada checada conserva identidad, hora y decisión de entrada/salida por empleado; aparece como pendiente de subir y se sincroniza al recuperar conexión con la aplicación abierta. Las referencias de empresa se conservan al cerrar sesión. Un empleado nuevo o un cambio facial necesita descargarse con internet. No borrar los datos del navegador mientras haya pendientes.
 
@@ -166,3 +166,20 @@ Pedido del dueño: «cada que entra al reloj valida; que lo haga una vez al día
   medianoche checando, no pasa nada»). 💡 Opcional a futuro: validar la suscripción en el backend al sincronizar.
 - Pruebas: `scripts/test-suscripcion-dia.mjs`; `verify-employee-mobile.cjs` (segunda entrada abre en < 2 s aunque el
   servidor tarde 3 s; reproducido en rojo sin el cambio).
+
+## Reloj de empresa a pantalla completa (kiosco, 24/11/2026)
+Pedido del dueño: quitar el encabezado «Reloj checador / Registro de entradas y salidas… / Reconocimiento offline
+preparado…» porque estorbaba, y que el reloj se vea siempre completo, sin desplazar.
+- `src/app/[slug]/layout.jsx`: sin la barra ni el pie del sitio público (solo en el reloj; el resto del sitio no cambia).
+- `src/components/Clock/PantallaKiosco.jsx`: 100dvh sin desplazamiento. Horizontal: hora y código/teclado a la izquierda,
+  cámara a la derecha y, desde 1360 px, «Últimos registros» (`UltimosRegistros.jsx`, se desplaza por dentro). Vertical
+  (tablet y celular): hora arriba, cámara en medio, código/QR/teclado abajo. Celular acostado: teclado a la izquierda.
+  Teclas ≥ 56 px (≥ 48 px en celular). Las variantes `kiosco-*` están en `src/app/globals.css`.
+- Estado de conexión/rostros: `Clock/IndicadorConexion.jsx` (punto gris = preparando, verde = listo, ámbar = sin
+  conexión); el texto completo va en `title` y para lectores de pantalla. «Cámara siempre encendida» quedó como botón
+  redondo (alfiler) sobre el video.
+- «¿Registrar otra vez?» y el resultado de la checada se muestran centrados en todos los tamaños.
+- El reloj del empleado (`/empleado/reloj-checador`) conserva su diseño; solo pierde el mismo encabezado.
+- Solo presentación: checado, cola, rostro, QR y PIN sin cambios.
+- Verificación: `node scripts/verify-reloj-pantalla.mjs` (1440×900, 1280×720, 1024×768, 768×1024, 390×844).
+

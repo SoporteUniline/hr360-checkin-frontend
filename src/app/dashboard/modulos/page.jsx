@@ -1,6 +1,6 @@
 import { ModulosPlanesAdmin } from "@/components/modulos/ModulosAdmin";
 
-// Admin de ADAMIA: módulos que incluye cada plan (03/12/2026, «Módulos por empresa»).
+// Admin de ADAMIA: módulos que incluye cada plan.
 export const metadata = { title: "Módulos por plan | ADAMIA" };
 
 export default function PaginaModulosPorPlan() {

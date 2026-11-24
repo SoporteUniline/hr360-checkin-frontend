@@ -1,7 +1,7 @@
 "use client";
 
-// Marco común del módulo Nómina (22/11/2026: «homologar diseño»): mismo encabezado, pestañas Nóminas / Bonos y descuentos /
-// Préstamos, selector de empresa y botón principal; misma tabla con renglones que llevan al detalle y mismo estado vacío.
+// Marco común del módulo Nómina: mismo encabezado, pestañas Nóminas / Bonos y descuentos / Préstamos, selector de
+// empresa y botón principal; misma tabla con renglones que llevan al detalle y mismo estado vacío.
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ArrowLeft, Wallet } from "lucide-react";

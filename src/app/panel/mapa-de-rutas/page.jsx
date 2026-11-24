@@ -1551,7 +1551,7 @@ export default function PageMapaDeRutas() {
     );
     doc.setFontSize(8);
     doc.setTextColor(...ADAMIA.text2);
-    // Antes decía siempre «Uniline Innovacion en la Nube»: ahora la empresa real.
+    // Nombre de la empresa real, no uno fijo.
     doc.text(
       String(companyName || "—").slice(0, 40),
       pageWidth - margin - 37.5,

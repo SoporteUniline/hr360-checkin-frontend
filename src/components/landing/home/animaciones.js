@@ -257,14 +257,23 @@ var bloques = document.querySelectorAll(".reveal"), alto = window.innerHeight;
 if ("IntersectionObserver" in window && !quieto) {
   bloques.forEach(function (b) { if (b.getBoundingClientRect().top > alto) b.classList.add("pre"); });
   var io = observa(function (es) {
+    var orden = 0;
     es.forEach(function (e) {
       if (!e.isIntersecting) return;
+      // Las que entran juntas (una fila del mosaico) se escalonan en orden del documento; tope para no hacer esperar.
+      e.target.style.setProperty("--d", Math.min(orden++, 4) * 90 + "ms");
       e.target.classList.remove("pre"); io.unobserve(e.target);
       acciones.forEach(function (a) { if (a[0] === e.target) a[1](); });
     });
   }, { rootMargin: "0px 0px -80px 0px", threshold: .15 });
   bloques.forEach(function (b) { io.observe(b); });
 } else { acciones.forEach(function (a) { a[1](); }); }
+
+// ===== Pantallas que flotan: la animación corre solo mientras se ven (.en-vista) =====
+if ("IntersectionObserver" in window && !quieto) {
+  var ioF = observa(function (es) { es.forEach(function (e) { e.target.classList.toggle("en-vista", e.isIntersecting); }); });
+  document.querySelectorAll(".flota").forEach(function (el) { ioF.observe(el); });
+}
 
   return () => {
     timers.forEach((id) => window.clearTimeout(id));

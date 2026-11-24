@@ -28,12 +28,16 @@ const PILL_ESTADO = {
  * Componente para mostrar los permisos del empleado
  * Relacionado con: src/app/panel/panel-empleado/page.jsx
  */
-export default function PanelEmpleadoPermisos({
+// El guard va en un envoltorio: los hooks de PanelEmpleadoPermisosContenido no pueden ir tras un return condicional.
+export default function PanelEmpleadoPermisos(props) {
+  if (!props.datosEmpleado) return null;
+  return <PanelEmpleadoPermisosContenido {...props} />;
+}
+
+function PanelEmpleadoPermisosContenido({
   datosEmpleado,
   festivosSet = new Set(),
 }) {
-  if (!datosEmpleado) return null;
-
   const resumen = datosEmpleado.permisos?.resumen || {};
   const permisos = datosEmpleado.permisos?.historial || [];
 

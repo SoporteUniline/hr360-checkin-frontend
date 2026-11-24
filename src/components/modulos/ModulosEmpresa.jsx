@@ -1,5 +1,5 @@
 "use client";
-// Ajustes → Módulos (03/12/2026, «Módulos por empresa», opción C). RH / dueño prende o apaga lo que su empresa usa dentro
+// Ajustes → Módulos. RH / dueño prende o apaga lo que su empresa usa dentro
 // de lo que tiene contratado; lo base aparece fijo («Incluido siempre»); lo que no tiene, con candado y Contratar.
 // Apagar pide confirmación: se oculta para todos y no se borra nada. El servidor valida todo (empresa de la sesión).
 import { useState } from "react";

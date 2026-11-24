@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Pencil, Eye, Mail, Phone, UserPlus, Download } from "lucide-react";
+import { Pencil, Mail, Phone, UserPlus, Download } from "lucide-react";
 import EstadoEmpleadoDialog from "./EstadoEmpleadoDialog";
 import CambiarContrasenaEmpleado from "./CambiarContrasenaEmpleado";
 import { EstadoBadge } from "@/lib/estados";
@@ -334,7 +334,6 @@ export default function EmpleadosTable({
   useEffect(() => {
     if (!limpiarFiltrosToken) return;
     clearAllHeaderFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [limpiarFiltrosToken]);
 
   // ——— Pestañas por estado ———
@@ -433,7 +432,7 @@ export default function EmpleadosTable({
           {exportando ? "Descargando…" : "Descargar"}
         </Button>
         <Button
-          onClick={() => abrirFormulario(null, false, false)}
+          onClick={() => abrirFormulario(null)}
           className="h-9 rounded-md bg-brand font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
         >
           <UserPlus className="w-4 h-4 mr-2" />
@@ -531,7 +530,7 @@ export default function EmpleadosTable({
                     alt={nombreCompleto}
                   />
                 ) : null}
-                {/* Avatar como en la app del empleado: azul claro con iniciales azules (antes colores al azar). */}
+                {/* Avatar como en la app del empleado: azul claro con iniciales azules. */}
                 <AvatarFallback className="bg-blue-50 text-blue-700 font-semibold text-sm">
                   {getInitials(nombreCompleto)}
                 </AvatarFallback>
@@ -735,7 +734,7 @@ export default function EmpleadosTable({
                   <TableRow
                     className="cursor-pointer hover:bg-gray-50 border-b border-gray-100"
                     key={emp.id_empleado}
-                    onClick={() => abrirFormulario(emp, false, true)}
+                    onClick={() => abrirFormulario(emp)}
                   >
                     {columnasOrdenadas.map(key => renderCelda(key, emp, nombreCompleto))}
                     <TableCell className="sticky right-0 bg-white z-10">
@@ -743,22 +742,12 @@ export default function EmpleadosTable({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            abrirFormulario(emp, true, false);
+                            abrirFormulario(emp);
                           }}
                           className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                           title="Editar"
                         >
                           <Pencil className="h-4 w-4 text-[#2563EB]" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            abrirFormulario(emp, false, true);
-                          }}
-                          className="p-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
-                          title="Ver detalles"
-                        >
-                          <Eye className="h-4 w-4 text-green-600" />
                         </button>
                         <CambiarContrasenaEmpleado empleado={emp} />
                         <div onClick={(e) => e.stopPropagation()}>

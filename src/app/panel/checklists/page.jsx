@@ -1,6 +1,6 @@
 "use client";
 
-// Módulo Checklists → Checklists (23/11/2026). Ver src/components/tareas/ModuloTareas.jsx.
+// Módulo Checklists → Checklists. Ver src/components/tareas/ModuloTareas.jsx.
 import { Suspense } from "react";
 import ModuloTareas from "@/components/tareas/ModuloTareas";
 

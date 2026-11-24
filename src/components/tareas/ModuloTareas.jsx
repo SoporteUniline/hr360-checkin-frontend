@@ -1,9 +1,7 @@
 "use client";
 
-// Módulos Tareas y Checklists (23/11/2026, conectados a la API). Desde el 23/11/2026 son dos módulos con su entrada en el
-// menú y una dirección por vista (pedido del dueño): Tareas = Tablero y Proyectos; Checklists = Checklists (plantillas que se
-// repiten), Revisar (enviados) y Cumplimiento (% por persona, bono, Excel). Se activan juntos por empresa (lo activa el dueño).
-// Mismo marco que Nómina: encabezado, empresa y pestañas que son enlaces.
+// Módulos Tareas (Tablero, Proyectos) y Checklists (Checklists, Revisar, Cumplimiento): una dirección por vista y
+// se activan juntos por empresa. Mismo marco que Nómina.
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
@@ -71,7 +69,7 @@ function Contenido({ clave }) {
     return <Estado titulo={codigo === "SIN_MIGRACION" ? "Falta preparar la base de datos" : "No se pudo cargar Tareas"} texto={errorDe(error, "Intenta de nuevo en un momento.")} />;
   }
   if (cargando || modulo.activo == null) return <p role="status" className="text-sm text-slate-500">Cargando tareas…</p>;
-  // (03/12/2026) Mismo aviso que cualquier módulo apagado (Módulos por empresa). Con derecho, RH lo activa aquí mismo;
+  // Mismo aviso que cualquier módulo apagado (Módulos por empresa). Con derecho, RH lo activa aquí mismo;
   // sin derecho (su plan no lo incluye), Contratar.
   if (!modulo.activo) {
     return (

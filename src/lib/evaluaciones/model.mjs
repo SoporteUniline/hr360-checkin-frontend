@@ -1,5 +1,5 @@
 // Reglas puras de pantalla del módulo de evaluaciones (plantillas, respuestas, fechas y textos).
-// (20/11/2026) Se quitaron las funciones que solo usaba la demostración (cálculo de resultados,
+// Se quitaron las funciones que solo usaba la demostración (cálculo de resultados,
 // asignaciones, campañas, CSV): esas reglas viven en el backend (modules/performance/services).
 export const PERSPECTIVES = {
   descending: "Descendente · Jefe",

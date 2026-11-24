@@ -1,7 +1,7 @@
 "use client";
 
-// Tablero (kanban) de tareas del equipo (prototipo 23/11/2026). Arrastra una tarjeta a otra columna (o ábrela y usa
-// «Mover a»). Filtros: proyecto, persona, texto y solo vencidas. A la derecha, «Mi equipo hoy» con quién vino y su carga.
+// Tablero (kanban) de tareas del equipo: arrastrar a otra columna o «Mover a». Filtros: proyecto, persona, texto y
+// solo vencidas. A la derecha, «Mi equipo hoy» con quién vino y su carga.
 import { useMemo, useState } from "react";
 import { Camera, MessageSquare, Plus, Search } from "lucide-react";
 import { COLUMNAS, avancePasos, motivoNoMover } from "@/lib/tareas/reglas.mjs";

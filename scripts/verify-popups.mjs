@@ -1,4 +1,4 @@
-// Verificación en navegador de los pop-ups de venta (21/11/2026; diseño «Conversemos» 23/11/2026), con el backend
+// Verificación en navegador de los pop-ups de venta (diseño «Conversemos»), con el backend
 // simulado. Página pública: aparece a los segundos indicados (nunca antes de 3), dividido en dos en escritorio y en
 // una columna en celular (390 px sin desborde); valida nombre, celular por lada y aviso de privacidad; al enviar
 // abre el WhatsApp de ventas, registra la aceptación y el «clic»; Esc/X cierran; foco atrapado; frecuencia; sin

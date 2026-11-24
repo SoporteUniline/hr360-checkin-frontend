@@ -2,7 +2,7 @@
 
 // Tarjeta de horas extra en el detalle del celular: mismo estado y acciones que la tabla
 // de escritorio (CeldaHorasExtra), con botones táctiles grandes. Si el empleado debe horas de
-// permisos por horas, «Repone» (20/11/2026) descuenta ese tiempo de su cuenta y no se paga como extra.
+// permisos por horas, «Repone» descuenta ese tiempo de su cuenta y no se paga como extra.
 
 import { useState } from "react";
 import { Check, RotateCcw, X } from "lucide-react";

@@ -34,18 +34,21 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
         if (p.endsWith('/vacaciones/mi-saldo')) return json({ dias_disponibles: 8, dias_cargados: 12, dias_tomados: 4 });
         if (p.includes('/solicitudes-permiso/empleado/101')) { const pageNo=Number(new URL(route.request().url()).searchParams.get('page') || 1); return json({results:requests.slice((pageNo-1)*5,pageNo*5),total:requests.length}); }
         if(p.includes('/holidays/')) return json({festivos:[]});
-        // Reloj del empleado (21/11/2026): perfil del dispositivo y checada por código.
+        // Reloj del empleado: perfil del dispositivo y checada por código.
         if (p.startsWith('/api/empresas/check-subscription/')) { if (suscripcionLenta) await new Promise(r => setTimeout(r, 3000)); return json({ hasActivePlan: true }); }
         if (p.endsWith('/empresas/id/10/slug')) return json({ slug: 'empresa-prueba' });
         if (p.endsWith('/reloj/offline/empresa/perfil') || p.endsWith('/reloj/offline/perfil')) return json({ id_empresa: 10, id_empleado: 101, slug: 'empresa-prueba', nombre: 'Diego León', metodo: 'codigo', grant: 'g', prepared_at: new Date().toISOString() });
         if (p.endsWith('/reloj/offline/empresa/sincronizar') || p.endsWith('/reloj/offline/sincronizar')) { checadas++; return json({ action: 'entrada', employee: { nombre: 'Diego León' }, message: 'Entrada registrada' }); }
+        // (24/11/2026) Motivo del catálogo de motivos: el empleado elige tipo y motivo; el goce lo decide RH.
+        if (p.endsWith('/motivos-permiso')) return json({ ok: true, motivos: [{ id: 1, nombre: 'Visita al médico', global: true }, { id: 6, nombre: 'Otro', global: true }] });
         if (p.endsWith('/tiposPermiso')) return json({ tiposPermiso: [{ id: 2, nombre: 'Vacaciones', es_permiso: 0, descuenta_vacaciones: 1 }, { id: 3, nombre: 'Permiso personal', es_permiso: 1, descuenta_vacaciones: 0 }] });
         if (p.endsWith('/solicitudes-permiso') && route.request().method() === 'POST') {
           posts++;
           const payload = route.request().postDataJSON();
           if (payload.modalidad === 'horas') {
-            // Permiso por horas desde Mi espacio (21/11/2026): un día, tipo, hora y cómo se cubre.
+            // Permiso por horas desde Mi espacio: un día, tipo, hora y cómo se cubre.
             assert.deepEqual([payload.id_empleado, payload.id_tipo_permiso, payload.tipo_horas, payload.hora_inicio, payload.hora_fin, payload.tratamiento, payload.fecha_inicio, payload.fecha_fin], [101, 3, 'sale_antes', '15:00', null, 'repone', '2026-11-23', '2026-11-23']);
+            assert.equal(payload.motivo_permiso, 'Visita al médico'); assert.equal(payload.goce, undefined, 'el goce lo decide RH');
             requests.unshift({ ...payload, id: 98, tipo_permiso_nombre: 'Permiso personal', estado: 'Pendiente' });
             return json({ id: 3 });
           }
@@ -100,7 +103,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
       await page.getByRole('option', { name: 'Vacaciones' }).click();
       await page.getByLabel('Fecha inicial').fill('2026-11-09');
       await page.getByLabel('Fecha final').fill('2026-11-10');
-      await page.getByLabel('Motivo', { exact: true }).fill('Solicitud de prueba');
+      await page.getByLabel('Observaciones', { exact: true }).fill('Solicitud de prueba');
       const dialog = page.getByRole('dialog');
       const box = await dialog.boundingBox(); assert(box.y >= 0 && box.y + box.height <= 781, 'Dialog exceeds screen');
       await page.getByRole('button', { name: 'Enviar solicitud' }).click();
@@ -123,7 +126,8 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
       await page.getByLabel('Tipo de permiso por horas').selectOption('sale_antes');
       await page.getByLabel('Desde qué hora').fill('15:00');
       await page.getByRole('radio', { name: /Se repone/ }).click();
-      await page.getByLabel('Motivo', { exact: true }).fill('Cita médica');
+      await page.getByLabel('Motivo del permiso').selectOption('Visita al médico');
+      await page.getByLabel('Observaciones', { exact: true }).fill('Cita médica');
       await noOverflow();
       await page.getByRole('button', { name: 'Enviar solicitud' }).click();
       await page.getByRole('dialog').waitFor({ state: 'hidden' });

@@ -1,4 +1,4 @@
-// Verificación en navegador de las pantallas de Nómina R1 (21/11/2026), con el backend simulado en memoria:
+// Verificación en navegador de las pantallas de Nómina R1, con el backend simulado en memoria:
 // RH crea la nómina, revisa un recibo, edita un importe con motivo, envía a autorizar (no ve «Autorizar»);
 // el dueño autoriza; el empleado ve «Mis recibos» y firma. También: celular sin desbordes.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-nomina.mjs
@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
 import crypto from "node:crypto";
+import { elegir, textosOpciones, valorDe } from "./lib/desplegable.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -27,7 +28,7 @@ const estado = { periodos: [], ediciones: [], posts: [], asistencias: [], person
 const recibo = () => ({
   id: 11, id_empleado: 15, estado: "vigente", envio_estado: null, transferencia_editada: null,
   datos: { empleado: { nombre: "Ana Torres", puesto: "Empacadora", medio_pago: "Mixto", monto_transferencia: 1000 }, resumen: { diasPagados: 4.67, diasRango: 7, diasTrabajados: 4, minTrabajados: 2040, minExtra: 120, minDobles: 120, minTriples: 0, faltas: 2, sinGoce: 0, retardos: 1, domingos: 0, festivosTrab: 0, sueldo: 210000, diario: 30000, periodoPago: "Semanal" }, alertas: [],
-    dias: [["2026-11-16", "trabajado", 600, 120, false], ["2026-11-17", "trabajado", 480, 0, false], ["2026-11-18", "trabajado", 480, 0, true], ["2026-11-19", "trabajado", 480, 0, false], ["2026-11-20", "falta", 0, 0, false], ["2026-11-21", "falta", 0, 0, false], ["2026-11-22", "descanso", 0, 0, false]].map(([fecha, estado, min, extra, retardo]) => ({ fecha, estado, min, extra, retardo, programado: estado === "descanso" ? 0 : 480, entrada: min ? (retardo ? "09:10" : "09:00") : null, salida: min ? (extra ? "19:00" : "17:00") : null, pagos: extra ? [{ texto: "2 h extra al doble", importe: 15000 }] : undefined })) },
+    dias: [["2026-11-16", "trabajado", 600, 120, false], ["2026-11-17", "trabajado", 480, 0, false], ["2026-11-18", "trabajado", 480, 0, true], ["2026-11-19", "trabajado", 480, 0, false], ["2026-11-20", "falta", 0, 0, false], ["2026-11-21", "falta", 0, 0, false], ["2026-11-22", "descanso", 0, 0, false]].map(([fecha, estado, min, extra, retardo]) => ({ fecha, estado, min, extra, retardo, programado: estado === "descanso" ? 0 : 480, entrada: min ? (retardo ? "09:10" : "09:00") : null, salida: min ? (extra ? "19:00" : "17:00") : null, pagos: extra ? [{ texto: "2 h extra al doble", importe: 15000 }] : fecha === "2026-11-17" ? [{ texto: "2 h no trabajadas · se descuentan", importe: -12000 }] : undefined })) },
   total_percepciones: 1600, total_descuentos: 0, neto: 1600, transferencia: 1000, efectivo: 600,
   lineas: [
     { clave: "sueldo", concepto: "Sueldo (días pagados)", tipo: "percepcion", cantidad: 4.67, importe: 1400, importe_sugerido: 1400, editado: 0, origen: "calculo" },
@@ -78,13 +79,22 @@ async function rutas(ctx, usuario) {
       estado.periodos[0].version += 1;
       return ok({ ok: true });
     }
-    // Asistencias (la ventana de edición que se abre desde «Corregir»).
+    // Asistencias (la ventana del reloj del día que se abre desde «Corregir»).
     if (p === "/checador/asistencias" && req.method() === "GET") {
       assert.deepEqual([url.searchParams.get("fechaInicio"), url.searchParams.get("fechaFin"), url.searchParams.get("filtroEmpleado")], ["2026-11-18", "2026-11-18", "Ana Torres"]);
       return ok({ registros: [{ id: 501, id_empleado: 15, nombre: "Ana", apellido_paterno: "Torres", fecha: "2026-11-18", entrada: "2026-11-18 09:10:00", salida: "2026-11-18 17:00:00", asistencia: 1, hora_entrada_programada: "09:00:00", hora_salida_programada: "17:00:00", zona_horaria: "America/Mexico_City", tipo_registro_nombre: "Asistencia" }], total: 1, page: 1 });
     }
     if (/^\/checador\/asistencias\/501$/.test(p) && req.method() === "PUT") { estado.asistencias.push(req.postDataJSON()); return ok({ ok: true }); }
-    // Misma forma que el backend real ({ data: [...] }): la ventana necesita la lista, no el objeto (falla del 21/11/2026).
+    // El día se corrige en el reloj (la misma ventana que en Asistencias y el Monitor).
+    if (/^\/checador\/asistencias\/501\/reloj$/.test(p) && req.method() === "GET") {
+      return ok({ ok: true, migracion: true, asistencia: { id: 501, id_empleado: 15, nombre: "Ana Torres", departamento: "Empaque", fecha: "2026-11-18" },
+        horario: { entrada: "09:00", salida: "17:00", salida_comida: null, regreso_comida: null }, dia: { tipo: "normal", nombre: "Día normal", pago: "" },
+        registros: [{ id: 81, entrada: "2026-11-18 09:10:00", salida: "2026-11-18 17:00:00", entrada_reloj: "2026-11-18 09:10:00", salida_reloj: "2026-11-18 17:00:00",
+          concepto: "jornada", motivo: null, origen: "reloj", anulado: false, id_autoriza: null, autoriza_no: false }],
+        motivos: { permisos: [], correccion: [{ clave: "olvido", nombre: "Olvidó checar" }, { clave: "reloj", nombre: "Falla del reloj" }] }, autorizadores: [] });
+    }
+    if (/^\/checador\/asistencias\/501\/reloj$/.test(p) && req.method() === "PUT") { estado.asistencias.push(req.postDataJSON()); return ok({ ok: true, asistencia: {} }); }
+    // Misma forma que el backend real ({ data: [...] }): la ventana necesita la lista, no el objeto.
     if (p === "/checador/empleados") return ok({ data: [{ id_empleado: 15, nombre: "Ana", apellido_paterno: "Torres" }, { id_empleado: 3, nombre: "Luis", apellido_paterno: "Jefe" }], total: 2 });
     if (p === "/checador/tiposPermiso") return ok({ tiposPermiso: [{ id: 1, nombre: "Asistencia" }] });
     // Ficha del empleado (clic en su nombre en cualquier pantalla).
@@ -133,6 +143,10 @@ try {
   for (const t of ["Trabajó", "Retardo", "09:10", "17:00", "8 h"]) assert.ok((await mie.innerText()).includes(t), `miércoles con ${t}`);
   const lun = await asistencia.getByRole("row", { name: /lun 16/ }).innerText();
   for (const t of ["2 h extra autorizada", "+$150.00", "2 h extra al doble"]) assert.ok(lun.includes(t), `lunes con ${t}`);
+  // (24/11/2026) Descuento de horas no trabajadas («se descuentan»): renglón de pagos con importe negativo, en rojo y con «−».
+  const mar = asistencia.getByRole("row", { name: /mar 17/ });
+  assert.ok((await mar.innerText()).includes("−$120.00 2 h no trabajadas · se descuentan"), await mar.innerText());
+  assert.match(await mar.locator("[data-pago-dia] b").getAttribute("class"), /text-rose-700/);
   assert.ok((await asistencia.getByRole("row", { name: /vie 20/ }).innerText()).includes("Falta"));
   await asistencia.getByText(/\$2,100\.00 semanal × 4\.67 días pagados ÷ 7 días del periodo/).waitFor();
   await captura(page, "nomina-desplegado");
@@ -145,9 +159,11 @@ try {
   await dormir(500);
   await captura(page, "nomina-corregir");
   await ventana.getByLabel("Entrada").fill("09:00");
+  await elegir(ventana.getByLabel("Motivo"), "reloj"); // cambiar una hora en el reloj pide motivo
   await ventana.getByRole("button", { name: "Guardar" }).click();
   await page.getByText(/Asistencia corregida: la nómina se recalculó/).waitFor();
-  assert.equal(estado.asistencias[0].entrada, "2026-11-18 09:00:00");
+  assert.equal(estado.asistencias[0].registros[0].entrada, "2026-11-18 09:00:00");
+  assert.equal(estado.asistencias[0].registros[0].motivo, "reloj");
   assert.deepEqual(estado.posts.at(-1).accion, "calcular");
   estado.posts.length = 0;
   // Otro clic lo cierra; el botón abre el recibo para ajustar importes.
@@ -177,6 +193,8 @@ try {
   await page.getByText("Agregado y asignado para las próximas nóminas.").waitFor();
   assert.deepEqual([estado.conceptosNuevos[0].nombre, estado.conceptosNuevos[0].valor], ["Bono de productividad", 500]);
   assert.deepEqual(estado.ediciones.at(-1).agregar, [{ id_concepto: 9, importe: 500 }]);
+  // La asignación a su ficha va después de guardar el recibo: se espera a que llegue.
+  for (let i = 0; i < 50 && !estado.personas.length; i++) await dormir(100);
   assert.deepEqual(estado.personas.at(-1), { id: 9, cambios: [{ id_empleado: 15, lo_tiene: true }] });
   await panelRecibo.getByRole("button", { name: "Quitárselo para siempre" }).first().click();
   await page.getByText("Quitado de esta nómina y de su ficha.").waitFor();
@@ -184,19 +202,24 @@ try {
   assert.deepEqual(estado.ediciones.at(-1).lineas, [{ clave: "concepto:1", importe: 0, motivo: "Se le quitó (también de su ficha)" }]);
   await page.keyboard.press("Escape");
 
-  // 2b) Clic en el NOMBRE: abre aquí mismo su ficha (la misma de Empleados), con «Editar»; Ctrl+clic sería otra pestaña.
+  // 2b) Clic en el NOMBRE: abre aquí mismo su ficha (la misma de Empleados), ya editable; Ctrl+clic sería
+  // otra pestaña.
   const enlace = page.getByRole("row", { name: /Ana Torres/ }).first().getByRole("link", { name: "Ana Torres" });
   assert.equal(await enlace.getAttribute("href"), "/panel/empleados?id=15");
   await enlace.click();
   const ficha = page.getByRole("dialog", { name: "Ficha de Ana Torres Paz" });
-  await ficha.getByRole("button", { name: "Editar" }).first().waitFor({ timeout: 20000 });
+  await ficha.getByRole("button", { name: "Guardar" }).first().waitFor({ timeout: 20000 });
   assert.ok(page.url().endsWith("/panel/nomina/5"), "no salió de la nómina");
   assert.equal(estado.fichas, 1);
   await dormir(400);
   await captura(page, "ficha-flotante");
-  await ficha.getByRole("button", { name: "Editar" }).first().click();
-  await ficha.getByRole("button", { name: "Actualizar" }).first().waitFor();
+  assert.equal(await ficha.getByRole("button", { name: "Editar", exact: true }).count(), 0, "abre editable, sin «Editar»");
+  assert.equal(await ficha.locator("[data-boton-guardar]:visible").isDisabled(), true, "sin cambios, Guardar deshabilitado");
+  // Con cambios, cerrar la ventana pregunta antes («Salir sin guardar» la cierra).
+  await ficha.locator('input[name="telefono"]').fill("8110000000");
   await ficha.getByRole("button", { name: "Cerrar" }).first().click();
+  await page.getByRole("alertdialog").getByText("Tienes cambios sin guardar").waitFor();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Salir sin guardar" }).click();
   await ficha.waitFor({ state: "detached" });
   await page.getByRole("region", { name: "Asistencia de Ana Torres" }).waitFor(); // la fila desplegada sigue igual
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirmarSalida } from "@/components/cambios/CambiosPendientes";
 import { Command } from "cmdk";
 import axiosInstance from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
@@ -15,7 +16,6 @@ import {
   BriefcaseBusiness,
   FileText,
   CalendarClock,
-  Clock3,
   ClipboardList,
   ReceiptText,
   ClipboardCheck,
@@ -44,6 +44,7 @@ import {
   Route,
   UserRound,
   MessageCircle,
+  Activity,
 } from "lucide-react";
 
 // ─── Nav items estáticos (espejo del sidebar) ────────────────────────────────
@@ -141,7 +142,7 @@ const ALL_NAV_ITEMS = [
   },
   // Recruiter — General
   {
-    title: "Inicio",
+    title: "Resumen",
     url: "/panel/dashboard",
     rol: "Recruiter",
     section: "General",
@@ -234,18 +235,18 @@ const ALL_NAV_ITEMS = [
   },
   // Control de tiempo
   {
+    title: "Monitor",
+    url: "/panel/monitor",
+    rol: "Recruiter",
+    section: "Control de Tiempo",
+    icon: Activity,
+  },
+  {
     title: "Asistencias",
     url: "/panel/registro-asistencia",
     rol: "Recruiter",
     section: "Control de Tiempo",
     icon: ClipboardCheck,
-  },
-  {
-    title: "Control de horas extra",
-    url: "/panel/horas-extra",
-    rol: "Recruiter",
-    section: "Control de Tiempo",
-    icon: Clock3,
   },
   {
     title: "Entradas y salidas",
@@ -514,6 +515,7 @@ export function CommandPalette() {
   const [isNative, setIsNative] = useState(false);
   const debounceRef = useRef(null);
   const router = useRouter();
+  const confirmarSalida = useConfirmarSalida();
   const { dataUser } = useAuth();
 
   useEffect(() => {
@@ -594,7 +596,7 @@ export function CommandPalette() {
 
   const handleSelect = (route) => {
     setOpen(false);
-    router.push(route);
+    confirmarSalida(({ reemplazar }) => (reemplazar ? router.replace(route) : router.push(route)), { navega: true });
   };
 
   if (!open) return null;

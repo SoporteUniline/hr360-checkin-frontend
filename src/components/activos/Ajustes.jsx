@@ -1,7 +1,7 @@
 "use client";
 
-// Ajustes del módulo (20/11/2026): categorías (por tipo), ubicaciones (compartidas por activos y
-// uniformes) y paquetes/dotaciones. Antes eran 6 entradas del menú; se usan poco.
+// Ajustes del módulo: categorías (por tipo), ubicaciones (compartidas por activos y uniformes) y paquetes/dotaciones,
+// juntos en una pestaña porque se usan poco.
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { RAIZ_ACTIVOS } from "@/lib/activos/module.mjs";

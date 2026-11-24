@@ -2,8 +2,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
-import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
 import AsistenciaDataContainer from "./AsistenciaDataContainer";
 import MobileAsistenciaView from "./MobileAsistenciaView";
@@ -11,7 +11,6 @@ import { CuentaHorasProvider } from "./CuentaHorasContext";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import FormularioAsistenciasMasivas from "@/components/FormularioAsistenciasMasivas";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import ClockNavigation from '@/components/Clock/ClockNavigation';
 import {
@@ -42,25 +41,42 @@ import ColumnasSelector, {
   cargarColumnasGuardadas,
   LS_COLUMNAS,
 } from "@/components/tabla/ColumnasSelector";
-import { COLUMNAS_ASISTENCIA } from "./AsistenciaTable";
+import { COLUMNAS_ASISTENCIA, COLUMNAS_RELOJ_NUEVAS } from "./AsistenciaTable";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
-import { ahoraEn, textoFechaHoy } from "@/lib/asistencia/hoy.mjs";
-import { hora12 } from "@/lib/hora12.mjs";
+import { esVistaEnVivo, RUTA_MONITOR } from "@/lib/asistencia/vistasAsistencia.mjs";
+import { AGRUPAR_SITUACION, agruparEfectivo, eleccionAlCambiarPeriodo, esPeriodoHoy } from "@/lib/asistencia/situacionHoy.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// Pestañas de Asistencias (control segmentado de la maqueta «Hoy», 23/11/2026). En celular ocupan el ancho.
+// Pestañas de Asistencias (control segmentado). En celular ocupan el ancho. Lo de hoy en vivo está en el Monitor.
 const PESTANAS = [
-  ["envivo", "Hoy", "Quién está, quién falta, quién va tarde y quién salió antes"],
-  ["registros", "Registros", "Ver y corregir checadas del periodo"],
+  ["registros", "Registros", "Ver, corregir y exportar checadas del periodo"],
   ["horas", "Horas de ley", "Horas de la semana contra el límite de la ley y horas extra"],
 ];
+// Formato de Registros: tabla (con filtros por columna y exportar) o matriz (personas × días).
+const FORMATOS = [["lista", "Tabla", List], ["matriz", "Matriz", Grid3x3]];
+function FormatoRegistros({ vista, onElegir, movil = false }) {
+  return (
+    <div role="group" aria-label="Formato de registros"
+      className={`overflow-hidden rounded-xl border border-gray-200 ${movil ? "grid grid-cols-2" : "inline-flex"}`}>
+      {FORMATOS.map(([valor, texto, Icono]) => (
+        <button key={valor} type="button" aria-pressed={vista === valor} onClick={() => onElegir(valor)}
+          className={`flex items-center justify-center gap-1.5 px-3 text-[13px] font-semibold transition-colors ${movil ? "min-h-11" : "py-2"} ${
+            vista === valor ? "bg-[#2563EB] text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+          }`}>
+          <Icono className="h-4 w-4" aria-hidden="true" />
+          {texto}
+        </button>
+      ))}
+    </div>
+  );
+}
 function PestanasAsistencia({ vista, onElegir, movil = false }) {
   return (
     <div role="tablist" aria-label="Vistas de asistencia"
-      className={`gap-1 rounded-[10px] bg-[#e8ebf3] p-1 ${movil ? "grid grid-cols-3" : "inline-flex"}`}>
+      className={`gap-1 rounded-[10px] bg-[#e8ebf3] p-1 ${movil ? "grid grid-cols-2" : "inline-flex"}`}>
       {PESTANAS.map(([clave, texto, ayuda]) => {
         const activa = clave === "registros" ? vista === "lista" || vista === "matriz" : vista === clave;
         return (
@@ -76,8 +92,29 @@ function PestanasAsistencia({ vista, onElegir, movil = false }) {
   );
 }
 
+// Aviso corto al llegar desde una pantalla que ya vive dentro de Asistencias (ver /panel/horas-extra).
+const AVISOS = {
+  "horas-extra": "«Control de horas extra» ahora vive aquí: las horas extra se autorizan en el reloj de cada fila (botón morado «por autorizar»).",
+};
+function AvisoMovido({ clave }) {
+  const [visible, setVisible] = useState(true);
+  if (!visible || !AVISOS[clave]) return null;
+  return (
+    <div role="status" data-aviso-movido className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-[13.5px] text-blue-900">
+      <span className="flex-1">{AVISOS[clave]}</span>
+      <button type="button" onClick={() => setVisible(false)} className="min-h-9 shrink-0 font-semibold underline">Entendido</button>
+    </div>
+  );
+}
+
 export default function ControlAsistencia() {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  // Enlaces viejos a «Hoy / En vivo» (?vista=envivo): esa vista ahora es el Monitor.
+  const aMonitor = esVistaEnVivo(searchParams.get("vista"));
+  useEffect(() => {
+    if (aMonitor) router.replace(RUTA_MONITOR);
+  }, [aMonitor, router]);
   const [empresaActiva, setEmpresaActiva] = useState(null);
   const idEmpresa = empresaActiva;
   const initialDate =
@@ -98,12 +135,13 @@ export default function ControlAsistencia() {
     filtroDiasFestivos: false,
     filtroRequiereAutorizacion: false,
   });
-  // (22/11/2026) Asistencias abre en «Hoy» (en vivo: ayer y hoy, por los turnos nocturnos). Si llega con un enlace
-  // a una fecha o persona (desde Horas, Incidencias o el buscador), abre en «Registros».
-  const conEnlace = Boolean(searchParams.get("fecha") || searchParams.get("empleado") || searchParams.get("abrirEmpleado"));
-  const ayerMx = dayjs().tz("America/Mexico_City").subtract(1, "day").format("YYYY-MM-DD");
-  const [fechaInicio, setFechaInicio] = useState(conEnlace ? initialDate : ayerMx);
-  const [fechaFin, setFechaFin] = useState(initialDate);
+  // Asistencias abre en Registros › Tabla con el día de hoy (o la fecha del enlace).
+  // ?desde=&hasta= (p. ej. la semana desde «Horas de ley») abre ese periodo.
+  const FECHA = /^\d{4}-\d{2}-\d{2}$/;
+  const desdeParam = FECHA.test(searchParams.get("desde") ?? "") ? searchParams.get("desde") : null;
+  const hastaParam = FECHA.test(searchParams.get("hasta") ?? "") ? searchParams.get("hasta") : null;
+  const [fechaInicio, setFechaInicio] = useState(desdeParam && hastaParam ? desdeParam : initialDate);
+  const [fechaFin, setFechaFin] = useState(desdeParam && hastaParam ? hastaParam : initialDate);
   const [page, setPage] = useState(1);
   // Escritorio arranca en "Todos los registros": se ve el periodo completo y los
   // filtros por columna se aplican sobre todo. Celular conserva páginas de 500.
@@ -127,17 +165,19 @@ export default function ControlAsistencia() {
 
   // Nueva UX de escritorio: rango con modal, agrupación, columnas y detalle
   const [rangoOpen, setRangoOpen] = useState(false);
-  // Pestañas: «Hoy» = envivo · «Registros» = lista o matriz (Calendario) · «Horas de ley» = horas.
-  const [vista, setVista] = useState(conEnlace ? "lista" : "envivo");
+  // Pestañas: «Registros» = lista (Tabla) o matriz · «Horas de ley» = horas.
+  const [vista, setVista] = useState("lista");
   const [formatoRegistros, setFormatoRegistros] = useState("lista");
-  const [rangoEtiqueta, setRangoEtiqueta] = useState(conEnlace ? "Hoy" : "En vivo");
-  const [agrupar, setAgrupar] = useState(null);
+  const [rangoEtiqueta, setRangoEtiqueta] = useState(desdeParam && hastaParam
+    ? `${desdeParam.split("-").reverse().join("/")} – ${hastaParam.split("-").reverse().join("/")}` : "Hoy");
+  // Lo elegido en «Agrupar» (undefined = no ha elegido: con Hoy se divide por «Situación de hoy»; null = «Sin agrupar»).
+  const [agrupar, setAgrupar] = useState(undefined);
   const [visibleColumns, setVisibleColumns] = useState(null);
 
   // Las columnas guardadas se cargan en cliente (localStorage no existe en SSR)
   useEffect(() => {
     const columnas = cargarColumnasGuardadas(COLUMNAS_ASISTENCIA);
-    // (23/11/2026) Columna nueva «Comida»: se muestra una vez aunque haya columnas guardadas; si la quitan, se respeta.
+    // Columna nueva «Comida»: se muestra una vez aunque haya columnas guardadas; si la quitan, se respeta.
     try {
       if (!window.localStorage.getItem("adamia-asistencia-col-comida")) {
         window.localStorage.setItem("adamia-asistencia-col-comida", "1");
@@ -145,6 +185,24 @@ export default function ControlAsistencia() {
           const i = columnas.indexOf("jornada");
           columnas.splice(i >= 0 ? i + 1 : columnas.length, 0, "comida");
         }
+      }
+      // Columnas del reloj (Día, Estado · motivo, Reloj): se muestran una vez; si luego las ocultan, se respeta.
+      // (24/11/2026) «Goce» y «Editado» como columnas propias: se muestran una vez.
+      // «-v2»: una pestaña con la versión anterior podía volver a guardar las columnas sin las nuevas.
+      if (!window.localStorage.getItem("adamia-asistencia-col-goce-editado-v2")) {
+        window.localStorage.setItem("adamia-asistencia-col-goce-editado-v2", "1");
+        const i = columnas.includes("hrs_extra") ? columnas.indexOf("hrs_extra") + 1 : columnas.length;
+        const nuevas = ["goce", "correccion"].filter((k) => !columnas.includes(k));
+        columnas.splice(i, 0, ...nuevas);
+      }
+      // (24/11/2026) «Motivo» se separó de «Estado»: se muestra una vez a quien ya tenía columnas guardadas.
+      if (!window.localStorage.getItem("adamia-asistencia-col-motivo-v2")) {
+        window.localStorage.setItem("adamia-asistencia-col-motivo-v2", "1");
+        if (columnas.includes("estado_asistencia") && !columnas.includes("motivo")) columnas.splice(columnas.indexOf("estado_asistencia") + 1, 0, "motivo");
+      }
+      if (!window.localStorage.getItem("adamia-asistencia-col-reloj")) {
+        window.localStorage.setItem("adamia-asistencia-col-reloj", "1");
+        for (const k of COLUMNAS_RELOJ_NUEVAS) if (!columnas.includes(k)) columnas.push(k);
       }
     } catch {
       // sin almacenamiento local: se usan las columnas cargadas
@@ -176,28 +234,21 @@ export default function ControlAsistencia() {
     setLimit(isMobile ? 500 : LIMITE_TODOS);
   }, [isMobile]);
 
-  const [modoFormulario, setModoFormulario] = useState(false);
-  const [values, setValues] = useState(null);
-
-  const abrirFormulario = () => {
-    setValues(null);
-    setModoFormulario(true);
-  };
+  // «Registrar asistencia masiva» ya no está en Asistencias: lo reemplazan «Marcar como…» y «Cargar horario
+  // normal…» al elegir filas (el formulario sigue existiendo para otras pantallas).
+  const abrirFormulario = null;
 
   const handleLimitChange = (newLimit) => {
     setLimit(newLimit);
   };
 
   const today = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
-  // Al salir de «En vivo» (que carga ayer y hoy) se regresa a «Hoy».
+  const esHoy = esPeriodoHoy(fechaInicio, fechaFin, today);
+  const agruparAplicado = agruparEfectivo(agrupar, esHoy);
+  // Al entrar o salir de Hoy, «Sin agrupar» / «Situación de hoy» vuelven al valor por defecto del periodo.
   useEffect(() => {
-    if (vista !== "envivo" && rangoEtiqueta === "En vivo") {
-      setFechaInicio(today);
-      setFechaFin(today);
-      setRangoEtiqueta("Hoy");
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vista]);
+    setAgrupar(eleccionAlCambiarPeriodo);
+  }, [esHoy]);
 
   const handleResetFilters = () => {
     setEmpresaActiva("all");
@@ -217,7 +268,7 @@ export default function ControlAsistencia() {
     setMostrarCamposExtras(false);
     setFiltroRapido("hoy");
     setSortConfig(DEFAULT_SORT_CONFIG);
-    setAgrupar(null);
+    setAgrupar(undefined);
     setRangoEtiqueta("Hoy");
   };
 
@@ -272,7 +323,7 @@ export default function ControlAsistencia() {
     setSinGoceDeSueldo(Boolean(v.sinGoceDeSueldo));
     setDiasFestivos(Boolean(v.diasFestivos));
     setRequiereAutorizacion(Boolean(v.requiereAutorizacion));
-    setAgrupar(v.agrupar || null);
+    setAgrupar(v.agrupar || undefined);
     if (Array.isArray(v.visibleColumns) && v.visibleColumns.length >= 2) {
       setVisibleColumns(v.visibleColumns);
       try {
@@ -287,83 +338,87 @@ export default function ControlAsistencia() {
     setPage(1);
   };
 
-  // «Hoy» trae a TODOS los de ayer y hoy (busca y filtra por área en pantalla); los filtros de Registros no se pierden
-  // pero no se le aplican. En celular también trae todo para que se refresque con cada checada.
-  const enHoy = vista === "envivo";
   const { ui, data, mutate, localEvents, resumenHorasExtra, totalSinComida, cargando } = AsistenciaDataContainer({
-    sinComida: enHoy ? false : sinComida,
+    sinComida,
     idEmpresa,
     empresaActiva,
     fechaInicio,
     fechaFin,
-    page: enHoy ? 1 : page,
-    limit: enHoy ? LIMITE_TODOS : limit,
-    debouncedFiltroEmpleado: enHoy ? "" : debouncedFiltroEmpleado,
-    filtroDepartamento: enHoy ? [] : filtroDepartamento,
-    filtroTipoRegistro: enHoy ? "" : filtroTipoRegistro,
-    filtroEstadoAsistencia: enHoy ? "" : filtroEstadoAsistencia,
+    page: page,
+    limit: limit,
+    debouncedFiltroEmpleado: debouncedFiltroEmpleado,
+    filtroDepartamento: filtroDepartamento,
+    filtroTipoRegistro: filtroTipoRegistro,
+    filtroEstadoAsistencia: filtroEstadoAsistencia,
     setPage,
     onLimitChange: handleLimitChange,
     mostrarCamposExtras,
     abrirFormulario,
     onResetFilters: handleResetFilters,
-    soloPresentes: enHoy ? false : soloPresentes,
-    soloAusentes: enHoy ? false : soloAusentes,
-    horasExtra: enHoy ? false : horasExtra,
-    sinGoceDeSueldo: enHoy ? false : sinGoceDeSueldo,
-    diasFestivos: enHoy ? false : diasFestivos,
-    requiereAutorizacion: enHoy ? false : requiereAutorizacion,
+    soloPresentes: soloPresentes,
+    soloAusentes: soloAusentes,
+    horasExtra: horasExtra,
+    sinGoceDeSueldo: sinGoceDeSueldo,
+    diasFestivos: diasFestivos,
+    requiereAutorizacion: requiereAutorizacion,
     sortConfig,
     setSortConfig,
-    agrupar,
+    agrupar: agruparAplicado,
     visibleColumns,
     vista,
+    ocultarRegistroMasivo: true,
   });
 
   const elegirPestana = (clave) => {
-    if (clave === "envivo") {
-      setVista("envivo");
-      setFechaInicio(dayjs().tz("America/Mexico_City").subtract(1, "day").format("YYYY-MM-DD"));
-      setFechaFin(today);
-      setRangoEtiqueta("En vivo");
-      setPage(1);
-    } else {
-      setVista(clave === "registros" ? (isMobile ? "lista" : formatoRegistros) : "horas");
-    }
+    setVista(clave === "registros" ? formatoRegistros : "horas");
   };
-  // «Hoy»: fecha y hora de la última actualización (cada checada llega por SSE y recarga los datos).
-  const zonaEmpresa = useEmpresaTimezone(empresaActiva);
-  const [actualizado, setActualizado] = useState(null);
-  useEffect(() => {
-    if (data) setActualizado(new Date());
-  }, [data]);
-  const horaActualizado = actualizado ? hora12(ahoraEn(zonaEmpresa, actualizado).hora) : null;
+  const elegirFormato = (valor) => {
+    setVista(valor);
+    setFormatoRegistros(valor);
+  };
+  if (aMonitor) return null;
 
-  // Celular: «Hoy» y «Horas de ley» con encabezado y pestañas; «Registros» es la vista móvil de siempre.
-  if (isMobile && vista !== "lista" && vista !== "matriz") {
+  const modalRango = (
+    <RangoFechasModal
+      open={rangoOpen}
+      onOpenChange={setRangoOpen}
+      fechaInicio={fechaInicio}
+      fechaFin={fechaFin}
+      onAplicar={({ inicio, fin, etiqueta }) => {
+        setFechaInicio(inicio);
+        setFechaFin(fin);
+        setRangoEtiqueta(etiqueta);
+        setPage(1);
+      }}
+    />
+  );
+
+  // Celular: «Horas de ley» y la matriz con encabezado y pestañas; la tabla es la vista móvil de siempre.
+  if (isMobile && vista !== "lista") {
     return (
       <>
-        {modoFormulario && (
-          <FormularioAsistenciasMasivas
-            values={values}
-            setModoFormulario={setModoFormulario}
-            mutate={mutate}
-            idEmpresa={idEmpresa}
-          />
-        )}
         <div className="-m-5 h-[calc(100dvh-3.5rem)] overflow-y-auto overflow-x-hidden bg-[#f6f7fb] px-4 pb-8 pt-[max(1rem,env(safe-area-inset-top))]">
           <div className="space-y-3.5">
             <ClockNavigation companyId={empresaActiva} />
             <header className="space-y-0.5">
               <h1 className="text-[22px] font-bold leading-tight text-slate-900">Asistencias</h1>
-              <p className="text-[13px] text-slate-600">
-                {textoFechaHoy(zonaEmpresa, actualizado ?? new Date(), { corto: true })}{horaActualizado ? ` · ${horaActualizado}` : ""}
-              </p>
+              <p className="text-[13px] text-slate-600">Historial: corrige, exporta y revisa por periodo</p>
             </header>
             <PestanasAsistencia vista={vista} onElegir={elegirPestana} movil />
+            {vista === "matriz" ? (
+              <div className="space-y-2">
+                <FormatoRegistros vista={vista} onElegir={elegirFormato} movil />
+                <Button variant="outline" onClick={() => setRangoOpen(true)}
+                  className="min-h-11 w-full justify-between rounded-xl border-gray-200 bg-white font-semibold text-gray-700">
+                  <span className="flex items-center"><CalendarDays className="mr-1.5 h-4 w-4" aria-hidden="true" />Periodo: {rangoEtiqueta}</span>
+                  <ChevronDown className="h-3.5 w-3.5 text-gray-400" aria-hidden="true" />
+                </Button>
+              </div>
+            ) : null}
             {ui}
           </div>
         </div>
+        {vista === "matriz" ? modalRango : null}
       </>
     );
   }
@@ -373,17 +428,11 @@ export default function ControlAsistencia() {
     const registros = data?.registros || [];
     return (
       <>
-        {modoFormulario && (
-          <FormularioAsistenciasMasivas
-            values={values}
-            setModoFormulario={setModoFormulario}
-            mutate={mutate}
-            idEmpresa={idEmpresa}
-          />
-        )}
         <div className="-m-5 flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden">
           <div className="shrink-0 bg-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
             <PestanasAsistencia vista={vista} onElegir={elegirPestana} movil />
+            <div className="mt-2"><AvisoMovido clave={searchParams.get("aviso")} /></div>
+            <div className="mt-2"><FormatoRegistros vista={vista} onElegir={elegirFormato} movil /></div>
           </div>
           <div className="min-h-0 flex-1">
           <CuentaHorasProvider registros={registros}>
@@ -436,21 +485,13 @@ export default function ControlAsistencia() {
         <EncabezadoPagina
           icono={ClipboardCheck}
           titulo="Asistencias"
-          subtitulo={enHoy
-            ? `${textoFechaHoy(zonaEmpresa, actualizado ?? new Date())}${horaActualizado ? ` · actualizado ${horaActualizado}` : ""} · se refresca solo`
-            : "Quién está hoy, registros de entrada y salida, y horas de ley"}
+          subtitulo="Historial completo: corrige, exporta y revisa por periodo"
           acciones={<PestanasAsistencia vista={vista} onElegir={elegirPestana} />}
         />
       </div>
 
-      {modoFormulario && (
-        <FormularioAsistenciasMasivas
-          values={values}
-          setModoFormulario={setModoFormulario}
-          mutate={mutate}
-          idEmpresa={idEmpresa}
-        />
-      )}
+
+      <AvisoMovido clave={searchParams.get("aviso")} />
 
       {(vista === "lista" || vista === "matriz") && (
       <ResumenAsistencia
@@ -473,7 +514,6 @@ export default function ControlAsistencia() {
       )}
 
 
-      {!enHoy && (
       <div className="flex flex-wrap items-center gap-2.5">
         <div className="relative min-w-[220px] max-w-[340px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -501,28 +541,11 @@ export default function ControlAsistencia() {
         </Button>
         )}
 
-        {(vista === "lista" || vista === "matriz") && (
-          <div className="inline-flex overflow-hidden rounded-xl border border-gray-200" role="group" aria-label="Formato de registros">
-            {[["lista", "Lista", List], ["matriz", "Calendario", Grid3x3]].map(([valor, texto, Icono]) => (
-              <button
-                key={valor}
-                type="button"
-                aria-pressed={vista === valor}
-                onClick={() => { setVista(valor); setFormatoRegistros(valor); }}
-                className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
-                  vista === valor ? "bg-[#2563EB] text-white" : "bg-white text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <Icono className="h-4 w-4" />
-                {texto}
-              </button>
-            ))}
-          </div>
-        )}
+        {(vista === "lista" || vista === "matriz") && <FormatoRegistros vista={vista} onElegir={elegirFormato} />}
 
         {vista === "lista" && (
           <Select
-            value={agrupar || "none"}
+            value={agruparAplicado || "none"}
             onValueChange={(v) => {
               setAgrupar(v === "none" ? null : v);
             }}
@@ -533,6 +556,7 @@ export default function ControlAsistencia() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Sin agrupar</SelectItem>
+              {esHoy && <SelectItem value={AGRUPAR_SITUACION}>Situación de hoy</SelectItem>}
               <SelectItem value="unidad">Unidad de negocio</SelectItem>
               <SelectItem value="departamento">Departamento</SelectItem>
               <SelectItem value="tipo">Tipo de registro</SelectItem>
@@ -562,7 +586,6 @@ export default function ControlAsistencia() {
           />
         )}
       </div>
-      )}
 
       {(vista === "lista" || vista === "matriz") && (
       <VistasGuardadas
@@ -575,18 +598,7 @@ export default function ControlAsistencia() {
 
       {ui}
 
-      <RangoFechasModal
-        open={rangoOpen}
-        onOpenChange={setRangoOpen}
-        fechaInicio={fechaInicio}
-        fechaFin={fechaFin}
-        onAplicar={({ inicio, fin, etiqueta }) => {
-          setFechaInicio(inicio);
-          setFechaFin(fin);
-          setRangoEtiqueta(etiqueta);
-          setPage(1);
-        }}
-      />
+      {modalRango}
 
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />

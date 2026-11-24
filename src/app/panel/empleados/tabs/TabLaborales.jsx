@@ -31,13 +31,15 @@ import { Combobox } from "@/components/Combobox";
 import { useEmpresaDependencias } from "@/hooks/useEmpresaDependencias";
 import { CreatableCombobox } from "@/components/CreatableCombobox";
 
-// (23/11/2026) Ficha en 5 pestañas: este componente pinta «Puesto y organización» (seccion="trabajo", pestaña Trabajo) o
+// Ficha en 5 pestañas: este componente pinta «Puesto y organización» (seccion="trabajo", pestaña Trabajo) o
 // «Checador y acceso» (seccion="checador"). Los campos personalizados siguen en su clave «laborales».
-export default function TabLaborales({ renderCampos = () => null, form, soloLectura, dataUser, editar, seccion = "todo", cambiarContrasena = null }) {
+export default function TabLaborales({ renderCampos = () => null, form, soloLectura, dataUser, editar, seccion = "todo", cambiarContrasena = null, sincronizarCampo }) {
   const ver = (s) => seccion === "todo" || seccion === s;
   const { enqueueSnackbar } = useSnackbar();
   const [areas, setAreas] = useState([]);
-  const [areasAsignadas, setAreasAsignadas] = useState([]);
+  // Arranca con lo que ya tiene el formulario (no con []), para no marcar «cambios sin guardar» al volver a
+  // la pestaña mientras se consultan las áreas.
+  const [areasAsignadas, setAreasAsignadas] = useState(() => form.getValues("areasAsignadas") || []);
   const [mostrarModalArea, setMostrarModalArea] = useState(false);
   const [guardandoArea, setGuardandoArea] = useState(false);
   const checarGPS = form.watch("checar_gps");
@@ -128,17 +130,20 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
         const { data } = await axios.get(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/area_check/${empleadoId}/areas`,
         );
-        setAreasAsignadas(data.map((a) => a.id_area));
+        const ids = data.map((a) => a.id_area);
+        // Lo que dice el servidor es la base: cargarlo no es un cambio de la persona.
+        sincronizarCampo?.("areasAsignadas", ids);
+        setAreasAsignadas(ids);
       } catch (error) {
         console.error("Error al obtener áreas del empleado", error);
       }
     };
 
     fetchAsignadas();
-  }, [checarGPS, empleadoId]);
+  }, [checarGPS, empleadoId, sincronizarCampo]);
 
   useEffect(() => {
-    form.setValue("areasAsignadas", areasAsignadas);
+    form.setValue("areasAsignadas", areasAsignadas, { shouldDirty: true });
   }, [areasAsignadas]);
 
   const { data: empleados } = useSWR(
@@ -222,11 +227,11 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
                       const parsed = val ? Number(val) : "";
                       field.onChange(parsed);
 
-                      form.setValue("sucursal", "");
-                      form.setValue("departamento", "");
-                      form.setValue("id_jefe_inmediato", null);
-                      form.setValue("id_autoriza_vacaciones", null);
-                      form.setValue("id_autoriza_permisos", null);
+                      form.setValue("sucursal", "", { shouldDirty: true });
+                      form.setValue("departamento", "", { shouldDirty: true });
+                      form.setValue("id_jefe_inmediato", null, { shouldDirty: true });
+                      form.setValue("id_autoriza_vacaciones", null, { shouldDirty: true });
+                      form.setValue("id_autoriza_permisos", null, { shouldDirty: true });
                     }}
                   />
                 </FormControl>
@@ -269,7 +274,7 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
                   getOptionValue={(o) => o.nombre} // 🔥 CLAVE
                   onChange={(nombre) => {
                     field.onChange(nombre);
-                    form.setValue("departamento", "");
+                    form.setValue("departamento", "", { shouldDirty: true });
                   }}
                   onCreated={(nuevo) => {
                     field.onChange(nuevo.nombre);

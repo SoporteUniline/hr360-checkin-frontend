@@ -20,8 +20,10 @@ import { useAuth } from "@/context/AuthContext";
 import AuthSplitShell from "@/components/auth/AuthSplitShell";
 import { CircleArrowLeftIcon } from "lucide-react";
 import { isNativeClient } from "@/lib/native-app";
+import { destinoSeguro } from "@/lib/destinoLogin.mjs";
 
-export default function LoginClient({ initialIsNative = false }) {
+// destino: a dónde volver después de entrar (?next= ya validado en la página; se vuelve a validar aquí).
+export default function LoginClient({ initialIsNative = false, destino: destinoPedido = null }) {
   const { login } = useAuth();
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
@@ -73,7 +75,7 @@ export default function LoginClient({ initialIsNative = false }) {
         Empleado: "/empleado",
       };
 
-      const destino = rutas[tipo_usuario];
+      const destino = rutas[tipo_usuario] ? destinoSeguro(destinoPedido) || rutas[tipo_usuario] : null;
 
       if (destino) {
         enqueueSnackbar("Inicio de sesión exitoso", { variant: "success" });

@@ -1,4 +1,4 @@
-// Rutas del módulo «Activos y uniformes» (20/11/2026, propuesta aprobada «menos vistas»):
+// Rutas del módulo «Activos y uniformes»:
 // una sola entrada /panel/activos con Inicio · Inventario · Personas y un botón Ajustes. Los componentes
 // siguen pidiendo sus rutas de siempre ("/activos/7", "/entregas/nueva", "/empleados/3"…) y aquí se
 // traducen a la ruta nueva; el tipo (activos | uniformes) viaja en ?tipo= solo donde importa.

@@ -1021,7 +1021,7 @@ const QUICK_ACTIONS = [
 ];
 
 function QuickActions() {
-  // (03/12/2026) Módulos por empresa: solo accesos a lo que la empresa tiene activo (p. ej. Permisos).
+  // Módulos por empresa: solo accesos a lo que la empresa tiene activo (p. ej. Permisos).
   const { activos, opciones } = useModulosActivos();
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -1671,7 +1671,7 @@ export default function DashboardRH() {
             description="Una sola lista con estado, horario y fecha de regreso. Usa los indicadores superiores para filtrar."
             icon={UsersRound}
             action={
-              <SectionLink href="/panel/registro-asistencia">
+              <SectionLink href={showingToday ? "/panel/monitor" : "/panel/registro-asistencia"}>
                 Ver detalle
               </SectionLink>
             }

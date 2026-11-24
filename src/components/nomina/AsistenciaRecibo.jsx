@@ -1,7 +1,7 @@
 "use client";
 
 // Asistencia de una persona en el periodo de nómina: de dónde sale cada número (días, faltas, retardos, horas extra,
-// festivos, domingos y el sueldo), día por día y con lo que se pagó de más cada día. Misma tipografía que Asistencias.
+// festivos, domingos y el sueldo), día por día con lo que se pagó de más o se descontó cada día. Misma tipografía que Asistencias.
 // `modo="tabla"`: desplegable de la tabla de la nómina; `modo="compacto"`: dentro del panel del recibo (menos columnas).
 // `onCorregir(fecha)`: abre la ventana de edición de Asistencias de ese día (solo con la nómina en borrador).
 import { Pencil } from "lucide-react";
@@ -45,9 +45,12 @@ function PagosDia({ pagos }) {
   if (!pagos?.length) return <span className="text-slate-300">—</span>;
   return (
     <span className="grid gap-0.5">
+      {/* Un importe negativo es un descuento del día (p. ej. horas no trabajadas que «se descuentan»). */}
       {pagos.map((p) => (
-        <span key={p.texto} className="whitespace-nowrap text-[12px]">
-          <b className="tabular-nums text-emerald-700">+{dinero(p.importe / 100)}</b> <span className="text-slate-500">{p.texto}</span>
+        <span key={p.texto} data-pago-dia className="whitespace-nowrap text-[12px]">
+          {Number(p.importe) < 0
+            ? <b className="tabular-nums text-rose-700">−{dinero(Math.abs(p.importe) / 100)}</b>
+            : <b className="tabular-nums text-emerald-700">+{dinero(p.importe / 100)}</b>} <span className="text-slate-500">{p.texto}</span>
         </span>
       ))}
     </span>
@@ -64,8 +67,8 @@ export default function AsistenciaRecibo({ recibo, modo = "tabla", onEditar, onC
   const compacto = modo === "compacto";
   const extra = (r.minDobles ?? 0) + (r.minTriples ?? 0);
   const columnas = compacto
-    ? ["Día", "Qué pasó", "Entrada · salida", "Trabajó", "Se pagó de más"]
-    : ["Día", "Qué pasó", "Entrada", "Salida", "Trabajó", "Su jornada", "Se pagó de más"];
+    ? ["Día", "Qué pasó", "Entrada · salida", "Trabajó", "Pagos y descuentos"]
+    : ["Día", "Qué pasó", "Entrada", "Salida", "Trabajó", "Su jornada", "Pagos y descuentos"];
   if (onCorregir) columnas.push("");
   const th = "px-3 py-2 text-[10.5px] font-semibold uppercase tracking-[0.07em] text-slate-500";
   const td = "px-3 py-2";

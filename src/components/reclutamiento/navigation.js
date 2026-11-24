@@ -52,7 +52,7 @@ export const RECRUITMENT_NAV = [
     label: "Entrevistas",
     title: "Agenda de entrevistas",
     description: "Organiza las conversaciones de tu equipo y registra su seguimiento.",
-    // 23/11/2026: la agenda real (citas de WhatsApp), no la maqueta de /panel/reclutamiento/entrevistas.
+    // La agenda real (citas de WhatsApp), no la maqueta de /panel/reclutamiento/entrevistas.
     href: ENTREVISTAS_REAL,
     icon: CalendarDays,
   },

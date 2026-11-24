@@ -9,7 +9,7 @@ import Ajustes from "@/components/activos/Ajustes";
 import FiltroTipo from "@/components/activos/FiltroTipo";
 import { TIPO_DE_URL } from "@/lib/activos/module.mjs";
 
-// Activos y uniformes (20/11/2026). Inicio · Inventario · Personas · Ajustes; el resto son pantallas a
+// Activos y uniformes. Inicio · Inventario · Personas · Ajustes; el resto son pantallas a
 // las que se llega desde esas (entregar, recibir, resguardos, revisión, solicitudes, historial).
 const ID = /^[1-9]\d*$/;
 const SIN_ID = {

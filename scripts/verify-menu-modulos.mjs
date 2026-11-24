@@ -1,4 +1,4 @@
-// Verificación en navegador del menú (23/11/2026): Nómina, Tareas y Checklists son módulos propios; Finiquitos y Aguinaldos
+// Verificación en navegador del menú: Nómina, Tareas y Checklists son módulos propios; Finiquitos y Aguinaldos
 // están en Nómina; las direcciones viejas /panel/tareas?vista=… llevan a la vista nueva. Backend simulado.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-menu-modulos.mjs
 import assert from "node:assert/strict";

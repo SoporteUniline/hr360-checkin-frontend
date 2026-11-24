@@ -3,7 +3,7 @@ import test from "node:test";
 import { horaAMinutos, sumarDias } from "../src/lib/fechaHora.mjs";
 import {
   formatearMinutos, minutosDescanso, minutosProgramados, minutosTrabajados,
-  resumenJornada, salidaEsDiaSiguiente, sinSalidaAComer,
+  resumenJornada, salidaEsDiaSiguiente, sinSalidaAComer, hayComidaChecada, puedeAgregarComida,
 } from "../src/lib/asistencia/jornada.mjs";
 
 const reg = (o) => ({
@@ -125,4 +125,22 @@ test("en comida (o ya regresó de comer) no sale «No marcó salida a comer»", 
   assert.equal(sinSalidaAComer(r), true, "sin dato de comida, un tramo sigue alertando");
   assert.equal(sinSalidaAComer({ ...r, comida_checada: { salida: "2026-11-13 11:34:00", regreso: null, minutos: null } }), false);
   assert.equal(sinSalidaAComer({ ...r, comida_checada: { salida: "2026-11-13 11:34:00", regreso: "2026-11-13 12:30:00", minutos: 56 } }), false);
+});
+
+test("agregar comida: solo sin comida y sin una pausa real dentro de su comida", () => {
+  const unTramo = { ...reg(comida), ...tramos([["2026-11-13 08:00:00", "2026-11-13 17:00:00"]]) };
+  assert.equal(puedeAgregarComida(unTramo), true);
+  assert.equal(puedeAgregarComida({ ...unTramo, salida: null }), false, "sin salida no se ofrece");
+  const checada = { ...unTramo, comida_checada: { salida: "2026-11-13 13:00:00", regreso: "2026-11-13 13:30:00" } };
+  assert.equal(hayComidaChecada(checada), true);
+  assert.equal(puedeAgregarComida(checada), false, "comida checada en el reloj");
+  assert.equal(puedeAgregarComida({ ...checada, comida_checada: { ...checada.comida_checada, manual: true } }), false, "comida manual");
+  // Caso real: salió 11:03 y regresó 11:25 sin marcarlo; su comida es 11:00–11:30.
+  const alondra = { ...reg({ hora_salida_comida_programada: "11:00:00", hora_regreso_comida_programada: "11:30:00" }),
+    ...tramos([["2026-11-13 09:18:00", "2026-11-13 11:03:00"], ["2026-11-13 11:25:00", "2026-11-13 16:08:00"]]) };
+  assert.equal(puedeAgregarComida(alondra), false);
+  // Una pausa fuera de su comida (15:00–15:20) no cuenta.
+  const banco = { ...reg(comida), ...tramos([["2026-11-13 08:00:00", "2026-11-13 15:00:00"], ["2026-11-13 15:20:00", "2026-11-13 17:00:00"]]) };
+  assert.equal(puedeAgregarComida(banco), true);
+  assert.equal(puedeAgregarComida({ ...banco, hora_salida_comida_programada: null }), false, "sin comida en el horario, cualquier pausa");
 });

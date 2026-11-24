@@ -281,7 +281,6 @@ export default function VacacionesPage() {
       // Asegura que al cambiar de pestaña se carguen datos si faltan
       ensureRowDetalle(expandedTab, expandedRow);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expandedTab, expandedRow, empresaDetalleParam]);
 
   // Click sobre la fila: si está abierta, plegar SIEMPRE; si está cerrada, abrir con "cargados"

@@ -1,10 +1,10 @@
-// Asistencias → Hoy (23/11/2026): un estado por persona, precedencia, permisos, tolerancia, turno nocturno, varios tramos
+// Monitor (estado de hoy): un estado por persona, precedencia, permisos, tolerancia, turno nocturno, varios tramos
 // y comida pasada. Uso: node --test scripts/test-asistencias-hoy.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { minutosAbsolutos } from "../src/lib/fechaHora.mjs";
 import {
-  agruparHoy, describir, diaDesdeRegistro, diasDeHoy, duracionHoy, estadoHoy, resumenHoy, tipoDelDia,
+  describir, diaDesdeRegistro, diasDeHoy, duracionHoy, estadoHoy, tipoDelDia,
 } from "../src/lib/asistencia/hoy.mjs";
 
 const HOY = "2026-11-23";
@@ -208,35 +208,6 @@ test("captura manual sin tramos del reloj: usa entrada/salida de la asistencia",
   assert.equal(estado(reg({ entrada: t("09:00"), salida: t("18:00") }), "18:30").estado, "ya_salio");
 });
 
-test("resumen de tarjetas y grupos en orden (lo urgente primero)", () => {
-  const ahora = a("14:10");
-  const filas = [
-    reg({ nombre: "Faltó" }), // 14:10 > 13:30 → faltó
-    reg({ nombre: "No llega", hora_entrada_programada: "12:00:00", hora_salida_programada: "20:00:00" }), // 2 h 10 tarde, mitad 16:00
-    reg({ nombre: "Trabaja", ...conTramos([], "08:55") }),
-    reg({ nombre: "Tarde", ...conTramos([], "09:30") }),
-    reg({ nombre: "Comida pasada", ...conTramos([["09:00", "13:00"]]), comida_checada: { salida: t("13:00"), regreso: null, minutos_programados: 60 } }),
-    reg({ nombre: "Comida", ...conTramos([["09:00", "13:50"]]) }),
-    reg({ nombre: "Antes", ...conTramos([["07:00", "12:00"]]), hora_salida_comida_programada: null, hora_regreso_comida_programada: null }),
-    reg({ nombre: "Salió", hora_entrada_programada: "06:00:00", hora_salida_programada: "14:00:00", ...conTramos([["06:00", "14:00"]]) }),
-    reg({ nombre: "Próximo", hora_entrada_programada: "16:00:00", hora_salida_programada: "23:00:00" }),
-    reg({ nombre: "Descansa", tipo_registro_nombre: "Día de Descanso" }),
-  ].map((r) => ({ r, e: estadoHoy(diaDesdeRegistro(r), ahora) }));
-  const res = filas.map((x) => ({ ...x.e, nombre: x.r.nombre }));
-  const s = resumenHoy(res);
-  assert.deepEqual(s.cuenta, { trabajando: 2, tarde: 1, no_ha_llegado: 1, en_comida: 2, ya_salio: 1, salio_antes: 1, falto: 1 });
-  assert.deepEqual([s.programadosHoy, s.promedioTarde, s.comidaExcedida, s.atencion, s.noLaboran], [9, 30, 1, 4, 1]);
-  const grupos = agruparHoy(res, (r) => r.nombre);
-  assert.deepEqual(grupos.map((g) => [g.clave, g.filas.map((r) => r.nombre)]), [
-    ["atencion", ["Faltó", "No llega", "Antes", "Comida pasada"]],
-    ["comida", ["Comida"]],
-    ["trabajando", ["Trabaja", "Tarde"]],
-    ["proximos", ["Próximo"]],
-    ["salieron", ["Salió"]],
-    ["no_laboran", ["Descansa"]],
-  ]);
-});
-
 test("formato corto de la barra", () => {
   assert.deepEqual([duracionHoy(125), duracionHoy(480), duracionHoy(45), duracionHoy(-82), duracionHoy(4, { signo: true }), duracionHoy(null)],
     ["2 h 05", "8 h", "45 min", "−1 h 22", "+4 min", "—"]);
@@ -251,7 +222,7 @@ test("hora actual y fecha en la zona de la empresa", async () => {
   assert.equal(textoFechaHoy("America/Mexico_City", d, { corto: true }), "Lun 23 nov");
 });
 
-// Columnas Entrada / Salida / Comida (pedido del 23/11/2026).
+// Columnas Entrada / Salida / Comida.
 test("checadas del día: entrada, salida y comida reales; la salida a comer no es su salida", async () => {
   const { checadasDelDia } = await import("../src/lib/asistencia/hoy.mjs");
   const base = { tramos: [], hayAbierto: false, abierto: null, comida: null };

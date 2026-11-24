@@ -1,6 +1,6 @@
 // PDF de la matriz de asistencia (empleados × días) de registro-asistencia.
 // Módulo puro (prueba en Node: scripts/test-pdf-marca.mjs). Formato homologado
-// ADAMIA (23/11/2026): encabezado con logotipo, documento, empresa y periodo;
+// ADAMIA: encabezado con logotipo, documento, empresa y periodo;
 // pie «Generado con ADAMIA · fecha · Página X de Y» en cada página; la tabla
 // deja libre la franja del pie.
 import { dibujarEncabezadoAdamia, dibujarPieAdamia } from "../pdfMarcaAdamia.mjs";

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/form";
 import axiosInstance from "@/lib/axios";
 import { useSnackbar } from "notistack";
+import { mutate } from "swr";
 import Cookies from "js-cookie";
 
 export default function BasicInfoForm({ user }) {

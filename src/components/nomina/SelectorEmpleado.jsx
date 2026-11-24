@@ -1,7 +1,7 @@
 "use client";
 
-// Elegir a una persona escribiendo su nombre (22/11/2026: «en persona ponle buscador claro»). Un solo campo: se escribe,
-// aparece la lista filtrada (nombre, puesto y departamento) y se elige con clic o con ↑ ↓ Enter. Solo personas activas.
+// Elegir a una persona escribiendo su nombre: lista filtrada (nombre, puesto y departamento), clic o ↑ ↓ Enter.
+// Solo personas activas.
 import { useId, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import { Search, X } from "lucide-react";

@@ -12,7 +12,7 @@ export default function GlobalThirdPartyScripts() {
 
   useEffect(() => {
     // En iOS/Android nativo se omite Meta Pixel para cumplir App Tracking Transparency (ATT).
-    // En web, solo con el consentimiento de cookies de publicidad (aviso de cookies, 21/11/2026).
+    // En web, solo con el consentimiento de cookies de publicidad.
     if (isNativeClient()) return undefined;
     const revisar = () => setAllowMetaPixel(leerConsentimiento() === "aceptadas");
     revisar();

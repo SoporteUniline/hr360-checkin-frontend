@@ -113,7 +113,7 @@ export const schemaEmpleado = z
     // Nómina - OPCIONALES
     sueldo: z.coerce.number().nullable().optional(),
     porcentaje: z.coerce.number().nullable().optional(),
-    // (21/11/2026) Nómina R1, D-1: medio de pago y monto fijo por transferencia (vacío = sin definir).
+    // Nómina R1, D-1: medio de pago y monto fijo por transferencia (vacío = sin definir).
     medio_pago: z.enum(["", "Transferencia", "Efectivo", "Mixto"]).nullable().optional(),
     monto_transferencia: z
       .union([z.number(), z.string(), z.null()])

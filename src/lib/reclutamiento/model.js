@@ -1,4 +1,4 @@
-// Modelo de las pantallas de Reclutamiento (03/12/2026: datos reales; la traducción con el API está en ./adaptador.mjs).
+// Modelo de las pantallas de Reclutamiento (la traducción con el API está en ./adaptador.mjs).
 export const VACANCY_STATUSES = {
   draft: { label: "Borrador", tone: "neutral" },
   open: { label: "Publicada", tone: "green" },

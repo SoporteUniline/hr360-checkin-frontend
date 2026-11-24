@@ -14,12 +14,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAuth } from "@/context/AuthContext";
-import { clockStore } from '@/lib/offline-clock';
+import { destinoRelojSinConexion, RUTA_RELOJ_EMPRESA } from '@/components/Clock/destinoReloj';
 import { Capacitor } from "@capacitor/core";
 import {
   UsersIcon,
   ClipboardCheck,
-  Clock3,
   CircleUserRoundIcon,
   ClockIcon,
   ClockArrowUp,
@@ -63,6 +62,7 @@ import {
   Settings2,
   MessageCircle,
   LayoutGrid,
+  Activity,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -73,6 +73,7 @@ import {
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useModulosActivos } from "@/components/modulos/useModulos";
+import { useConfirmarSalida } from "@/components/cambios/CambiosPendientes";
 import { filtrarGrupos, rutaPermitida } from "@/lib/modulos/menu.mjs";
 import {
   RECRUITMENT_NAV,
@@ -80,6 +81,9 @@ import {
 } from "@/components/reclutamiento/navigation";
 import { VISTAS_RH } from "@/lib/evaluaciones/vistas.mjs";
 import { useMenuEvaluaciones } from "./useMenuEvaluaciones";
+import useMonitorEquipo from "@/hooks/useMonitorEquipo";
+import { ContadorEncuestas, useMisEncuestas } from "@/components/clima/AvisoEncuestas";
+import { RUTA_PANEL as RUTA_MIS_ENCUESTAS } from "@/lib/clima/pendientes.mjs";
 const ICONOS_EVALUACION = {
   campanas: ClipboardList,
   plantillas: LayoutTemplate,
@@ -87,6 +91,16 @@ const ICONOS_EVALUACION = {
   configuracion: Settings2,
 };
 const dashboardItems = [
+  {
+    // RH o dueño que también son empleados (tienen ficha con su correo): contestan Clima y NOM-035 desde el panel.
+    // Solo aparece con ficha; el número son las que faltan por contestar.
+    title: "Mis encuestas",
+    url: RUTA_MIS_ENCUESTAS,
+    rol: "Recruiter",
+    icon: ClipboardList,
+    matchPrefix: RUTA_MIS_ENCUESTAS,
+    soloConFicha: true,
+  },
   {
     title: "Mis activos y uniformes",
     url: "/empleado/panel/mis-recursos",
@@ -102,10 +116,25 @@ const dashboardItems = [
     matchPrefix: "/empleado/panel/evaluaciones",
   },
   {
+    title: "Encuestas",
+    url: "/empleado/panel/encuestas",
+    rol: "Empleado",
+    icon: ClipboardList,
+    matchPrefix: "/empleado/panel/encuestas",
+  },
+  {
     title: "Solicitudes de mi equipo",
     url: "/empleado/panel/solicitudes-equipo",
     rol: "Empleado",
     icon: ClipboardCheck,
+  },
+  {
+    // Solo si es jefe (GET /checador/mi-equipo/hoy dice es_jefe).
+    title: "Monitor de mi equipo",
+    url: "/empleado/panel/monitor-equipo",
+    rol: "Empleado",
+    icon: UsersIcon,
+    soloJefe: true,
   },
   {
     title: "Empresas",
@@ -173,7 +202,7 @@ const dashboardItems = [
     rol: "Admin",
     icon: MessageCircle,
   },
-  // (03/12/2026) Módulos por empresa: qué incluye cada plan (los extras de una empresa, en su detalle).
+  // Módulos por empresa: qué incluye cada plan (los extras de una empresa, en su detalle).
   {
     title: "Módulos por plan",
     url: "/dashboard/modulos",
@@ -181,7 +210,8 @@ const dashboardItems = [
     icon: LayoutGrid,
   },
   {
-    title: "Inicio",
+    // «Resumen» y no «Inicio»: la primera pantalla de RH es el Monitor.
+    title: "Resumen",
     url: "/panel/dashboard",
     rol: "Recruiter",
     icon: LayoutDashboard,
@@ -205,16 +235,16 @@ const menuGroups = [
     groupIcon: ClockIcon,
     items: [
       {
+        title: "Monitor",
+        url: "/panel/monitor",
+        rol: "Recruiter",
+        icon: Activity,
+      },
+      {
         title: "Asistencias",
         url: "/panel/registro-asistencia",
         rol: "Recruiter",
         icon: ClipboardCheck,
-      },
-      {
-        title: "Control de horas extra",
-        url: "/panel/horas-extra",
-        rol: "Recruiter",
-        icon: Clock3,
       },
       {
         title: "Turnos extra",
@@ -327,8 +357,8 @@ const menuGroups = [
     ],
   },
   {
-    // (23/11/2026) Nómina es su propio módulo (antes un submenú dentro de Gestión de personal). Incluye Finiquitos y
-    // Aguinaldos porque también son pagos (decisión del dueño). Nóminas/Bonos/Préstamos también son pestañas del módulo.
+    // Nómina es su propio módulo; incluye Finiquitos y Aguinaldos porque también son pagos.
+    // Nóminas/Bonos/Préstamos también son pestañas del módulo.
     group: "NÓMINA",
     groupIcon: Wallet,
     items: [
@@ -450,8 +480,7 @@ const menuGroups = [
     ],
   },
   {
-    // (20/11/2026) Antes dos grupos con 24 entradas (12 de activos y 12 de uniformes). Ahora un solo
-    // módulo con pestañas Inicio · Inventario · Personas y Ajustes (src/app/panel/activos).
+    // Un solo módulo con pestañas Inicio · Inventario · Personas y Ajustes (src/app/panel/activos).
     group: "ACTIVOS Y UNIFORMES",
     groupIcon: Monitor,
     items: [
@@ -465,7 +494,7 @@ const menuGroups = [
     ],
   },
   {
-    // (23/11/2026) Tareas y Checklists son dos módulos, cada uno con su entrada y sus vistas (pedido del dueño).
+    // Tareas y Checklists son dos módulos, cada uno con su entrada y sus vistas.
     group: "TAREAS",
     groupIcon: ListChecks,
     items: [
@@ -483,10 +512,8 @@ const menuGroups = [
     ],
   },
   {
-    // (23/11/2026) Cada vista con su entrada (pedido del dueño: «separa cada vista en su módulo»). Son las
-    // pestañas de RH del módulo (src/lib/evaluaciones/vistas.mjs) y se ocultan las que el servidor no le
-    // permite a la persona (useMenuEvaluaciones). «Campañas» mantiene resaltado el grupo también en el
-    // resultado de una persona (/panel/evaluaciones/resultados/…), que se abre desde la campaña.
+    // Una entrada por vista de RH (src/lib/evaluaciones/vistas.mjs); se ocultan las que el servidor no permite
+    // (useMenuEvaluaciones). «Campañas» sigue resaltado en el resultado de una persona (/panel/evaluaciones/resultados/…).
     group: "EVALUACIÓN DE DESEMPEÑO",
     groupIcon: BarChart3,
     items: VISTAS_RH.map((v) => ({
@@ -498,8 +525,18 @@ const menuGroups = [
       vistaEvaluacion: v,
     })),
   },
-  // (03/12/2026) Reclutamiento depende del módulo de la empresa (antes de NEXT_PUBLIC_RECRUITMENT_ENABLED, global por
-  // build). La variable solo queda como interruptor de emergencia: "false" lo oculta para todos (filtrarGrupos).
+  {
+    // Clima organizacional y NOM-035 (src/components/clima/ModuloClima.jsx): una dirección por vista.
+    group: "CLIMA Y NOM-035",
+    groupIcon: HeartHandshake,
+    items: [
+      { title: "Resultados", url: "/panel/clima", rol: "Recruiter", icon: LayoutDashboard },
+      { title: "Encuestas y plantillas", url: "/panel/clima/encuestas", matchPrefix: true, rol: "Recruiter", icon: ClipboardList },
+      { title: "NOM-035", url: "/panel/clima/nom035", rol: "Recruiter", icon: ShieldCheck },
+    ],
+  },
+  // Reclutamiento depende del módulo de la empresa; NEXT_PUBLIC_RECRUITMENT_ENABLED="false" queda como interruptor
+  // de emergencia que lo oculta para todos (filtrarGrupos).
   {
     group: "RECLUTAMIENTO Y SELECCIÓN",
     groupIcon: BriefcaseBusiness,
@@ -542,7 +579,7 @@ const menuGroups = [
         rol: "Recruiter",
         icon: SlidersHorizontal,
       },
-      // (03/12/2026) Qué módulos usa la empresa: prender, apagar y contratar.
+      // Qué módulos usa la empresa: prender, apagar y contratar.
       {
         title: "Módulos",
         url: "/panel/modulos",
@@ -578,7 +615,8 @@ const ITEM_ACTIVO =
 const ITEM_NORMAL =
   "text-gray-700 [&_svg]:text-gray-400 hover:[&_svg]:text-[#2563EB]";
 // Módulo del rail contraído: icono + panel flotante con todos sus items.
-function RailModule({ icon: Icon, title, items, path, onNavigate }) {
+// `consulta` llega como prop porque aquí no está definida (sin ella, contraer el menú lanza ReferenceError).
+function RailModule({ icon: Icon, title, items, path, onNavigate, consulta = "", contador = 0 }) {
   const [open, setOpen] = useState(false);
   const cierreRef = useRef(null);
   const abrir = () => {
@@ -637,6 +675,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
           }`}
         >
           <Icon size={19} />
+          {contador ? <ContadorEncuestas n={contador} className="absolute -right-1 -top-1 ring-2 ring-white" /> : null}
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -683,6 +722,8 @@ export function NavMain({ consulta = "" } = {}) {
   const path = usePathname();
   const { dataUser } = useAuth();
   const { state: sidebarState, isMobile, setOpenMobile } = useSidebar();
+  // Con cambios sin guardar (p. ej. la ficha del empleado) pregunta antes de navegar.
+  const confirmarSalida = useConfirmarSalida();
   const [open, setOpen] = useState();
   const [busqueda, setBusqueda] = useState("");
   // Colapso por módulo: todos abiertos por defecto; se recuerda en localStorage.
@@ -690,10 +731,16 @@ export function NavMain({ consulta = "" } = {}) {
   const [isNative, setIsNative] = useState(false);
   const effectiveRole =
     dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
-  // (03/12/2026) Módulos por empresa: fuera lo que la empresa no tiene activo. Llega junto con la sesión (sin parpadeo).
+  // Módulos por empresa: fuera lo que la empresa no tiene activo. Llega junto con la sesión (sin parpadeo).
   const { activos, opciones: opcionesModulo } = useModulosActivos();
   const grupos = filtrarGrupos(menuGroups, activos, opcionesModulo);
-  const itemsInicio = dashboardItems.filter((item) => rutaPermitida(item.url, activos, opcionesModulo));
+  // «Monitor de mi equipo» solo para jefes (lo decide el servidor con la sesión).
+  const { esJefe } = useMonitorEquipo();
+  // «Mis encuestas» de RH o dueño: solo con ficha de empleado (si no, el servidor responde SIN_FICHA y no se muestra).
+  const misEncuestas = useMisEncuestas(effectiveRole === "Recruiter");
+  const contadorDe = (item) => (item.url === RUTA_MIS_ENCUESTAS ? misEncuestas.pendientes : 0);
+  const itemsInicio = dashboardItems.filter((item) =>
+    rutaPermitida(item.url, activos, opcionesModulo) && (!item.soloJefe || esJefe) && (!item.soloConFicha || misEncuestas.conFicha));
   const vistasEvaluacion = useMenuEvaluaciones(dataUser, effectiveRole === "Recruiter" && rutaPermitida("/panel/evaluaciones", activos, opcionesModulo));
   // Rol, app nativa (sin «Mi suscripción») y, en Evaluaciones, los permisos del servidor. Mientras no se
   // saben se muestran por rol, salvo «Por responder», que solo aparece si hay evaluaciones asignadas.
@@ -761,23 +808,24 @@ export function NavMain({ consulta = "" } = {}) {
       }
       return false;
     });
-  const handleClick = async (href) => {
+  const handleClick = (href) => {
     if (isMobile) setOpenMobile(false);
+    confirmarSalida(({ reemplazar }) => { navegar(href, reemplazar); }, { navega: true });
+  };
+  // reemplazar: la guardia de cambios pide reemplazar su entrada extra del historial en vez de agregar otra.
+  const navegar = async (href, reemplazar = false) => {
     // These items are buttons, so the global offline link handler cannot see them.
     if (!navigator.onLine || window.__adamiaOffline === true) {
-      if (href === '/seleccionar-reloj') {
-        const assigned = [...new Set([...(dataUser?.empresas || []), ...(dataUser?.empresas_detalle || []).map(company => company.id_empresa)].map(Number))].filter(id => Number.isInteger(id) && id > 0);
-        if (assigned.length === 1) {
-          try {
-            const profile = await (await clockStore()).getValue(`clock:company:${assigned[0]}`);
-            if (profile?.slug) { window.location.assign(`/${encodeURIComponent(profile.slug)}`); return; }
-          } catch { /* The offline gate still offers the available destinations. */ }
-        }
+      if (href === RUTA_RELOJ_EMPRESA) {
+        const destino = await destinoRelojSinConexion(dataUser);
+        if (destino !== RUTA_RELOJ_EMPRESA) { window.location.assign(destino); return; }
       }
-      window.location.assign(href);
+      if (reemplazar) window.location.replace(href);
+      else window.location.assign(href);
       return;
     }
-    router.push(href);
+    if (reemplazar) router.replace(href);
+    else router.push(href);
   };
   let perfilRoute = "/home/cuenta";
   if (effectiveRole === "Recruiter") {
@@ -808,7 +856,9 @@ export function NavMain({ consulta = "" } = {}) {
                 title={item.title}
                 items={[item]}
                 path={path}
+                consulta={consulta}
                 onNavigate={handleClick}
+                contador={contadorDe(item)}
               />
             ))}
           {gruposVisibles.length > 0 && (
@@ -821,6 +871,7 @@ export function NavMain({ consulta = "" } = {}) {
               title={g.group}
               items={g.items}
               path={path}
+              consulta={consulta}
               onNavigate={handleClick}
             />
           ))}
@@ -878,6 +929,7 @@ export function NavMain({ consulta = "" } = {}) {
                     {item.icon && <item.icon size={16} />}
                     <span>{item.title}</span>
                   </div>
+                  <ContadorEncuestas n={contadorDe(item)} />
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );
@@ -899,7 +951,7 @@ export function NavMain({ consulta = "" } = {}) {
                 : gruposAbiertos[group.group] !== false;
               return (
                 <div key={group.group} className="mt-1.5">
-                  {/* (23/11/2026) Títulos de módulo más legibles: texto normal en azul marino, su ícono y el módulo donde
+                  {/* Títulos de módulo más legibles: texto normal en azul marino, su ícono y el módulo donde
                       estás resaltado (antes: MAYÚSCULAS grises con mucho espaciado). */}
                   <button
                     type="button"

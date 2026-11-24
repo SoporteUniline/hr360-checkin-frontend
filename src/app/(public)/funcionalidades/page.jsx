@@ -3,7 +3,7 @@ import { CATEGORIAS, DETALLES, TOTAL_MODULOS } from "@/lib/sitio/modulos";
 import "@/components/landing/home/landing-home.css";
 import "./funciones.css";
 
-// Funciones (21/11/2026): mismo estilo que el inicio — colores sólidos de la marca, franjas lado a lado.
+// Funciones: mismo estilo que el inicio — colores sólidos de la marca, franjas lado a lado.
 export const metadata = {
   title: "Funciones de ADAMIA | Asistencia, permisos, contratos y más",
   description: `Las ${TOTAL_MODULOS} herramientas de ADAMIA para Recursos Humanos en México: reloj checador con rostro y GPS, horas extra, vacaciones, permisos por WhatsApp, contratos y firma en línea.`,

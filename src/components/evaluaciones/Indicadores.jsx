@@ -75,8 +75,7 @@ function DashboardValues({ value }) {
     </div>
   );
 }
-// (20/11/2026) «Resumen» y «Tablero» eran la misma vista con dos nombres. Ahora los indicadores van
-// arriba de la lista de campañas (todas) y dentro de cada campaña (solo esa).
+// Indicadores arriba de la lista de campañas (todas) y dentro de cada campaña (solo esa).
 export function Indicadores({ campaignId }) {
   const { capabilities } = useEvaluations();
   const query = useEvaluationQuery(

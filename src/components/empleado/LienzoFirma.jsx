@@ -1,8 +1,7 @@
 "use client";
 
-// Lienzo para dibujar la firma con el dedo o el mouse (Mi espacio → Mi firma y PIN, 22/11/2026).
-// Guarda los trazos en coordenadas relativas: al girar el teléfono o cambiar el tamaño se vuelve a pintar igual.
-// ref expone: aPng() → Blob PNG, borrar().
+// Lienzo para dibujar la firma con el dedo o el mouse. Guarda los trazos en coordenadas relativas para volver a
+// pintarlos igual al girar el teléfono o cambiar el tamaño. ref expone: aPng() → Blob PNG, borrar().
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
 import { puntoEnLienzo } from "@/lib/firma/pantallaFirma.mjs";
 

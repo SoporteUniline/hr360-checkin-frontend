@@ -1,4 +1,4 @@
-// Verificación en navegador (celular 390 px) de «Mi firma y PIN», firmar un documento con el PIN y «Mi rostro» (22/11/2026),
+// Verificación en navegador (celular 390 px) de «Mi firma y PIN», firmar un documento con el PIN y «Mi rostro»,
 // con el backend simulado en memoria. La cámara es la falsa de Chromium y face-api se sustituye por uno simulado que
 // devuelve siempre la misma cara (no se prueba la detección real, que ya cubre el reloj).
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-firma-pin.mjs
@@ -88,15 +88,29 @@ async function rutas(ctx) {
   });
 }
 
-// face-api simulado: siempre una cara con la misma huella (ligeramente distinta en cada lectura).
+// face-api simulado: siempre una cara centrada y de frente (caja y puntos en píxeles del video, para la guía en vivo)
+// con la misma huella (ligeramente distinta en cada lectura).
 const faceapiFalso = () => {
   let n = 0;
   const huella = () => Float32Array.from({ length: 128 }, (_, i) => Math.sin(i + 1) * 0.1 + Math.cos(i * ++n) * 0.0005);
+  const caras = (input) => {
+    const vw = input?.videoWidth || 640, vh = input?.videoHeight || 480;
+    const w = Math.round(Math.min(vw, vh) * 0.4), h = Math.round(w * 1.1), x = (vw - w) / 2, y = (vh - h) / 2;
+    const positions = Array.from({ length: 68 }, () => ({ x: x + w / 2, y: y + h * 0.6 }));
+    for (let i = 36; i < 42; i++) positions[i] = { x: x + w * 0.3, y: y + h * 0.4 };
+    for (let i = 42; i < 48; i++) positions[i] = { x: x + w * 0.7, y: y + h * 0.4 };
+    return [{ detection: { box: { x, y, width: w, height: h }, score: 0.9 }, landmarks: { positions } }];
+  };
   window.faceapi = {
     nets: { tinyFaceDetector: { params: {} }, faceLandmark68Net: { params: {}, detectLandmarks: async () => null }, faceRecognitionNet: { params: {}, computeFaceDescriptor: async () => null } },
     TinyFaceDetectorOptions: class {},
     detectSingleFace: async () => null,
-    detectAllFaces: () => ({ withFaceLandmarks: () => ({ withFaceDescriptors: async () => [{ descriptor: huella() }] }) }),
+    detectAllFaces: (input) => ({
+      withFaceLandmarks: () => ({
+        then: (ok, mal) => Promise.resolve(caras(input)).then(ok, mal),
+        withFaceDescriptors: async () => caras(input).map((c) => ({ ...c, descriptor: huella() })),
+      }),
+    }),
   };
 };
 
@@ -113,7 +127,7 @@ try {
   pg.on("pageerror", (e) => errores.push(e.message));
   const sinDesborde = async (donde) => assert.ok(await pg.evaluate(() => document.documentElement.scrollWidth <= 390), `sin desborde en ${donde}`);
 
-  // (23/11/2026) Celular ya en horizontal: pantalla completa SIN rotar.
+  // Celular ya en horizontal: pantalla completa SIN rotar.
   const ctxH = await browser.newContext({ viewport: { width: 844, height: 390 }, locale: "es-MX", hasTouch: true });
   await ctxH.addCookies([{ name: "token", value: jwt("Empleado"), url: base }]);
   await rutas(ctxH);
@@ -126,7 +140,7 @@ try {
   await ph.screenshot({ path: `${process.env.CAPTURAS || "/tmp"}/firma-horizontal-pantalla.png` });
   await captura(ph, "firma-horizontal-celular");
   await ctxH.close();
-  // (23/11/2026) Computadora: el lienzo se queda en la página (sin pantalla completa).
+  // Computadora: el lienzo se queda en la página (sin pantalla completa).
   const ctxPc = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: "es-MX" });
   await ctxPc.addCookies([{ name: "token", value: jwt("Empleado"), url: base }]);
   await rutas(ctxPc);
@@ -139,7 +153,7 @@ try {
   await pg.goto(base + "/empleado/panel/mi-espacio", { waitUntil: "domcontentloaded" });
   await pg.getByRole("link", { name: /Mi firma y PIN/ }).click();
   await pg.getByRole("heading", { name: "Mi firma y PIN" }).waitFor({ timeout: 20000 });
-  // (23/11/2026) En celular: botón «Registrar firma» → pantalla completa (horizontal) con «Borrar» y «Guardar firma».
+  // En celular: botón «Registrar firma» → pantalla completa (horizontal) con «Borrar» y «Guardar firma».
   assert.equal(await pg.getByLabel("Dibuja tu firma con el dedo o el mouse").count(), 0, "en celular el lienzo no está en la página");
   await pg.getByRole("button", { name: "Registrar firma" }).click();
   const pantalla = pg.getByRole("dialog", { name: "Mi firma a pantalla completa" });
@@ -238,7 +252,9 @@ try {
   assert.equal(await abrir.isDisabled(), true, "pide aceptar el aviso");
   await pg.getByText("Acepto, de forma expresa").click();
   await abrir.click();
-  await pg.getByText("Mira de frente, con buena luz").waitFor({ timeout: 20000 });
+  // Guía en vivo: con la cara bien colocada dice «Rostro detectado ✅» y habilita el botón.
+  await pg.getByText("Rostro detectado ✅").waitFor({ timeout: 20000 });
+  for (let i = 0; i < 30 && await pg.getByRole("button", { name: "Registrar mi rostro" }).isDisabled(); i++) await dormir(100);
   await sinDesborde("Mi rostro");
   await captura(pg, "mi-rostro-camara");
   await pg.getByRole("button", { name: "Registrar mi rostro" }).click();

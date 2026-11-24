@@ -1,7 +1,7 @@
 "use client";
 
-// Reclutamiento y selección (03/12/2026: datos reales). Un solo estado compartido por todas las pantallas del módulo:
-// el resumen de la empresa (SWR, /api/reclutamiento/panel/resumen) y las acciones que escriben en el servidor.
+// Reclutamiento y selección: un solo estado compartido por todas las pantallas del módulo, el resumen de la
+// empresa (SWR, /api/reclutamiento/panel/resumen) y las acciones que escriben en el servidor.
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -155,7 +155,7 @@ export default function RecruitmentModule({ children }) {
   };
   // Etapa de selección (no «hired»: eso es «Contratar»). true si se guardó.
   // Se ve al instante (sin esperar al servidor); si falla, regresa a la etapa anterior.
-  // opciones (04/12/2026): { motivo } al descartar y { sugerencia: true } al aceptar la sugerencia del agente de WhatsApp.
+  // opciones: { motivo } al descartar y { sugerencia: true } al aceptar la sugerencia del agente de WhatsApp.
   const changeStage = async (candidateId, stage, opciones) => {
     const etapa = VISTA_A_ETAPA[stage];
     try {
@@ -225,7 +225,7 @@ export default function RecruitmentModule({ children }) {
       };
     }
   };
-  // Candidato de WhatsApp que aceptó el aviso pero aún no tiene proceso: un clic lo mete (04/12/2026). → id o null.
+  // Candidato de WhatsApp que aceptó el aviso pero aún no tiene proceso: un clic lo mete. → id o null.
   const startWhatsapp = async (interviewId) => {
     try {
       const postulacion = await api.iniciarProcesoWhatsapp(interviewId);

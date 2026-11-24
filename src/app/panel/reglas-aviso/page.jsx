@@ -918,7 +918,7 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
                 <div className="border border-amber-400/60 bg-amber-50 text-amber-900 rounded p-2 text-xs flex gap-2">
                   <Info className="h-4 w-4 mt-0.5 text-amber-700" />
                   <div>
-                    <strong>Ejemplo:</strong> Si ingresas "30", recibirás los
+                    <strong>Ejemplo:</strong> Si ingresas &quot;30&quot;, recibirás los
                     contratos que vencen en los próximos 30 días desde hoy.
                   </div>
                 </div>
