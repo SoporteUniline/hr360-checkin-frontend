@@ -1,5 +1,5 @@
 import { synchronizeBackground } from './offline-clock/background-sync.mjs';
-const CACHE = 'adamia-clock-shell-v17';
+const CACHE = 'adamia-clock-shell-v18';
 const RUNTIME = 'adamia-runtime-assets-v1';
 const MAX_AGE = 7 * 86400000;
 const ASSETS = [
