@@ -20,10 +20,13 @@ import {
   CONCEPTOS, TOLERANCIA_MIN, aHHMM, aMin, agregarComida, agregarRegistro, autorizaValor, claseEstado, conAutoriza,
   cuerpoPut, desdeApi, diaFila, durTexto, editado, errores as validar, erroresPorRenglon, estadoFila, etiquetaQuitar,
   fechaTxt, hora12Txt, horarioMin, horarioNormal, minDeCampo, ordenar, origenTexto, puedeComida, quitarORestaurar,
-  resumen, resumenServidor, separarExtra, vivos,
+  resumen, resumenServidor, separarExtra, vivos, esMotivoOtro, textoMotivoOtro, motivoOtro, MAX_TEXTO_OTRO,
 } from "@/lib/asistencia/relojDia.mjs";
-import { normalizarTipo } from "@/lib/asistencia/tiposGoce.mjs";
-import { cuerpoPermisoDia, faltaPar, parDesdePermiso, parVacio } from "@/lib/asistencia/quePasoMotivo.mjs";
+import { minutosNoTrabajados, normalizarTipo } from "@/lib/asistencia/tiposGoce.mjs";
+import { cuerpoPermisoDia, faltaPar, nombreTipo, parDesdePermiso, parVacio } from "@/lib/asistencia/quePasoMotivo.mjs";
+import { CAMPOS_HORA, ajustarPorPermiso, errorHoraPermiso, horasPermiso, horasValidas } from "@/lib/asistencia/horaPermiso.mjs";
+import SelectConIconos from "@/components/ui/SelectConIconos";
+import { ICONO_AUTORIZA, ICONO_CONCEPTO, iconoCorreccion } from "@/components/asistencia/iconosAsistencia";
 import PermisoDelDia from "./PermisoDelDia";
 import CeldaEstadoDia from "./CeldaEstadoDia";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
@@ -47,12 +50,22 @@ function Campo({ etiqueta, children, nota, className = "" }) {
   );
 }
 
+// Nombre de respaldo si el servidor aún no manda esas claves en motivos.correccion (la lista sale del servidor).
+const RESPALDO = { permiso: "Por el permiso del día", otro: "Otro (escribe el motivo)" };
+function opcionesCorreccion(motivos, actual) {
+  const correccion = motivos.correccion ?? [];
+  const claves = correccion.map((m) => m.clave);
+  // Los «tp:<id>» ya guardados (permiso como motivo de renglón, antes de «Permiso del día») se muestran con su nombre.
+  const extra = actual && !claves.includes(actual)
+    ? [{ valor: actual, texto: (motivos.permisos ?? []).find((m) => m.clave === actual)?.nombre ?? RESPALDO[actual] ?? actual, ...iconoCorreccion(actual) }] : [];
+  return [...extra, ...correccion.map((m) => ({ valor: m.clave, texto: m.nombre, grupo: "Corrección", ...iconoCorreccion(m.clave) }))];
+}
+
 function Renglon({ r, n, error, motivos, autorizadores, nocturno, onCambio, onQuitar }) {
   const ed = editado(r);
   const pideMotivo = ed || (r.anulado && !r.anuladoAntes);
-  const motivosConocidos = (motivos.correccion ?? []).map((m) => m.clave);
-  // Los «tp:<id>» ya guardados (permiso como motivo de renglón, antes de «Permiso del día») se muestran con su nombre.
-  const nombreGuardado = (motivos.permisos ?? []).find((m) => m.clave === r.motivo)?.nombre ?? r.motivo;
+  const otro = esMotivoOtro(r.motivo);
+  const valorMotivo = otro ? "otro" : r.motivo;
   const fondo = r.anulado ? "bg-slate-50" : ed ? "bg-amber-50/50" : r.concepto === "extra" ? "bg-violet-50/50" : r.concepto === "comida" ? "bg-slate-50/70" : "bg-white";
   const tachado = r.anulado ? "line-through" : "";
   const duracion = r.ini != null && r.fin != null && r.fin > r.ini ? durTexto(r.fin - r.ini) : r.fin == null && r.ini != null ? "Sin salida" : "";
@@ -75,9 +88,8 @@ function Renglon({ r, n, error, motivos, autorizadores, nocturno, onCambio, onQu
             onChange={(e) => onCambio({ fin: e.target.value ? minDeCampo(e.target.value, { referencia: r.ini, nocturno }) : null })} />
         </Campo>
         <Campo etiqueta="Concepto" className="max-sm:col-span-2">
-          <select aria-label="Concepto" disabled={r.anulado} className={CAMPO} value={r.concepto} onChange={(e) => onCambio({ concepto: e.target.value })}>
-            {CONCEPTOS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-          </select>
+          <SelectConIconos aria="Concepto" disabled={r.anulado} valor={r.concepto} onCambio={(v) => onCambio({ concepto: v })}
+            opciones={CONCEPTOS.map(([v, t]) => ({ valor: v, texto: t, ...ICONO_CONCEPTO[v] }))} />
         </Campo>
         <span className="pt-7 text-[13px] tabular-nums text-slate-500 max-sm:hidden">{duracion}</span>
         <div className="flex justify-end pt-6 max-sm:hidden">
@@ -89,21 +101,21 @@ function Renglon({ r, n, error, motivos, autorizadores, nocturno, onCambio, onQu
       </div>
       <div className={`mt-3 grid gap-3 sm:pl-9 ${r.concepto === "extra" && !r.anulado ? "sm:grid-cols-2" : ""}`}>
         <Campo etiqueta={pideMotivo ? "Motivo (obligatorio)" : "Motivo (opcional)"}>
-          <select aria-label="Motivo" value={r.motivo} onChange={(e) => onCambio({ motivo: e.target.value })}
-            className={cn(CAMPO, pideMotivo && !r.motivo && ROJO)}>
-            <option value="">{pideMotivo ? "Elige el motivo…" : "Sin motivo"}</option>
-            {r.motivo && !motivosConocidos.includes(r.motivo) ? <option value={r.motivo}>{nombreGuardado}</option> : null}
-            <optgroup label="Corrección">{(motivos.correccion ?? []).map((m) => <option key={m.clave} value={m.clave}>{m.nombre}</option>)}</optgroup>
-          </select>
+          <SelectConIconos aria="Motivo" valor={valorMotivo} error={pideMotivo && !r.motivo}
+            onCambio={(v) => onCambio({ motivo: v === "otro" ? (otro ? r.motivo : motivoOtro("")) : v, motivoElegido: true })}
+            vacio={pideMotivo ? "Elige el motivo…" : "Sin motivo"} opciones={opcionesCorreccion(motivos, valorMotivo)} />
+          {otro ? (
+            <input aria-label="Escribe el motivo de la corrección" placeholder="Escribe el motivo (al menos 3 letras)" maxLength={MAX_TEXTO_OTRO}
+              value={textoMotivoOtro(r.motivo)} onChange={(e) => onCambio({ motivo: motivoOtro(e.target.value), motivoElegido: true })}
+              className={cn(CAMPO, "mt-1.5")} />
+          ) : null}
         </Campo>
         {r.concepto === "extra" && !r.anulado ? (
           <Campo etiqueta="¿Quién autoriza?" nota="Dobles o triples: lo decide la ley por semana.">
-            <select aria-label="Quién autoriza" value={autorizaValor(r)} onChange={(e) => onCambio(conAutoriza(e.target.value))}
-              className={cn(CAMPO, !autorizaValor(r) && ROJO)}>
-              <option value="">Elige quién autoriza…</option>
-              {autorizadores.map((a) => <option key={a.id} value={String(a.id)}>{a.nombre}</option>)}
-              <option value="no">No se autoriza</option>
-            </select>
+            <SelectConIconos aria="Quién autoriza" valor={autorizaValor(r)} onCambio={(v) => onCambio(conAutoriza(v))}
+              error={!autorizaValor(r)} vacio="Elige quién autoriza…"
+              opciones={[...autorizadores.map((a) => ({ valor: String(a.id), texto: a.nombre, ...ICONO_AUTORIZA.persona })),
+                { valor: "no", texto: "No se autoriza", ...ICONO_AUTORIZA.no }]} />
           </Campo>
         ) : null}
       </div>
@@ -136,6 +148,8 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   const [guardando, setGuardando] = useState(false);
   // «Permiso del día»: undefined = aún no se carga; null = sin permiso.
   const [permiso, setPermiso] = useState(undefined);
+  // Checadas antes de ajustarlas a la hora del permiso (cambiar la hora recalcula desde aquí; editar a mano lo suelta).
+  const [baseAjuste, setBaseAjuste] = useState(null);
   const { data: tiposPermiso } = useTiposPermisoData();
   const tiposParciales = useMemo(() => (Array.isArray(data?.tipos_parciales) ? data.tipos_parciales : []), [data]);
   const motivosPermiso = data?.motivos_permiso;
@@ -162,8 +176,14 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   const llevaPermiso = Boolean(cuerpoPermiso) || Boolean(permisoGuardado);
   const cambioPermiso = permiso !== undefined
     && JSON.stringify(cuerpoPermiso) !== JSON.stringify(cuerpoPermisoDia(permisoGuardado, tipoDe(permisoGuardado), motivosPermiso));
+  // Tipo parcial: su hora es obligatoria y debe dejar minutos no trabajados dentro de la jornada (lib/asistencia/horaPermiso.mjs).
+  const alcancePermiso = tipoPermiso ? normalizarTipo(tipoPermiso).alcance : null;
+  const conHora = Boolean(alcancePermiso && CAMPOS_HORA[alcancePermiso]);
+  const horasDelPermiso = conHora ? horasPermiso(permiso, alcancePermiso, lista, horario) : null;
+  const errorHora = conHora ? errorHoraPermiso({ nombre: nombreTipo(tipoPermiso), alcance: alcancePermiso, horas: horasDelPermiso, horario,
+    minutos: minutosNoTrabajados(alcancePermiso, lista, horario) }) : "";
   // El servidor responde 400 a un permiso parcial sin checadas: se avisa antes.
-  const errorDelPermiso = (cuerpoPermiso || permiso?.motivo ? faltaPar(permiso, tipoPermiso, motivosPermiso) : "")
+  const errorDelPermiso = errorHora || (cuerpoPermiso || permiso?.motivo ? faltaPar(permiso, tipoPermiso, motivosPermiso) : "")
     || (cuerpoPermiso && regs != null && vivos(lista).length === 0
       ? "Si no vino, elige «Inasistencia» o un día de ley en «Qué pasó», o carga sus horas." : "");
   // Cambios = el cuerpo del PUT ya no es el que se cargó.
@@ -181,7 +201,7 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   // Si la migración de la base de datos aún no corre, el reloj se ve pero no se puede corregir.
   const soloLectura = data?.migracion === false;
 
-  const cambiar = (fn) => { setRegs((prev) => fn(prev ?? [])); setServidor((s) => (s.general || Object.keys(s.renglones).length ? { general: "", renglones: {} } : s)); };
+  const cambiar = (fn) => { setBaseAjuste(null); setRegs((prev) => fn(prev ?? [])); setServidor((s) => (s.general || Object.keys(s.renglones).length ? { general: "", renglones: {} } : s)); };
   const guardar = async () => {
     if (hayErrores || guardando) return false;
     setGuardando(true);
@@ -200,6 +220,23 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
     } finally {
       setGuardando(false);
     }
+  };
+  // «Permiso del día»: al cambiar de tipo, las checadas vuelven a como estaban antes del ajuste por la hora.
+  const cambiarPermiso = (p) => {
+    if (baseAjuste && String(p?.tipo ?? "") !== String(permiso?.tipo ?? "")) { setRegs(baseAjuste); setBaseAjuste(null); }
+    setPermiso(p);
+    setServidor({ general: "", renglones: {} });
+  };
+  // Hora del tipo parcial: ajusta las checadas (sin checadas, carga el horario normal ya ajustado).
+  const cambiarHora = (campo, valor) => {
+    const nuevo = { ...permiso, [campo]: valor };
+    setPermiso(nuevo);
+    setServidor({ general: "", renglones: {} });
+    const base = baseAjuste ?? lista;
+    const horas = horasPermiso(nuevo, alcancePermiso, base, horario);
+    if (!horasValidas(alcancePermiso, horas, horario)) return;
+    setBaseAjuste(base);
+    setRegs(ajustarPorPermiso(base, alcancePermiso, horas, horario));
   };
   const confirmarSalida = useGuardiaSalida({ hayCambios, guardar });
   const cerrar = () => (hayCambios ? confirmarSalida(() => onCerrar?.(false)) : onCerrar?.(false));
@@ -265,8 +302,9 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                     <p className="text-[12.5px] text-slate-500">Si no vino, elige «Inasistencia» (con motivo si lo justificó) o el día de ley. Si sí vino, elige «Asistencia» o lo que pasó y pon sus horas abajo.</p>
                   </section>
                 ) : tiposParciales.length || permiso ? (
-                  <PermisoDelDia permiso={permiso ?? null} onCambio={(p) => { setPermiso(p); setServidor({ general: "", renglones: {} }); }}
+                  <PermisoDelDia permiso={permiso ?? null} onCambio={cambiarPermiso}
                     tipos={tiposParciales} motivos={motivosPermiso} regs={lista} horario={horario} error={permiso ? errorDelPermiso : ""}
+                    horas={horasDelPermiso} onHora={cambiarHora} errorHora={Boolean(errorHora)}
                     origen={data?.permiso_dia?.origen === "permiso" ? data.permiso_dia.id_solicitud ?? true : null} />
                 ) : null}
 
