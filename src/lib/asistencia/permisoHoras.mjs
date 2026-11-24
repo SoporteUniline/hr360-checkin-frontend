@@ -46,11 +46,19 @@ export function movimientosCuenta(cuenta) {
   if (!cuenta) return [];
   const cierres = { rebaja: "Rebajado", condonacion: "Condonado", otro: "Cerrado" };
   return [
+    // (25/11/2026) Con el motivo del permiso; los días fijados en el reloj no tienen solicitud (origen «reloj»).
     ...(cuenta.cargos ?? []).map((c) => ({
-      clave: `c${c.id_solicitud}`, fecha: c.fecha, texto: horarioPermiso(c), minutos: c.minutos,
+      clave: c.id_solicitud ? `c${c.id_solicitud}` : `a${c.id_asistencia}`, fecha: c.fecha,
+      texto: [c.origen === "reloj" ? "Permiso del reloj" : horarioPermiso(c), c.motivo].filter(Boolean).join(" · "), minutos: c.minutos,
       nota: c.estado === "sin_checadas" ? "Aún sin checadas" : c.estado === "sin_horario" ? "Sin horario" : null,
+      cargo: c,
     })),
-    ...(cuenta.reposiciones ?? []).map((r) => ({ clave: `r${r.id_asistencia}`, fecha: r.fecha, texto: "Reposición", minutos: -r.minutos })),
+    // Reposición registrada con su horario (origen «registro») o asistencia autorizada como reposición.
+    ...(cuenta.reposiciones ?? []).map((r) => (r.origen === "registro"
+      ? { clave: `h${r.id_horas_extra}`, fecha: r.fecha, texto: `Reposición · se quedó ${hora12(r.desde)} a ${hora12(r.hasta)}`, minutos: -r.minutos,
+        nota: Number(r.registrado) > Number(r.minutos)
+          ? `Registró ${formatearMinutos(r.registrado)}; cuenta ${formatearMinutos(r.minutos)} (lo que trabajó de más ese día)` : r.motivo ?? null }
+      : { clave: `r${r.id_asistencia}`, fecha: r.fecha, texto: "Reposición", minutos: -r.minutos })),
     ...(cuenta.cierres ?? []).map((c) => ({
       clave: `x${c.id}`, fecha: String(c.creado_en ?? "").slice(0, 10), texto: cierres[c.tipo] ?? "Cerrado",
       minutos: -c.minutos, nota: [c.nota, c.creado_por_nombre && `por ${c.creado_por_nombre}`].filter(Boolean).join(" · ") || null,
