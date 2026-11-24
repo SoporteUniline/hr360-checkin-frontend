@@ -96,6 +96,36 @@ try {
   await plantillas.getByText("Guía III (más de 50)").waitFor();
   await sinDesborde(rh, "plantillas 1440");
   await captura(rh, "1440-plantillas");
+
+  // 1b) Adamia AI arma una encuesta desde una descripción, la revisa (propuesta aplicada) y agrega 3 preguntas.
+  const cajaIa = rh.getByRole("region", { name: "Créala con Adamia AI" });
+  await cajaIa.getByText(/Uso de Adamia AI este mes: 12 consultas/).waitFor({ timeout: 15000 });
+  await cajaIa.getByRole("button", { name: "¿Por qué se va la gente?" }).click();
+  await cajaIa.getByRole("button", { name: "Armar encuesta" }).click();
+  await rh.waitForURL("**/panel/clima/encuestas/editor/12", { timeout: 30000 });
+  await rh.getByLabel("Texto de la pregunta 3").waitFor({ timeout: 30000 });
+  await rh.getByRole("button", { name: "Revisar preguntas" }).click();
+  await rh.getByText("Adamia AI · esta pregunta influye en la respuesta y pregunta dos cosas").waitFor({ timeout: 15000 });
+  await rh.getByText(/La pregunta 1 influye en la respuesta/).waitFor();
+  await sinDesborde(rh, "editor con revisión 1440");
+  await captura(rh, "1440-editor-adamia-ai");
+  await rh.getByRole("button", { name: "Usar propuesta" }).click();
+  assert.equal(await rh.getByLabel("Texto de la pregunta 1").inputValue(), "Mi jefe directo me trata con respeto.");
+  assert.equal(await rh.getByLabel("Tipo de la pregunta 2").inputValue(), "escala");
+  await rh.getByRole("button", { name: "Pedir 3 preguntas más a Adamia AI" }).click();
+  await rh.getByLabel("Texto de la pregunta 7").waitFor({ timeout: 15000 });
+  for (let i = 0; i < 40 && S.estado.plantillaIa.definicion.secciones.flatMap((x) => x.preguntas).length !== 7; i++) await dormir(100);
+  const deIa = S.estado.plantillaIa.definicion.secciones;
+  assert.deepEqual(deIa[0].preguntas.map((q) => q.texto).slice(-3), [
+    "Sé a quién acudir si tengo un problema.",
+    "Mi capacitación fue suficiente.",
+    "Me siento parte del equipo.",
+  ]);
+  assert.equal(deIa[1].preguntas.length, 1, "las nuevas no van a la sección de abiertas");
+  assert.match(S.estado.llamadasIa[0].cuerpo.descripcion, /se va la gente/);
+  console.log("PASS: Adamia AI crea, revisa (propuesta) y agrega 3 preguntas; muestra el uso del mes");
+  await ir(rh, "/panel/clima/encuestas");
+  await plantillas.getByRole("heading", { name: "Clima general" }).waitFor({ timeout: 30000 });
   await plantillas.locator("article").filter({ hasText: "Clima general" }).getByRole("button", { name: "Usar plantilla" }).click();
   await rh.waitForURL("**/panel/clima/encuestas/editor/11", { timeout: 30000 });
   console.log("PASS: plantillas profesionales y copia editable");
@@ -161,6 +191,26 @@ try {
   await captura(rh, "1440-tablero");
   console.log("PASS: tablero con mínimo de 5 e informe PDF");
 
+  // 4b) Adamia AI en el tablero: temas con cita anonimizada, plan de acción y convertirlo en tareas.
+  const temas = rh.getByRole("region", { name: "Lo que dicen" });
+  await temas.getByRole("button", { name: "Agrupar comentarios" }).click();
+  await temas.getByText("Horarios y descansos").waitFor({ timeout: 15000 });
+  await temas.getByText("«Los sábados salimos tarde y nadie avisa con tiempo.»", { exact: false }).waitFor();
+  const plan = rh.getByRole("region", { name: "Plan de acción sugerido" });
+  await plan.getByRole("button", { name: "Proponer plan" }).click();
+  await plan.getByText("Publicar los horarios del sábado con 1 semana de anticipación.", { exact: false }).waitFor({ timeout: 15000 });
+  await sinDesborde(rh, "tablero con IA 1440");
+  await captura(rh, "1440-tablero-adamia-ai");
+  await plan.getByRole("button", { name: "Convertir en tareas →" }).click();
+  const dt = rh.getByRole("dialog", { name: "Convertir en tareas" });
+  for (const sel of await dt.getByRole("combobox").all()) await sel.selectOption({ index: 1 });
+  await dt.getByRole("button", { name: "Crear 2 tareas" }).click();
+  await rh.getByText("Se crearon 2 tareas en el módulo de Tareas.").waitFor({ timeout: 15000 });
+  assert.equal(S.estado.tareas.length, 2);
+  assert.ok(S.estado.tareas.every((t) => t.empresa === 7 && t.id_responsable === 101 && /^\d{4}-\d{2}-\d{2}$/.test(t.fecha_limite)));
+  assert.match(S.estado.tareas[0].titulo, /^Almacén · Carga de trabajo: Publicar/);
+  console.log("PASS: Adamia AI agrupa comentarios, propone plan y lo convierte en tareas");
+
   // 5) NOM-035 (1440): nivel final, dominios con semáforo, Guía I confidencial y canalización, obligaciones e informe STPS.
   await ir(rh, "/panel/clima/nom035");
   await rh.getByRole("heading", { name: "NOM-035 · Factores de riesgo psicosocial" }).waitFor({ timeout: 30000 });
@@ -181,6 +231,15 @@ try {
   assert.match((await informe).suggestedFilename(), /informe-nom035-40\.pdf/);
   await sinDesborde(rh, "nom035 1440");
   await captura(rh, "1440-nom035");
+  const prog = rh.getByRole("region", { name: "Programa de intervención" });
+  await prog.getByRole("button", { name: "Proponer programa" }).click();
+  await prog.getByText("Respetar descansos y publicar horarios con anticipación.", { exact: false }).waitFor({ timeout: 15000 });
+  await prog.getByRole("button", { name: "Crear acciones y responsables →" }).click();
+  await rh
+    .getByRole("dialog", { name: "Convertir en tareas" })
+    .getByText(/NOM-035 · Jornada de trabajo/)
+    .waitFor();
+  await rh.keyboard.press("Escape");
   console.log("PASS: NOM-035 con semáforo, Guía I confidencial, obligaciones e informe STPS");
 
   // 6) Vistas del panel a 390.

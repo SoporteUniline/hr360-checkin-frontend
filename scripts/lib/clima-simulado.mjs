@@ -343,6 +343,127 @@ const GUIA_III = {
   ],
 };
 
+// Adamia AI simulada: mismas formas que modules/clima/controllers/iaController.js.
+function respuestaIa(e, cuerpo, estado) {
+  if (e === "/ia/estado") return { ok: true, activo: true, usos_mes: estado.llamadasIa.length + 12, gasto_mes_usd: 0.42, tope_mensual_usd: 5 };
+  if (e === "/ia/crear") {
+    return {
+      ok: true,
+      nombre: "¿Por qué se van los cajeros nuevos?",
+      minutos: 2,
+      avisos: [],
+      definicion: {
+        agruparPor: "area",
+        recurrencia: "ninguna",
+        dimensiones: [{ clave: "induccion", nombre: "Inducción" }],
+        secciones: [
+          {
+            clave: "s1",
+            titulo: "Primeros días",
+            preguntas: [
+              { clave: "a1", tipo: "sino", texto: "¿Verdad que tu jefe te trata bien y te apoya siempre?", dimension: "induccion", requerida: true },
+              {
+                clave: "a2",
+                tipo: "escala",
+                texto: "En tu primera semana alguien te explicó con claridad cómo hacer tu trabajo.",
+                dimension: "induccion",
+                requerida: true,
+              },
+            ],
+          },
+          {
+            clave: "s2",
+            titulo: "Abiertas",
+            preguntas: [{ clave: "a3", tipo: "abierta", texto: "¿Qué te haría quedarte?", dimension: null, requerida: false }],
+          },
+        ],
+      },
+    };
+  }
+  if (e === "/ia/revisar") {
+    const q = cuerpo.definicion.secciones.flatMap((s) => s.preguntas).find((x) => x.tipo !== "abierta" && x.tipo !== "enps");
+    return {
+      ok: true,
+      minutos: 2,
+      lenguajeClaro: true,
+      hallazgos: [
+        {
+          clave: q.clave,
+          problemas: ["sesgada", "doble"],
+          explicacion: "«¿Verdad que…?» empuja a contestar que sí y junta dos ideas.",
+          propuesta: ["Mi jefe directo me trata con respeto.", "Cuando tengo un problema, mi jefe me ayuda a resolverlo."],
+        },
+      ],
+    };
+  }
+  if (e === "/ia/mas-preguntas") {
+    return {
+      ok: true,
+      preguntas: ["Sé a quién acudir si tengo un problema.", "Mi capacitación fue suficiente.", "Me siento parte del equipo."].map((texto) => ({
+        tipo: "escala",
+        texto,
+        dimension: null,
+        requerida: true,
+      })),
+    };
+  }
+  const guardado = estado.llamadasIa.some((x) => x.ruta === e);
+  if (e.endsWith("/temas")) {
+    if (cuerpo?.soloGuardado && !guardado) return { ok: true, vacio: true };
+    return {
+      ok: true,
+      comentarios: 96,
+      loMejor: "El trato de los jefes.",
+      temas: [
+        { tema: "Horarios y descansos", menciones: 23, cita: "Los sábados salimos tarde y nadie avisa con tiempo." },
+        { tema: "Reconocimiento", menciones: 18, cita: null },
+        { tema: "Trato del jefe directo", menciones: 15, cita: null },
+        { tema: "Herramientas de trabajo", menciones: 9, cita: null },
+      ],
+    };
+  }
+  if (cuerpo?.soloGuardado && !guardado) return { ok: true, vacio: true };
+  return {
+    ok: true,
+    acciones: [
+      {
+        grupo: "Almacén",
+        tema: "Carga de trabajo",
+        accion: "Publicar los horarios del sábado con 1 semana de anticipación.",
+        responsable: "Jefe de almacén",
+        plazoDias: 14,
+        indicador: "Horarios publicados a tiempo",
+      },
+      {
+        grupo: "Toda la empresa",
+        tema: "Reconocimiento",
+        accion: "Reconocimiento mensual por área desde la app.",
+        responsable: "RH",
+        plazoDias: 30,
+        indicador: "",
+      },
+    ],
+    programaNom035: [
+      {
+        dominio: "Jornada de trabajo",
+        nivel: "Alto",
+        acciones: "Respetar descansos y publicar horarios con anticipación.",
+        responsable: "Gerente de operaciones",
+        plazoDias: 60,
+        evaluacion: "Reaplicar en 6 meses",
+      },
+      {
+        dominio: "Reconocimiento del desempeño",
+        nivel: "Alto",
+        acciones: "Retroalimentación mensual del jefe y reconocimiento visible.",
+        responsable: "RH",
+        plazoDias: 60,
+        evaluacion: "Encuesta de pulso",
+      },
+    ],
+  };
+}
+
 const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
 
 export function datosSimulados() {
@@ -358,6 +479,9 @@ export function datosSimulados() {
       revision: 1,
       archivada: false,
     },
+    plantillaIa: null,
+    tareas: [],
+    llamadasIa: [],
     campania: null,
     guardados: 0,
     respuestas: [],
@@ -451,13 +575,26 @@ export function datosSimulados() {
     const m = req.method();
     const cuerpo = req.postData() ? JSON.parse(req.postData()) : null;
     if (p.endsWith("/users/verify/token")) return usuario ? json({ user: usuario }) : json({ error: "sesión" }, 401);
+    if (p === "/checador/tareas/tareas" && m === "POST") {
+      estado.tareas.push(cuerpo);
+      return json({ ok: true, id: estado.tareas.length }, 201);
+    }
     if (!p.startsWith("/checador/clima")) return json({});
     const e = p.slice("/checador/clima".length);
     const c = estado.campania;
 
     if (e === "/inicio") return json({ ok: true, empresa: { activos: 165, guias: ["I", "III"], muestraGuiaIII: 116 }, catalogo: CATALOGO, minimo: 5 });
     if (e === "/plantillas" && m === "GET") return json({ ok: true, plantillas: [estado.plantilla] });
-    if (e === "/plantillas" && m === "POST") return json({ ok: true, plantilla: estado.plantilla }, 201);
+    if (e === "/plantillas" && m === "POST") {
+      if (cuerpo.clave_origen) return json({ ok: true, plantilla: estado.plantilla }, 201);
+      estado.plantillaIa = { id: 12, claveOrigen: null, tipo: "clima", nombre: cuerpo.nombre, descripcion: null, definicion: cuerpo.definicion, revision: 1 };
+      return json({ ok: true, plantilla: estado.plantillaIa }, 201);
+    }
+    if (e === "/plantillas/12" && m === "GET") return json({ ok: true, plantilla: estado.plantillaIa });
+    if (e === "/plantillas/12" && m === "PUT") {
+      estado.plantillaIa = { ...estado.plantillaIa, nombre: cuerpo.nombre, definicion: cuerpo.definicion, revision: estado.plantillaIa.revision + 1 };
+      return json({ ok: true, plantilla: estado.plantillaIa, avisos: [] });
+    }
     if (e === "/plantillas/11" && m === "GET") return json({ ok: true, plantilla: estado.plantilla });
     if (e === "/plantillas/11" && m === "PUT") {
       if (cuerpo.revision !== estado.plantilla.revision) return json({ ok: false, error: "Alguien más guardó esta encuesta." }, 409);
@@ -626,6 +763,10 @@ export function datosSimulados() {
     if (/^\/(encuestas\/\d+|publica\/[\w-]+)\/respuestas$/.test(e)) {
       estado.respuestas.push(cuerpo);
       return json({ ok: true }, 201);
+    }
+    if (e.startsWith("/ia/") || /\/ia\/(temas|plan)$/.test(e)) {
+      if (m === "POST" && !cuerpo?.soloGuardado) estado.llamadasIa.push({ ruta: e, cuerpo });
+      return json(respuestaIa(e, cuerpo, estado));
     }
     return json({ ok: false, error: `Ruta simulada no definida: ${m} ${e}` }, 404);
   }

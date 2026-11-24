@@ -17,6 +17,8 @@ import Encuestas from "./Encuestas";
 import Editor from "./Editor";
 import Lanzar from "./Lanzar";
 import Nom035 from "./Nom035";
+import { RevisionIa } from "./IaEncuesta";
+import { iaNom035, iaTablero } from "./IaResultados";
 
 const PESTANAS = [
   {
@@ -65,10 +67,10 @@ function Contenido({ v, idEmpresa }) {
   if (!inicio.data) return <Cargando />;
   const props = { idEmpresa, inicio: inicio.data };
   if (v.vista === "encuestas") return <Encuestas {...props} />;
-  if (v.vista === "editor") return <Editor key={v.id} id={v.id} {...props} />;
+  if (v.vista === "editor") return <Editor key={v.id} id={v.id} {...props} revision={RevisionIa} />;
   if (v.vista === "lanzar") return <Lanzar key={v.id} id={v.id} {...props} />;
-  if (v.vista === "nom035") return <Nom035 {...props} />;
-  return <Tablero {...props} />;
+  if (v.vista === "nom035") return <Nom035 {...props} extra={iaNom035(idEmpresa)} />;
+  return <Tablero {...props} extra={iaTablero(idEmpresa)} />;
 }
 
 export default function ModuloClima({ segmentos = [] }) {
