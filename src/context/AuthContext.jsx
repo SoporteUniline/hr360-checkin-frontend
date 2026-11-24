@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [dataUser, setDataUser] = useState(null);
-  // (03/12/2026) Módulos activos de las empresas de la sesión (los manda /users/verify/token). Llegan junto con el
+  // Módulos activos de las empresas de la sesión (los manda /users/verify/token). Llegan junto con el
   // usuario, así el menú se arma de una vez (sin mostrar y luego ocultar). null = servidor viejo: no se filtra nada.
   const [modulosSesion, setModulosSesion] = useState(null);
   const router = useRouter();

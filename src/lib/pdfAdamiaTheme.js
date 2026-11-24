@@ -10,7 +10,7 @@
  * Los helpers son agnósticos de unidades (pt o mm): reciben el `doc` y
  * coordenadas en la unidad con la que se creó el documento.
  *
- * Formato homologado de todo PDF (23/11/2026): `dibujarPieAdamia` pone en cada
+ * Formato homologado de todo PDF: `dibujarPieAdamia` pone en cada
  * página el logotipo ADAMIA, «Generado con ADAMIA · fecha» y «Página X de Y».
  * El nombre del archivo descargado sale de `src/lib/nombreArchivo.mjs`.
  *

@@ -1,4 +1,4 @@
-// «Continuar desde el celular» (05/12/2026): reglas puras del enlace QR para registrar el rostro. Las usan el diálogo de
+// «Continuar desde el celular»: reglas puras del enlace QR para registrar el rostro. Las usan el diálogo de
 // la ficha (RostroCelular.jsx) y la página pública del celular (/rostro/[token]). Pruebas: scripts/test-rostro-celular.mjs.
 import qrcode from "qrcode-generator";
 

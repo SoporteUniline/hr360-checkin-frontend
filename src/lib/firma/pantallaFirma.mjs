@@ -1,4 +1,4 @@
-// (23/11/2026, pedido del dueño) ¿Firmar a pantalla completa en horizontal? Sí en celular (pantalla táctil y chica);
+// ¿Firmar a pantalla completa en horizontal? Sí en celular (pantalla táctil y chica);
 // en computadora (o tableta grande con mouse) se firma en la misma página.
 export function esCelularParaFirmar({ tactil, ancho, alto }) {
   if (!tactil) return false;
@@ -10,7 +10,7 @@ export function detectarCelular(win = typeof window === "undefined" ? null : win
   return esCelularParaFirmar({ tactil: win.matchMedia("(pointer: coarse)").matches, ancho: win.screen?.width ?? win.innerWidth, alto: win.screen?.height ?? win.innerHeight });
 }
 
-// (23/11/2026) iPhone no deja girar la pantalla por código: la firma se dibuja ROTADA 90° (en sentido horario) para que,
+// iPhone no deja girar la pantalla por código: la firma se dibuja ROTADA 90° (en sentido horario) para que,
 // al girar el celular, quede horizontal. El lienzo guarda puntos relativos a SU sistema (x a lo largo, y a lo alto), así
 // que el toque (clientX/Y de la pantalla) se traduce: con rotate(90deg) el eje x del lienzo apunta hacia abajo y el eje
 // y hacia la izquierda. rect = getBoundingClientRect() del lienzo (la caja ya rotada, en pantalla).

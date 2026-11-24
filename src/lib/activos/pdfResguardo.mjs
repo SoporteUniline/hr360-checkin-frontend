@@ -1,6 +1,6 @@
 // Resguardo de activos y uniformes en PDF. Módulo puro (sin fetch): recibe el
 // documento jsPDF, autoTable, la tipografía y los logotipos; así se prueba en
-// Node (scripts/test-pdf-marca.mjs). Formato homologado ADAMIA (23/11/2026):
+// Node (scripts/test-pdf-marca.mjs). Formato homologado ADAMIA:
 // encabezado con logotipo ADAMIA (y el de la empresa), documento y empresa; pie
 // «Generado con ADAMIA · fecha · Folio · Página X de Y» en cada página.
 import { dibujarEncabezadoAdamia, dibujarPieAdamia } from "../pdfMarcaAdamia.mjs";

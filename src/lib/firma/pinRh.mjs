@@ -1,4 +1,4 @@
-// (23/11/2026) Ficha del empleado → «Firma y PIN» para RH: qué se muestra y qué acciones aplican.
+// Ficha del empleado → «Firma y PIN» para RH: qué se muestra y qué acciones aplican.
 // RH nunca ve ni escribe el PIN: solo ve si existe, si está bloqueado, y puede desbloquear o restablecer (borrarlo).
 const hora = (iso) => new Date(iso).toLocaleTimeString("es-MX", { timeZone: "America/Mexico_City", hour: "numeric", minute: "2-digit" });
 

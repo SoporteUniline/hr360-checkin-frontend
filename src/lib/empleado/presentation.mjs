@@ -56,7 +56,7 @@ export function requestDates(row, holidays = null) {
   const from = isoDate(row.fecha_inicio), to = isoDate(row.fecha_fin || row.fecha_inicio);
   if (!from || !to || to < from) return { range: 'Fechas no disponibles', duration: null, back: null };
   const range = from === to ? compactRequestDate(from) : `${compactRequestDate(from, { year: from.slice(0,4) !== to.slice(0,4), month: from.slice(0,7) !== to.slice(0,7) })} – ${compactRequestDate(to)}`;
-  // Permiso por horas (21/11/2026): un solo día; la duración es su horario («Sale antes · desde 3:00 p.m.»).
+  // Permiso por horas: un solo día; la duración es su horario («Sale antes · desde 3:00 p.m.»).
   if (row.modalidad === 'horas') return { range, duration: horarioPermiso(row), back: null };
   const days = Math.round((new Date(`${to}T12:00:00Z`) - new Date(`${from}T12:00:00Z`)) / 86400000) + 1;
   const weekdays = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];

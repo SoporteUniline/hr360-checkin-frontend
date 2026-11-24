@@ -1,4 +1,4 @@
-// Candidato de WhatsApp en el proceso de selección (04/12/2026). Reglas puras de las pantallas del chat y de Reclutamiento:
+// Candidato de WhatsApp en el proceso de selección. Reglas puras de las pantallas del chat y de Reclutamiento:
 // etapas rápidas, sugerencia del agente, aviso por WhatsApp (texto prellenado y ventana de 24 h), atajos de teclado y el
 // filtro de la bandeja. Sin React ni red: lo prueba scripts/test-proceso-whatsapp.mjs. El servidor decide y valida todo
 // (docs/candidato-whatsapp.md del backend); aquí solo se arma lo que ve y confirma RH.

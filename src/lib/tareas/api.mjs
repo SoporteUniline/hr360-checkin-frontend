@@ -1,5 +1,5 @@
-// Traducción entre la API de Tareas y Checklists (backend /api/checador/tareas, 23/11/2026) y la forma que usan las
-// pantallas (la del prototipo). Funciones puras; pruebas en scripts/test-tareas.mjs.
+// Traducción entre la API de Tareas y Checklists (backend /api/checador/tareas) y la forma que usan las pantallas.
+// Funciones puras; pruebas en scripts/test-tareas.mjs.
 
 const MAYUS = { alta: "Alta", media: "Media", baja: "Baja" };
 const FRECUENCIA_TEXTO = { diario: "Diario", semanal: "Semanal", una_vez: "Una sola vez" };

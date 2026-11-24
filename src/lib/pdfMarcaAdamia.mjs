@@ -2,7 +2,7 @@
  * Marca ADAMIA para PDFs de jsPDF — módulo puro (sin fetch ni cookies), para
  * usarse igual en el navegador y en las pruebas de Node.
  *
- * Formato homologado (pedido del dueño, 23/11/2026):
+ * Formato homologado:
  * - Encabezado: logotipo ADAMIA (o de la empresa), empresa y nombre del documento.
  * - Pie en CADA página: logotipo ADAMIA · «Generado con ADAMIA · <fecha y hora>»
  *   · nombre del documento y, a la derecha, «Página X de Y».

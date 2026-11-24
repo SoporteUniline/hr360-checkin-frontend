@@ -1,4 +1,4 @@
-// Filtro del menú y de las rutas por módulos activos (03/12/2026, «Módulos por empresa»). Sin red ni React: probado en
+// Filtro del menú y de las rutas por módulos activos. Sin red ni React: probado en
 // scripts/test-modulos.mjs. La verdad está en el servidor (403 MODULO_INACTIVO); esto solo oculta lo que no se puede usar.
 import { BASE, modulo, modulosDeRuta } from "./catalogo.mjs";
 

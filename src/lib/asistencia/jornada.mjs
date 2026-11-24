@@ -2,7 +2,7 @@
 // Lo usan Asistencias (escritorio y celular), Centro de incidencias y Reportes.
 // Duraciones (formatearMinutos, duracionCorta) viven aquí; fechas y horas del día en ../fechaHora.mjs.
 //
-// Reglas del dueño (18/11/2026). La comida no se paga en ningún caso (Adamia no maneja nómina).
+// Reglas de negocio. La comida no se paga en ningún caso (Adamia no maneja nómina).
 // - Programadas = salida programada − entrada programada (+24 h si cruza medianoche)
 //   − comida del horario (salida → regreso de comida). Sin comida en el horario: `hrs_comida`.
 // - Trabajadas = SUMA de los tramos checados en el reloj (entrada → salida); los huecos
@@ -44,9 +44,8 @@ function tramosVigentes(registro) {
   return tramos;
 }
 
-// Alerta: su horario tiene comida pero solo checó un tramo (no marcó salida a comer).
-// (23/11/2026) Si checó su comida (está en comida ahora o ya regresó), no hay alerta: antes salía mientras comía,
-// porque en ese momento solo existe el tramo de la mañana.
+// Alerta: su horario tiene comida pero solo checó un tramo (no marcó salida a comer). Si está en comida o ya
+// regresó no hay alerta: mientras come solo existe el tramo de la mañana.
 export function sinSalidaAComer(registro) {
   if (registro?.comida_checada?.salida) return false;
   const tramos = tramosVigentes(registro);

@@ -1,4 +1,4 @@
-// Preguntas propias de una vacante en el formulario público (03/12/2026). Puro: lo prueba
+// Preguntas propias de una vacante en el formulario público. Puro: lo prueba
 // scripts/test-reclutamiento-adaptador.mjs. El servidor repite la validación (services/panel/reglas.js).
 const vacio = (v) => v == null || v === "" || (Array.isArray(v) && !v.length);
 

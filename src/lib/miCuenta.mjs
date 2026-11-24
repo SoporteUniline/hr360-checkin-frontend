@@ -1,4 +1,4 @@
-// Mi cuenta del panel (24/11/2026, rediseño pedido por el dueño: «hazlo igual de bonito como todo lo que tenemos»).
+// Mi cuenta del panel.
 // Lógica pura, sin React ni navegador: la usan src/app/panel/cuenta/* y la prueba scripts/test-mi-cuenta.mjs.
 //
 // - Las recomendaciones de contraseña son guía visible; NO bloquean el guardado. La validación que manda sigue siendo

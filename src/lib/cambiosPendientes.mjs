@@ -1,4 +1,4 @@
-// Cambios sin guardar (23/11/2026, pedido del dueño: «en cuanto entre ya pueda editar» + «Guardar» + aviso al salir).
+// Cambios sin guardar.
 // Lógica pura, sin React ni navegador: la usan la ficha del empleado (FormularioEmpleado) y la guardia de salida común
 // (components/cambios/CambiosPendientes.jsx). Probado en scripts/test-cambios-pendientes.mjs.
 //
@@ -62,7 +62,7 @@ export function tieneMarca(marca) {
 }
 
 // Campos de primer nivel que cambiaron respecto a la base. `ignorar`: campos que no cuentan (derivados de otros o que
-// se revisan aparte, como el rostro). `tocados` (24/11/2026): si se da (dirtyFields), solo cuentan los campos que la
+// se revisan aparte, como el rostro). `tocados`: si se da (dirtyFields), solo cuentan los campos que la
 // persona tocó; lo que el sistema acomoda solo al abrir (catálogos, formatos, datos del servidor) nunca es «cambio».
 export function camposCambiados(base = {}, actual = {}, ignorar = [], tocados = null) {
   const fuera = new Set(ignorar);

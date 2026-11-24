@@ -1,4 +1,4 @@
-// «Probar rostro» de la ficha (23/11/2026, pedido del dueño): compara el rostro en vivo con el registrado usando
+// «Probar rostro» de la ficha: compara el rostro en vivo con el registrado usando
 // EXACTAMENTE la métrica y el umbral del checador real: similitud coseno ≥ 0.95
 //   - backend: checadorController.registrarMovimientoFacial (umbralSimilitud = 0.95, calcularSimilitudCoseno) y
 //     offlineClockController (cosine < 0.95 → FACE_NOT_MATCHED);

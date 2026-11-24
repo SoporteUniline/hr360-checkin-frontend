@@ -1,6 +1,5 @@
-// Permisos por horas (R1, 20/11/2026): textos para mostrar. El cálculo de lo que faltó y la cuenta de
-// horas los hace el backend (services/permisoHoras.js); aquí solo se presentan.
-// Probado en scripts/test-permiso-horas.mjs.
+// Permisos por horas: textos para mostrar. El cálculo de lo que faltó y la cuenta de horas los hace el backend
+// (services/permisoHoras.js). Probado en scripts/test-permiso-horas.mjs.
 import { hora12 } from "../hora12.mjs";
 import { formatearMinutos } from "./jornada.mjs";
 
