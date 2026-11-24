@@ -50,7 +50,8 @@ function ConteoPreguntas({ idVacante }) {
 }
 
 // Interruptor de la bolsa de trabajo: lee GET /bolsa y guarda con PUT {publicar_bolsa}. Si falla, vuelve al valor anterior.
-function InterruptorBolsa({ idEmpresa, abierto }) {
+// También se usa arriba de la lista de Vacantes (Reclutamiento): ahí siempre está «abierto».
+export function InterruptorBolsa({ idEmpresa, abierto = true }) {
   const { data, error, isLoading, mutate } = useSWR(abierto ? rutaBolsa(idEmpresa) : null, obtener, { revalidateOnFocus: false });
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState("");

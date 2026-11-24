@@ -109,6 +109,15 @@ try {
   await tarjeta.getByText("Publicada").waitFor({ timeout: 20000 });
   await tarjeta.getByText("1 de 1 lugar disponible").waitFor();
   await captura(pg, "rec-vacantes");
+  // «Publicar mis vacantes en la bolsa» también arriba de Vacantes (contra el backend real): apagar y volver a prender.
+  const bolsa = pg.locator('section[aria-label="Bolsa de trabajo"]');
+  await bolsa.and(pg.locator('[data-bolsa="si"]')).waitFor({ timeout: 20000 });
+  await bolsa.getByRole("switch").click();
+  await bolsa.and(pg.locator('[data-bolsa="no"]')).waitFor({ timeout: 15000 });
+  await bolsa.getByText("Tus vacantes ya no aparecen en la bolsa de trabajo.").waitFor();
+  await bolsa.getByRole("switch").click();
+  await bolsa.and(pg.locator('[data-bolsa="si"]')).waitFor({ timeout: 15000 });
+  await bolsa.getByText("Tus vacantes abiertas ya aparecen en la bolsa de trabajo.").waitFor();
 
   // 3) La bolsa de trabajo la muestra (la empresa publica en la bolsa).
   await pg.goto(base + "/bolsa-de-trabajo", { waitUntil: "domcontentloaded" });
