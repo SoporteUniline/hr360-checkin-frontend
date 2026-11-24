@@ -5,8 +5,7 @@ import { CommandPalette } from "@/components/CommandPalette";
 import FaceApiPreloader from "@/components/FaceApiPreloader";
 import DiagnosticoReloj from "@/components/DiagnosticoReloj";
 import { useNativeBackButton } from "@/hooks/Capacitor/useNativeBackButton";
-import OfflineExperience from '@/components/OfflineExperience';
-import FaceReferenceSync from '@/components/Clock/FaceReferenceSync';
+import RetireOfflineWorker from '@/components/RetireOfflineWorker';
 import { CambiosPendientesProvider } from '@/components/cambios/CambiosPendientes';
 
 export function ClientProviders({ children }) {
@@ -16,8 +15,7 @@ export function ClientProviders({ children }) {
     <AuthProvider>
       {/* Antes de la precarga facial para medirla desde el inicio. */}
       <DiagnosticoReloj />
-      <OfflineExperience />
-      <FaceReferenceSync />
+      <RetireOfflineWorker />
       <FaceApiPreloader />
       {/* Guardia común de «cambios sin guardar»: cubre el panel, el menú lateral y el buscador. */}
       <CambiosPendientesProvider>
