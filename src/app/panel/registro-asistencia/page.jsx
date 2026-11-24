@@ -45,6 +45,7 @@ import { COLUMNAS_ASISTENCIA, COLUMNAS_RELOJ_NUEVAS } from "./AsistenciaTable";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
 import { esVistaEnVivo, RUTA_MONITOR } from "@/lib/asistencia/vistasAsistencia.mjs";
+import { AGRUPAR_SITUACION, agruparEfectivo, eleccionAlCambiarPeriodo, esPeriodoHoy } from "@/lib/asistencia/situacionHoy.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -169,7 +170,8 @@ export default function ControlAsistencia() {
   const [formatoRegistros, setFormatoRegistros] = useState("lista");
   const [rangoEtiqueta, setRangoEtiqueta] = useState(desdeParam && hastaParam
     ? `${desdeParam.split("-").reverse().join("/")} – ${hastaParam.split("-").reverse().join("/")}` : "Hoy");
-  const [agrupar, setAgrupar] = useState(null);
+  // Lo elegido en «Agrupar» (undefined = no ha elegido: con Hoy se divide por «Situación de hoy»; null = «Sin agrupar»).
+  const [agrupar, setAgrupar] = useState(undefined);
   const [visibleColumns, setVisibleColumns] = useState(null);
 
   // Las columnas guardadas se cargan en cliente (localStorage no existe en SSR)
@@ -241,6 +243,12 @@ export default function ControlAsistencia() {
   };
 
   const today = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
+  const esHoy = esPeriodoHoy(fechaInicio, fechaFin, today);
+  const agruparAplicado = agruparEfectivo(agrupar, esHoy);
+  // Al entrar o salir de Hoy, «Sin agrupar» / «Situación de hoy» vuelven al valor por defecto del periodo.
+  useEffect(() => {
+    setAgrupar(eleccionAlCambiarPeriodo);
+  }, [esHoy]);
 
   const handleResetFilters = () => {
     setEmpresaActiva("all");
@@ -260,7 +268,7 @@ export default function ControlAsistencia() {
     setMostrarCamposExtras(false);
     setFiltroRapido("hoy");
     setSortConfig(DEFAULT_SORT_CONFIG);
-    setAgrupar(null);
+    setAgrupar(undefined);
     setRangoEtiqueta("Hoy");
   };
 
@@ -315,7 +323,7 @@ export default function ControlAsistencia() {
     setSinGoceDeSueldo(Boolean(v.sinGoceDeSueldo));
     setDiasFestivos(Boolean(v.diasFestivos));
     setRequiereAutorizacion(Boolean(v.requiereAutorizacion));
-    setAgrupar(v.agrupar || null);
+    setAgrupar(v.agrupar || undefined);
     if (Array.isArray(v.visibleColumns) && v.visibleColumns.length >= 2) {
       setVisibleColumns(v.visibleColumns);
       try {
@@ -355,7 +363,7 @@ export default function ControlAsistencia() {
     requiereAutorizacion: requiereAutorizacion,
     sortConfig,
     setSortConfig,
-    agrupar,
+    agrupar: agruparAplicado,
     visibleColumns,
     vista,
     ocultarRegistroMasivo: true,
@@ -537,7 +545,7 @@ export default function ControlAsistencia() {
 
         {vista === "lista" && (
           <Select
-            value={agrupar || "none"}
+            value={agruparAplicado || "none"}
             onValueChange={(v) => {
               setAgrupar(v === "none" ? null : v);
             }}
@@ -548,6 +556,7 @@ export default function ControlAsistencia() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="none">Sin agrupar</SelectItem>
+              {esHoy && <SelectItem value={AGRUPAR_SITUACION}>Situación de hoy</SelectItem>}
               <SelectItem value="unidad">Unidad de negocio</SelectItem>
               <SelectItem value="departamento">Departamento</SelectItem>
               <SelectItem value="tipo">Tipo de registro</SelectItem>
