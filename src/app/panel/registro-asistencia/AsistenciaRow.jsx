@@ -5,6 +5,8 @@ import { leerPar, suscribir } from "@/lib/asistencia/parFila.mjs";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import EtiquetaPermisoHoras from "./EtiquetaPermisoHoras";
 import CeldaEstadoDia from "./CeldaEstadoDia";
+import CeldaEditado, { crearFormateadorCambios } from "./CeldaEditado";
+import CeldaGoce from "./CeldaGoce";
 import { FIJA_RELOJ, derechaEstado, derechaMotivo, fijaEstado, fijaMotivo } from "./columnasFijas";
 import CeldaObservaciones from "./CeldaObservaciones";
 import CeldasControlHorasExtra from "./CeldasControlHorasExtra";
@@ -170,6 +172,17 @@ export default function AsistenciaRow({
           </TableCell>
         )}
         {control && <CeldasControlHorasExtra registro={registro} control={control} zona={userTimezone} />}
+        {isColVisible("goce") && (
+          <TableCell className="whitespace-nowrap">
+            <CeldaGoce registro={registro} />
+          </TableCell>
+        )}
+        {isColVisible("correccion") && (
+          <TableCell className="text-center">
+            <CeldaEditado registro={registro} formatear={crearFormateadorCambios({ tiposPermiso, zona: userTimezone })}
+              onVerChecadas={readOnly || !onAbrirReloj ? null : abrirReloj} />
+          </TableCell>
+        )}
         {isColVisible("dia") && (
           <TableCell title="Lo marca la ley o el catálogo: no se edita aquí">
             <span className="flex flex-col gap-0.5">

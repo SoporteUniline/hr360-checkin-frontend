@@ -54,6 +54,8 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "jornada", label: "Jornada", extra: false },
   { key: "comida", label: "Comida", extra: false },
   { key: "hrs_extra", label: "Horas extra", extra: false },
+  { key: "goce", label: "Goce", extra: false },
+  { key: "correccion", label: "Editado", extra: false },
   { key: "dia", label: "Día (festivo / domingo)", extra: false },
   { key: "estado_asistencia", label: "Estado", extra: false },
   { key: "motivo", label: "Motivo", extra: false },
@@ -933,6 +935,8 @@ export default function AsistenciaTable({
                     <TableHead className={TH_STICKY}>Alertas</TableHead>
                   </>
                 )}
+                {colVisible("goce") && <TableHead className={TH_STICKY}>Goce</TableHead>}
+                {colVisible("correccion") && <TableHead className={`${TH_STICKY} text-center`}>Editado</TableHead>}
                 {colVisible("dia") && <TableHead className={TH_STICKY}>Día</TableHead>}
                 {colVisible("notas") && <TableHead className={TH_STICKY}>Observaciones</TableHead>}
                 {colVisible("estado_asistencia") && (

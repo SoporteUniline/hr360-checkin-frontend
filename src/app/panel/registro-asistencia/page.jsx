@@ -185,6 +185,13 @@ export default function ControlAsistencia() {
         }
       }
       // Columnas del reloj (Día, Estado · motivo, Reloj): se muestran una vez; si luego las ocultan, se respeta.
+      // (24/11/2026) «Goce» y «Editado» como columnas propias: se muestran una vez.
+      if (!window.localStorage.getItem("adamia-asistencia-col-goce-editado")) {
+        window.localStorage.setItem("adamia-asistencia-col-goce-editado", "1");
+        const i = columnas.includes("hrs_extra") ? columnas.indexOf("hrs_extra") + 1 : columnas.length;
+        const nuevas = ["goce", "correccion"].filter((k) => !columnas.includes(k));
+        columnas.splice(i, 0, ...nuevas);
+      }
       // (24/11/2026) «Motivo» se separó de «Estado»: se muestra una vez a quien ya tenía columnas guardadas.
       if (!window.localStorage.getItem("adamia-asistencia-col-motivo")) {
         window.localStorage.setItem("adamia-asistencia-col-motivo", "1");

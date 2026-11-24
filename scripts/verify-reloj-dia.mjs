@@ -52,7 +52,7 @@ const fila = (id, nombre, apellido, depto, o = {}) => ({
 });
 const filas = () => [
   fila(501, "Alondra", "Munguía", "Ventas", { entrada: `${F} 09:18:00`, salida: `${F} 16:08:00`, checadas_vivas: 3, minutos_trabajados: 370,
-    minutos_comida: 40, estado_calculado: { clave: "retardo", texto: "Retardo +18 min", atencion: true }, motivos_resumen: "1 corregido en reloj · Laura M." }),
+    minutos_comida: 40, estado_calculado: { clave: "retardo", texto: "Retardo +18 min", atencion: true }, motivos_resumen: "1 corregido en reloj · Laura M.", checadas_corregidas: 1 }),
   fila(502, "Armando", "González", "Contaduría", { id_tipo_permiso: 2, tipo_registro_nombre: "Falta injustificada", asistencia: 0,
     estado_calculado: { clave: "falta", texto: "Falta injustificada", atencion: true }, estadoAsistencia: "Ausente" }),
   fila(503, "Juan", "Pérez", "Producción", { id_tipo_permiso: 2, tipo_registro_nombre: "Falta injustificada", asistencia: 0,
@@ -224,11 +224,18 @@ try {
   for (const c of ["EMPLEADO", "DEPARTAMENTO", "FECHA", "ENTRADA", "SALIDA", "JORNADA TRABAJADO DE PROGRAMADO", "COMIDA", "HORAS EXTRA", "DÍA", "ESTADO", "MOTIVO", "RELOJ"]) {
     assert.ok(encabezados.some((h) => h.startsWith(c)), `falta la columna ${c}: ${encabezados.join(" | ")}`);
   }
-  for (const c of ["TIPO", "EDITADO", "PAGO TRIPLE", "PRIMA DOM.", "% FESTIVO", "HRS COMIDA", "¿AUTORIZAR?"]) assert.ok(!encabezados.includes(c), `sobra ${c}`);
+  // «Editado» volvió como columna (el dueño la pidió: es clave ver qué y por qué se editó).
+  for (const c of ["TIPO", "PAGO TRIPLE", "PRIMA DOM.", "% FESTIVO", "HRS COMIDA", "¿AUTORIZAR?"]) assert.ok(!encabezados.includes(c), `sobra ${c}`);
   assert.equal(await page.getByRole("button", { name: /Registrar asistencia masiva/ }).count(), 0, "sin «Registrar asistencia masiva»");
   assert.equal(await page.locator("[data-sidebar=menu-button]", { hasText: "Control de horas extra" }).count(), 0, "fuera del menú");
   assert.match(await filaDe("Alondra Munguía").innerText(), /6 h 10 min[\s\S]*de 6 h[\s\S]*🕒 Retardo \+18 min[\s\S]*1 corregido en reloj · Laura M\./);
   assert.match(await filaDe("Pedro Salas").innerText(), /Festivo oficial[\s\S]*Salario doble además del día \(art\. 75\)/);
+  // «Editado»: «Sí» ámbar que abre «Qué cambió» (checadas corregidas en el reloj); sin editar, «No».
+  const siEditado = filaDe("Alondra Munguía").getByRole("button", { name: "Editado: Sí, ver qué cambió" });
+  await siEditado.click();
+  await page.getByText(/Se corrigió 1 checada del reloj/).waitFor({ timeout: 10000 });
+  await page.keyboard.press("Escape");
+  assert.equal((await filaDe("Pedro Salas").getByLabel("Sin editar").innerText()).trim(), "No");
   assert.match(await filaDe("Sofía Ramos").innerText(), /Domingo[\s\S]*Prima dominical 25% \(art\. 71\)/);
   assert.equal(await filaDe("Pedro Salas").locator("td", { hasText: "Festivo oficial" }).locator("input,[role=combobox]").count(), 0, "festivo solo lectura");
   assert.equal(await filaDe("Alondra Munguía").getByRole("combobox").count(), 0, "con checadas el estado es solo lectura");
