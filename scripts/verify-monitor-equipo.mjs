@@ -80,8 +80,9 @@ try {
   const ana = pj.getByRole("button", { name: "Ver día de Ana Prueba" });
   await ana.waitFor({ timeout: 10000 });
   assert.equal(await ana.getAttribute("data-estado"), "trabajando");
-  assert.match(await pj.getByRole("region", { name: /No laboran hoy/ }).innerText(), /Beto Ruiz/);
-  assert.match(await pj.getByRole("group", { name: "Resumen de hoy" }).innerText(), /Trabajando\s*1/);
+  // Mismos grupos y tarjetas que el Monitor de RH (lib/asistencia/monitor.mjs).
+  assert.match(await pj.getByRole("region", { name: /Con permiso/ }).innerText(), /Beto Ruiz[\s\S]*Vacaciones/);
+  assert.match(await pj.getByRole("group", { name: "Resumen de hoy" }).innerText(), /En jornada\s*1[\s\S]*Con permiso\s*2/);
   assert.ok(pedidos.every((q) => !/jefe|empresa|empleado/.test(q)), "el cliente no manda el jefe ni la empresa");
   assert.ok(await pj.evaluate(() => document.documentElement.scrollWidth <= 390), "sin desborde en celular");
   if (capturas) { await dormir(400); await pj.screenshot({ path: `${capturas}/390-monitor-equipo.png` }); }

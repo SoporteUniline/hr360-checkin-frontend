@@ -1,13 +1,15 @@
 "use client";
 
 // «Monitor de mi equipo» (app del empleado, solo jefes): quién está trabajando, quién no ha llegado, en comida, etc.,
-// con la misma lógica de estados del Monitor de RH (lib/asistencia/hoy.mjs vía lib/asistencia/hoyEquipo.mjs).
+// con la misma lógica del Monitor de RH: estados de lib/asistencia/hoy.mjs (vía hoyEquipo.mjs) y tarjetas, grupos y
+// razón de lib/asistencia/monitor.mjs.
 // Versión ligera propia: el componente de RH (VistaHoy) depende del panel (ficha del empleado, cuentas de horas) y lo
 // está moviendo otra rebanada. Al tocar a alguien se ve su día en modo lectura; editar sigue siendo de RH.
 import { useEffect, useMemo, useState } from "react";
 import { Search, UsersRound } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { agruparHoy, checadasDelDia, describir, resumenHoy, TARJETAS, textoFechaHoy } from "@/lib/asistencia/hoy.mjs";
+import { checadasDelDia, describir, textoFechaHoy } from "@/lib/asistencia/hoy.mjs";
+import { agruparMonitor, razonMonitor, resumenMonitor, TARJETAS_MONITOR } from "@/lib/asistencia/monitor.mjs";
 import { diaParaLeer, resultadosHoy } from "@/lib/asistencia/hoyEquipo.mjs";
 import useMonitorEquipo from "@/hooks/useMonitorEquipo";
 import { DataState } from "@/components/empleado/shared";
@@ -72,6 +74,7 @@ function DiaEquipo({ registro, zona, onCerrar }) {
 function Renglon({ r, onAbrir }) {
   const reg = r.dia.registro;
   const d = describir(r);
+  const razon = razonMonitor(r);
   const c = checadasDelDia(r);
   return (
     <li>
@@ -83,7 +86,7 @@ function Renglon({ r, onAbrir }) {
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <b className="truncate text-[15px] text-slate-900">{nombreDe(reg)}</b>
-          <span className="text-[13px] text-slate-600">{d.detalle}{d.resaltado ? <> · <b className="text-orange-800">{d.resaltado}</b></> : null}</span>
+          <span className="text-[13px] text-slate-600">{razon.texto}</span>
           {c.entrada ? (
             <span className="text-xs tabular-nums text-slate-500">
               Entrada {c.entrada}{c.salida ? ` · Salida ${c.salida}` : ""}{c.comida ? ` · Comida ${c.comida.texto}` : ""}
@@ -113,9 +116,9 @@ export default function MonitorEquipo() {
     const q = sinAcentos(busqueda.trim());
     return q ? resultados.filter((r) => sinAcentos(nombreDe(r.dia.registro)).includes(q)) : resultados;
   }, [resultados, busqueda]);
-  const resumen = useMemo(() => resumenHoy(visibles), [visibles]);
-  const tarjeta = TARJETAS.find((t) => t.clave === filtro) ?? null;
-  const grupos = useMemo(() => agruparHoy(tarjeta ? visibles.filter(tarjeta.es) : visibles, (r) => nombreDe(r.dia.registro)), [visibles, tarjeta]);
+  const resumen = useMemo(() => resumenMonitor(visibles), [visibles]);
+  const tarjeta = TARJETAS_MONITOR.find((t) => t.clave === filtro) ?? null;
+  const grupos = useMemo(() => agruparMonitor(tarjeta ? visibles.filter(tarjeta.es) : visibles, (r) => nombreDe(r.dia.registro)), [visibles, tarjeta]);
 
   return (
     <div className="space-y-4">
@@ -134,7 +137,7 @@ export default function MonitorEquipo() {
           <>
             <div role="group" aria-label="Resumen de hoy" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-4 sm:px-0
               lg:grid-cols-7">
-              {TARJETAS.map((t) => (
+              {TARJETAS_MONITOR.map((t) => (
                 <button key={t.clave} type="button" aria-pressed={filtro === t.clave} onClick={() => setFiltro((f) => (f === t.clave ? null : t.clave))}
                   className={`flex min-h-11 min-w-[104px] shrink-0 flex-col rounded-xl px-3 py-2 text-left sm:min-w-0 ${
                     filtro === t.clave ? "border-2 border-blue-600 bg-white" : "border border-slate-200 bg-white"}`}>
