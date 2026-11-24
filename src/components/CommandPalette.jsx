@@ -16,7 +16,6 @@ import {
   BriefcaseBusiness,
   FileText,
   CalendarClock,
-  Clock3,
   ClipboardList,
   ReceiptText,
   ClipboardCheck,
@@ -248,13 +247,6 @@ const ALL_NAV_ITEMS = [
     rol: "Recruiter",
     section: "Control de Tiempo",
     icon: ClipboardCheck,
-  },
-  {
-    title: "Control de horas extra",
-    url: "/panel/horas-extra",
-    rol: "Recruiter",
-    section: "Control de Tiempo",
-    icon: Clock3,
   },
   {
     title: "Entradas y salidas",

@@ -25,6 +25,7 @@ import { crearFormateadorCambios } from "./CeldaEditado";
 import { useSnackbar } from "notistack";
 import useHorasExtra from "@/hooks/useHorasExtra";
 import AccionesMasivas from "./AccionesMasivas";
+import { diaFila, estadoFila } from "@/lib/asistencia/relojDia.mjs";
 import { minutosDescanso, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 import { ahoraBase, textoComida } from "@/lib/reporte/comida.mjs";
 import {
@@ -43,28 +44,19 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "unidad", label: "Unidad", extra: false },
   { key: "codigo", label: "Código", extra: true },
   { key: "departamento", label: "Departamento", extra: false },
-  { key: "tipo", label: "Tipo", extra: false },
   { key: "fecha", label: "Fecha", extra: false },
-  { key: "correccion", label: "Editado", extra: false },
   { key: "entrada", label: "Entrada", extra: false },
   { key: "salida", label: "Salida", extra: false },
-  { key: "jornada", label: "Jornada", extra: false },
+  { key: "jornada", label: "Trabajadas", extra: false },
   { key: "comida", label: "Comida", extra: false },
-  { key: "hrs_diferencia", label: "Balance del día", extra: false },
-  { key: "autorizado_por", label: "Autorizado por", extra: true },
-  { key: "asistio", label: "Asistió", extra: false },
-  { key: "goce", label: "Goce", extra: false },
-  { key: "pago_triple", label: "Pago triple", extra: true },
-  { key: "domingo", label: "Domingo", extra: true },
-  { key: "prima_dominical", label: "Prima dom.", extra: true },
-  { key: "festivo", label: "Festivo", extra: true },
-  { key: "porcentaje_festivo", label: "% festivo", extra: true },
   { key: "hrs_extra", label: "Horas extra", extra: false },
-  { key: "forma_pago", label: "Forma pago", extra: true },
-  { key: "hrs_comida", label: "Hrs comida", extra: true },
-  { key: "notas", label: "Observaciones", extra: false },
-  { key: "estado_asistencia", label: "Estado", extra: false },
+  { key: "dia", label: "Día (festivo / domingo)", extra: false },
+  { key: "estado_asistencia", label: "Estado · motivo", extra: false },
+  { key: "reloj", label: "Reloj", extra: false },
+  { key: "notas", label: "Observaciones", extra: true },
 ];
+// Columnas nuevas del reloj: se muestran una vez aunque haya columnas guardadas (ver page.jsx).
+export const COLUMNAS_RELOJ_NUEVAS = ["dia", "estado_asistencia", "reloj"];
 
 const EXTRA_COLUMN_KEYS = new Set(
   COLUMNAS_ASISTENCIA.filter((col) => col.extra).map((col) => col.key),
@@ -114,6 +106,7 @@ export default function AsistenciaTable({
   control = null,
   estadosHorasExtra = null,
   ocultarRegistroMasivo = false,
+  onAbrirReloj = null,
 }) {
   // Para el Excel usamos la zona de la primera empresa visible (o la activa como fallback)
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
@@ -151,7 +144,7 @@ export default function AsistenciaTable({
     COLUMNAS_ASISTENCIA.filter((col) => {
       if (col.key === "unidad" && empresaActiva !== "all") return false;
       return colVisible(col.key);
-    }).length + (colVisible("hrs_extra") ? 1 : 0) + (control ? 3 : 0) || 1; // +1: «¿Autorizar?» va con «Horas extra»
+    }).length + (control ? 3 : 0) || 1;
 
   const optionSourceRows = useMemo(
     () => (Array.isArray(filterOptionsRows) ? filterOptionsRows : filtrados),
@@ -245,7 +238,7 @@ export default function AsistenciaTable({
   const estadoAsistenciaOptions = useMemo(
     () =>
       uniqueOptions(
-        optionSourceRows.map((registro) => registro.estadoAsistencia),
+        optionSourceRows.map((registro) => estadoFila(registro).texto),
       ),
     [optionSourceRows],
   );
@@ -304,7 +297,7 @@ export default function AsistenciaTable({
       autorizacionSeleccionada.includes(toAutorizacion(registro));
     const pasaEstadoAsistencia =
       estadoAsistenciaSeleccionado.length === 0 ||
-      estadoAsistenciaSeleccionado.includes(registro.estadoAsistencia);
+      estadoAsistenciaSeleccionado.includes(estadoFila(registro).texto);
 
     return (
       pasaEmpleado &&
@@ -385,7 +378,7 @@ export default function AsistenciaTable({
         case "tipo":
           return registro.tipo_registro_nombre || "Sin tipo";
         case "estado":
-          return registro.estadoAsistencia || "Sin estado";
+          return estadoFila(registro).texto || "Sin estado";
         default:
           return "Sin grupo";
       }
@@ -469,6 +462,12 @@ export default function AsistenciaTable({
     { header: "Observaciones", key: "notas" },
     { header: "Notas horas extra", key: "notas_hrs_extra" },
     { header: "Estado", key: "estadoAsistencia" },
+    { header: "Día", key: "dia" },
+    { header: "Trabajadas (min)", key: "minutos_trabajados" },
+    { header: "Comida (min)", key: "minutos_comida" },
+    { header: "Extra (min)", key: "minutos_extra" },
+    { header: "Extra por autorizar (min)", key: "minutos_extra_por_autorizar" },
+    { header: "Motivos", key: "motivos_resumen", width: 40 },
   ];
 
   const aFilaExcel = (r) => {
@@ -530,7 +529,13 @@ export default function AsistenciaTable({
       comida_checada: textoComida(r.comida_checada, undefined, ahoraBase()) || "-",
       notas: r.notas ?? "-",
       notas_hrs_extra: r.notas_hrs_extra ?? "-",
-      estadoAsistencia: r.estadoAsistencia,
+      estadoAsistencia: estadoFila(r).texto,
+      dia: [diaFila(r).nombre, diaFila(r).pago].filter(Boolean).join(" · "),
+      minutos_trabajados: r.minutos_trabajados ?? "-",
+      minutos_comida: r.minutos_comida ?? "-",
+      minutos_extra: r.minutos_extra ?? "-",
+      minutos_extra_por_autorizar: r.minutos_extra_por_autorizar ?? "-",
+      motivos_resumen: r.motivos_resumen || "-",
     };
   };
 
@@ -650,6 +655,7 @@ export default function AsistenciaTable({
       horasExtra={accionesHorasExtra}
       control={control}
       seleccion={readOnly ? null : { marcado: seleccionados.has(reg.id), alternar: (v) => accionesHorasExtra.seleccionar(reg.id, v) }}
+      onAbrirReloj={readOnly ? null : onAbrirReloj}
     />
   );
 
@@ -864,33 +870,10 @@ export default function AsistenciaTable({
                     </div>
                   </TableHead>
                 )}
-                {colVisible("tipo") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
-                  >
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleSort("tipoRegistro")}
-                        className="flex items-center"
-                      >
-                        TIPO
-                        {renderSortIcon("tipoRegistro")}
-                      </button>
-
-                      <HeaderMultiFilter
-                        selected={tipoSeleccionado}
-                        onChange={setTipoSeleccionado}
-                        options={tipoOptions}
-                        placeholder=""
-                      />
-                    </div>
-                  </TableHead>
-                )}
                 {colVisible("fecha") && (
                   <TableHead
                     onClick={() => handleSort("fecha")}
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center cursor-pointer select-none`}
+                    className={`${TH_STICKY} cursor-pointer select-none text-center`}
                   >
                     <div className="flex items-center justify-center">
                       Fecha
@@ -898,26 +881,10 @@ export default function AsistenciaTable({
                     </div>
                   </TableHead>
                 )}
-                {colVisible("correccion") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      <span>EDITADO</span>
-
-                      <HeaderMultiFilter
-                        selected={correccionSeleccionada}
-                        onChange={setCorreccionSeleccionada}
-                        options={correccionOptions}
-                        placeholder=""
-                      />
-                    </div>
-                  </TableHead>
-                )}
                 {colVisible("entrada") && (
                   <TableHead
                     onClick={() => handleSort("entrada")}
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center cursor-pointer select-none`}
+                    className={`${TH_STICKY} cursor-pointer select-none text-center`}
                   >
                     <div className="flex items-center justify-center">
                       Entrada
@@ -928,7 +895,7 @@ export default function AsistenciaTable({
                 {colVisible("salida") && (
                   <TableHead
                     onClick={() => handleSort("salida")}
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center cursor-pointer select-none`}
+                    className={`${TH_STICKY} cursor-pointer select-none text-center`}
                   >
                     <div className="flex items-center justify-center">
                       Salida
@@ -936,141 +903,15 @@ export default function AsistenciaTable({
                     </div>
                   </TableHead>
                 )}
-                {colVisible("jornada") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Jornada{" "}
-                    <span className="font-medium normal-case tracking-normal text-slate-400">trabajado de programado</span>
-                  </TableHead>
-                )}
-                {colVisible("comida") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Comida
-                  </TableHead>
-                )}
-
-                {colVisible("hrs_diferencia") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Balance del día
-                  </TableHead>
-                )}
-                {colVisible("autorizado_por") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    <HeaderMultiFilter
-                      selected={autorizacionSeleccionada}
-                      onChange={setAutorizacionSeleccionada}
-                      options={autorizacionOptions}
-                      placeholder="Autorizado por"
-                    />
-                  </TableHead>
-                )}
-                {colVisible("asistio") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleSort("asistencia")}
-                        className="flex items-center"
-                      >
-                        ASISTIÓ
-                        {renderSortIcon("asistencia")}
-                      </button>
-
-                      <HeaderMultiFilter
-                        selected={asistioSeleccionado}
-                        onChange={setAsistioSeleccionado}
-                        options={asistioOptions}
-                        placeholder=""
-                      />
-                    </div>
-                  </TableHead>
-                )}
-                {colVisible("goce") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleSort("goceSueldo")}
-                        className="flex items-center"
-                      >
-                        GOCE
-                        {renderSortIcon("goceSueldo")}
-                      </button>
-
-                      <HeaderMultiFilter
-                        selected={goceSeleccionado}
-                        onChange={setGoceSeleccionado}
-                        options={goceOptions}
-                        placeholder=""
-                      />
-                    </div>
-                  </TableHead>
-                )}
-                {colVisible("pago_triple") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Pago triple
-                  </TableHead>
-                )}
-                {colVisible("domingo") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Domingo
-                  </TableHead>
-                )}
-                {colVisible("prima_dominical") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Prima dom.
-                  </TableHead>
-                )}
-                {colVisible("festivo") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    <HeaderMultiFilter
-                      selected={festivoSeleccionado}
-                      onChange={setFestivoSeleccionado}
-                      options={festivoOptions}
-                      placeholder="Festivo"
-                    />
-                  </TableHead>
-                )}
-                {colVisible("porcentaje_festivo") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    % festivo
-                  </TableHead>
-                )}
+                {colVisible("jornada") && <TableHead className={TH_STICKY}>Trabajadas</TableHead>}
+                {colVisible("comida") && <TableHead className={`${TH_STICKY} text-center`}>Comida</TableHead>}
                 {colVisible("hrs_extra") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
+                  <TableHead className={TH_STICKY}>
                     <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleSort("horasExtra")}
-                        className="flex items-center"
-                      >
+                      <button type="button" onClick={() => handleSort("horasExtra")} className="flex items-center">
                         HORAS EXTRA
                         {renderSortIcon("horasExtra")}
                       </button>
-
                       <HeaderMultiFilter
                         selected={horasExtraSeleccionado}
                         onChange={setHorasExtraSeleccionado}
@@ -1080,55 +921,29 @@ export default function AsistenciaTable({
                     </div>
                   </TableHead>
                 )}
-                {colVisible("hrs_extra") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
-                  >
-                    ¿Autorizar?
-                  </TableHead>
-                )}
                 {control && (
                   <>
-                    <TableHead className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}>Decidió</TableHead>
-                    <TableHead className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}>Semana</TableHead>
-                    <TableHead className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}>Alertas</TableHead>
+                    <TableHead className={TH_STICKY}>Decidió</TableHead>
+                    <TableHead className={TH_STICKY}>Semana</TableHead>
+                    <TableHead className={TH_STICKY}>Alertas</TableHead>
                   </>
                 )}
-                {colVisible("forma_pago") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Forma pago
-                  </TableHead>
-                )}
-                {colVisible("hrs_comida") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Hrs comida
-                  </TableHead>
-                )}
-                {colVisible("notas") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Observaciones
-                  </TableHead>
-                )}
-
+                {colVisible("dia") && <TableHead className={TH_STICKY}>Día</TableHead>}
+                {colVisible("notas") && <TableHead className={TH_STICKY}>Observaciones</TableHead>}
                 {colVisible("estado_asistencia") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    <HeaderMultiFilter
-                      selected={estadoAsistenciaSeleccionado}
-                      onChange={setEstadoAsistenciaSeleccionado}
-                      options={estadoAsistenciaOptions}
-                      placeholder="Estado"
-                    />
+                  <TableHead className={`${TH_STICKY} min-w-[250px]`}>
+                    <div className="flex items-center gap-1">
+                      <span>ESTADO · MOTIVO</span>
+                      <HeaderMultiFilter
+                        selected={estadoAsistenciaSeleccionado}
+                        onChange={setEstadoAsistenciaSeleccionado}
+                        options={estadoAsistenciaOptions}
+                        placeholder=""
+                      />
+                    </div>
                   </TableHead>
                 )}
-                
+                {colVisible("reloj") && <TableHead className={`${TH_STICKY} text-center`}>Reloj</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1206,8 +1021,6 @@ export default function AsistenciaTable({
         <AccionesMasivas
           filas={filasSeleccionadas}
           tiposPermiso={tiposPermiso}
-          zonaDe={zonaDe}
-          hx={hx}
           onLimpiar={limpiarSeleccion}
           onGuardado={mutateAsistencia}
         />

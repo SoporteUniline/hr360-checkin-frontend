@@ -8,6 +8,7 @@ import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import AsistenciaTable from "./AsistenciaTable";
+import RelojDiaDialog from "./RelojDiaDialog";
 import AsistenciaMatriz from "./AsistenciaMatriz";
 import VistaHoras from "./VistaHoras";
 import TablePagination from "@/components/TablePagination";
@@ -222,6 +223,9 @@ export default function AsistenciaDataContainer({
     handleFieldChange,
     handleSaveClick,
   } = useAsistenciaActions(mutate);
+  // El reloj del día: la forma de corregir horas en Asistencias (fila, icono, «Sí vino», horas extra por autorizar).
+  const [relojDe, setRelojDe] = useState(null);
+  const abrirDia = readOnly || controlHorasExtra ? handleEditClick : setRelojDe;
 
   // «Abrir en Asistencias» desde Control de horas extra: ?abrir=<id> abre su ventana de edición una vez.
   const searchParams = useSearchParams();
@@ -238,8 +242,8 @@ export default function AsistenciaDataContainer({
       : registros.find((x) => String(x.id_empleado) === String(abrirEmpleado) && String(x.fecha ?? "").slice(0, 10) === abrirFecha);
     if (!r) return;
     abiertoRef.current = clave;
-    handleEditClick(r);
-  }, [abrirId, abrirEmpleado, abrirFecha, registros, handleEditClick]);
+    abrirDia(r);
+  }, [abrirId, abrirEmpleado, abrirFecha, registros, abrirDia]);
 
 
   // Devuelve { ui, ... } con un solo esqueleto hasta tener datos (y empresa): así la tabla no desaparece al
@@ -310,6 +314,7 @@ export default function AsistenciaDataContainer({
           control={control}
           estadosHorasExtra={estadosHorasExtra}
           ocultarRegistroMasivo={ocultarRegistroMasivo}
+          onAbrirReloj={readOnly || controlHorasExtra ? null : setRelojDe}
           footer={
             mostrarPaginacion && registros.length > 0 ? (
               <TablePagination
@@ -326,6 +331,10 @@ export default function AsistenciaDataContainer({
             ) : null
           }
         />
+
+        {relojDe ? (
+          <RelojDiaDialog registro={relojDe} onCerrar={() => setRelojDe(null)} onGuardado={() => mutate()} />
+        ) : null}
 
         {!mostrarPaginacion && !controlHorasExtra && registros.length > 0 && (
           <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded text-center">
