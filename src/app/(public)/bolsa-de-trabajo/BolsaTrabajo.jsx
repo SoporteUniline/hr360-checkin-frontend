@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { MapPin, Search, SlidersHorizontal, X } from "lucide-react";
+import HeroCarrusel from "@/components/landing/home/HeroCarrusel";
 import { fetcher, swr_config } from "@/lib/fetcher";
 import {
   FILTROS_INICIALES, LIMITE_VACANTES, aplicarUbicacion, cambiarFiltro, consultaVacantes, filtrosActivos, filtrosDesdeUrl,
@@ -11,6 +12,7 @@ import {
 import EmpresasContratando, { RUTA_EMPRESAS_BOLSA } from "./EmpresasContratando";
 import ListaVacantes, { Esqueletos, Estado } from "./ListaVacantes";
 import { GruposFiltros, HojaFiltros, Paginacion } from "./Filtros";
+import { DIAPOSITIVAS_BOLSA } from "./diapositivas";
 
 const Flecha = () => (
   <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -124,16 +126,17 @@ export default function BolsaTrabajo() {
 
   return (
     <>
-      <section className="bt-hero" aria-labelledby="bt-titulo">
-        <div className="wrap bt-hero-in">
-          <span className="eyebrow">Bolsa de trabajo</span>
-          <h1 id="bt-titulo">Encuentra tu próximo trabajo</h1>
-          <p className="lead">Vacantes de empresas en México que contratan con ADAMIA. Postúlate desde tu celular en minutos, sin crear una cuenta.</p>
-        </div>
-      </section>
+      <HeroCarrusel
+        diapositivas={DIAPOSITIVAS_BOLSA}
+        etiqueta="Bolsa de trabajo de ADAMIA"
+        className="bt-carr"
+        primerTitulo="h2"
+        desliza
+      />
 
       <div className="wrap bt-buscar-caja">
         <form className="bt-buscar" role="search" aria-label="Buscar vacantes" onSubmit={buscar}>
+          <h1 id="bt-titulo" className="bt-buscar-tit">Encuentra tu próximo trabajo</h1>
           <label className="bt-campo">
             <span>Puesto</span>
             <span className="bt-control">
@@ -175,7 +178,7 @@ export default function BolsaTrabajo() {
         onElegir={(id) => cambiar("id_empresa", id)}
       />
 
-      <section className="bt-res" aria-labelledby="bt-res-titulo">
+      <section className="bt-res" id="vacantes" aria-labelledby="bt-res-titulo">
         <div className="wrap bt-res-grid">
           <aside className="bt-lateral" aria-label="Filtros">
             <h2>Filtrar vacantes</h2>

@@ -41,9 +41,9 @@ export default function TabGPS({ form, soloLectura }) {
 
     // Guardamos coords en checkin o checkout
     if (tipo === "checkin") {
-      form.setValue("lugar_checkin", ubicacion);
+      form.setValue("lugar_checkin", ubicacion, { shouldDirty: true });
     } else {
-      form.setValue("lugar_checkout", ubicacion);
+      form.setValue("lugar_checkout", ubicacion, { shouldDirty: true });
     }
 
     // Geocodificación inversa con Google (esto lo dejas igual)
@@ -73,7 +73,7 @@ export default function TabGPS({ form, soloLectura }) {
             response.results[0].address_components.find((comp) =>
               comp.types.includes("locality")
             )?.long_name || "",
-        });
+        }, { shouldDirty: true });
       }
     } catch (error) {
       console.log("No se pudo obtener la dirección con Google:", error);
@@ -143,7 +143,7 @@ export default function TabGPS({ form, soloLectura }) {
       };
 
       const campo = tipo === "checkin" ? "lugar_checkin" : "lugar_checkout";
-      form.setValue(campo, nuevaUbicacion);
+      form.setValue(campo, nuevaUbicacion, { shouldDirty: true });
     } catch (error) {
       console.error("Error en búsqueda de dirección:", error);
       setErrorGPS("❌ No se pudo encontrar la dirección. Intenta con otra.");

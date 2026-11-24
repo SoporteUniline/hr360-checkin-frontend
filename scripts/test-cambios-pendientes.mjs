@@ -99,3 +99,18 @@ test("rutaInterna y decisión tras guardar", () => {
   assert.equal(decidirTrasGuardar(false), "quedarse", "si falla la validación o el servidor, se queda");
   assert.equal(decidirTrasGuardar(undefined), "quedarse");
 });
+
+test("(24/11/2026) solo cuenta lo que la persona tocó", async () => {
+  const { camposCambiados: cc, hayCambiosPendientes: hay, tieneMarca } = await import("../src/lib/cambiosPendientes.mjs");
+  const base = { nombre: "Ana", sexo: "Femenino", horarios: [{ entrada: "09:00" }], campos_personalizados: { 1: "M" } };
+  const acomodado = { ...base, sexo: "", horarios: [{ entrada: "09:00:00" }] }; // el sistema lo acomodó al abrir
+  assert.equal(hay({ base, actual: acomodado, tocados: {} }), false, "sin tocar nada no hay cambios");
+  assert.deepEqual(cc(base, acomodado), ["horarios", "sexo"], "sin la marca sí se contarían");
+  assert.equal(hay({ base, actual: { ...acomodado, nombre: "Ana María" }, tocados: { nombre: true } }), true);
+  assert.deepEqual(cc(base, { ...base, horarios: [{ entrada: "10:00" }] }, [], { horarios: [{ entrada: true }] }), ["horarios"], "marca anidada");
+  assert.deepEqual(cc(base, { ...base, campos_personalizados: { 1: "L" } }, [], { campos_personalizados: { 1: true } }), ["campos_personalizados"]);
+  assert.equal(hay({ base, actual: base, tocados: { nombre: true } }), false, "tocó y regresó al valor original");
+  assert.equal(tieneMarca([{ a: false }, { b: true }]), true);
+  assert.equal(tieneMarca({ a: false, b: [false] }), false);
+  assert.equal(tieneMarca(undefined), false);
+});

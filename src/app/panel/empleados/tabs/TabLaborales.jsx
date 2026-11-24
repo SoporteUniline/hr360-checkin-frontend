@@ -143,7 +143,7 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
   }, [checarGPS, empleadoId, sincronizarCampo]);
 
   useEffect(() => {
-    form.setValue("areasAsignadas", areasAsignadas);
+    form.setValue("areasAsignadas", areasAsignadas, { shouldDirty: true });
   }, [areasAsignadas]);
 
   const { data: empleados } = useSWR(
@@ -227,11 +227,11 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
                       const parsed = val ? Number(val) : "";
                       field.onChange(parsed);
 
-                      form.setValue("sucursal", "");
-                      form.setValue("departamento", "");
-                      form.setValue("id_jefe_inmediato", null);
-                      form.setValue("id_autoriza_vacaciones", null);
-                      form.setValue("id_autoriza_permisos", null);
+                      form.setValue("sucursal", "", { shouldDirty: true });
+                      form.setValue("departamento", "", { shouldDirty: true });
+                      form.setValue("id_jefe_inmediato", null, { shouldDirty: true });
+                      form.setValue("id_autoriza_vacaciones", null, { shouldDirty: true });
+                      form.setValue("id_autoriza_permisos", null, { shouldDirty: true });
                     }}
                   />
                 </FormControl>
@@ -274,7 +274,7 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
                   getOptionValue={(o) => o.nombre} // 🔥 CLAVE
                   onChange={(nombre) => {
                     field.onChange(nombre);
-                    form.setValue("departamento", "");
+                    form.setValue("departamento", "", { shouldDirty: true });
                   }}
                   onCreated={(nuevo) => {
                     field.onChange(nuevo.nombre);

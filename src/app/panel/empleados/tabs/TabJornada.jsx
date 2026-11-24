@@ -138,7 +138,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
     });
 
     // Actualiza los horarios en el formulario
-    form.setValue("horarios", actualizados, { shouldValidate: true });
+    form.setValue("horarios", actualizados, { shouldValidate: true, shouldDirty: true });
 
     // 🔄 Limpiar campos comunes
     setEntradaComun("");
@@ -154,7 +154,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
     const actualizados = horarios.map((h) =>
       h.dia === dia ? { ...h, [campo]: valor } : h,
     );
-    form.setValue("horarios", actualizados, { shouldValidate: true });
+    form.setValue("horarios", actualizados, { shouldValidate: true, shouldDirty: true });
   };
 
   useEffect(() => {
