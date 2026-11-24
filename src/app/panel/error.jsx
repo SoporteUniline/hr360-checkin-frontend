@@ -31,7 +31,7 @@ export default function PanelError({ error, reset }) {
   const detalle = [error?.name, error?.message].filter(Boolean).join(': ') || null;
   return <section role="alert" className="mx-auto max-w-xl rounded-xl border border-amber-200 bg-amber-50 p-6 text-slate-800">
     <h1 className="text-xl font-semibold">{offline ? 'No se pudo abrir esta pantalla sin conexión' : 'No se pudo abrir este módulo'}</h1>
-    <p className="mt-3">{offline ? 'Tus checadas pendientes siguen guardadas. Puedes volver a abrir la copia descargada de esta pantalla o regresar al menú.' : 'Intenta abrirlo de nuevo. Las checadas pendientes se conservan en el celular.'}</p>
+    <p className="mt-3">{offline ? 'Comprueba tu conexión a internet y vuelve a intentarlo.' : 'Intenta abrir el módulo de nuevo.'}</p>
     <div className="mt-4 flex flex-wrap gap-2">
       <button type="button" className="min-h-11 rounded-lg bg-blue-700 px-4 text-white" onClick={() => offline ? window.location.reload() : reset()}>Volver a intentar</button>
       {!offline ? <button type="button" className="min-h-11 rounded-lg border border-slate-300 bg-white px-4" onClick={() => window.location.reload()}>Recargar la página</button> : null}

@@ -57,13 +57,12 @@ try {
       if (p.endsWith("/empresas/slug/demo")) return json({ id_empresa: 7, nombre: "Demo" });
       if (p.endsWith("/eventos-checada")) return route.abort();
       if (p.endsWith("/registros-del-dia")) return json({ registrosHoy: registros, activosHoy: 1, totalRegistrosHoy: 2, zona_horaria: "America/Mexico_City" });
-      if (p.endsWith("/offline/empresa/perfil")) return json({ scope: "company", id_empresa: 7, slug: "demo", nombre: "Demo", grant: "concesion-prueba", prepared_at: new Date().toISOString() });
-      if (p.endsWith("/offline/empresa/sincronizar")) {
+      if (p.endsWith("/reloj/registrar")) {
         const ev = req.postDataJSON();
         envios++;
         // Primero el candado de 5 minutos («¿Registrar otra vez?»); al confirmar, se registra.
-        if (!ev.repetir) return json({ id: ev.id, status: "synced", action: "ignorada", rebote: { tipo: "entrada", hora: hace(2).slice(11) }, employee: { id: 1, nombre: "Ana Torres" } });
-        return json({ id: ev.id, status: "synced", action: "entrada", message: "Entrada registrada", employee: { id: 1, nombre: "Ana Torres" } });
+        if (!ev.repetir) return json({ ignorada: true, rebote: { tipo: "entrada", hora: hace(2).slice(11) }, empleado: { nombre: "Ana", apellido_paterno: "Torres" } });
+        return json({ message: "Entrada registrada", empleado: { nombre: "Ana", apellido_paterno: "Torres" } });
       }
       return json({ data: [], results: [], employees: [], total: 0 });
     });

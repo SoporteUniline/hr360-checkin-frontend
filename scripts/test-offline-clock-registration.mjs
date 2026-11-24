@@ -13,8 +13,6 @@ const source = (await readFile(new URL('../src/lib/offline-clock.js', import.met
   .replace(/\bexport /g, '');
 
 import { motivoPendiente, errorDelServidor, textoChecada, preguntaRepetida } from '../src/lib/reloj/motivoPendiente.mjs';
-const componentSource = await readFile(new URL('../src/components/RelojChecador.jsx', import.meta.url), 'utf8');
-const submitMovementSource = componentSource.match(/const submitMovement = ([^\r\n]+);/)[1];
 
 function harness({ online = true, detectedOffline = false, method = 'ambos', getProfile, save, send, companyClock = false, employeePage = false } = {}) {
   const events = new Map();
@@ -38,8 +36,7 @@ function harness({ online = true, detectedOffline = false, method = 'ambos', get
     axios: { get: async () => ({ data: {} }), post: async (url, body) => { requests++; return send ? send(body, url) : { data: { id: body.id, status: 'synced', action: 'entrada', employee: { nombre: 'Prueba' } } }; } },
   });
   vm.runInContext(source + '\nglobalThis.register = registerClockMovement; globalThis.sync = synchronizeClockQueue; globalThis.prepare = prepareLocalFaces;', context);
-  vm.runInContext(`globalThis.pageSubmit = ${submitMovementSource};`, context);
-  return { prepare: options => context.prepare({ company: 10, slug: 'fixture', ...options }), register: payload => employeePage ? context.pageSubmit(payload) : context.register(payload, { company: 10, employee: companyClock ? null : 2 }), sync: () => context.sync(), setOnline: value => { navigator.onLine = value; }, store, values, events, requests: () => requests };
+  return { prepare: options => context.prepare({ company: 10, slug: 'fixture', ...options }), register: payload => context.register(payload, { company: 10, employee: companyClock || employeePage ? null : 2, slug: employeePage ? 'fixture' : null }), sync: () => context.sync(), setOnline: value => { navigator.onLine = value; }, store, values, events, requests: () => requests };
 }
 
 test('employee page submits coworker codes to the company clock and shows the server resolved identity', async () => {

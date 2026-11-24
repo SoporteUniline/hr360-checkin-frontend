@@ -14,7 +14,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAuth } from "@/context/AuthContext";
-import { destinoRelojSinConexion, RUTA_RELOJ_EMPRESA } from '@/components/Clock/destinoReloj';
 import { Capacitor } from "@capacitor/core";
 import {
   UsersIcon,
@@ -813,17 +812,7 @@ export function NavMain({ consulta = "" } = {}) {
     confirmarSalida(({ reemplazar }) => { navegar(href, reemplazar); }, { navega: true });
   };
   // reemplazar: la guardia de cambios pide reemplazar su entrada extra del historial en vez de agregar otra.
-  const navegar = async (href, reemplazar = false) => {
-    // These items are buttons, so the global offline link handler cannot see them.
-    if (!navigator.onLine || window.__adamiaOffline === true) {
-      if (href === RUTA_RELOJ_EMPRESA) {
-        const destino = await destinoRelojSinConexion(dataUser);
-        if (destino !== RUTA_RELOJ_EMPRESA) { window.location.assign(destino); return; }
-      }
-      if (reemplazar) window.location.replace(href);
-      else window.location.assign(href);
-      return;
-    }
+  const navegar = (href, reemplazar = false) => {
     if (reemplazar) router.replace(href);
     else router.push(href);
   };

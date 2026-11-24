@@ -6,7 +6,6 @@ import axiosInstance from "@/lib/axios";
 import Navbar from "@/components/Navbar";
 import { Building2, Lock } from "lucide-react";
 import { useSnackbar } from "notistack";
-import { clockStore } from '@/lib/offline-clock';
 
 export default function SeleccionarRelojPage() {
   const { dataUser } = useAuth();
@@ -14,25 +13,10 @@ export default function SeleccionarRelojPage() {
   const { enqueueSnackbar } = useSnackbar();
   const [loadingSelection, setLoadingSelection] = useState(false);
   const redirecting = useRef(false);
-  const openClock = slug => {
-    const href = `/${encodeURIComponent(slug)}`;
-    if (!navigator.onLine || window.__adamiaOffline === true) window.location.assign(href);
-    else router.push(href);
-  };
-  const openSavedClock = async idEmpresa => {
-    const profile = await (await clockStore()).getValue(`clock:company:${idEmpresa}`);
-    if (!profile?.slug || Date.now() - Date.parse(profile.prepared_at) >= 7 * 86400000 || !Number.isFinite(Date.parse(profile.prepared_at))) return false;
-    openClock(profile.slug);
-    return true;
-  };
 
   const handleSelectEmpresa = async (idEmpresa) => {
     setLoadingSelection(true);
     try {
-      if (!navigator.onLine || window.__adamiaOffline === true) {
-        if (await openSavedClock(idEmpresa)) return;
-        throw new Error('Reloj no descargado');
-      }
       const response = await fetch(
         `/api/empresas/check-status?id=${idEmpresa}`,
       );
@@ -48,7 +32,7 @@ export default function SeleccionarRelojPage() {
       }
 
       if (data.slug) {
-        openClock(data.slug);
+        router.push(`/${encodeURIComponent(data.slug)}`);
       } else {
         enqueueSnackbar("No se encontró la ruta (slug) para esta empresa", {
           variant: "warning",
@@ -56,9 +40,8 @@ export default function SeleccionarRelojPage() {
         setLoadingSelection(false);
       }
     } catch (error) {
-      if ((!navigator.onLine || window.__adamiaOffline === true) && await openSavedClock(idEmpresa).catch(() => false)) return;
       console.error("Error al seleccionar empresa:", error);
-      enqueueSnackbar("Este reloj no está descargado. Necesitas conexión para abrirlo por primera vez.", {
+      enqueueSnackbar("No se pudo abrir el reloj. Comprueba tu conexión e intenta de nuevo.", {
         variant: "error",
       });
       setLoadingSelection(false);
