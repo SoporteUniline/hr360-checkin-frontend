@@ -20,12 +20,12 @@ const FacialRecognitionPanel = ({
   submitMovement,
   // Reloj de la empresa: la cámara se queda encendida para el siguiente empleado.
   continuo = false,
-  // Celular: la cámara llena el alto que le da el contenedor (maqueta aprobada 19/11/2026).
+  // Celular: la cámara llena el alto que le da el contenedor.
   pantallaCompleta = false,
   // Mientras el reloj pregunta «¿Registrar otra vez?» no se reconoce a nadie más (la tarjeta quedaría tapada).
   pausado = false,
 }) => {
-  // (19/11/2026) El análisis corre en un intervalo creado al encender la cámara: leer `continuo`
+  // El análisis corre en un intervalo creado al encender la cámara: leer `continuo`
   // directo dejaba el valor de ese momento y el interruptor no surtía efecto hasta reiniciarla.
   const continuoRef = useRef(continuo);
   continuoRef.current = continuo;
@@ -55,10 +55,10 @@ const FacialRecognitionPanel = ({
   const isProcessingRef = useRef(false);
   const isDetectingRef = useRef(false);
   const lastCheckTimeRef = useRef(0);
-  // (19/11/2026) Checar debe ser inmediato: se analiza en cuanto termina el cuadro anterior.
+  // Checar debe ser inmediato: se analiza en cuanto termina el cuadro anterior.
   const MIN_INTERVAL = 60;
   const NO_MATCH_INTERVAL = 800; // sin coincidencia: no saturar el reconocimiento / servidor
-  // (19/11/2026) Al entrar al cuadro o al abrir la cámara, el primer cuadro suele salir borroso o
+  // Al entrar al cuadro o al abrir la cámara, el primer cuadro suele salir borroso o
   // a contraluz y no alcanza 0.95: se reintenta rápido y en silencio; el aviso «no se encontró
   // coincidencia» solo aparece si sigue sin reconocer después de este tiempo.
   const GRACIA_SIN_COINCIDENCIA_MS = 1500;
@@ -66,7 +66,7 @@ const FacialRecognitionPanel = ({
   const sinCoincidenciaDesdeRef = useRef(null);
   const PAUSA_TRAS_CHECAR = 2000; // modo reloj: el nombre se ve 2 s y sigue con el siguiente
   const RESPALDO_SENSIBLE_MS = 2000; // si no ve cara en 2 s, alterna con un umbral más sensible (poca luz)
-  // (19/11/2026) Hay que acercarse al reloj: si la cara ocupa menos de esta fracción del alto del
+  // Hay que acercarse al reloj: si la cara ocupa menos de esta fracción del alto del
   // cuadro, se pide «Acércate» y no se intenta reconocer (cara chica = huella pobre).
   const CARA_MINIMA = 0.22;
   const [acercate, setAcercate] = useState(false);
@@ -586,7 +586,7 @@ const FacialRecognitionPanel = ({
                     muted
                     playsInline
                     className={`w-full object-cover border-0 md:border-4 rounded-none md:rounded-lg ${pantallaCompleta ? "h-full" : ""}`}
-                    // (19/11/2026) Cámara frontal en espejo, como cualquier selfie: si giras a la izquierda,
+                    // Cámara frontal en espejo, como cualquier selfie: si giras a la izquierda,
                     // la imagen también. Solo cambia lo que se ve; el reconocimiento usa el cuadro original.
                     style={cameraFacing === "user" ? { transform: "scaleX(-1)" } : undefined}
                   />

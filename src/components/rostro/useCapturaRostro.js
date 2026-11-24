@@ -1,10 +1,10 @@
 "use client";
 
-// Captura del rostro con la cámara frontal (22/11/2026, extraída el 05/12/2026 para reutilizarla): Mi espacio → Mi rostro
+// Captura del rostro con la cámara frontal: Mi espacio → Mi rostro
 // y la página pública del celular (/rostro/[token], enlace QR de RH) usan la MISMA lógica: face-api del navegador
 // (loadBrowserFaceApi, modelos de /models), 3 lecturas seguidas de una sola cara y promedio con promediarLecturas
 // (si dos lecturas no se parecen, no se guarda). Solo se obtiene la huella numérica (128 números), nunca la foto.
-// (23/11/2026, pedido del dueño) Guía EN VIVO mientras la cámara está abierta (src/lib/rostro/guia.mjs): «No se detecta
+// Guía EN VIVO mientras la cámara está abierta (src/lib/rostro/guia.mjs): «No se detecta
 // rostro», «Acércate un poco», «Más luz», «Mira de frente», «Rostro detectado ✅»… `listo` dice cuándo habilitar el
 // botón; solo cuentan las lecturas con la cara bien colocada, y al terminar se informa la calidad («✅ Rostro correcto»).
 // También lo usa «Probar rostro» de la ficha (lecturas: 1, como el checador; no guarda nada).

@@ -1,6 +1,6 @@
 "use client";
 
-// Guardia de salida con cambios sin guardar (23/11/2026). Cualquier pantalla con un formulario la activa con
+// Guardia de salida con cambios sin guardar. Cualquier pantalla con un formulario la activa con
 // useGuardiaSalida({ hayCambios, guardar }); mientras haya cambios, antes de salir se pregunta
 // «Tienes cambios sin guardar. ¿Qué quieres hacer?» → Guardar y salir · Salir sin guardar · Seguir editando.
 // Cubre: botones propios de la pantalla (confirmarSalida), menú lateral y buscador (confirmarSalida), enlaces <a>/<Link>

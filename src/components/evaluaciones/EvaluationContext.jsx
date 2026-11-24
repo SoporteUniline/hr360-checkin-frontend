@@ -41,7 +41,7 @@ export function EvaluationProvider({ children, employee = false }) {
       </div>
     );
   const company = selected ?? initial;
-  // (20/11/2026) La empresa se elige en la barra de pestañas (antes era una fila aparte arriba).
+  // La empresa se elige en la barra de pestañas.
   const selectorEmpresa = !employee && companies.length > 1 && (
     <label className="ev-company">
       <span className="sr-only">Empresa</span>

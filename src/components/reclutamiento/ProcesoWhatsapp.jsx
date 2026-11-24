@@ -1,6 +1,6 @@
 "use client";
 
-// Piezas del proceso de selección de un candidato de WhatsApp (04/12/2026), compartidas por Reclutamiento (expediente) y
+// Piezas del proceso de selección de un candidato de WhatsApp, compartidas por Reclutamiento (expediente) y
 // el chat de WhatsApp: sugerencia del agente (un clic), aviso por WhatsApp con texto editable (nunca sin que RH pulse
 // «Enviar aviso»; respeta la ventana de 24 h), descartar con motivo y la entrevista del agente.
 import { useState } from "react";

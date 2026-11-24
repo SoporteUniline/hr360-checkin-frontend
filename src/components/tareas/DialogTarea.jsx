@@ -1,7 +1,7 @@
 "use client";
 
-// Ventana de una tarea (prototipo 23/11/2026): ver su avance, palomear pasos, comentar, aprobar o regresar si está en
-// revisión, y crear o editar (título, proyecto, responsable, fecha, prioridad, pasos, pide foto).
+// Ventana de una tarea: ver su avance, palomear pasos, comentar, aprobar o regresar si está en revisión, y crear o
+// editar (título, proyecto, responsable, fecha, prioridad, pasos, pide foto).
 import { useState } from "react";
 import { Archive, Camera, Check, History, MessageSquare, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";

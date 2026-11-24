@@ -19,7 +19,7 @@ export async function teamFetcher(key, options) {
     cache: "no-store",
     ...options,
   });
-  // (23/11/2026) Si llega HTML (una ruta equivocada) no se muestra «Unexpected token '<'», sino un mensaje claro.
+  // Si llega HTML (una ruta equivocada) no se muestra «Unexpected token '<'», sino un mensaje claro.
   const data = await response.json().catch(() => ({ error: "El servicio respondió algo inesperado. Vuelve a intentar en un momento." }));
   if (!response.ok) {
     const error = new Error(

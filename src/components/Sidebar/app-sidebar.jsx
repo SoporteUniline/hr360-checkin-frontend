@@ -13,7 +13,7 @@ import {
 import Image from "next/image";
 
 // Isotipo compacto (la "A" con degradado de marca) para el modo contraído.
-// (23/11/2026) Menú contraído: la «A» oficial de ADAMIA (recortada de /assets/logo.png), no un dibujo parecido.
+// Menú contraído: la «A» oficial de ADAMIA (recortada de /assets/logo.png), no un dibujo parecido.
 function AdamiaMark() {
   return <Image alt="" aria-hidden="true" src="/assets/adamia-isotipo.png" width={28} height={28} className="size-7 object-contain" />;
 }

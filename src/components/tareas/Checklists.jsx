@@ -1,9 +1,7 @@
 "use client";
 
-// Checklists (prototipo 23/11/2026, pedido del dueño: «muy fácil de crear, de entender, de llenar y de calificar»).
-// Cada punto es una PREGUNTA con tipo (Sí/No, una opción, varias, número con rango, foto, texto), cuánto vale cada
-// respuesta y cuánto pesa la pregunta. A la derecha, la vista previa del celular: se puede contestar de prueba y ver el %.
-// Reglas y validación: lib/tareas/preguntas.mjs.
+// Checklists: cada punto es una PREGUNTA con tipo, valor por respuesta y peso; a la derecha, vista previa del
+// celular para contestar de prueba. Reglas y validación: lib/tareas/preguntas.mjs.
 import { useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Copy, Plus, Smartphone, Trash2 } from "lucide-react";
 import { OPCIONES_RAPIDAS, TIPOS, calificarRespuestas, esCalificable, problemasChecklist, valorDePregunta } from "@/lib/tareas/preguntas.mjs";

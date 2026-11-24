@@ -24,7 +24,7 @@ import axios from "@/lib/axios";
 import Cookies from "js-cookie";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CalendarCheck2, Save } from "lucide-react";
-// (21/11/2026) El empleado también pide permisos por horas (llega tarde, sale antes, sale y regresa): mismos campos y
+// El empleado también pide permisos por horas (llega tarde, sale antes, sale y regresa): mismos campos y
 // validación que el panel de RH. RH confirma o cambia «se repone / se rebaja» al aprobar.
 import CamposPermisoHoras, { datosPermisoHoras, erroresPermisoHoras } from "@/app/panel/permisos/CamposPermisoHoras";
 import { horarioPermiso } from "@/lib/asistencia/permisoHoras.mjs";

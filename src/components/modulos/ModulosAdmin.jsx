@@ -1,5 +1,5 @@
 "use client";
-// Admin de ADAMIA (03/12/2026, «Módulos por empresa»): el DERECHO.
+// Admin de ADAMIA: el DERECHO.
 //   ModulosEmpresaAdmin: en el detalle de una empresa, sus módulos y los extras / quitados (con nota), con su bitácora.
 //   ModulosPlanesAdmin: qué módulos opcionales incluye cada plan. Plan sin configurar = incluye todo.
 import { useState } from "react";

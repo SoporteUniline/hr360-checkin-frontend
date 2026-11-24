@@ -1,7 +1,7 @@
 "use client";
 
-// Pestañas del módulo «Activos y uniformes» (propuesta aprobada 20/11/2026): Inicio · Inventario ·
-// Personas, y Ajustes (categorías, ubicaciones y paquetes) aparte porque se usan poco.
+// Pestañas del módulo «Activos y uniformes»: Inicio · Inventario · Personas, y Ajustes (categorías, ubicaciones y
+// paquetes) aparte porque se usan poco.
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Settings } from "lucide-react";

@@ -8,7 +8,7 @@ import { MENU } from "./enlacesSitio";
 import "./landing-home.css";
 
 // Encabezado de todo el sitio público (inicio, blog, funciones, cotizar, contratar…). Estilos bajo .lh.
-// En celular el menú se abre con el botón ☰ (antes no había menú en celular).
+// En celular el menú se abre con el botón ☰.
 export default function SitioEncabezado() {
   const [abierto, setAbierto] = useState(false);
   const ruta = usePathname();

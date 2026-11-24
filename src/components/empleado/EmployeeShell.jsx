@@ -21,7 +21,7 @@ export default function EmployeeShell({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const { dataUser, isAuthChecked, isLoggedIn } = useAuth();
-  // (03/12/2026) Módulos por empresa: la barra solo trae lo que su empresa tiene activo (Tareas, Solicitudes).
+  // Módulos por empresa: la barra solo trae lo que su empresa tiene activo (Tareas, Solicitudes).
   const { activos, opciones } = useModulosActivos();
   const visibles = items.filter(([, href]) => rutaPermitida(href, activos, opciones));
   useEffect(() => {

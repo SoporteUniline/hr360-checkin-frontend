@@ -1,6 +1,6 @@
 "use client";
 
-// Proceso de selección desde el chat de WhatsApp (04/12/2026). El candidato de WhatsApp es una postulación más (mismas
+// Proceso de selección desde el chat de WhatsApp. El candidato de WhatsApp es una postulación más (mismas
 // rutas del panel y mismas reglas del servidor que Reclutamiento → Candidatos): etapa con selector rápido, sugerencia del
 // agente (un clic), notas internas con su historial, «Contratar» con el mismo formulario y «Descartar» con motivo; después
 // de contratar, descartar u ofrecer, «Avisarle por WhatsApp» con texto editable (solo se envía al confirmarlo).
@@ -105,7 +105,7 @@ export default function ProcesoChat({ proceso, puedeIniciar = false, conversacio
 
   const etapaActual = detail ? VISTA_A_ETAPA[detail.stage] : proceso?.etapa;
   const puede = acciones(etapaActual);
-  // Con el expediente cargado manda el expediente (lo que respondió el servidor tras cada cambio); antes, la del hilo.
+  // Con el expediente cargado se usa lo que respondió el servidor tras cada cambio, no la copia del hilo.
   const sugerencia = detail
     ? detail.whatsapp?.suggestion ? { etapa: VISTA_A_ETAPA[detail.whatsapp.suggestion.stage] } : null
     : proceso?.sugerencia ?? null;

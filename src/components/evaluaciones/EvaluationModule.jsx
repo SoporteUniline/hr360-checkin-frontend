@@ -29,8 +29,8 @@ import {
   vistasVisibles,
 } from "@/lib/evaluaciones/vistas.mjs";
 import "./evaluaciones.css";
-// (20/11/2026, «menos vistas») Cada quien ve lo suyo: RH administra y los demás responden y consultan.
-// (23/11/2026, «separa cada vista en su módulo») Cada vista tiene su dirección y su entrada en el menú
+// Cada quien ve lo suyo: RH administra y los demás responden y consultan.
+// Cada vista tiene su dirección y su entrada en el menú
 // (Campañas, Plantillas, Por responder y Configuración, con sus secciones). Las vistas y quién ve cada una
 // están en src/lib/evaluaciones/vistas.mjs; el menú lee lo mismo.
 

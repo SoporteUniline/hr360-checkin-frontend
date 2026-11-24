@@ -6,7 +6,7 @@ import { Check, ChevronDown, ChevronUp } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-// (24/11/2026) Radix llama onValueChange("") por su cuenta cuando el valor guardado no está entre las opciones (un dato
+// Radix llama onValueChange("") por su cuenta cuando el valor guardado no está entre las opciones (un dato
 // viejo como «F» en vez de «Femenino», o la lista aún sin cargar): lo borraba al abrir la pantalla («cambios sin guardar»
 // sin tocar nada) y al guardar se perdía. Ninguna opción puede valer "" (Radix no lo permite), así que ese aviso se ignora.
 function Select({ onValueChange, ...props }) {

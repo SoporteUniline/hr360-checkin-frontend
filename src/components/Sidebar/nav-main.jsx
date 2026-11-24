@@ -174,7 +174,7 @@ const dashboardItems = [
     rol: "Admin",
     icon: MessageCircle,
   },
-  // (03/12/2026) Módulos por empresa: qué incluye cada plan (los extras de una empresa, en su detalle).
+  // Módulos por empresa: qué incluye cada plan (los extras de una empresa, en su detalle).
   {
     title: "Módulos por plan",
     url: "/dashboard/modulos",
@@ -328,8 +328,8 @@ const menuGroups = [
     ],
   },
   {
-    // (23/11/2026) Nómina es su propio módulo (antes un submenú dentro de Gestión de personal). Incluye Finiquitos y
-    // Aguinaldos porque también son pagos (decisión del dueño). Nóminas/Bonos/Préstamos también son pestañas del módulo.
+    // Nómina es su propio módulo; incluye Finiquitos y Aguinaldos porque también son pagos.
+    // Nóminas/Bonos/Préstamos también son pestañas del módulo.
     group: "NÓMINA",
     groupIcon: Wallet,
     items: [
@@ -451,8 +451,7 @@ const menuGroups = [
     ],
   },
   {
-    // (20/11/2026) Antes dos grupos con 24 entradas (12 de activos y 12 de uniformes). Ahora un solo
-    // módulo con pestañas Inicio · Inventario · Personas y Ajustes (src/app/panel/activos).
+    // Un solo módulo con pestañas Inicio · Inventario · Personas y Ajustes (src/app/panel/activos).
     group: "ACTIVOS Y UNIFORMES",
     groupIcon: Monitor,
     items: [
@@ -466,7 +465,7 @@ const menuGroups = [
     ],
   },
   {
-    // (23/11/2026) Tareas y Checklists son dos módulos, cada uno con su entrada y sus vistas (pedido del dueño).
+    // Tareas y Checklists son dos módulos, cada uno con su entrada y sus vistas.
     group: "TAREAS",
     groupIcon: ListChecks,
     items: [
@@ -484,10 +483,8 @@ const menuGroups = [
     ],
   },
   {
-    // (23/11/2026) Cada vista con su entrada (pedido del dueño: «separa cada vista en su módulo»). Son las
-    // pestañas de RH del módulo (src/lib/evaluaciones/vistas.mjs) y se ocultan las que el servidor no le
-    // permite a la persona (useMenuEvaluaciones). «Campañas» mantiene resaltado el grupo también en el
-    // resultado de una persona (/panel/evaluaciones/resultados/…), que se abre desde la campaña.
+    // Una entrada por vista de RH (src/lib/evaluaciones/vistas.mjs); se ocultan las que el servidor no permite
+    // (useMenuEvaluaciones). «Campañas» sigue resaltado en el resultado de una persona (/panel/evaluaciones/resultados/…).
     group: "EVALUACIÓN DE DESEMPEÑO",
     groupIcon: BarChart3,
     items: VISTAS_RH.map((v) => ({
@@ -499,8 +496,8 @@ const menuGroups = [
       vistaEvaluacion: v,
     })),
   },
-  // (03/12/2026) Reclutamiento depende del módulo de la empresa (antes de NEXT_PUBLIC_RECRUITMENT_ENABLED, global por
-  // build). La variable solo queda como interruptor de emergencia: "false" lo oculta para todos (filtrarGrupos).
+  // Reclutamiento depende del módulo de la empresa; NEXT_PUBLIC_RECRUITMENT_ENABLED="false" queda como interruptor
+  // de emergencia que lo oculta para todos (filtrarGrupos).
   {
     group: "RECLUTAMIENTO Y SELECCIÓN",
     groupIcon: BriefcaseBusiness,
@@ -543,7 +540,7 @@ const menuGroups = [
         rol: "Recruiter",
         icon: SlidersHorizontal,
       },
-      // (03/12/2026) Qué módulos usa la empresa: prender, apagar y contratar.
+      // Qué módulos usa la empresa: prender, apagar y contratar.
       {
         title: "Módulos",
         url: "/panel/modulos",
@@ -579,8 +576,7 @@ const ITEM_ACTIVO =
 const ITEM_NORMAL =
   "text-gray-700 [&_svg]:text-gray-400 hover:[&_svg]:text-[#2563EB]";
 // Módulo del rail contraído: icono + panel flotante con todos sus items.
-// (23/11/2026) `consulta` llega como prop: antes no estaba definida aquí y contraer el menú tronaba la página
-// («consulta is not defined» → «Application error»).
+// `consulta` llega como prop porque aquí no está definida (sin ella, contraer el menú lanza ReferenceError).
 function RailModule({ icon: Icon, title, items, path, onNavigate, consulta = "" }) {
   const [open, setOpen] = useState(false);
   const cierreRef = useRef(null);
@@ -686,7 +682,7 @@ export function NavMain({ consulta = "" } = {}) {
   const path = usePathname();
   const { dataUser } = useAuth();
   const { state: sidebarState, isMobile, setOpenMobile } = useSidebar();
-  // (23/11/2026) Con cambios sin guardar (p. ej. la ficha del empleado) pregunta antes de navegar.
+  // Con cambios sin guardar (p. ej. la ficha del empleado) pregunta antes de navegar.
   const confirmarSalida = useConfirmarSalida();
   const [open, setOpen] = useState();
   const [busqueda, setBusqueda] = useState("");
@@ -695,7 +691,7 @@ export function NavMain({ consulta = "" } = {}) {
   const [isNative, setIsNative] = useState(false);
   const effectiveRole =
     dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
-  // (03/12/2026) Módulos por empresa: fuera lo que la empresa no tiene activo. Llega junto con la sesión (sin parpadeo).
+  // Módulos por empresa: fuera lo que la empresa no tiene activo. Llega junto con la sesión (sin parpadeo).
   const { activos, opciones: opcionesModulo } = useModulosActivos();
   const grupos = filtrarGrupos(menuGroups, activos, opcionesModulo);
   const itemsInicio = dashboardItems.filter((item) => rutaPermitida(item.url, activos, opcionesModulo));
@@ -912,7 +908,7 @@ export function NavMain({ consulta = "" } = {}) {
                 : gruposAbiertos[group.group] !== false;
               return (
                 <div key={group.group} className="mt-1.5">
-                  {/* (23/11/2026) Títulos de módulo más legibles: texto normal en azul marino, su ícono y el módulo donde
+                  {/* Títulos de módulo más legibles: texto normal en azul marino, su ícono y el módulo donde
                       estás resaltado (antes: MAYÚSCULAS grises con mucho espaciado). */}
                   <button
                     type="button"

@@ -1,4 +1,4 @@
-// Mosaico de módulos (23/11/2026, aprobado por el dueño: «hazlo así»). Inspirado en la sección de módulos de Crehana:
+// Mosaico de módulos. Inspirado en la sección de módulos de Crehana:
 // tarjeta principal grande con degradado de marca y las demás en gris suave; cada una con nombre, submarca
 // «adamia ___.», una línea de beneficio y una mini pantalla del producto dibujada con código (datos de ejemplo).
 // Estilos en ./landing-home.css (bloque «Mosaico de módulos», todo bajo .lh .mz).
