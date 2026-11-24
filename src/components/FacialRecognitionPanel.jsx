@@ -30,8 +30,6 @@ const FacialRecognitionPanel = ({
   onCodigoCara,
   // La persona tiene «Código y cara»: la cara sola no basta y hay que pedirle su código.
   onPedirCodigo,
-  // Intento fallido reconocido en este dispositivo (motivo y %, sin la huella) para que RH lo vea en la ficha.
-  onIntento,
   // Botones del reloj debajo del aviso de estado (p. ej. «¿No te reconoce? Escribe tu código»).
   accionInferior = null,
 }) => {
@@ -43,8 +41,8 @@ const FacialRecognitionPanel = ({
   pausadoRef.current = pausado;
   const codigoCaraRef = useRef(codigoCara);
   codigoCaraRef.current = codigoCara;
-  const avisosRef = useRef({ onCodigoCara, onPedirCodigo, onIntento });
-  avisosRef.current = { onCodigoCara, onPedirCodigo, onIntento };
+  const avisosRef = useRef({ onCodigoCara, onPedirCodigo });
+  avisosRef.current = { onCodigoCara, onPedirCodigo };
   const codigoCaraDesdeRef = useRef(0);
   // Con código: unos segundos para que la cámara vea bien la cara antes de decir que no coincide.
   const ESPERA_CODIGO_CARA_MS = 8000;
@@ -507,7 +505,6 @@ const FacialRecognitionPanel = ({
           setError("");
           return;
         }
-        if (err.intento) avisosRef.current.onIntento?.(err.intento);
         retryIntervalRef.current = NO_MATCH_INTERVAL;
         setError("");
         avisosRef.current.onCodigoCara?.({ tipo: "fallo", mensaje: message });
@@ -522,9 +519,6 @@ const FacialRecognitionPanel = ({
           return;
         }
       }
-      // Pasada la gracia ya es un intento fallido de verdad (el primer cuadro borroso no cuenta). El límite por persona y
-      // motivo cada 30 s lo pone reportFaceAttempt.
-      if (err.intento) avisosRef.current.onIntento?.(err.intento);
       retryIntervalRef.current = sinCoincidencia ? NO_MATCH_INTERVAL : ERROR_INTERVAL;
 
       // Keep one stable message by the camera while automatic retries continue.

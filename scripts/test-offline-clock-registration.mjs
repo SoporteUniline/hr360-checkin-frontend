@@ -13,11 +13,7 @@ const source = (await readFile(new URL('../src/lib/offline-clock.js', import.met
   .replace(/\bexport /g, '');
 
 import { motivoPendiente, errorDelServidor, textoChecada, preguntaRepetida } from '../src/lib/reloj/motivoPendiente.mjs';
-const componentSource = await readFile(new URL('../src/components/RelojChecador.jsx', import.meta.url), 'utf8');
-const submitMovementSource = componentSource.match(/const submitMovement = ([^\r\n]+);/)[1];
 
-const contexts = new WeakMap();
-const clockContext = (clock) => contexts.get(clock.store);
 function harness({ online = true, detectedOffline = false, method = 'ambos', getProfile, save, send, companyClock = false, employeePage = false } = {}) {
   const events = new Map();
   const values = new Map();
@@ -40,9 +36,7 @@ function harness({ online = true, detectedOffline = false, method = 'ambos', get
     axios: { get: async () => ({ data: {} }), post: async (url, body) => { requests++; return send ? send(body, url) : { data: { id: body.id, status: 'synced', action: 'entrada', employee: { nombre: 'Prueba' } } }; } },
   });
   vm.runInContext(source + '\nglobalThis.register = registerClockMovement; globalThis.sync = synchronizeClockQueue; globalThis.prepare = prepareLocalFaces;', context);
-  vm.runInContext(`globalThis.pageSubmit = ${submitMovementSource};`, context);
-  contexts.set(store, context);
-  return { prepare: options => context.prepare({ company: 10, slug: 'fixture', ...options }), register: payload => employeePage ? context.pageSubmit(payload) : context.register(payload, { company: 10, employee: companyClock ? null : 2 }), sync: () => context.sync(), setOnline: value => { navigator.onLine = value; }, store, values, events, requests: () => requests };
+  return { prepare: options => context.prepare({ company: 10, slug: 'fixture', ...options }), register: payload => context.register(payload, { company: 10, employee: companyClock || employeePage ? null : 2, slug: employeePage ? 'fixture' : null }), sync: () => context.sync(), setOnline: value => { navigator.onLine = value; }, store, values, events, requests: () => requests };
 }
 
 test('employee page submits coworker codes to the company clock and shows the server resolved identity', async () => {
@@ -438,57 +432,4 @@ test('the previously rejected entry does not block a fresh online check and rema
   clock.setOnline(false);
   const next = await clock.register({ descriptor_facial: descriptor });
   assert.equal(next.data.offline_event.action, 'entrada');
-});
-
-// ---- Rostro con varias fotos y «Código y cara» (24/11/2026) ----
-const unit = (k) => Array.from({ length: 128 }, (_, i) => (i === k ? 1 : 0));
-const near = (k, s, other = (k + 1) % 128) => Array.from({ length: 128 }, (_, i) => (i === k ? s : i === other ? Math.sqrt(1 - s * s) : 0));
-
-test('kiosk «código y cara» without downloaded faces sends method facial + descriptor + code to the server', async () => {
-  let sent;
-  const clock = harness({ companyClock: true, send: async (body, url) => { sent = { body, url }; return { data: { id: body.id, status: 'synced', action: 'entrada', employee: { id: 3, nombre: 'Caro' } } }; } });
-  const result = await clock.register({ codigo: '3003', descriptor_facial: unit(0) });
-  assert.equal(sent.url, '/checador/reloj/offline/empresa/sincronizar');
-  assert.equal(sent.body.method, 'facial');
-  assert.equal(sent.body.code, '3003');
-  assert.equal(sent.body.descriptor.length, 128);
-  assert.match(sent.body.device_id, /^[0-9a-f-]{36}$/, 'device_id for the code attempt limit');
-  assert.equal(result.data.empleado.nombre, 'Caro');
-});
-
-test('kiosk «código y cara» recognized on the device sends code + local_verification (1 to 1, score ≥ 0.92)', async () => {
-  let sent;
-  const clock = harness({ companyClock: true, send: async (body) => { sent = body; return { data: { id: body.id, status: 'synced', action: 'entrada', employee: { id: 3, nombre: 'Caro' } } }; } });
-  const device = await engine.deviceIdentity(clock.store);
-  const caro = { id: 3, nombre: 'Caro', metodo_chequeo: 'codigo_cara', code_identity: createHash('sha256').update('3003').digest('hex'), referencias: [{ pose: 'frente', descriptor: unit(5) }, { pose: 'izquierda', descriptor: near(5, 0.97) }],
-    grant: 'grant-3', reference: 'ref-3', open: false, cierre_turno: 'Automatico', checar_gps: false, areas: [] };
-  clock.values.set('faces:company:10', { company: 10, mode: 'company', model: engine.MODEL, device_id: device.id, prepared_at: new Date(Date.now() - 1000).toISOString(), expires_at: new Date(Date.now() + 86400000).toISOString(), employees: [caro], code_references: [] });
-  // Face alone: never accepted for «código y cara».
-  await assert.rejects(clock.register({ descriptor_facial: unit(5) }), { code: 'CODE_REQUIRED' });
-  const result = await clock.register({ codigo: '3003', descriptor_facial: near(5, 0.93, 60) });
-  assert.equal(sent.method, 'facial');
-  assert.equal(sent.code, '3003');
-  assert.equal(sent.descriptor, undefined, 'a local result never resends the descriptor');
-  assert.equal(sent.local_employee, 3);
-  assert.ok(sent.local_verification.score >= 0.92 && sent.local_verification.score < 0.95);
-  assert.equal(result.data.empleado.nombre, 'Caro');
-  await assert.rejects(clock.register({ codigo: '3003', descriptor_facial: unit(40) }), (e) => e.code === 'FACE_CODE_NOT_MATCHED' && e.intento.motivo === 'codigo_no_coincide' && e.intento.id_empleado === 3);
-});
-
-test('failed attempts are queued, rate limited per candidate and motivo, and sent with the contract body', async () => {
-  const posts = [];
-  const clock = harness({ companyClock: true, send: async (body, url) => { posts.push({ url, body }); return { data: { ok: true, guardado: true } }; } });
-  vm.runInContext('globalThis.report = reportFaceAttempt;', clockContext(clock));
-  const attempt = { metodo: 'cara', motivo: 'sin_coincidencia', id_empleado: 15, mejor: 0.91, segundo: 0.4, id_segundo: 3 };
-  assert.equal(await clockContext(clock).report(attempt, { company: 10 }), true);
-  assert.equal(await clockContext(clock).report(attempt, { company: 10 }), false, 'same candidate and motivo within 30 s');
-  await new Promise((r) => setTimeout(r, 20));
-  const [post] = posts;
-  assert.equal(posts.length, 1);
-  assert.equal(post.url, '/checador/reloj/offline/empresa/intentos');
-  assert.equal(post.body.grant, 'company-permit');
-  assert.deepEqual([post.body.id_empleado, post.body.metodo, post.body.motivo, post.body.mejor, post.body.segundo, post.body.id_segundo], [15, 'cara', 'sin_coincidencia', 0.91, 0.4, 3]);
-  assert.ok(Date.parse(post.body.capturado_en));
-  assert.equal('descriptor' in post.body, false);
-  assert.equal(clock.values.get('face:attempts:v1').length, 0, 'sent attempts leave the queue');
 });

@@ -38,8 +38,7 @@ import Cookies from "js-cookie";
 import axiosInstance from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import OfflineClockSetup from '@/components/Clock/OfflineClockSetup';
-import { registerClockMovement } from '@/lib/offline-clock';
+import { registrarEnLinea } from '@/lib/reloj/registrarEnLinea.mjs';
 import ClockNavigation from '@/components/Clock/ClockNavigation';
 
 export default function Home() {
@@ -52,7 +51,7 @@ export default function Home() {
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
   const [registrando, setRegistrando] = useState(false);
-  const { data: offlineCompany } = useSWR(dataUser?.id_empresa ? `/empresas/id/${dataUser.id_empresa}/slug` : null, fetcherWithToken);
+  const { data: empresaReloj } = useSWR(dataUser?.id_empresa ? `/empresas/id/${dataUser.id_empresa}/slug` : null, fetcherWithToken);
 
   const formatearHora = (fechaString) => {
     if (!fechaString) return "-";
@@ -132,9 +131,9 @@ export default function Home() {
 
   const registrarMovimiento = async () => {
     if (registrando) return;
-    setRegistrando(true);
     const codigo = codigoEmpleado.trim();
     if (!codigo) return;
+    setRegistrando(true);
 
     try {
       if (!dataUser?.id_empresa) {
@@ -144,25 +143,26 @@ export default function Home() {
         return;
       }
 
-      const { data } = await registerClockMovement(
-        {
-          codigo,
-          id_empresa: dataUser.id_empresa,
-        },
-        { company: dataUser.id_empresa, slug: offlineCompany?.slug },
-      );
+      const { data } = await registrarEnLinea(axiosInstance, {
+        codigo,
+        id_empresa: dataUser.id_empresa,
+      });
 
       if (data.requiereDecision) {
-        enqueueSnackbar(`${data.message || 'Elige qué registrar'}: elige la opción en las checadas pendientes.`, { variant: 'info' });
+        enqueueSnackbar('Abre el reloj de la empresa para elegir cómo registrar la salida.', { variant: 'info' });
+        return;
+      }
+      if (data.ignorada) {
+        enqueueSnackbar(data.message || 'La checada ya estaba registrada.', { variant: 'info' });
         return;
       }
 
-      const { movimiento, empleado } = data;
+      const { empleado } = data;
 
       setPopupInfo({
         nombre: `${empleado.nombre} ${empleado.apellido_paterno}`,
         foto_perfil: empleado.foto_perfil || "/assets/user.png",
-        movimiento,
+        movimiento: data.movimiento || data.message,
         success: true,
       });
 
@@ -201,7 +201,7 @@ export default function Home() {
         }
       } else {
         console.error("Error sin respuesta del servidor:", err);
-        enqueueSnackbar("Error de red", {
+        enqueueSnackbar(err.message || "Error de red", {
           variant: "error",
         });
       }
@@ -215,9 +215,8 @@ export default function Home() {
 
   return (
     <>
-      {offlineCompany?.slug && <OfflineClockSetup companySlug={offlineCompany.slug} companyId={dataUser.id_empresa} />}
       <main className="min-h-screen bg-slate-50/60 p-4">
-        <div className="mx-auto mb-4 max-w-7xl"><ClockNavigation companyId={dataUser?.id_empresa} companySlug={offlineCompany?.slug} /></div>
+        <div className="mx-auto mb-4 max-w-7xl"><ClockNavigation companyId={dataUser?.id_empresa} companySlug={empresaReloj?.slug} /></div>
         {!isLoggedIn ? (
           <div className="max-w-md mx-auto">
             <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-slate-200/50 p-8 text-center">
