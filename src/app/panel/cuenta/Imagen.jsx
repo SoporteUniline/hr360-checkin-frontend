@@ -1,6 +1,6 @@
 "use client";
 
-// Tarjeta de identidad de Mi cuenta (24/11/2026, rediseño): avatar circular grande, nombre, correo, rol y empresa, y el
+// Tarjeta de identidad de Mi cuenta: avatar circular grande, nombre, correo, rol y empresa, y el
 // cambio de foto con vista previa antes de guardar. Mismo guardado de siempre: PUT /users/:id/upload-image (campo «imagen»).
 import { useEffect, useRef, useState } from "react";
 import { Building2, Camera, ShieldCheck } from "lucide-react";

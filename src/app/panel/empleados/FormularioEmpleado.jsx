@@ -57,7 +57,7 @@ import { useGuardiaSalida } from "@/components/cambios/CambiosPendientes";
 import EstadoCambios from "@/components/cambios/EstadoCambios";
 import { fechaParaInput } from "@/lib/fechaInput.mjs";
 
-// (23/11/2026) Campos que no cuentan como «cambios sin guardar»: las horas por día y de comida se recalculan solas a
+// Campos que no cuentan como «cambios sin guardar»: las horas por día y de comida se recalculan solas a
 // partir de los horarios (que sí cuentan) y el rostro se revisa aparte (solo cuenta si RH capturó uno nuevo).
 const NO_CUENTAN_COMO_CAMBIO = ["hrs_por_dia", "hrs_de_comida", "descriptor_facial"];
 
@@ -68,12 +68,12 @@ export default function FormularioEmpleado({
   values = null,
   page,
   limit,
-  // Solo para mostrar la ficha sin editar. Desde el 23/11/2026 la ficha abre siempre editable («en cuanto entre ya pueda
-  // editar»); no hay un permiso de «ver sin editar» en el panel (lo decide el servidor al guardar).
+  // Solo para mostrar la ficha sin editar: la ficha abre siempre editable y no hay permiso de «ver sin editar» en el
+  // panel (lo decide el servidor al guardar).
   soloLectura = false,
   onClose,
   mutate,
-  // (21/11/2026) Ficha flotante desde otras pantallas (components/empleado/FichaEmpleado.jsx).
+  // Ficha flotante desde otras pantallas (components/empleado/FichaEmpleado.jsx).
   textoRegresar = "Regresar a la tabla",
   enVentana = false,
 }) {
@@ -103,13 +103,13 @@ export default function FormularioEmpleado({
   );
 
   const [contactosEmergencia, setContactosEmergencia] = useState([]);
-  // (23/11/2026) 5 pestañas: personal · trabajo · checador · pago · documentos.
+  // 5 pestañas: personal · trabajo · checador · pago · documentos.
   const [tab, setTab] = useState("personal");
-  // (22/11/2026) Al editar, el rostro solo se envía si RH capturó uno nuevo: así guardar la ficha no pisa el rostro que la
-  // persona haya actualizado desde su app mientras la ficha estaba abierta. (23/11/2026) También cuenta como cambio sin
+  // Al editar, el rostro solo se envía si RH capturó uno nuevo: así guardar la ficha no pisa el rostro que la
+  // persona haya actualizado desde su app mientras la ficha estaba abierta. También cuenta como cambio sin
   // guardar.
   const [rostroNuevo, setRostroNuevo] = useState(false);
-  // (23/11/2026) Valores con los que abrió la ficha (o con los que se guardó por última vez): contra ellos se decide si
+  // Valores con los que abrió la ficha (o con los que se guardó por última vez): contra ellos se decide si
   // hay cambios sin guardar. Lo que llega del servidor después de abrir (turno asignado, áreas) se suma con
   // sincronizarCampo para no contarlo como cambio.
   const [base, setBase] = useState(null);
@@ -180,7 +180,7 @@ export default function FormularioEmpleado({
 
   const fijarBase = useCallback(() => setBase(copiarValores(form.getValues())), [form]);
   const sincronizarCampo = useCallback((campo, valor) => {
-    // (24/11/2026) También es el nuevo «valor original» del formulario, para que solo cuente lo que la persona toque.
+    // También es el nuevo «valor original» del formulario, para que solo cuente lo que la persona toque.
     // resetField solo actúa sobre campos registrados: tipo_horario, id_turno o areasAsignadas no tienen input propio.
     form.register(campo);
     form.resetField(campo, { defaultValue: copiarValores(valor) });
@@ -666,7 +666,7 @@ export default function FormularioEmpleado({
           variant: "success",
         });
 
-        // (23/11/2026) Lo guardado es la nueva base: ya no hay cambios pendientes. Se queda en la pestaña donde estaba.
+        // Lo guardado es la nueva base: ya no hay cambios pendientes. Se queda en la pestaña donde estaba.
         setSelectedFile(null);
         setRostroNuevo(false);
         // Lo guardado pasa a ser el «valor original» (base y valores por omisión del formulario).
@@ -724,12 +724,12 @@ export default function FormularioEmpleado({
     }
   }, [modoFormulario, editar, soloLectura]);
 
-  // (23/11/2026) ¿Hay algo que se perdería al salir? Valores del formulario contra la base, más lo que se guarda con la
+  // ¿Hay algo que se perdería al salir? Valores del formulario contra la base, más lo que se guarda con la
   // ficha sin vivir en el formulario: foto nueva, rostro capturado con la cámara y, en un empleado nuevo, los contactos de
   // emergencia en borrador. No cuentan: «Continuar desde el celular», firma y PIN, consentimiento del rostro, contactos
   // de un empleado ya guardado, bonos y conceptos de pago (se guardan solos en el servidor).
   const valoresActuales = form.watch();
-  // (24/11/2026) Solo cuenta lo que la persona tocó (y quedó distinto): abrir la ficha nunca marca cambios aunque el
+  // Solo cuenta lo que la persona tocó (y quedó distinto): abrir la ficha nunca marca cambios aunque el
   // sistema acomode datos al cargar (pasaba con datos reales: «no he movido nada y dice cambios sin guardar»).
   const { dirtyFields } = form.formState;
   const hayCambios = !soloLectura && Boolean(base) && hayCambiosPendientes({
@@ -774,7 +774,7 @@ export default function FormularioEmpleado({
   if (error) return <ErrorPage message={error?.message} />;
 
   // Los campos personalizados siguen guardados con su pestaña original (personales, laborales, jornada…): cada sección
-  // los pinta con su clave aunque ahora viva dentro de otra pestaña. Así no se mueve ningún dato.
+  // los pinta con su clave aunque viva dentro de otra pestaña, así no se mueve ningún dato.
   const renderCamposDe = (pestana) => function camposDePestana(despuesDe, agrupar = false) {
     return <CamposEmpleado form={form} campos={camposConfigurados} soloLectura={soloLectura} pestana={pestana} despuesDe={despuesDe} agrupar={agrupar} />;
   };

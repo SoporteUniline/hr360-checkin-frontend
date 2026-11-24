@@ -34,7 +34,7 @@ export default function OTPForm({ onSubmit, form, onCambiarTelefono }) {
           variant: "success",
         }
       );
-      // (24/11/2026, INC-REC-002) El backend entrega un token de un solo uso que /postulaciones/create exige.
+      // (INC-REC-002) El backend entrega un token de un solo uso que /postulaciones/create exige.
       onSubmit(form.getValues(), response?.data?.verification_token || "");
       setLoading(false);
     } catch (error) {

@@ -1,6 +1,6 @@
 "use client";
 
-// Banda de la LFT + totales + tabla de todos los empleados del periodo (maqueta aprobada 19/11/2026).
+// Banda de la LFT + totales + tabla de todos los empleados del periodo.
 // Datos: GET /checador/reportes/horas-ley → reporte.ley (backend services/reporteLey.js).
 
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";

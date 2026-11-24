@@ -5,7 +5,7 @@ import "@/components/landing/home/landing-home.css";
 import "./vacante.css";
 import VacanteDetalle from "./VacanteDetalle";
 
-// Página de una vacante (rediseño 23/11/2026). El servidor solo pide la vacante para el título, la vista previa al
+// Página de una vacante. El servidor solo pide la vacante para el título, la vista previa al
 // compartir y los datos estructurados JobPosting; todo lo demás (preguntas, postulación, OTP) sigue en el navegador,
 // con los datos al momento. Si el API no responde en 2.5 s, la página sale igual con metadatos genéricos.
 // RUTA_BACKEND_SERVIDOR (opcional) permite usar una ruta interna del backend desde el servidor.

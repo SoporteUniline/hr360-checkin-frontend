@@ -58,7 +58,7 @@ export default function PermisoDialog({
     fecha_fin: "",
     motivo: "",
     estado: "Pendiente",
-    // Permisos por horas (20/11/2026)
+    // Permisos por horas
     modalidad: "dias",
     tipo_horas: "",
     tratamiento: "",
@@ -526,7 +526,7 @@ export default function PermisoDialog({
               </div>
             ) : null}
 
-            {/* Días completos o por horas (20/11/2026) */}
+            {/* Días completos o por horas */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Duración</Label>
               <div className="inline-flex w-full overflow-hidden rounded-lg border border-slate-200 sm:w-auto" role="radiogroup" aria-label="Duración del permiso">

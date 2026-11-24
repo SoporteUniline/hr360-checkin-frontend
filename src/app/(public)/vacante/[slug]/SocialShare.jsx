@@ -14,8 +14,7 @@ import {
   EmailShareButton,
 } from "react-share";
 
-// Compartir la vacante (23/11/2026): antes se mandaba el texto literal «{title}»; ahora va el puesto y la empresa.
-// Se dejan las redes que más usan los candidatos en México y «Copiar enlace».
+// Compartir la vacante con el puesto y la empresa. Redes más usadas por candidatos en México y «Copiar enlace».
 export default function SocialShare({ titulo = "" }) {
   const location = usePathname();
   const [copiado, setCopiado] = React.useState(false);

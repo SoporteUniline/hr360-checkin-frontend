@@ -19,7 +19,7 @@ import { useModulosActivos } from "@/components/modulos/useModulos";
 
 export default function TabNomina({ renderCampos = () => null, form, soloLectura }) {
   const periodoPago = form.watch("periodo_pago");
-  // (03/12/2026) Bonos y descuentos son del módulo de Nómina: con Nómina apagado no se muestran (el sueldo sí, es de la ficha).
+  // Bonos y descuentos son del módulo de Nómina: con Nómina apagado no se muestran (el sueldo sí, es de la ficha).
   const { activos } = useModulosActivos();
   const conNomina = !activos || activos.has("nomina");
 
@@ -236,7 +236,7 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
           {renderCampos("fin", true)}
         </div>
       </div>
-      {/* (21/11/2026) Nómina R1: cómo se le paga y qué bonos o descuentos tiene. */}
+      {/* Nómina R1: cómo se le paga y qué bonos o descuentos tiene. */}
       <div className="rounded-xl border-2 border-gray-100 bg-white p-6">
         <h3 className="text-lg font-bold text-gray-900">Pago en la nómina</h3>
         <p className="mb-4 text-sm text-gray-600">Cómo recibe su pago y sus bonos o descuentos de cada periodo.</p>

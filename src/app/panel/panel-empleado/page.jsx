@@ -71,7 +71,7 @@ const TAB_TRIGGER_CLASS =
  */
 export default function PanelEmpleadoPage() {
   const { dataUser } = useAuth();
-  // (03/12/2026) Módulos por empresa: pestañas de Vacaciones, Finiquitos y Aguinaldos solo si su módulo está activo.
+  // Módulos por empresa: pestañas de Vacaciones, Finiquitos y Aguinaldos solo si su módulo está activo.
   const { activos: modulosActivos } = useModulosActivos();
   const conModulo = (clave) => !modulosActivos || modulosActivos.has(clave);
   const router = useRouter();

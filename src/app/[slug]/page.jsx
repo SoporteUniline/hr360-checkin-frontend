@@ -64,9 +64,8 @@ export default function ChecadorPage() {
     };
 
     const fetchAndValidate = async () => {
-      // (21/11/2026) Una vez al día: si hoy ya se validó este reloj en el dispositivo, abre directo.
-      // (22/11/2026) Si se validó activo en los últimos 7 días, también abre directo y valida en segundo plano: así la
-      // primera apertura del día no espera a la red (el dueño vio ~10 s en «Validando acceso»). Si resulta inactiva, se bloquea.
+      // Validado hoy, o activo en los últimos 7 días: abre directo y revalida en segundo plano para que la
+      // primera apertura del día no espere a la red. Si resulta inactiva, se bloquea.
       const hoy = validadaHoy(`slug:${slug}`);
       const reciente = hoy ?? validadaReciente(`slug:${slug}`);
       if (reciente?.idEmpresa) {
@@ -93,7 +92,7 @@ export default function ChecadorPage() {
           return;
         }
         setIdEmpresa(r.id);
-        // Los modelos del rostro (7 MB) se bajan después de validar: antes competían por la red con la validación.
+        // Los modelos del rostro (7 MB) se bajan después de validar para no competir por la red con la validación.
         loadBrowserFaceApi().catch(() => {});
       } catch (err) {
         if (!vigente) return;

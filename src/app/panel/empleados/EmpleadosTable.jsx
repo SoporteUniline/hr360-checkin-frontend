@@ -531,7 +531,7 @@ export default function EmpleadosTable({
                     alt={nombreCompleto}
                   />
                 ) : null}
-                {/* Avatar como en la app del empleado: azul claro con iniciales azules (antes colores al azar). */}
+                {/* Avatar como en la app del empleado: azul claro con iniciales azules. */}
                 <AvatarFallback className="bg-blue-50 text-blue-700 font-semibold text-sm">
                   {getInitials(nombreCompleto)}
                 </AvatarFallback>

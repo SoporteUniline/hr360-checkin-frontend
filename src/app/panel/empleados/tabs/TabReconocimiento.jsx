@@ -37,7 +37,7 @@ export default function TabReconocimiento({
   const [descriptorReady, setDescriptorReady] = useState(false);
   const [rostroCelular, setRostroCelular] = useState(false);
   const { mutate } = useSWRConfig();
-  // (05/12/2026) Registrado desde el celular: se actualiza el estado y el aviso del rostro de la ficha, sin recargar.
+  // Registrado desde el celular: se actualiza el estado y el aviso del rostro de la ficha, sin recargar.
   // No se toca el formulario: al guardar la ficha no se reenvía un rostro (ver rostroCapturado en FormularioEmpleado).
   const idEmpleadoFicha = valores.id_empleado;
   const alRegistrarDesdeCelular = useCallback(() => {
@@ -330,7 +330,7 @@ export default function TabReconocimiento({
     error: "border-red-200 bg-red-50 text-red-700",
   }[guidance.level] ?? "border-slate-200 bg-slate-50 text-slate-700";
 
-  // (05/12/2026, pedido del dueño) Tres columnas en vez de una tira angosta: 1) documento (consentimiento),
+  // Tres columnas en vez de una tira angosta: 1) documento (consentimiento),
   // 2) firma y PIN + aviso del rostro desde la app, 3) reconocimiento facial (instrucciones, cámara y botones).
   // Por ancho del contenedor (no de la ventana): 3 columnas ≥ 1024 px; 2 + 1 en tableta; apiladas en teléfono.
   return (
@@ -388,7 +388,7 @@ export default function TabReconocimiento({
               )}
             </div>
           )}
-          {/* (23/11/2026) También en modo «ver»: el QR guarda el rostro directo en el servidor (con su permiso de RH), no
+          {/* También en modo «ver»: el QR guarda el rostro directo en el servidor (con su permiso de RH), no
               depende de guardar la ficha. Antes se ocultaba y en la ficha abierta en solo lectura no aparecía. */}
           {valores.id_empleado || !soloLectura ? (
             <div className="mt-4 grid gap-2 border-t border-slate-100 pt-4" data-rostro-celular-bloque>

@@ -1,6 +1,6 @@
 "use client";
 
-// Ficha → Checador y acceso (23/11/2026, pedido del dueño): «Firma y PIN» de la persona para RH.
+// Ficha → Checador y acceso: «Firma y PIN» de la persona para RH.
 // RH nunca ve ni escribe el PIN: ve si tiene firma guardada y PIN, si está bloqueado, y puede DESBLOQUEAR (quita el
 // candado de intentos) o RESTABLECER (borra el PIN; la persona crea uno nuevo en su app). Cada acción queda registrada.
 // Reglas de qué mostrar: src/lib/firma/pinRh.mjs (scripts/test-pin-rh.mjs).

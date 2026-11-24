@@ -4,7 +4,7 @@ import { TOTAL_MODULOS } from "@/lib/sitio/modulos";
 import "@/components/landing/home/landing-home.css";
 import "./nosotros.css";
 
-// Nosotros (21/11/2026): mismo estilo que el inicio. Sin cifras que no se puedan comprobar (la versión anterior
+// Nosotros: mismo estilo que el inicio. Sin cifras que no se puedan comprobar (la versión anterior
 // decía «500+ empresas», «50K+ empleados» y «4.9/5» sin fuente); se usan hechos del producto.
 export const metadata = {
   title: "Nosotros | ADAMIA, Recursos Humanos hecho en México",

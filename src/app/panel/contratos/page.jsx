@@ -172,9 +172,8 @@ export default function ContratosPage() {
     if (page > totalPages) setPage(1);
   }, [headerFilterMeta, page, limit]);
 
-  // Estadísticas del universo completo. Se prefieren las del servidor
-  // (`estadisticas`); el cálculo local es fallback e IMPRECISO porque solo ve
-  // la página actual (antes esto hacía que las tarjetas mostraran números mal).
+  // Estadísticas del universo completo: se prefieren las del servidor (`estadisticas`); el cálculo local es
+  // fallback e IMPRECISO porque solo ve la página actual.
   const stats = useMemo(() => {
     const s = estadisticas;
     if (s && (s.total || s.activos || s.porVencer || s.vencidos)) {

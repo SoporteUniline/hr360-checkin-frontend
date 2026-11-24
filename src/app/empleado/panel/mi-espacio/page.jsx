@@ -6,7 +6,7 @@ import { useModulosActivos } from "@/components/modulos/useModulos";
 import { rutaPermitida } from "@/lib/modulos/menu.mjs";
 export default function EmployeeSpace() {
   const { dataUser, logout } = useAuth();
-  // (03/12/2026) Solo lo que su empresa tiene activo (recibos y préstamos = Nómina, activos, evaluaciones, solicitudes).
+  // Solo lo que su empresa tiene activo (recibos y préstamos = Nómina, activos, evaluaciones, solicitudes).
   const { activos, opciones } = useModulosActivos();
   const ver = (href) => rutaPermitida(href, activos, opciones);
   return <div className="space-y-5"><h1 className="text-3xl font-bold tracking-tight">Mi espacio</h1><section className={cardClass}><p className="font-semibold">{dataUser?.nombre}</p><p className="mt-1 break-words text-sm text-slate-500">{dataUser?.correo || dataUser?.email}</p></section>

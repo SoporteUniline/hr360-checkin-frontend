@@ -1,8 +1,7 @@
 "use client";
 
-// Alerta «No marcó salida a comer» + botón para agregar la comida (pedido del 19/11/2026).
-// Parte el tramo en dos en el backend (POST /checador/asistencias/:id/comida); la checada
-// real del reloj se conserva y el registro queda «Editado».
+// Alerta «No marcó salida a comer» + agregar la comida: el backend parte el tramo en dos
+// (POST /checador/asistencias/:id/comida), conserva la checada real y el registro queda «Editado».
 
 import { useState } from "react";
 import { mutate as recargar } from "swr";
@@ -51,7 +50,7 @@ export default function BotonAgregarComida({ registro, aBaseDeDatos, fechaBase, 
       });
       enqueueSnackbar(`Comida agregada: ${salida}–${regreso}. Su checada original se conserva.`, { variant: "success" });
       setAbierto(false);
-      // (19/11/2026) Refresca también las «Checadas del reloj» de la ventana: antes había que cerrar y abrir.
+      // Refresca también las «Checadas del reloj» de la ventana abierta.
       await Promise.all([
         onGuardado?.(),
         recargar((clave) => typeof clave === "string" && clave.includes("/checador/reloj/asistencia-por-empleado")),
@@ -78,7 +77,7 @@ export default function BotonAgregarComida({ registro, aBaseDeDatos, fechaBase, 
           </button>
         )}
       </PopoverTrigger>
-      {/* (19/11/2026) Dentro de la ventana de edición «Guardar comida» no hacía nada: la ventana pone
+      {/* Dentro de la ventana de edición «Guardar comida» no hacía nada: la ventana pone
           pointer-events:none fuera de ella. Arreglado en ui/popover (pointer-events-auto) + z-[60]. */}
       <PopoverContent className="z-[60] w-72 border border-slate-200 bg-white p-4 shadow-xl" data-no-row-click onClick={detener}>
         <p className="text-sm font-semibold text-slate-900">Agregar comida · {registro.nombre} {registro.apellido_paterno}</p>

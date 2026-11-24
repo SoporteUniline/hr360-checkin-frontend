@@ -1,6 +1,6 @@
 "use client";
 
-// Ficha → Checador y acceso → Reconocimiento facial (05/12/2026, pedido del dueño): «Continuar desde el celular».
+// Ficha → Checador y acceso → Reconocimiento facial: «Continuar desde el celular».
 // RH genera un enlace de UN solo uso (15 min) para que ESA persona registre su rostro con la cámara de su celular. Se
 // muestra un QR (dibujado aquí: el enlace no se manda a servicios externos) y el enlace para copiar. Mientras el diálogo
 // está abierto se consulta el estado cada 2.5 s; al detectar «usado» se cierra y avisa. Backend:

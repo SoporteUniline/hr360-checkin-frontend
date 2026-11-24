@@ -49,13 +49,13 @@ export default function ChecadasDelDia({ empleado, activo = true, mutateAsistenc
   const horaVer = (v) => (valida(v) ? hora12(dayjs.tz(v, DB_TIMEZONE).tz(zona)) : "");
   const fechaBase = dayjs.tz(empleado?.entrada, DB_TIMEZONE).tz(zona).format("YYYY-MM-DD");
   const aFecha = (h) => (h ? dayjs(`${fechaBase} ${h}`).format("YYYY-MM-DD HH:mm:ss") : null);
-  // En orden de hora (19/11/2026): el tramo creado al agregar la comida salía antes que el de la mañana.
+  // En orden de hora: el tramo creado al agregar la comida no es el último en la lista del servidor.
   const horaEfectiva = (c) => String(c.entrada_corregida || c.entrada || c.salida_corregida || c.salida || "");
   const registros = Array.isArray(data?.registros)
     ? [...data.registros].sort((a, b) => horaEfectiva(a).localeCompare(horaEfectiva(b)) || Number(a.id) - Number(b.id))
     : [];
 
-  // (23/11/2026) Pausas entre tramos: la de «Salir a comer» se marca como COMIDA (con minutos y si se pasó).
+  // Pausas entre tramos: la de «Salir a comer» se marca como COMIDA (con minutos y si se pasó).
   const aMin = (v) => (valida(v) ? Math.floor(dayjs.tz(v, DB_TIMEZONE).valueOf() / 60000) : null);
   const pausas = pausasDelDia(registros, {
     comida: empleado?.comida_checada,

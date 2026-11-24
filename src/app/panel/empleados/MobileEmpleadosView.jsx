@@ -199,7 +199,7 @@ export default function MobileEmpleadosView({
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Encabezado blanco con acentos azul ADAMIA, como la app del empleado (21/11/2026; antes azul pizarra oscuro).
+      {/* Encabezado blanco con acentos azul ADAMIA, como la app del empleado.
           Sin botón de menú propio: el encabezado general del panel ya lo tiene. */}
       <div className="bg-white text-[#080d36] px-4 pt-3 pb-3 shrink-0 border-b border-slate-200">
         <div className="flex items-center justify-between mb-3">
