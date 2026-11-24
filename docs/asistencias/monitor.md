@@ -78,11 +78,9 @@ tolerancia de salida; lo trabajado del tramo abierto tras varios tramos no se cu
   personas, chips, tarjeta → reloj, celular en secciones, sin desborde a 1440 y 390.
 
 ## Pendiente del backend
-- ❓ PENDIENTE: «Saldrán tarde» necesita las horas extra autorizadas ANTES de que ocurran. `/checador/asistencias` no las
-  manda; el Monitor lee `horas_extra_autorizadas_dia: { hasta: "HH:mm", minutos?, motivo? }` en cada registro (propuesta
-  de contrato en `salidaExtraDe`, hoy.mjs). Sin ese campo no aparece el chip «Extra autorizada hasta …».
-- ❓ PENDIENTE: el motivo de los permisos por horas (`permisos_horas_dia[].motivo`) no viene del backend; sin él la
-  fila dice solo el horario del permiso.
+- ✅ El backend ya manda `horas_extra_autorizadas_dia: { hasta: "HH:mm", minutos, motivo }` (de las horas extra
+  registradas con horario, o de la salida del día si Asistencias dice «Sí» a horas extra; las de reposición no cuentan)
+  y `permisos_horas_dia[].motivo`. Lo cubre `tests/miEquipoBd.test.cjs` en el backend.
 - ❓ PENDIENTE: la maqueta muestra «regresa el jueves» en vacaciones y un filtro «Sucursal»; no hay dato de regreso en
   la consulta del día y el filtro de área ya existe.
 
