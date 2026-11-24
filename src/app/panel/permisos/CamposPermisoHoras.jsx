@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TIPOS_HORAS, TRATAMIENTOS } from "@/lib/asistencia/permisoHoras.mjs";
 import { HORAS } from "@/lib/asistencia/tiposGoce.mjs";
+import SelectConIconos from "@/components/ui/SelectConIconos";
+import { ICONO_HORAS, ICONO_TIPO_HORAS } from "@/components/asistencia/iconosAsistencia";
 
 const opcion = (activa) =>
   `flex-1 rounded-lg border px-3 py-2 text-left text-sm transition ${
@@ -53,15 +55,8 @@ export default function CamposPermisoHoras({ form, setForm, tipoFijo = false, ho
         </div>
         {tipoFijo ? null : <div className="space-y-2">
           <Label className="text-sm font-medium text-gray-700">Tipo</Label>
-          <select
-            aria-label="Tipo de permiso por horas"
-            value={form.tipo_horas}
-            onChange={set("tipo_horas")}
-            className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm"
-          >
-            <option value="">Seleccionar…</option>
-            {TIPOS_HORAS.map((t) => <option key={t.valor} value={t.valor}>{t.texto}</option>)}
-          </select>
+          <SelectConIconos aria="Tipo de permiso por horas" valor={form.tipo_horas} onCambio={set("tipo_horas")} placeholder="Seleccionar…"
+            opciones={TIPOS_HORAS.map((t) => ({ valor: t.valor, texto: t.texto, ...ICONO_TIPO_HORAS[t.valor] }))} />
         </div>}
       </div>
 
@@ -85,11 +80,8 @@ export default function CamposPermisoHoras({ form, setForm, tipoFijo = false, ho
       {horas ? (
         <div className="space-y-2">
           <Label htmlFor="horas-no-trabajadas" className="text-sm font-medium text-gray-700">Horas no trabajadas</Label>
-          <select id="horas-no-trabajadas" aria-label="Horas no trabajadas" value={horas.valor} disabled={horas.bloqueado}
-            onChange={(e) => horas.onChange(e.target.value)}
-            className="h-9 w-full rounded-md border border-input bg-white px-3 text-[13.5px] disabled:bg-slate-50 disabled:text-slate-500">
-            {HORAS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-          </select>
+          <SelectConIconos id="horas-no-trabajadas" aria="Horas no trabajadas" valor={horas.valor} disabled={horas.bloqueado}
+            onCambio={(v) => horas.onChange(v)} opciones={HORAS.map(([v, t]) => ({ valor: v, texto: t, ...ICONO_HORAS[v] }))} />
           {horas.bloqueado ? <p className="text-xs text-slate-500">🔒 Lo fija el tipo de registro.</p> : null}
         </div>
       ) : sinTratamiento ? null : (

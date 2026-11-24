@@ -3,14 +3,11 @@
 // El par «Qué pasó» (tipo) + «Motivo» (por qué): dos selects juntos, del mismo alto, con «Otro…» para escribir el motivo.
 // Lo usan la fila de Asistencias (variante «fila»: se ven como texto, sin cuadro), el reloj del día, la vista móvil y
 // Permisos (variante «campo»). Reglas y opciones en lib/asistencia/quePasoMotivo.mjs; este componente solo dibuja.
+// Los desplegables son SelectConIconos (fondo blanco, icono por opción): iconos en components/asistencia/iconosAsistencia.
 import { GOCES } from "@/lib/asistencia/tiposGoce.mjs";
 import { goceTxt } from "@/lib/asistencia/quePasoMotivo.mjs";
-
-const FLECHA = (
-  <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" fill="none">
-    <path d="M5.5 7.5 10 12l4.5-4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
+import SelectConIconos from "@/components/ui/SelectConIconos";
+import { ICONO_GOCE, iconoMotivo, iconoRol, textoLimpio } from "@/components/asistencia/iconosAsistencia";
 
 // Clases de un campo (select o input) según la variante; `movil` = 44 px y 16 px (iOS no hace zoom).
 export function claseCampo({ variante = "campo", movil = false, error = false } = {}) {
@@ -23,24 +20,33 @@ export function claseCampo({ variante = "campo", movil = false, error = false } 
     + `focus:ring-2 focus:ring-blue-500/30 disabled:bg-slate-50 disabled:text-slate-500 ${error ? "border-rose-300 bg-rose-50" : "border-slate-200"}`;
 }
 
-function Select({ etiqueta, aria, valor, onCambio, opciones, vacio, variante, movil, disabled, error, autoFocus }) {
-  const sel = (
-    <span className={`relative inline-flex min-w-0 ${variante === "fila" ? "max-w-full" : "w-full"}`}>
-      <select aria-label={aria} value={valor} disabled={disabled} autoFocus={autoFocus} onChange={(e) => onCambio(e.target.value)}
-        className={claseCampo({ variante, movil, error })}>
-        {vacio != null ? <option value="">{vacio}</option> : null}
-        {opciones.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-      {FLECHA}
-    </span>
-  );
-  if (!etiqueta) return sel;
+const GRUPO_CLASE = { asistencia: "Día completo", inasistencia: "Día completo", dia: "Otros del catálogo", parcial: "Parte del día", ley: "Días de ley" };
+// { value, label, clase, rol } de opcionesTipo / opcionesMotivo → opciones del desplegable con icono y grupo.
+export const opcionesQuePaso = (opciones) => opciones.map((o) => ({
+  valor: o.value, texto: textoLimpio(o.label), ...iconoRol(o.rol ?? (o.clase === "ley" ? "ley" : null)),
+  grupo: o.historial ? "Anterior" : GRUPO_CLASE[o.clase] ?? null,
+}));
+export const opcionesDeMotivo = (opciones) => opciones.map((o) => ({ valor: o.value, texto: textoLimpio(o.label), ...iconoMotivo(o.label, { otro: o.otro }) }));
+
+function Campo({ etiqueta, children }) {
+  if (!etiqueta) return children;
   return (
-    <label className="flex min-w-0 flex-col gap-1">
-      <span className="text-[12px] font-medium text-slate-500">{etiqueta}</span>
-      {sel}
-    </label>
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="text-[12px] font-medium text-slate-500" aria-hidden>{etiqueta}</span>
+      {children}
+    </div>
   );
+}
+
+// Icono de la opción vacía: «Asistencia» (reloj) con su palomita; «Injustificada» con la X; las demás sin icono.
+function vacioTipoIcono(texto) {
+  const t = textoLimpio(texto).toLowerCase();
+  if (t === "asistencia") { const i = iconoRol("asistencia"); return { iconoVacio: i.icono, tonoVacio: i.tono }; }
+  return {};
+}
+function vacioMotivoIcono(texto) {
+  if (/injustificada/i.test(String(texto ?? ""))) { const i = iconoRol("inasistencia"); return { iconoVacio: i.icono, tonoVacio: i.tono }; }
+  return {};
 }
 
 // tipo / motivo: valores del select ("" = vacío). motivoVisible: false en Asistencia y días de ley.
@@ -56,11 +62,15 @@ export default function QuePasoMotivo({
   return (
     <span className="flex min-w-0 flex-col gap-1.5" data-que-paso-motivo>
       <span className={fila ? "flex min-w-0 flex-wrap items-center gap-1" : `grid min-w-0 gap-3 ${movil ? "" : "sm:grid-cols-2"}`}>
-        <Select etiqueta={etiquetas ? "Qué pasó" : null} aria={`Qué pasó${de}`} valor={tipo} onCambio={onTipo} opciones={tipoOpciones}
-          vacio={tipoVacio} variante={variante} movil={movil} disabled={disabled} />
+        <Campo etiqueta={etiquetas ? "Qué pasó" : null}>
+          <SelectConIconos aria={`Qué pasó${de}`} valor={tipo} onCambio={onTipo} opciones={opcionesQuePaso(tipoOpciones)}
+            vacio={tipoVacio} {...vacioTipoIcono(tipoVacio)} variante={variante} movil={movil} disabled={disabled} />
+        </Campo>
         {motivoVisible ? (
-          <Select etiqueta={etiquetas ? "Motivo" : null} aria={`Motivo${de}`} valor={motivo} onCambio={onMotivo} opciones={motivoOpciones}
-            vacio={motivoVacio} variante={variante} movil={movil} disabled={disabled} error={errorMotivo} autoFocus={autoFocusMotivo} />
+          <Campo etiqueta={etiquetas ? "Motivo" : null}>
+            <SelectConIconos aria={`Motivo${de}`} valor={motivo} onCambio={onMotivo} opciones={opcionesDeMotivo(motivoOpciones)}
+              vacio={motivoVacio} {...vacioMotivoIcono(motivoVacio)} variante={variante} movil={movil} disabled={disabled} error={errorMotivo} autoFocus={autoFocusMotivo} />
+          </Campo>
         ) : null}
       </span>
       {motivoVisible && esOtro ? (
@@ -78,12 +88,9 @@ export function GoceMotivo({ goce, cambia, onCambio, movil = false, disabled = f
     return <span data-goce-fijo className={`inline-flex items-center whitespace-nowrap text-[13px] text-slate-600 ${className}`}>🔒 {goceTxt(goce)}</span>;
   }
   return (
-    <span className={`relative inline-flex min-w-0 ${className}`}>
-      <select aria-label="Goce del día" value={goce} disabled={disabled} onChange={(e) => onCambio?.(e.target.value)}
-        className={claseCampo({ variante: "campo", movil })}>
-        {GOCES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-      </select>
-      {FLECHA}
+    <span className={`inline-flex min-w-0 ${className}`}>
+      <SelectConIconos aria="Goce del día" valor={goce} disabled={disabled} onCambio={(v) => onCambio?.(v)} movil={movil}
+        opciones={GOCES.map(([v, t]) => ({ valor: v, texto: t, ...ICONO_GOCE[v] }))} />
     </span>
   );
 }

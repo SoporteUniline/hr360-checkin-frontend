@@ -79,9 +79,10 @@ export function tiposPermisoCaptura(tipos, { actual = null, conVacaciones = fals
 // Opciones del select «Qué pasó»: [{ value, label }].
 export function opcionesTipo(tipos, { conAsistencia = true } = {}) {
   return [
-    ...(conAsistencia ? [{ value: ASISTENCIA, label: "Asistencia" }] : []),
+    ...(conAsistencia ? [{ value: ASISTENCIA, label: "Asistencia", clase: "asistencia", rol: "asistencia" }] : []),
     // Los días de ley van al final con 🔒 (su goce lo fija la ley, no lleva motivo).
-    ...tipos.map((t) => ({ value: String(t.id), label: claseDe(t) === "ley" ? `${nombreTipo(t)} 🔒` : nombreTipo(t), clase: claseDe(t) })),
+    ...tipos.map((t) => ({ value: String(t.id), label: claseDe(t) === "ley" ? `${nombreTipo(t)} 🔒` : nombreTipo(t), clase: claseDe(t),
+      rol: rolDe(t), historial: Boolean(t._historial) })),
   ];
 }
 
@@ -107,7 +108,7 @@ export function motivosCaptura(motivos) {
   const otro = lista.find((m) => m.otro) ?? { id: OTRO_MOTIVO, nombre: "Otro", global: true, goce: null, horas: null, cambia: true, otro: true, sinCatalogo: true };
   return [...lista.filter((m) => !m.otro), otro];
 }
-export const opcionesMotivo = (motivos) => motivosCaptura(motivos).map((m) => ({ value: m.id, label: m.otro ? "Otro…" : m.nombre }));
+export const opcionesMotivo = (motivos) => motivosCaptura(motivos).map((m) => ({ value: m.id, label: m.otro ? "Otro…" : m.nombre, otro: m.otro }));
 export const motivoPorId = (motivos, id) => (id ? motivosCaptura(motivos).find((m) => m.id === String(id)) ?? null : null);
 // Motivo guardado (id o texto) → { motivo, texto } del par de selects.
 export function motivoGuardado(motivos, { id = null, nombre = "" } = {}) {

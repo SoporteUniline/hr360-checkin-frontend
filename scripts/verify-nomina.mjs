@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
 import crypto from "node:crypto";
+import { elegir, textosOpciones, valorDe } from "./lib/desplegable.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -158,7 +159,7 @@ try {
   await dormir(500);
   await captura(page, "nomina-corregir");
   await ventana.getByLabel("Entrada").fill("09:00");
-  await ventana.getByLabel("Motivo").selectOption("reloj"); // cambiar una hora en el reloj pide motivo
+  await elegir(ventana.getByLabel("Motivo"), "reloj"); // cambiar una hora en el reloj pide motivo
   await ventana.getByRole("button", { name: "Guardar" }).click();
   await page.getByText(/Asistencia corregida: la nómina se recalculó/).waitFor();
   assert.equal(estado.asistencias[0].registros[0].entrada, "2026-11-18 09:00:00");

@@ -9,6 +9,7 @@ import { createHmac, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
+import { elegir, textosOpciones, valorDe } from "./lib/desplegable.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -110,7 +111,7 @@ try {
   await porAutorizar.click();
   const hoja = page.getByRole("dialog", { name: /Pendiente Prueba/ });
   await hoja.getByRole("button", { name: "Separar 1 h 42 min después de las 5:00 p.m. como hora extra" }).click();
-  await hoja.getByLabel("Quién autoriza").selectOption("7");
+  await elegir(hoja.getByLabel("Quién autoriza"), "7");
   await hoja.getByRole("button", { name: "Guardar" }).waitFor();
   assert.equal(await hoja.getByRole("button", { name: "Guardar" }).isDisabled(), false);
   assert.equal(puts.length, 0, "nada se guarda con el PUT viejo de la asistencia");
