@@ -30,7 +30,8 @@ const reg = (o) => ({ fecha: hoy, zona_horaria: "America/Mexico_City", tipo_regi
   hora_entrada_programada: "00:00:00", hora_salida_programada: "23:59:00", tramos_checadas: [], tramos_abiertos: 0, permisos_horas_dia: [],
   horas_extra_registradas: [], ...o });
 const equipo = [
-  reg({ id: 1, id_empleado: 11, nombre: "Ana", apellido_paterno: "Prueba", entrada: `${hoy} 00:01:00`, tramos_abiertos: 1, entrada_tramo_abierto: `${hoy} 00:01:00`,
+  reg({ id: 1, id_empleado: 11, nombre: "Ana", apellido_paterno: "Prueba", entrada: `${hoy} 00:01:00`, tramos_abiertos: 1,
+    entrada_tramo_abierto: `${hoy} 00:01:00`,
     permisos_horas_dia: [{ tipo_horas: "sale_antes", hora_inicio: "23:00", hora_fin: "23:59", motivo: "Cita" }],
     horas_extra_registradas: [{ desde: `${hoy} 16:00:00`, hasta: `${hoy} 19:00:00`, minutos: 180, motivo: "Inventario" }] }),
   reg({ id: 2, id_empleado: 12, nombre: "Beto", apellido_paterno: "Ruiz", tipo_registro_nombre: "Vacaciones", asistencia: 0 }),
@@ -48,10 +49,14 @@ async function rutas(ctx, { esJefe }) {
     const ok = (json, status = 200) => route.fulfill({ status, json, headers: cors });
     if (req.method() === "OPTIONS") return route.fulfill({ status: 204, headers: cors });
     const p = url.pathname.replace("/api", "");
-    if (p.endsWith("/users/verify/token")) return ok({ user: { id_usuario: 10, id_empleado: 10, tipo_usuario: "Empleado", nombre: "Jefa Prueba", id_empresa: 7, empresas: [7] } });
+    if (p.endsWith("/users/verify/token")) {
+      return ok({ user: { id_usuario: 10, id_empleado: 10, tipo_usuario: "Empleado", nombre: "Jefa Prueba", id_empresa: 7, empresas: [7] } });
+    }
     if (p === "/checador/mi-equipo/hoy") {
       pedidos.push(url.search);
-      return ok(esJefe ? { es_jefe: true, fecha: hoy, zona_horaria: "America/Mexico_City", total_equipo: 2, registros: equipo } : { es_jefe: false, registros: [] });
+      return ok(esJefe
+        ? { es_jefe: true, fecha: hoy, zona_horaria: "America/Mexico_City", total_equipo: 2, registros: equipo }
+        : { es_jefe: false, registros: [] });
     }
     return ok({});
   });

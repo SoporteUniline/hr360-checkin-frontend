@@ -36,20 +36,23 @@ const usuario = { id_usuario: -1, tipo_usuario: "Recruiter", id_empresa: 10, nom
 const dia = {
   fecha: "2026-11-23", tipo_registro_nombre: "Asistencia", id_tipo_permiso: 14, asistencia: 1, goce_sueldo: 1, correccion: 1, estadoAsistencia: "Presente",
   departamento: "Ventas", zona_horaria: "America/Mexico_City", hrs_comida: 0.5, apellido_materno: "",
-  hora_entrada_programada: "09:00:00", hora_salida_programada: "16:00:00", hora_salida_comida_programada: "14:00:00", hora_regreso_comida_programada: "14:30:00",
+  hora_entrada_programada: "09:00:00", hora_salida_programada: "16:00:00",
+  hora_salida_comida_programada: "14:00:00", hora_regreso_comida_programada: "14:30:00",
 };
 const alondra = { ...dia, id: 501, id_empleado: 15, nombre: "Alondra", apellido_paterno: "Munguía",
   entrada: "2026-11-23 09:18:00", salida: "2026-11-23 16:08:00",
   tramos_checadas: [{ entrada: "2026-11-23 09:18:00", salida: "2026-11-23 14:00:00" }, { entrada: "2026-11-23 14:30:00", salida: "2026-11-23 16:08:00" }],
   minutos_trabajados_checadas: 380, minutos_descanso_checadas: 30,
-  comida_checada: { salida: "2026-11-23 14:00:00", regreso: "2026-11-23 14:30:00", minutos: 30, minutos_programados: 30, excedente: 0, manual: true, id_movimiento: 91,
+  comida_checada: { salida: "2026-11-23 14:00:00", regreso: "2026-11-23 14:30:00", minutos: 30, minutos_programados: 30, excedente: 0,
+    manual: true, id_movimiento: 91,
     agrego: { nombre_usuario: "Laura Méndez", creado_en: "2026-11-23 17:12:00.000000" } } };
 const beto = { ...dia, id: 502, id_empleado: 16, nombre: "Beto", apellido_paterno: "Ruiz", correccion: 0,
   entrada: "2026-11-23 09:00:00", salida: "2026-11-23 18:40:00",
   tramos_checadas: [{ entrada: "2026-11-23 09:00:00", salida: "2026-11-23 18:40:00" }], minutos_trabajados_checadas: 580, minutos_descanso_checadas: 0 };
 const registros = [alondra, beto];
 const semana = ["2026-11-23", "2026-11-24", "2026-11-25", "2026-11-26", "2026-11-27", "2026-11-28", "2026-11-29"];
-const jornadas = Object.fromEntries(semana.map((f, i) => [f, i < 5 ? { entrada: "09:00", salida: "16:00" } : i === 5 ? { entrada: "09:00", salida: "14:00" } : null]));
+const jornadaDia = (i) => (i < 5 ? { entrada: "09:00", salida: "16:00" } : i === 5 ? { entrada: "09:00", salida: "14:00" } : null);
+const jornadas = Object.fromEntries(semana.map((f, i) => [f, jornadaDia(i)]));
 
 const peticiones = { comida: [], horas: [] };
 let exito = false;
@@ -70,20 +73,23 @@ try {
     const url = new URL(req.url());
     if (url.origin === base && !url.pathname.startsWith("/api/")) return route.continue();
     const json = (data, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Access-Control-Allow-Origin": base,
-      "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Headers": "authorization,content-type", "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS" },
+      "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Headers": "authorization,content-type",
+      "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS" },
       body: JSON.stringify(data) });
     if (req.method() === "OPTIONS") return json({});
     const p = url.pathname;
     if (p.endsWith("/users/verify/token")) return json({ user: usuario });
     if (p.endsWith("/checador/reloj/asistencia-por-empleado")) {
       return json({ registros: url.searchParams.get("empleado") === "15"
-        ? [{ id: 91, entrada: "2026-11-23 09:18:00", salida: "2026-11-23 16:08:00", salida_corregida: "2026-11-23 14:00:00", estado: "Cerrado", tipo_cierre: "comida" },
+        ? [{ id: 91, entrada: "2026-11-23 09:18:00", salida: "2026-11-23 16:08:00", salida_corregida: "2026-11-23 14:00:00", estado: "Cerrado",
+          tipo_cierre: "comida" },
           { id: 92, entrada: null, salida: null, entrada_corregida: "2026-11-23 14:30:00", salida_corregida: "2026-11-23 16:08:00", estado: "Cerrado" }]
         : [{ id: 93, entrada: "2026-11-23 09:00:00", salida: "2026-11-23 18:40:00", estado: "Cerrado" }] });
     }
     if (p.endsWith("/checador/tiposPermiso")) return json({ tiposPermiso: [{ id: 14, nombre: "Asistencia" }] });
     if (p.endsWith("/checador/empleados")) {
-      return json({ data: [{ id_empleado: 7, nombre: "Laura", apellido_paterno: "Méndez" }, { id_empleado: 15, nombre: "Alondra", apellido_paterno: "Munguía" }], total: 2 });
+      const lista = [{ id_empleado: 7, nombre: "Laura", apellido_paterno: "Méndez" }, { id_empleado: 15, nombre: "Alondra", apellido_paterno: "Munguía" }];
+      return json({ data: lista, total: 2 });
     }
     if (p.endsWith("/checador/asistencias") && req.method() === "GET") return json({ registros, total: registros.length, page: 1, aplicarPaginacion: true });
     if (/\/checador\/asistencias\/\d+\/comida\/\d+$/.test(p)) {
