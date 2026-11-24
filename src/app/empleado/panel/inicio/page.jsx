@@ -15,6 +15,8 @@ import ComidaEnCurso from "@/components/empleado/ComidaEnCurso";
 import MiSemana from "@/components/empleado/MiSemana";
 import { useModulosActivos } from "@/components/modulos/useModulos";
 import { rutaPermitida } from "@/lib/modulos/menu.mjs";
+import AvisoEncuestas from "@/components/clima/AvisoEncuestas";
+import { RUTA_EMPLEADO } from "@/lib/clima/pendientes.mjs";
 
 export default function EmployeeHome() {
   const session = useEmpleadoSesion();
@@ -27,6 +29,7 @@ export default function EmployeeHome() {
   const conSolicitudes = rutaPermitida("/empleado/panel/solicitudes", activos, opciones);
   return <div className="space-y-4">
     <div><h1 className="text-3xl font-bold tracking-tight">Hola, {session.dataUser?.nombre?.split(" ")[0] || "bienvenido"}</h1><p className="mt-1 text-base first-letter:uppercase text-slate-500">{new Intl.DateTimeFormat("es-MX", { weekday: "long", day: "numeric", month: "long", timeZone: timezone }).format(new Date())}</p></div>
+    <AvisoEncuestas base={RUTA_EMPLEADO} />
     <ComidaEnCurso comida={data?.comida} timezone={data?.zona_horaria || timezone} />
     <section className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
       <h2 className="mb-3 font-semibold">Tu jornada de hoy</h2>

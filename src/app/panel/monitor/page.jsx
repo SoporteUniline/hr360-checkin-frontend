@@ -21,6 +21,8 @@ import { cn } from "@/lib/utils";
 import { CuentaHorasProvider } from "@/app/panel/registro-asistencia/CuentaHorasContext";
 import RelojDiaDialog from "@/app/panel/registro-asistencia/RelojDiaDialog";
 import VistaMonitor from "./VistaMonitor";
+import AvisoEncuestas from "@/components/clima/AvisoEncuestas";
+import { RUTA_PANEL } from "@/lib/clima/pendientes.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -93,6 +95,8 @@ export default function MonitorPage() {
             <EncabezadoPagina icono={Activity} titulo="Monitor" subtitulo={`${textoFechaHoy(zona, ahora)} · ${hora} · se actualiza solo`}
               acciones={<EnlaceHistorial />} />
           )}
+          {/* RH o dueño que también son empleados: sus encuestas por contestar (nada si no hay o no tiene ficha). */}
+          <AvisoEncuestas base={RUTA_PANEL} />
           {contenido}
           {isMobile ? <EnlaceHistorial className="w-full justify-center" /> : null}
         </div>

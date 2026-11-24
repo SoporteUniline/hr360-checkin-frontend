@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import { destinoSeguro, urlLogin } from "@/lib/destinoLogin.mjs";
+import { RUTA_NEUTRA, rutaMisEncuestas } from "@/lib/clima/pendientes.mjs";
 
 //Prueba CI/CD
 
@@ -60,12 +62,14 @@ export async function middleware(request) {
     }
   }
 
+  // Sin sesión, a una ruta protegida (o a «Mis encuestas», la liga del correo): al login recordando a dónde iba.
+  const rutaActual = `${pathname}${request.nextUrl.search}`;
   if (!token) {
-    const protectedRoutes = ["/dashboard", "/panel", "/home", "/empleado"].some(
+    const protectedRoutes = ["/dashboard", "/panel", "/home", "/empleado", RUTA_NEUTRA].some(
       (path) => pathname.startsWith(path),
     );
     if (protectedRoutes) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return NextResponse.redirect(new URL(urlLogin(rutaActual), request.url));
     }
     return NextResponse.next();
   }
@@ -77,9 +81,17 @@ export async function middleware(request) {
     // console.log("🧠 Tipo de usuario detectado:", tipoUsuario);
 
     if (pathname === "/login" || pathname === "/register") {
+      // Con sesión abierta, el login respeta ?next= (solo ruta interna segura); las reglas de acceso se aplican al llegar.
+      const siguiente = pathname === "/login" ? destinoSeguro(request.nextUrl.searchParams.get("next")) : null;
       const redirectTo =
-        defaultRedirects[tipoUsuario] || (isNativeApp ? "/panel" : "/");
+        siguiente || defaultRedirects[tipoUsuario] || (isNativeApp ? "/panel" : "/");
       return NextResponse.redirect(new URL(redirectTo, request.url));
+    }
+
+    // «Mis encuestas» (liga del correo de Clima): la app del empleado o el panel de RH y dueño.
+    if (pathname === RUTA_NEUTRA || pathname === `${RUTA_NEUTRA}/`) {
+      const destino = rutaMisEncuestas(tipoUsuario) || defaultRedirects[tipoUsuario] || "/";
+      return NextResponse.redirect(new URL(destino, request.url));
     }
 
     const allowedPaths = accessRules[tipoUsuario] || [];
@@ -98,7 +110,7 @@ export async function middleware(request) {
     response.headers.set('Cache-Control', 'private, no-store');
     return response;
   } catch (err) {
-    const response = NextResponse.redirect(new URL("/login", request.url));
+    const response = NextResponse.redirect(new URL(urlLogin(rutaActual), request.url));
     response.cookies.delete("token");
     return response;
   }
@@ -112,6 +124,7 @@ export const config = {
     "/home/:path*",
     "/empleado/:path*",
     "/login",
+    "/mis-encuestas",
     "/register/:path*",
     "/contratar-plan/:path*",
     "/cotiza/:path*",

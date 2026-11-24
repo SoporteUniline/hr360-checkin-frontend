@@ -13,7 +13,7 @@ export default function EncabezadoPagina({
   return (
     <div>
       <div className="flex items-center gap-3">
-        <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-brand shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
           {Icono ? <Icono className="h-5 w-5 text-white" /> : null}
         </div>
         <div className="min-w-0">
