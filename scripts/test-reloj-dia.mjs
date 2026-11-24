@@ -244,3 +244,20 @@ test("motivo de corrección «Otro»: viaja como «otro: <texto>», al menos 3 l
   assert.equal(cuerpoPut([ok], { fecha: F, zona: Z }).registros[0].motivo, "otro: Junta en planta");
   assert.equal(MAX_TEXTO_OTRO, 34);
 });
+
+// (25/11/2026) «Salir a comer» del reloj: la pausa siguiente se dibuja como comida (sin renglón «comida»).
+test("pausaComidaTras: la pausa después de un tramo cerrado con «Salir a comer»", async () => {
+  const { pausaComidaTras } = await import("../src/lib/asistencia/relojDia.mjs");
+  const F = "2026-11-24";
+  const base = (id, e, s, o = {}) => ({ id, entrada: e, salida: s, entrada_reloj: e, salida_reloj: s, concepto: "jornada", origen: "reloj", ...o });
+  const orden = ordenar(desdeApi([base(1, `${F} 08:56:00`, `${F} 11:21:00`, { tipo_cierre: "comida" }), base(2, `${F} 11:46:00`, null)], { fecha: F }));
+  assert.deepEqual(pausaComidaTras(orden, 0), { desde: 11 * 60 + 21, hasta: 11 * 60 + 46, minutos: 25 });
+  assert.equal(pausaComidaTras(orden, 1), null, "el tramo abierto no es comida");
+  const sinRegreso = ordenar(desdeApi([base(1, `${F} 08:56:00`, `${F} 11:21:00`, { tipo_cierre: "comida" })], { fecha: F }));
+  assert.deepEqual(pausaComidaTras(sinRegreso, 0), { desde: 11 * 60 + 21, hasta: null, minutos: null });
+  const conRenglon = ordenar(desdeApi([base(1, `${F} 09:00:00`, `${F} 13:00:00`, { tipo_cierre: "comida" }),
+    base(2, `${F} 13:00:00`, `${F} 14:00:00`, { concepto: "comida" }), base(3, `${F} 14:00:00`, `${F} 18:00:00`)], { fecha: F }));
+  assert.equal(pausaComidaTras(conRenglon, 0), null, "con renglón de comida no se repite");
+  const normal = ordenar(desdeApi([base(1, `${F} 09:00:00`, `${F} 14:00:00`), base(2, `${F} 14:00:00`, null)], { fecha: F }));
+  assert.equal(pausaComidaTras(normal, 0), null, "una salida normal no es comida");
+});
