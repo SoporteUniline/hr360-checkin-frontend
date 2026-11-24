@@ -338,7 +338,8 @@ try {
   assert.ok(!opcionesEstado.some((t) => /Asistencia · en jornada|· /.test(t)), `sin textos que no sean de la columna: ${opcionesEstado.join(" | ")}`);
   await page.locator("[data-radix-popper-content-wrapper] div[role=button]", { hasText: "⌚ Entrada tarde" }).click();
   await page.keyboard.press("Escape");
-  const nombresFiltrados = await page.locator("tbody tr").allInnerTexts();
+  // Con «Hoy» la tabla se divide por situación: se cuentan solo las filas de personas (no los encabezados de grupo).
+  const nombresFiltrados = await page.locator("tbody tr:not([data-grupo])").allInnerTexts();
   assert.ok(nombresFiltrados.length === 1 && /Marta Díaz/.test(nombresFiltrados[0]), `filtrado por «⌚ Entrada tarde»: ${nombresFiltrados.length} filas`);
   await thEstado.getByRole("button").first().click();
   await page.getByRole("button", { name: "Limpiar filtro" }).click();
