@@ -1,4 +1,4 @@
-// Horario contra el límite legal de la semana (23/11/2026).
+// Horario contra el límite legal de la semana.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { minutosSemanaHorario, avisoLimiteLegal, hoyMexico } from "../src/lib/asistencia/limiteLegal.mjs";

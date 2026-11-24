@@ -1,4 +1,4 @@
-// Verificación en navegador de la recuperación de contraseña (20/11/2026): el código se verifica con el
+// Verificación en navegador de la recuperación de contraseña: el código se verifica con el
 // correo y el cambio de contraseña lleva el token de recuperación que da el backend.
 // Backend simulado, nada sale a internet. Uso: npm run build && node scripts/verify-recuperacion.mjs
 import assert from "node:assert/strict";

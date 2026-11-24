@@ -1,4 +1,4 @@
-// Verificación DE PUNTA A PUNTA de Tareas y Checklists (23/11/2026): navegador → frontend → backend real
+// Verificación DE PUNTA A PUNTA de Tareas y Checklists: navegador → frontend → backend real
 // (/api/checador/tareas contra MariaDB de prueba; solo sesión y S3 simulados, ver backend scripts/servidor-prueba-tareas.cjs).
 // Uso:
 //   NEXT_PUBLIC_RUTA_BACKEND=http://127.0.0.1:4010/api npm run build
@@ -47,7 +47,7 @@ try {
   const pg = await ctx.newPage();
   pg.on("pageerror", (e) => errores.push(e.message));
 
-  // 1) El dueño activa el módulo (03/12/2026: aviso común de «Módulos por empresa», con «Activar» ahí mismo).
+  // 1) El dueño activa el módulo (aviso común de «Módulos por empresa», con «Activar» ahí mismo).
   await pg.goto(base + "/panel/tareas", { waitUntil: "domcontentloaded" });
   await pg.locator("[data-modulo-inactivo='tareas']").getByText("Este módulo no está activo para tu empresa").waitFor({ timeout: 30000 });
   await pg.getByRole("button", { name: "Activar Tareas y Checklists" }).click();
@@ -105,7 +105,7 @@ try {
   await preg("¿Cómo está el comedor?").getByRole("button", { name: "Regular", exact: true }).click();
   await preg("¿Cómo está el comedor?").locator('input[type="file"]').setInputFiles({ name: "comedor.png", mimeType: "image/png", buffer: PNG });
   await preg("¿Cómo está el comedor?").getByRole("img", { name: "Foto de evidencia" }).waitFor({ timeout: 15000 }); // ya subida y servida por el backend
-  // (23/11/2026) Firma con PIN: Ana tiene firma guardada y PIN (482915). PIN incorrecto → aviso; correcto → firma estampada.
+  // Firma con PIN: Ana tiene firma guardada y PIN (482915). PIN incorrecto → aviso; correcto → firma estampada.
   const pFirma = preg("Firma de quien abre");
   await pFirma.getByRole("button", { name: "Firmar con mi PIN" }).click();
   await pFirma.getByLabel("Tu PIN de 6 dígitos").fill("135790");
@@ -117,7 +117,7 @@ try {
   await captura(pe, "real-app-firma-pin");
   // Y también se puede volver a firmar dibujando.
   await pFirma.getByRole("button", { name: "Volver a firmar" }).click();
-  // (23/11/2026) En celular, «Firmar» abre la firma a pantalla completa (horizontal) con «Borrar» y «Listo, firmar».
+  // En celular, «Firmar» abre la firma a pantalla completa (horizontal) con «Borrar» y «Listo, firmar».
   await preg("Firma de quien abre").getByRole("button", { name: "Firmar dibujando" }).click();
   const pantallaFirma = pe.locator("[data-firma-pantalla]");
   await pantallaFirma.waitFor();

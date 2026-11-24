@@ -1,4 +1,4 @@
-// Verificación en navegador (23/11/2026): la ficha del empleado abre ya editable, «Guardar» solo se activa con cambios,
+// Verificación en navegador: la ficha del empleado abre ya editable, «Guardar» solo se activa con cambios,
 // y con cambios sin guardar cualquier salida pregunta «Tienes cambios sin guardar. ¿Qué quieres hacer?»:
 // «Regresar a la tabla», menú lateral, enlace interno <a>, botón atrás del navegador y beforeunload (recargar/cerrar).
 // «Guardar y salir» hace el PUT y sale; si el servidor falla, se queda. Abrir la ficha y recorrer sus pestañas (turno
@@ -262,7 +262,7 @@ try {
   assert.ok(largoSinCambios > 0);
   pasos.push("9 guardar limpia");
 
-  // 11) (23/11/2026) Fechas que llegan con hora se ven en el campo; el turno elegido no se pierde al cambiar de pestaña.
+  // 11) Fechas que llegan con hora se ven en el campo; el turno elegido no se pierde al cambiar de pestaña.
   await abrirDesdeTabla(pg);
   await pg.getByRole("tab", { name: "Personal" }).click();
   await pg.waitForFunction(() => document.querySelector('#formulario-empleado input[name="fecha_nacimiento"]')?.value === "1990-05-02", null, { timeout: 5000 })
@@ -290,7 +290,7 @@ try {
   await enTabla(pg);
   pasos.push("11 fechas con hora y turno al cambiar de pestaña");
 
-  // 12) (24/11/2026, «no he movido nada y dice cambios sin guardar») Abrir por enlace directo (?id=) a alguien con un
+  // 12) Abrir por enlace directo (?id=) a alguien con un
   // dato que no está en la lista (sexo «F»): no marca cambios y el dato se conserva y se manda tal cual al guardar.
   await pg.goto(base + "/panel/empleados?id=15", { waitUntil: "domcontentloaded" });
   await nombre(pg).waitFor({ timeout: 30000 });

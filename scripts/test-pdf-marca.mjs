@@ -1,4 +1,4 @@
-// Formato homologado de los PDF de ADAMIA (23/11/2026): nombre de archivo sin
+// Formato homologado de los PDF de ADAMIA: nombre de archivo sin
 // datos personales y, en cada página, logotipo ADAMIA y «Generado con ADAMIA ·
 // fecha · Página X de Y». Genera los PDF reales con jsPDF en Node.
 // Uso: node --test scripts/test-pdf-marca.mjs

@@ -170,7 +170,7 @@ try {
   if (!profile) throw new Error('Primero abre el reloj de empresa o el del empleado con internet y pulsa “Preparar reloj offline”.');
   await currentSession();
   $('employee').textContent = profile.nombre;
-  // (23/11/2026) «Salir a comer» disponible sin conexión para cierre manual y automático.
+  // «Salir a comer» disponible sin conexión para cierre manual y automático.
   const actions = profile.scope === 'company' ? ['entrada', 'salida', 'salida_comida', 'salida_temporal', 'cerrar_turno'] : profile.cierre_turno === 'Manual' ? ['entrada', 'salida_comida', 'salida_temporal', 'cerrar_turno'] : ['entrada', 'salida_comida', 'salida'];
   for (const action of actions) $('action').add(new Option(labels[action], action));
   const methods = ['codigo'];

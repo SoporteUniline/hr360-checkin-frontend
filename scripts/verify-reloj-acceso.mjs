@@ -1,4 +1,4 @@
-// Verificación en navegador del acceso al reloj por slug (22/11/2026): la primera vez valida antes de abrir; si este aparato
+// Verificación en navegador del acceso al reloj por slug: la primera vez valida antes de abrir; si este aparato
 // lo validó activo en los últimos 7 días abre sin «Validando acceso» y revalida en segundo plano; si en segundo plano
 // resulta inactiva, se bloquea. Backend simulado (las respuestas tardan 3 s para ver que no se espera).
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-reloj-acceso.mjs

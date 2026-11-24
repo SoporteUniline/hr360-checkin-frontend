@@ -1,4 +1,4 @@
-// Candidato de WhatsApp en el proceso de selección (04/12/2026): etapas rápidas, sugerencia, aviso por WhatsApp (texto
+// Candidato de WhatsApp en el proceso de selección: etapas rápidas, sugerencia, aviso por WhatsApp (texto
 // prellenado y ventana de 24 h), atajos de teclado y filtro de la bandeja. Uso: node --test scripts/test-proceso-whatsapp.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";

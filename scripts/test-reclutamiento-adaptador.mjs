@@ -1,4 +1,4 @@
-// Reclutamiento real (03/12/2026): traducción servidor ↔ pantallas y preguntas del formulario público.
+// Reclutamiento real: traducción servidor ↔ pantallas y preguntas del formulario público.
 // Uso: node --test scripts/test-reclutamiento-adaptador.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -105,7 +105,7 @@ test("formulario público: preguntas obligatorias y respuestas a enviar", () => 
   assert.deepEqual(respuestasParaEnviar(preguntas, { a: "x", b: "", c: ["L"], z: "no" }), { a: "x", c: ["L"] });
 });
 
-// 04/12/2026: candidato de WhatsApp con el mismo proceso (postulación con origen «whatsapp»).
+// Candidato de WhatsApp con el mismo proceso (postulación con origen «whatsapp»).
 test("candidato de WhatsApp: postulación con proceso, entrevista, sugerencia y cuerpo de etapa", async () => {
   const { aCandidato, aCuerpoEtapa, aCandidatoWhatsapp } = await import("../src/lib/reclutamiento/adaptador.mjs");
   const c = aCandidato({

@@ -1,4 +1,4 @@
-// Verificación en navegador (24/11/2026): Mi cuenta del panel rediseñada. Comprueba las 3 pestañas; guardar la información
+// Verificación en navegador: Mi cuenta del panel rediseñada. Comprueba las 3 pestañas; guardar la información
 // básica (PUT /users/:id con { nombre, correo }); foto con vista previa (PUT /users/:id/upload-image); contraseña con
 // mostrar/ocultar, recomendaciones en vivo, la validación de siempre y PUT /users/update-password/:id; la empresa
 // (PUT /empresas/:id, validación de teléfono); «Guardar» solo con cambios; la guardia de salida que guarda todo lo

@@ -259,7 +259,7 @@ test("sin coincidencia: los primeros 1.5 s reintenta rápido sin aviso; después
   const message = "No se encontr\u00f3 coincidencia facial";
   const env = setup({ postError: message });
   await startRecognition(env);
-  // (19/11/2026) Primer cuadro borroso al entrar: no se muestra «no se encontró» y se reintenta a los 200 ms.
+  // Primer cuadro borroso al entrar: no se muestra «no se encontró» y se reintenta a los 200 ms.
   assert.ok(!env.texts().includes(message), "el primer fallo no muestra el aviso");
   assert.equal(env.counts().posts, 1);
   env.advance(150);

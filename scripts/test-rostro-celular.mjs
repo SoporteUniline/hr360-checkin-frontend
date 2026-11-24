@@ -1,4 +1,4 @@
-// «Continuar desde el celular» (05/12/2026): reglas puras del enlace QR (src/lib/rostro/enlaceCelular.mjs).
+// «Continuar desde el celular»: reglas puras del enlace QR (src/lib/rostro/enlaceCelular.mjs).
 import test from "node:test";
 import assert from "node:assert/strict";
 import { cuentaRegresiva, dominioEnlace, errorPublico, INTERVALO_ESTADO_MS, matrizQr, mensajeListo, segundosHasta, trasEstado, trazoQr, urlEnlaceRostro, venceEn } from "../src/lib/rostro/enlaceCelular.mjs";

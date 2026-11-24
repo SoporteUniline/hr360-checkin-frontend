@@ -1,8 +1,8 @@
-// Verificación en navegador (05/12/2026): ficha → «Checador y acceso» en 3 columnas (1440 px) y apilada (390 px), y
+// Verificación en navegador: ficha → «Checador y acceso» en 3 columnas (1440 px) y apilada (390 px), y
 // «Continuar desde el celular»: QR + enlace, el celular abre el enlace, acepta el aviso y guarda el rostro, el escritorio
 // lo detecta solo, y el enlace usado o vencido muestra el error. Backend simulado; cámara falsa de Chromium y face-api
 // simulado en el celular (como scripts/verify-firma-pin.mjs).
-// (23/11/2026) Guía en vivo en el celular (sin rostro, fuera del óvalo, bien → botón deshabilitado/habilitado), toma
+// Guía en vivo en el celular (sin rostro, fuera del óvalo, bien → botón deshabilitado/habilitado), toma
 // inconsistente («La toma no salió bien…»), «✅ Rostro correcto» al terminar y, en la ficha, estado con fecha y origen y
 // «Probar rostro» con coincide y no coincide (sin guardar nada). window.__escena elige lo que «ve» el face-api simulado.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx npm run build
@@ -139,7 +139,7 @@ const faceapiFalso = () => {
 async function abrirFicha(pg, movil = false) {
   await pg.goto(base + "/panel/empleados", { waitUntil: "domcontentloaded" });
   if (movil) {
-    // En el teléfono la lista abre la ficha ya editable (23/11/2026: sin el paso de solo lectura con «Editar»).
+    // En el teléfono la lista abre la ficha ya editable (sin el paso de solo lectura con «Editar»).
     await pg.getByRole("button", { name: /Ana Torres/ }).first().click({ timeout: 30000 });
     await pg.locator("[data-boton-guardar]:visible").waitFor({ timeout: 30000 });
   } else {
@@ -188,7 +188,7 @@ try {
   await abrirFicha(rh);
   const c3 = await columnas(rh);
   assert.ok(c3[0].x < c3[1].x && c3[1].x < c3[2].x, `3 columnas: ${JSON.stringify(c3)}`);
-  // (23/11/2026) El QR del código de acceso (NIP) se genera en el navegador: ningún tercero recibe el NIP.
+  // El QR del código de acceso (NIP) se genera en el navegador: ningún tercero recibe el NIP.
   const qrNip = rh.getByAltText("QR Empleado").first();
   assert.match(await qrNip.getAttribute("src"), /^data:image\/gif;base64,/, "QR del código generado localmente");
   assert.ok(await qrNip.evaluate((img) => img.complete && img.naturalWidth > 20), "la imagen del QR carga");

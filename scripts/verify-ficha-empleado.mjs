@@ -1,4 +1,4 @@
-// Verificación en navegador: ficha del empleado en 5 pestañas (23/11/2026). Backend simulado.
+// Verificación en navegador: ficha del empleado en 5 pestañas. Backend simulado.
 // Revisa: pestañas Personal · Trabajo · Checador y acceso · Pago · Documentos; CURP/RFC/NSS una sola vez; estado civil sin
 // «sin-seleccion»; «Cambiar contraseña» en Checador; un error lleva a su pestaña; en teléfono las pestañas llevan nombre.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-ficha-empleado.mjs

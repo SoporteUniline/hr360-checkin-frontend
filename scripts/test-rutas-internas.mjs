@@ -1,4 +1,4 @@
-// Regresión (23/11/2026, «No pudimos cargar tu equipo: Unexpected token '<'»): en dev/prod el proxy manda /api/* al
+// Regresión: en dev/prod el proxy manda /api/* al
 // backend de Express, salvo unas rutas que sí llegan a Next. Las rutas de Next que usa el navegador deben llamarse por
 // /internal/* (con su rewrite en next.config.mjs), nunca por /api/*.
 import { test } from "node:test";

@@ -1,14 +1,15 @@
-// Verificación en navegador de la bolsa de trabajo pública (rediseño 23/11/2026): /bolsa-de-trabajo y /vacante/[slug].
+// Verificación en navegador de la bolsa de trabajo pública: /bolsa-de-trabajo y /vacante/[slug].
 // Backend simulado (nada sale a internet): el navegador pide a https://api.prueba.invalid (interceptado) y el servidor
 // de Next pide la vacante a un servidor local (RUTA_BACKEND_SERVIDOR) para el título y el JSON-LD.
 // Cubre: escritorio 1440 y celular 390 sin desborde; buscar y filtrar con los parámetros exactos del API; paginación;
 // vacío y error con «Reintentar»; tira de empresas (?bolsa=1); hoja de filtros en celular; abrir una vacante y
 // postularse (preguntas propias, CV, OTP incorrecto y correcto, token y multipart); vacante inexistente y error;
 // controles de al menos 44 px; y que no aparezca «HR360» en el texto, el título ni las imágenes.
-// Carrusel de la portada (24/11/2026): avanza solo de lado a lado, puntos, flechas, teclado, pausa (botón, cursor y
+// Carrusel de la portada: avanza solo de lado a lado, puntos, flechas, teclado, pausa (botón, cursor y
 // tocar), deslizar con el dedo, «reducir movimiento», buscador fijo mientras cambian las diapositivas, y el enlace
 // «Bolsa de trabajo» del menú del sitio (escritorio y celular) lleva a /bolsa-de-trabajo.
-// Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx NEXT_PUBLIC_RECRUITMENT_ENABLED=true npm run build
+// Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx \
+//      NEXT_PUBLIC_RECRUITMENT_ENABLED=true npm run build
 //      CAPTURAS=/ruta/capturas node scripts/verify-bolsa.mjs
 import { spawn } from "node:child_process";
 import { createServer as servidorNet } from "node:net";

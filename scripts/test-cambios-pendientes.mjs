@@ -1,4 +1,4 @@
-// Pruebas de src/lib/cambiosPendientes.mjs (23/11/2026): cuándo la ficha del empleado tiene cambios sin guardar y qué
+// Pruebas de src/lib/cambiosPendientes.mjs: cuándo la ficha del empleado tiene cambios sin guardar y qué
 // enlaces detiene la guardia de salida.
 import test from "node:test";
 import assert from "node:assert/strict";

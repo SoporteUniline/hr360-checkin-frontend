@@ -57,7 +57,7 @@ Object.assign(registros[8], { nombre: "SinComida", ...comidaHorario,
 Object.assign(registros[9], { nombre: "DosTramos", ...comidaHorario,
   tramos_checadas: [{ entrada: "2026-11-13 08:07:00", salida: "2026-11-13 13:00:00" }, { entrada: "2026-11-13 14:00:00", salida: "2026-11-13 17:20:00" }],
   minutos_trabajados_checadas: 493, minutos_descanso_checadas: 60 });
-// (23/11/2026) Comida marcada con «Salir a comer»: columna propia «Comida».
+// Comida marcada con «Salir a comer»: columna propia «Comida».
 Object.assign(registros[12], { nombre: "ComidaBoton",
   comida_checada: { salida: "2026-11-13 13:00:00", regreso: "2026-11-13 14:05:00", minutos: 65, minutos_programados: 60, excedente: 5 } });
 Object.assign(registros[3], { nombre: "Editado", correccion: 1, valores_originales: JSON.stringify({ salida: "2026-11-13 13:19:00", id_tipo_permiso: 2 }) });
@@ -88,7 +88,7 @@ try {
     if (req.method() === "OPTIONS") return json({});
     const p = url.pathname;
     if (p.endsWith("/users/verify/token")) return json({ user: usuario });
-    // (23/11/2026) ComidaBoton: dos tramos, el primero cerrado con «Salir a comer» → la ventana marca la comida.
+    // ComidaBoton: dos tramos, el primero cerrado con «Salir a comer» → la ventana marca la comida.
     if (p.endsWith("/checador/reloj/asistencia-por-empleado") && url.searchParams.get("empleado") === String(registros[12].id_empleado)) {
       return json({ registros: [
         { id: 91, entrada: "2026-11-13 08:00:00", salida: "2026-11-13 13:00:00", estado: "Cerrado", tipo_cierre: "comida" },
@@ -185,7 +185,7 @@ try {
   assert.match(await fila0.innerText(), /\bPresente\b/);
   assert.match(await fila0.locator("td").first().getAttribute("class"), /sticky left-0/);
   // 1b) Entrada y salida sin segundos.
-  // Horas en 12 h con a.m./p.m. (19/11/2026), sin segundos.
+  // Horas en 12 h con a.m./p.m., sin segundos.
   assert.match(await fila0.innerText(), /\b8:07 a\.m\./);
   assert.doesNotMatch(await fila0.innerText(), /08:07:00/);
   // 2) Nocturno: 7 h exactas y marca "+1 día"; el registro viejo también da 7 h (antes negativo).
@@ -229,7 +229,7 @@ try {
   // 2c) Horas extra: estados, decisiones de un clic, deshacer y masivo.
   const esperarPuts = async (n) => { for (let i = 0; i < 60 && puts.length < n; i++) await dormir(100); assert.equal(puts.length, n, JSON.stringify(puts)); };
   const filaExtra = page.locator("tr", { hasText: "Extra Prueba" }).first();
-  // Regla 19/11/2026: lo trabajado de más (08:07–18:42 = 10 h 35 min de 8 h) → 2 h 35 min.
+  // Regla: lo trabajado de más (08:07–18:42 = 10 h 35 min de 8 h) → 2 h 35 min.
   assert.match(await filaExtra.innerText(), /2 h 35 min/);
   await filaExtra.getByRole("button", { name: "Sí", exact: true }).click();
   await esperarPuts(1);
@@ -399,7 +399,7 @@ try {
   // 4) Editar el nocturno: salida 06:00 debe guardarse al día siguiente (2026-11-14).
   //    La edición abre el panel lateral (ya no se edita dentro de la fila).
   assert.equal(await page.getByTitle("Editar").count(), 0, "ya no hay botón Editar: se abre con clic en la fila");
-  // El nombre es un enlace a la ficha del empleado (21/11/2026); el resto de la fila abre la edición.
+  // El nombre es un enlace a la ficha del empleado; el resto de la fila abre la edición.
   assert.equal(await noct.locator("td").first().getByRole("link").count(), 1, "el nombre abre la ficha");
   await noct.locator("td").nth(2).click();
   const panel = page.getByRole("dialog", { name: /Nocturno Prueba/ });
@@ -429,7 +429,7 @@ try {
   assert.equal(Number(puts[1].es_festivo), 1, `es_festivo enviado: ${puts[1].es_festivo}`);
   assert.equal(Object.hasOwn(puts[1], "asistencia"), false, "no se toca Asistió");
 
-  // 4c) «Registrar asistencia masiva» manda la sesión (el backend la exige desde el 19/11/2026).
+  // 4c) «Registrar asistencia masiva» manda la sesión (el backend la exige).
   await page.getByRole("button", { name: /Registrar asistencia masiva/ }).click();
   await page.getByRole("button", { name: /Registrar asistencia\(s\)/ }).click();
   for (let i = 0; i < 50 && !autorizacionMasivo.length; i++) await dormir(100);

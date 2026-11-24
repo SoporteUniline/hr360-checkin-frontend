@@ -34,7 +34,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
         if (p.endsWith('/vacaciones/mi-saldo')) return json({ dias_disponibles: 8, dias_cargados: 12, dias_tomados: 4 });
         if (p.includes('/solicitudes-permiso/empleado/101')) { const pageNo=Number(new URL(route.request().url()).searchParams.get('page') || 1); return json({results:requests.slice((pageNo-1)*5,pageNo*5),total:requests.length}); }
         if(p.includes('/holidays/')) return json({festivos:[]});
-        // Reloj del empleado (21/11/2026): perfil del dispositivo y checada por código.
+        // Reloj del empleado: perfil del dispositivo y checada por código.
         if (p.startsWith('/api/empresas/check-subscription/')) { if (suscripcionLenta) await new Promise(r => setTimeout(r, 3000)); return json({ hasActivePlan: true }); }
         if (p.endsWith('/empresas/id/10/slug')) return json({ slug: 'empresa-prueba' });
         if (p.endsWith('/reloj/offline/empresa/perfil') || p.endsWith('/reloj/offline/perfil')) return json({ id_empresa: 10, id_empleado: 101, slug: 'empresa-prueba', nombre: 'Diego León', metodo: 'codigo', grant: 'g', prepared_at: new Date().toISOString() });
@@ -44,7 +44,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
           posts++;
           const payload = route.request().postDataJSON();
           if (payload.modalidad === 'horas') {
-            // Permiso por horas desde Mi espacio (21/11/2026): un día, tipo, hora y cómo se cubre.
+            // Permiso por horas desde Mi espacio: un día, tipo, hora y cómo se cubre.
             assert.deepEqual([payload.id_empleado, payload.id_tipo_permiso, payload.tipo_horas, payload.hora_inicio, payload.hora_fin, payload.tratamiento, payload.fecha_inicio, payload.fecha_fin], [101, 3, 'sale_antes', '15:00', null, 'repone', '2026-11-23', '2026-11-23']);
             requests.unshift({ ...payload, id: 98, tipo_permiso_nombre: 'Permiso personal', estado: 'Pendiente' });
             return json({ id: 3 });
