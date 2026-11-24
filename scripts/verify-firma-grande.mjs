@@ -1,4 +1,4 @@
-// Regresión (23/11/2026, «empiezo a escribir y se cierra solo»): la firma a pantalla completa del celular NO debe
+// Regresión: la firma a pantalla completa del celular NO debe
 // cerrarse cuando el sistema saca de pantalla completa o hace «atrás» (gesto de borde de Android/iPhone al empezar a
 // firmar). Solo se cierra con «X» o al guardar, y conserva lo dibujado. Si el PUT falla (500), el error se ve
 // (role="alert"), la firma sigue abierta y el trazo se conserva; no se muestra éxito. Backend simulado en memoria.

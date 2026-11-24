@@ -1,18 +1,11 @@
 "use client";
 
-// (23/11/2026, pedido del dueño) Firmar «en grande» donde sea que se firme (Mi firma y PIN, checklists…):
-// - Celular: un botón («Registrar firma» / «Firmar»). Al tocarlo se abre a pantalla completa en HORIZONTAL; abajo
-//   «Borrar» y «Guardar»; al guardar regresa a la vista normal. Android/Chrome giran la pantalla solos. En iPhone el
-//   navegador no deja girar por código: si el celular sigue en vertical, la firma se dibuja ROTADA 90° a pantalla
-//   completa (se gira el celular y queda horizontal); si lo giran de verdad, se endereza sin perder el trazo.
-// - Computadora: el lienzo se queda en la página con «Borrar» y «Guardar» (como antes).
-// La página de firmar documentos (/firmar/[token]) ya funcionaba así con su propia pantalla.
+// Firma en grande. Celular: botón que abre pantalla completa en horizontal; en iPhone (no deja girar por código) se
+// dibuja ROTADA 90° y el lienzo no se vuelve a montar al girar, así el trazo se conserva. Computadora: en la página.
+// Solo se cierra con «X» o al guardar: el gesto de borde del sistema (salir de pantalla completa o «atrás») no la
+// cierra; el «atrás» se absorbe con una entrada propia en el historial.
 // onGuardar(blobPng) → true si el servidor confirmó (cierra la pantalla completa); false para dejarla abierta; si lanza
 // un Error, su mensaje se muestra aquí mismo (role="alert") sin cerrar la firma ni borrar el trazo.
-// (23/11/2026, INC: «empiezo a escribir y se cierra solo») Firmar empezando cerca del borde activa el gesto «atrás» del
-// sistema: en Android saca de pantalla completa y en iPhone regresa de página. Antes eso cerraba la firma. Ahora solo
-// se cierra con «X» o al guardar: si sale de pantalla completa la firma sigue abierta (rotada si quedó en vertical) y
-// el «atrás» se absorbe con una entrada propia en el historial. Además se dejan márgenes para alejar el trazo del borde.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Eraser, PenLine, RotateCw, X } from "lucide-react";
 import LienzoFirma from "@/components/empleado/LienzoFirma";
@@ -93,7 +86,7 @@ export default function FirmaGrande({
   const rotado = vertical && medidas.ancho > 0;
 
   // Gesto o botón «atrás» con la firma abierta: no se pierde lo dibujado; se vuelve a poner la entrada propia.
-  // (Salir de pantalla completa ya NO cierra la firma: el gesto de borde en Android lo provocaba al empezar a firmar.)
+  // Salir de pantalla completa tampoco la cierra: el gesto de borde de Android lo provoca al empezar a firmar.
   useEffect(() => {
     if (!abierta) return undefined;
     const atras = () => {
