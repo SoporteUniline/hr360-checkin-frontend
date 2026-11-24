@@ -1,4 +1,4 @@
-// Verificación en navegador (23/11/2026): firma a pantalla completa en el celular (horizontal, área segura, botón de firmar
+// Verificación en navegador: firma a pantalla completa en el celular (horizontal, área segura, botón de firmar
 // ahí mismo), documento servido por nuestro servidor y «Quién firmó» (foto) para RH en la ficha. Backend simulado y
 // cámara simulada de Chromium.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-firma-pantalla.mjs
@@ -122,7 +122,7 @@ try {
     if (p === "/checador/empleados/15") return json(emp);
     if (p === "/checador/empleados") return json({ data: [emp], total: 1, page: 1, totalPages: 1 });
     if (p === "/checador/firma-digital/solicitudes/documento") return json({ success: true, solicitud: { id: 77, estatus: "firmado", signed_at: "2026-11-23 15:04:00", nombre_firmante: "Ana Torres Ruiz", tiene_documento_firmado: true } });
-    // (23/11/2026) Firma y PIN para RH: bloqueado → desbloquear; restablecer borra el PIN. RH nunca manda ni recibe el PIN.
+    // Firma y PIN para RH: bloqueado → desbloquear; restablecer borra el PIN. RH nunca manda ni recibe el PIN.
     if (p === "/checador/mi-espacio/firma/empleado/15" && req.method() === "GET") return json(pinRh);
     if (p === "/checador/mi-espacio/firma/empleado/15/desbloquear" && req.method() === "POST") {
       accionesPin.push(["desbloquear", req.postData()]);
@@ -151,7 +151,7 @@ try {
   await d2.getByText("Dibujada, con foto").waitFor();
   await d2.getByText(/Diego Dueño/).waitFor();
   assert.equal(consultas, 1);
-  // (23/11/2026) Nada se sale de la ventana aunque el nombre del documento sea largo (antes se desbordaba).
+  // Nada se sale de la ventana aunque el nombre del documento sea largo (antes se desbordaba).
   const fuera = await d2.evaluate((dlg) => {
     const caja = dlg.getBoundingClientRect();
     return [...dlg.querySelectorAll("*")].filter((el) => el.getBoundingClientRect().right > caja.right + 1).map((el) => el.textContent.slice(0, 40));

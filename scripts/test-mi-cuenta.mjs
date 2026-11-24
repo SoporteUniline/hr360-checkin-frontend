@@ -1,4 +1,4 @@
-// Pruebas de src/lib/miCuenta.mjs (24/11/2026): rol visible, recomendaciones de contraseña (guía, no bloqueo) y la
+// Pruebas de src/lib/miCuenta.mjs: rol visible, recomendaciones de contraseña (guía, no bloqueo) y la
 // validación de siempre del cambio de contraseña (ambos campos y que coincidan).
 import test from "node:test";
 import assert from "node:assert/strict";

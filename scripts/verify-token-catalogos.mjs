@@ -1,4 +1,4 @@
-// Verificación en navegador (20/11/2026): las pantallas que usan `axios` directo mandan el token al backend
+// Verificación en navegador: las pantallas que usan `axios` directo mandan el token al backend
 // (los catálogos ya piden sesión). Caso: Festivos › Nuevo › Agregar. Backend simulado, nada sale a internet.
 // Uso: npm run build && node scripts/verify-token-catalogos.mjs
 import assert from "node:assert/strict";

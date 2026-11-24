@@ -1,4 +1,4 @@
-// Comida checada en Asistencias y reporte de horas (23/11/2026).
+// Comida checada en Asistencias y reporte de horas.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { textoComida, resumenComida } from "../src/lib/reporte/comida.mjs";
@@ -16,7 +16,7 @@ test("resumen de comidas del periodo", () => {
   assert.deepEqual(resumenComida(undefined), { valor: "0 min", detalle: "sin comida checada", excedio: false });
 });
 
-// (23/11/2026) Comida abierta: cuánto lleva y alerta cuando ya pasó su tiempo.
+// Comida abierta: cuánto lleva y alerta cuando ya pasó su tiempo.
 test("comida abierta: lleva X de Y min y, si ya se pasó, ⚠ se pasó N min", async () => {
   const { comidaEnCurso, comidaExcedida, ahoraBase } = await import("../src/lib/reporte/comida.mjs");
   const abierta = { salida: "2026-11-23 11:34:00", regreso: null, minutos: null, minutos_programados: 60, excedente: 0 };

@@ -114,7 +114,7 @@ export async function syncEvents(events, send, persist) {
       if (event.status === 'review') { if (blocksQueue(event)) break; else continue; }
       const receipt = await send(event);
       if (receipt?.requiereDecision) {
-        // (23/11/2026, INC-RELOJ-COMIDA-001) Conservar las opciones del servidor («Salir a comer» / «Registrar salida»…);
+        // (INC-RELOJ-COMIDA-001) Conservar las opciones del servidor («Salir a comer» / «Registrar salida»…);
         // sin ellas la pantalla ofrecía salida temporal/cerrar turno a empleados con cierre automático.
         await persist({ ...event, status: 'decision', opciones: Array.isArray(receipt.opciones) ? receipt.opciones : undefined, clock_state: receipt.clock_state || event.clock_state, employeeName: receipt.empleado?.nombre || event.employeeName, error: receipt.message || 'Elige cómo registrar esta salida.' });
         break;

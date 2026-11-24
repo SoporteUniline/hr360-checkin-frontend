@@ -1,4 +1,4 @@
-// Verificación en navegador de Nómina → Bonos y descuentos (22/11/2026) con el backend simulado en memoria:
+// Verificación en navegador de Nómina → Bonos y descuentos con el backend simulado en memoria:
 // lista con quién lo tiene, clic en el renglón → detalle, buscar persona, asignar / quitar / valor propio y guardar en
 // bloque, «Se lo ganan todos» al editar, crear uno nuevo (lleva a su detalle). La dirección vieja /panel/nomina/ajustes redirige.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-bonos.mjs

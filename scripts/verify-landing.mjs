@@ -1,7 +1,8 @@
-// Verificación en navegador de la página de inicio (21/11/2026): portada sincronizada (la checada pasa por
+// Verificación en navegador de la página de inicio: portada sincronizada (la checada pasa por
 // rostro → GPS → registro y la fila llega al panel), números que cuentan desde 0, reporte semanal con
 // notificaciones, sin errores, sin desbordes en celular y sin animaciones vivas al salir de la página.
-// Las llamadas a otros dominios se bloquean (nada sale a internet). Uso: NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx npm run build && node scripts/verify-landing.mjs (construir como Dev: robots debe bloquear)
+// Las llamadas a otros dominios se bloquean (nada sale a internet). Construir como Dev (robots debe bloquear):
+// NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx npm run build && node scripts/verify-landing.mjs
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
@@ -27,7 +28,7 @@ try {
   const errores = [];
   page.on("pageerror", (e) => errores.push(e.message));
   await page.goto(base + "/", { waitUntil: "domcontentloaded" });
-  // (23/11/2026) Mosaico de módulos: seis tarjetas con submarca, mini pantalla y flecha a su página.
+  // Mosaico de módulos: seis tarjetas con submarca, mini pantalla y flecha a su página.
   const mosaico = page.locator("#modulos-adamia");
   await mosaico.getByRole("heading", { name: "Todo el día de tu equipo, en una sola plataforma." }).waitFor();
   assert.deepEqual(await mosaico.locator("h3").evaluateAll((hs) => hs.map((h) => h.firstChild.textContent.trim())), ["Nómina", "Asistencia", "Checador", "Tareas y checklists", "Documentos y firma", "Adamia AI"]);

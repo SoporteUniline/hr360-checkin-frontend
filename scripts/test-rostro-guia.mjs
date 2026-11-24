@@ -1,4 +1,4 @@
-// Guía en vivo, calidad de la toma y «Probar rostro» (23/11/2026): reglas puras de src/lib/rostro/*.mjs.
+// Guía en vivo, calidad de la toma y «Probar rostro»: reglas puras de src/lib/rostro/*.mjs.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { brilloPromedio, cajaEnRecuadro, carasDeFaceApi, deFrente, GUIA_INICIAL, guiaRostro, MENSAJES, OVALO_CELULAR, OVALO_FICHA } from "../src/lib/rostro/guia.mjs";

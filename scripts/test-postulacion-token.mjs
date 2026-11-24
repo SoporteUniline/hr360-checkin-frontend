@@ -1,4 +1,4 @@
-// Regresión (24/11/2026, INC-REC-002): el backend ahora exige en POST /postulaciones/create el token de un solo uso
+// Regresión (INC-REC-002): el backend ahora exige en POST /postulaciones/create el token de un solo uso
 // que entrega /otp/verify. El formulario público debe pasarlo; si no, ninguna postulación sin sesión entraría.
 import { test } from "node:test";
 import assert from "node:assert/strict";

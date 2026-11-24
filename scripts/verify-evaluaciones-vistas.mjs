@@ -1,4 +1,4 @@
-// Verificación en navegador (23/11/2026): en Evaluación de desempeño cada vista tiene su dirección y su entrada en el
+// Verificación en navegador: en Evaluación de desempeño cada vista tiene su dirección y su entrada en el
 // menú (Campañas, Plantillas, Por responder y Configuración con Valores iniciales · Niveles · Acceso al módulo).
 // Revisa: entradas del menú según los permisos del servidor, que cada ruta abra su vista, el resaltado del menú,
 // las direcciones viejas y que quien no tiene permiso no vea la entrada ni pueda abrir la ruta. Backend simulado.

@@ -56,7 +56,7 @@ test("menús separan movimientos, saldos y partidas sin modificar resguardos ori
   assert.equal(moduleState(state, null), state);
 });
 test("enlaces del módulo único: tipo en ?tipo=, empresa y autoservicio", () => {
-  // (20/11/2026) Un solo módulo /panel/activos; los componentes piden sus rutas de siempre.
+  // Un solo módulo /panel/activos; los componentes piden sus rutas de siempre.
   assert.equal(resourceHref("uniform", "/entregas/nueva?empleado=2", "4"), "/panel/activos/entregar?empleado=2&empresa=4");
   assert.equal(resourceHref("asset", "/uniformes/8/editar", "4"), "/panel/activos/inventario/8/editar?tipo=uniformes&empresa=4");
   assert.equal(resourceHref("uniform", "/activos/7", "4"), "/panel/activos/inventario/7?tipo=activos&empresa=4");

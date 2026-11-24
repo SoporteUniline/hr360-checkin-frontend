@@ -10,7 +10,7 @@ function setup({ scriptFails = false, modelFails = false, warmupFails = false } 
   let scripts = 0;
   let warmups = 0;
   const pending = [];
-  // (19/11/2026) Hay que acercarse al reloj: se carga el detector rápido, no SSD.
+  // Hay que acercarse al reloj: se carga el detector rápido, no SSD.
   const cargados = [];
   const nets = Object.fromEntries(["tinyFaceDetector", "ssdMobilenetv1", "faceLandmark68Net", "faceRecognitionNet"].map((name) => [name, {
     detectLandmarks: async () => { warmups++; if (warmupFails) throw Error("warmup"); },
