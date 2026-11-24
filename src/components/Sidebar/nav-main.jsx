@@ -105,6 +105,13 @@ const dashboardItems = [
     matchPrefix: "/empleado/panel/evaluaciones",
   },
   {
+    title: "Encuestas",
+    url: "/empleado/panel/encuestas",
+    rol: "Empleado",
+    icon: ClipboardList,
+    matchPrefix: "/empleado/panel/encuestas",
+  },
+  {
     title: "Solicitudes de mi equipo",
     url: "/empleado/panel/solicitudes-equipo",
     rol: "Empleado",
@@ -512,6 +519,16 @@ const menuGroups = [
       icon: ICONOS_EVALUACION[v.path],
       vistaEvaluacion: v,
     })),
+  },
+  {
+    // Clima organizacional y NOM-035 (src/components/clima/ModuloClima.jsx): una dirección por vista.
+    group: "CLIMA Y NOM-035",
+    groupIcon: HeartHandshake,
+    items: [
+      { title: "Resultados", url: "/panel/clima", rol: "Recruiter", icon: LayoutDashboard },
+      { title: "Encuestas y plantillas", url: "/panel/clima/encuestas", matchPrefix: true, rol: "Recruiter", icon: ClipboardList },
+      { title: "NOM-035", url: "/panel/clima/nom035", rol: "Recruiter", icon: ShieldCheck },
+    ],
   },
   // Reclutamiento depende del módulo de la empresa; NEXT_PUBLIC_RECRUITMENT_ENABLED="false" queda como interruptor
   // de emergencia que lo oculta para todos (filtrarGrupos).
