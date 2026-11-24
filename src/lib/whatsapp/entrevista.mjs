@@ -44,7 +44,7 @@ export function normalizarPuntaje(valor) {
   return Math.min(5, Math.max(1, n));
 }
 
-// Consentimiento: el API manda "aceptado" | "rechazado" | "pendiente" (antes true/false/null). Se aceptan las dos formas.
+// Consentimiento: el API manda "aceptado" | "rechazado" | "pendiente" (versiones previas, true/false/null).
 export function consentimientoAceptado(consentimiento) {
   return consentimiento === true || consentimiento === "aceptado";
 }

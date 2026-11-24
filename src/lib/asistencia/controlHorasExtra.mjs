@@ -1,6 +1,5 @@
-// «Control de horas extra» (maqueta aprobada 19/11/2026): resumen de la semana legal,
-// acumulado de extra autorizadas por persona contra el tope al doble (LFT) y quién decidió.
-// Probado en scripts/test-control-horas-extra.mjs.
+// «Control de horas extra»: resumen de la semana legal, acumulado de extra autorizadas por persona contra el tope
+// al doble (LFT) y quién decidió. Probado en scripts/test-control-horas-extra.mjs.
 import { DB_TZ, estadoHorasExtra } from "./horasExtra.mjs";
 import { leerOriginales } from "./cambios.mjs";
 import { formatearMinutos } from "./jornada.mjs";
@@ -20,7 +19,7 @@ export function topeRespaldo(fecha) {
 const claveSemana = (r) => `${r.id_empleado}|${lunesDe(r.fecha)}`;
 
 // Resumen de los registros con horas extra (los demás se ignoran).
-// `contexto` (19/11/2026): registros de los días de la semana que quedan FUERA del periodo (quincena o mes que
+// `contexto`: registros de los días de la semana que quedan FUERA del periodo (quincena o mes que
 // empieza o termina a media semana). Solo cuentan para el tope semanal: las dobles/triples se reparten en
 // orden de fecha dentro de cada semana y al periodo solo se le suma lo de sus propios registros.
 export function resumenControl(registros, { zonaDe = () => DB_TZ, tope = 540, contexto = [] } = {}) {

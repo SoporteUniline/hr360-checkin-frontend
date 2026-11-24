@@ -1,4 +1,4 @@
-// (23/11/2026) Comida checada con «Salir a comer» en Asistencias y en el reporte de horas (pantalla, Excel y PDF).
+// Comida checada con «Salir a comer» en Asistencias y en el reporte de horas (pantalla, Excel y PDF).
 // La comida llega del servidor como { salida, regreso, minutos, minutos_programados, excedente } (horas «AAAA-MM-DD HH:mm:ss»).
 
 const hhmm = (valor) => {
@@ -22,7 +22,7 @@ export function ahoraBase(fecha = new Date(), zona = "America/Mexico_City") {
   return minutosDe(`${p.year}-${p.month}-${p.day} ${String(Number(p.hour) % 24).padStart(2, "0")}:${p.minute}`);
 }
 
-// (23/11/2026, pedido del dueño) Comida abierta (salió a comer y no ha regresado): cuánto lleva y si ya se pasó de su
+// Comida abierta (salió a comer y no ha regresado): cuánto lleva y si ya se pasó de su
 // tiempo. → null si no está en comida. `ahora` en minutos (ahoraBase()).
 export function comidaEnCurso(comida, ahora) {
   if (!comida?.salida || comida.regreso || ahora == null) return null;
@@ -39,7 +39,7 @@ export function comidaExcedida(comida, ahora) {
   return (comidaEnCurso(comida, ahora)?.excedente ?? 0) > 0;
 }
 
-// (23/11/2026, pedido del dueño) Celda de comida en pantalla: SOLO el tiempo («26 min», «1 h 12 min») y si se pasó,
+// Celda de comida en pantalla: SOLO el tiempo («26 min», «1 h 12 min») y si se pasó,
 // para pintarla en rojo. Las horas van en `detalle` (tooltip). Excel/PDF siguen con textoComida (más completo).
 const duracion = (min) => {
   const n = Math.max(0, Math.round(Number(min) || 0));

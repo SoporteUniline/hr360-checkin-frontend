@@ -1,5 +1,4 @@
-// Preguntas de checklist (23/11/2026, pedido del dueño: «que puedan configurar sus datos: sí/no, opciones, más de una,
-// cuánto valen; muy fácil de crear, llenar y calificar»). Funciones puras; pruebas en scripts/test-tareas.mjs.
+// Preguntas de checklist. Funciones puras; pruebas en scripts/test-tareas.mjs.
 //
 // Pregunta: { id, texto, tipo, peso, obligatoria, permiteNA, pideFoto, ...config del tipo }
 //   si_no     { correcta: "si" | "no" }                 Sí/No: la respuesta buena vale 100 %, la otra 0 %.
@@ -139,7 +138,7 @@ export function textoRespuesta(p, r) {
   }
 }
 
-// Corrección del jefe (decisión A): sus respuestas reemplazan a las de la persona solo en las preguntas que cambió.
+// Corrección del jefe: sus respuestas reemplazan a las de la persona solo en las preguntas que cambió.
 // Devuelve las respuestas finales y la lista de cambios { pregunta, antes, despues } (texto legible) para el historial.
 export function aplicarCorrecciones(preguntas, respuestas = {}, correcciones = {}) {
   const finales = { ...respuestas };

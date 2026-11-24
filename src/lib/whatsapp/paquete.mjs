@@ -1,4 +1,4 @@
-// Paquete de entrevistas del agente y enlaces de la vacante (27/11/2026, decisiones del dueño).
+// Paquete de entrevistas del agente y enlaces de la vacante.
 // - Paquete (opción A): la empresa ve cuántas entrevistas lleva en el mes contra las incluidas; las extra se cobran
 //   aparte y el agente nunca se detiene. El backend cuenta; aquí solo se arman los textos.
 // - Bolsa de trabajo opcional: la página de la vacante (/vacante/<slug>, con su formulario) se comparte aunque la empresa

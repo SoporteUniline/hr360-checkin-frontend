@@ -1,5 +1,5 @@
 // Cálculos de pantalla del módulo de activos y uniformes (sin red ni base de datos).
-// (20/11/2026) Se quitó el modelo de demostración (datos semilla y motor de comandos en memoria):
+// Se quitó el modelo de demostración (datos semilla y motor de comandos en memoria):
 // la fuente de verdad es el servidor (src/lib/activos/server/commands.mjs) y sus pruebas con MySQL.
 // Probado en scripts/test-activos.mjs.
 

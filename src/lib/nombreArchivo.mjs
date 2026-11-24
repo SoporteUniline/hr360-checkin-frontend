@@ -1,7 +1,7 @@
 /**
  * Nombre de archivo homologado para todo documento que descarga ADAMIA.
  *
- * Regla del dueño (23/11/2026): el nombre dice QUÉ documento es, la FECHA y el
+ * Regla: el nombre dice QUÉ documento es, la FECHA y el
  * NÚMERO DE EMPLEADO, nunca su nombre. Solo letras ASCII, números y guiones:
  * algunos celulares renombran a «download» los archivos con acentos o espacios.
  *

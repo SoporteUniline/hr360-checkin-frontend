@@ -1,6 +1,4 @@
-// Fechas de calendario y horas del día: ÚNICO lugar de estas cuentas en el frontend (etapa 3, 20/11/2026).
-// Antes había 4 copias de «sumar días», 2 de «lunes de la semana», 3 de «HH:mm → minutos», etc.
-// Probado en scripts/test-fecha-hora.mjs.
+// Fechas de calendario y horas del día: ÚNICO lugar de estas cuentas en el frontend. Probado en scripts/test-fecha-hora.mjs.
 //
 // - Las fechas son texto "YYYY-MM-DD" y se tratan como días de calendario (en UTC, sin zona horaria):
 //   así sumar días nunca se corre por la zona del navegador.

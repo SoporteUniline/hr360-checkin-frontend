@@ -10,7 +10,7 @@ export function ensureOfflineCache() {
     .catch(() => { offlineReady = null; });
   return offlineReady;
 }
-// (20/11/2026) El backend ya pide sesión en catálogos (festivos, departamentos, unidades de negocio…)
+// El backend ya pide sesión en catálogos (festivos, departamentos, unidades de negocio…)
 // y en la ficha del empleado. Las pantallas que usan `axios` directo (no la instancia de abajo) también
 // mandan el token, pero solo cuando la petición va a nuestro backend y no trae ya su Authorization.
 function agregarTokenAlBackend(config) {
@@ -25,7 +25,7 @@ function agregarTokenAlBackend(config) {
 
 if (typeof window !== 'undefined') {
   axios.defaults.adapter = 'fetch';
-  // (23/11/2026) fetch que no deja pasar DOMException a axios (ver ./fetchSeguro.mjs).
+  // fetch que no deja pasar DOMException a axios (ver./fetchSeguro.mjs).
   axios.defaults.env = { ...(axios.defaults.env || {}), fetch: fetchSeguro };
   axios.interceptors.request.use(async config => { await ensureOfflineCache(); return agregarTokenAlBackend(config); });
 }

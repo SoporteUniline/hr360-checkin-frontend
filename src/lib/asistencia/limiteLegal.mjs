@@ -1,4 +1,4 @@
-// (23/11/2026) Horario contra el límite legal de la semana (catálogo de jornadas legales de Luis:
+// Horario contra el límite legal de la semana (catálogo de jornadas legales del backend:
 // GET /checador/jornadas-legales/vigente?fecha=AAAA-MM-DD). Solo avisa; nunca bloquea el guardado.
 import { formatearMinutos } from "./jornada.mjs";
 

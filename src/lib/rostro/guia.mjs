@@ -1,4 +1,4 @@
-// Guía EN VIVO del rostro (23/11/2026, pedido del dueño: «que sea más intuitivo, igual que en la computadora»).
+// Guía EN VIVO del rostro.
 // Regla pura, sin navegador: con lo que detecta face-api en un cuadro de la cámara (cajas y puntos de la cara), el
 // tamaño del video y el del recuadro donde se ve (object-cover), decide el mensaje y si ya se puede tomar el rostro.
 // La usan la página del celular (/rostro/[token]), Mi rostro y «Probar rostro» de la ficha.

@@ -136,7 +136,7 @@ const textoONulo = (v) => {
 };
 
 // Devuelve { errores: {campo: texto}, cuerpo } con el cuerpo listo para PUT /admin/empresas/:id.
-// Paquetes (27/11/2026): precio_mensual = precio del paquete; precio_conversacion = precio por entrevista extra;
+// Paquetes: precio_mensual = precio del paquete; precio_conversacion = precio por entrevista extra;
 // entrevistas_incluidas = entrevistas incluidas al mes (vacío = sin paquete).
 export function validarConfigEmpresa(form) {
   const incluidas = leerIncluidas(form?.entrevistas_incluidas);

@@ -2,7 +2,7 @@ import axios, { ensureOfflineCache } from './axios';
 import Cookies from 'js-cookie';
 import { motivoPendiente, errorDelServidor, textoChecada, preguntaRepetida } from './reloj/motivoPendiente.mjs';
 
-// Candado de 5 min (19/11/2026): el servidor no registró una checada repetida. Se devuelve la pregunta
+// Candado de 5 min: el servidor no registró una checada repetida. Se devuelve la pregunta
 // y el payload para «Sí, registrar» (se reenvía como captura nueva con repetir: true).
 const repetida = (payload, nombre, rebote, mensaje) => ({ data: {
   repetida: true, pregunta: preguntaRepetida(rebote, mensaje), movimiento: textoChecada('ignorada', mensaje),

@@ -1,4 +1,4 @@
-// Catálogo de módulos de ADAMIA (03/12/2026, «Módulos por empresa», opción C). Ver backend docs/modulos-empresa.md.
+// Catálogo de módulos de ADAMIA. Ver backend docs/modulos-empresa.md.
 // La MISMA lista (mismas claves) vive en el backend: services/modulosCatalogo.js. Si cambias una clave, cámbiala en los dos
 // (scripts/test-modulos.mjs y tests/modulosEmpresa.test.cjs fijan la lista).
 // Sin red ni React: probado en scripts/test-modulos.mjs.

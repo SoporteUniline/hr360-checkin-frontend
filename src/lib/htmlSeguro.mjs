@@ -1,13 +1,8 @@
-// Saneador de HTML con lista blanca estricta (24/11/2026, INC-REC-003).
-// Los textos de una vacante (descripción, responsabilidades, escolaridad, experiencia, habilidades) llegan del
-// editor de RH como HTML y la página pública los pinta tal cual. Sin sanear, quien edita una vacante podía meter
-// <script>, <img onerror>, enlaces javascript: … y ejecutarlo en el navegador de cada candidato.
-//
-// Cómo funciona: se lee el HTML y se vuelve a ESCRIBIR desde cero. Solo salen las etiquetas permitidas, sin
-// ningún atributo salvo el href de <a> (http, https o mailto), y todo el texto escapado. Lo demás se descarta
-// (de script, style, iframe, svg… se tira también el contenido). Sin dependencias: corre igual en Node y navegador.
-// La misma regla está en el backend (hr360-checkin-backend/utils/htmlSeguro.js, sanea al guardar la vacante);
-// si cambias una, cambia la otra. Aquí se sanea otra vez al mostrar: protege también lo guardado antes del cambio.
+// Saneador de HTML con lista blanca estricta (INC-REC-003): el HTML de la vacante viene del editor de RH y la página
+// pública lo pinta, así que sin sanear se podía inyectar script en el navegador de cada candidato.
+// Se vuelve a ESCRIBIR desde cero: solo etiquetas permitidas, sin atributos salvo href (http, https, mailto) en <a>,
+// texto escapado; de script, style, iframe, svg… se tira también el contenido. Misma regla que el backend
+// (utils/htmlSeguro.js, sanea al guardar): si cambias una, cambia la otra. Aquí cubre también lo guardado antes.
 
 export const PERMITIDAS = new Set(["p", "br", "strong", "b", "em", "i", "u", "ul", "ol", "li", "h3", "h4", "a"]);
 const VACIAS = new Set(["br"]);

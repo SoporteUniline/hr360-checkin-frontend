@@ -1,7 +1,7 @@
 // PDF del consentimiento para usar el rostro al checar (se manda a firmar; ver
 // src/app/panel/empleados/tabs/ConsentimientoRostro.jsx). Módulo puro: recibe el
 // documento jsPDF ya creado, la tipografía y el logotipo, para probarlo en Node
-// (scripts/test-pdf-marca.mjs). Formato homologado ADAMIA (23/11/2026):
+// (scripts/test-pdf-marca.mjs). Formato homologado ADAMIA:
 // encabezado con logotipo, documento y empresa; pie «Generado con ADAMIA ·
 // fecha · Página X de Y». El contenido (texto legal y datos) no cambia.
 import { CONSENTIMIENTO_BIOMETRICO as C } from "./documentos.js";

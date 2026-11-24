@@ -31,7 +31,7 @@ export function duracion(inicio, fin) {
 export function faseTurno(t, ahora) {
   if (t.estado === "cancelado") return "cancelado";
   const ini = minutosAbsolutos(t.fecha, t.hora_inicio);
-  // Sin hora de inicio válida no se puede saber la fase (antes contaba como medianoche).
+  // Sin hora de inicio válida no se puede saber la fase (no se toma como medianoche).
   if (ahora == null || ini == null) return "programado";
   const fin = ini + duracion(t.hora_inicio, t.hora_fin);
   return ahora < ini ? "programado" : ahora <= fin ? "en_curso" : "terminado";
@@ -59,7 +59,7 @@ export function estadoPersona(vivo) {
 // ¿Salió de su turno el mismo día, poco antes del turno extra? (filtro «Salieron hoy de su turno»).
 export function salioAntes(candidato, fecha, horaInicio, margenMin = 8 * 60) {
   const salida = marcaEnMinutos(candidato?.salida_anterior);
-  // Sin hora de inicio todavía no hay contra qué comparar (antes contaba como medianoche).
+  // Sin hora de inicio todavía no hay contra qué comparar (no se toma como medianoche).
   const inicio = minutosAbsolutos(fecha, horaInicio);
   return salida != null && inicio != null && salida <= inicio && inicio - salida <= margenMin;
 }

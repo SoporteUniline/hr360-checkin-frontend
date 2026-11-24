@@ -1,4 +1,4 @@
-// Fotos de evidencia (23/11/2026): se achican en el celular antes de subir (máx. 1600 px, JPEG 80 %) para ahorrar datos
+// Fotos de evidencia: se achican en el celular antes de subir (máx. 1600 px, JPEG 80 %) para ahorrar datos
 // y espacio. Si el navegador no puede (o ya es pequeña), se sube tal cual. El servidor acepta hasta 5 MB.
 export async function comprimirImagen(archivo, { maximo = 1600, calidad = 0.8 } = {}) {
   if (typeof document === "undefined" || !archivo?.type?.startsWith("image/")) return archivo;
