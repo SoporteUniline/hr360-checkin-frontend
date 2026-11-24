@@ -10,7 +10,7 @@
 //  · Asistencia, Entrada tarde, Salida temprano, Salir en medio turno: abren el reloj para poner sus horas (el parcial llega
 //    puesto en «Permiso del día», donde se elige su motivo).
 // Debajo: el resumen de motivos del reloj y, en una inasistencia injustificada, «📄 Acta en borrador».
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";
@@ -20,10 +20,12 @@ import { checadasVivas, estadoFila, textoConIcono } from "@/lib/asistencia/reloj
 import { permisoFila } from "@/lib/asistencia/tiposGoce.mjs";
 import {
   ASISTENCIA, aplicado, claseDe, cuerpoEstadoDia, estadoMotivo, faltaPar, opcionesMotivo, opcionesTipo, parDesdeFila, parVacio,
+  partesEstadoMotivo,
   goceTxt, nombreTipo, tiposCaptura,
 } from "@/lib/asistencia/quePasoMotivo.mjs";
 import { actaFila, avisosRespuesta } from "@/lib/actasEstatus.mjs";
 import QuePasoMotivo, { GoceMotivo } from "@/components/asistencia/QuePasoMotivo";
+import { leerPar, ponerPar, suscribir } from "@/lib/asistencia/parFila.mjs";
 
 const CLAVE_MOTIVOS = "/checador/motivos-permiso";
 
@@ -46,9 +48,17 @@ function Debajo({ registro, conDetalle, goce = "" }) {
 }
 
 // `comoCampo`: dentro del reloj sin checadas (campos con borde; «Asistencia» y los parciales se quedan en el reloj).
-export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = false, onAbrirReloj, onGuardado, movil = false, comoCampo = false }) {
+// `parte`: en la tabla «Estado» (qué pasó) y «Motivo» (por qué y cómo se paga) son columnas separadas que editan el mismo
+// par (compartido por lib/asistencia/parFila.mjs) y se guardan juntas con OK, en la celda de Motivo. «ambas»: todo junto
+// (reloj, celular o si una de las dos columnas está oculta).
+export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = false, onAbrirReloj, onGuardado, movil = false, comoCampo = false, parte = "ambas" }) {
   const { enqueueSnackbar } = useSnackbar();
-  const [cambio, setCambio] = useState(null); // par editado (null = el guardado)
+  const separada = parte !== "ambas" && !comoCampo && !movil;
+  // En el reloj abierto desde la fila con «Asistencia», ya viene elegida (para poner sus horas abajo).
+  const [cambioLocal, setCambioLocal] = useState(() => (comoCampo && registro?._quePaso === ASISTENCIA ? parVacio(ASISTENCIA) : null));
+  const cambioFila = useSyncExternalStore(suscribir, () => leerPar(registro.id), () => null);
+  const cambio = separada ? cambioFila : cambioLocal;
+  const setCambio = separada ? (v) => ponerPar(registro.id, v) : setCambioLocal;
   const [guardando, setGuardando] = useState(false);
   const editable = !readOnly && checadasVivas(registro) === 0;
   // Una sola petición para toda la tabla (SWR la comparte).
@@ -56,6 +66,24 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
   const estado = estadoFila(registro);
   const nombre = [registro.nombre, registro.apellido_paterno].filter(Boolean).join(" ");
   const nuevo = estadoMotivo(registro, tiposPermiso);
+
+  if (!editable && separada) {
+    const partes = partesEstadoMotivo(registro, tiposPermiso);
+    if (parte === "estado") {
+      return (
+        <span data-estado-fila data-columna-estado className="whitespace-normal text-[13.5px] leading-snug text-slate-800">
+          {partes?.estado ?? (permisoFila(registro)?.tipo || textoConIcono(estado.texto, estado.clave))}
+        </span>
+      );
+    }
+    return (
+      <span className="flex flex-col items-start gap-1" data-columna-motivo>
+        {partes?.motivo ? <span className="whitespace-normal text-[13.5px] leading-snug text-slate-700">{partes.motivo}</span> : null}
+        <Debajo registro={registro} conDetalle={!nuevo} />
+        {!partes?.motivo && !actaFila(registro) && !registro.motivos_resumen && !(permisoFila(registro)?.detalle) ? <span className="text-slate-300">—</span> : null}
+      </span>
+    );
+  }
 
   if (!editable) {
     return (
@@ -97,7 +125,7 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
     // Asistencia y los parciales: sus horas se ponen en el reloj.
     if (v === ASISTENCIA || (t && claseDe(t) === "parcial")) {
       setCambio(comoCampo ? parVacio(v === ASISTENCIA ? ASISTENCIA : "") : null);
-      onAbrirReloj?.(v === ASISTENCIA ? registro : { ...registro, _tipoParcial: v });
+      onAbrirReloj?.(v === ASISTENCIA ? { ...registro, _quePaso: ASISTENCIA } : { ...registro, _tipoParcial: v });
       return;
     }
     setCambio(v ? parVacio(v) : null);
@@ -107,6 +135,49 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
   // Sin tipo guardado (sin checar): la opción vacía dice el estado de hoy.
   const vacioTipo = par.tipo ? null : comoCampo ? "Elige qué pasó…" : textoConIcono(estado.texto, estado.clave) || "Elige qué pasó…";
   const boton = movil ? "h-11 px-4" : "h-9 px-3 max-sm:h-11";
+
+  if (separada && parte === "estado") {
+    return (
+      <span className="flex w-full flex-col gap-1" data-estado-fila data-columna-estado data-no-row-click onKeyDown={tecla}>
+        <QuePasoMotivo solo="tipo" variante={variante} movil={movil} nombre={nombre} disabled={guardando}
+        tipoOpciones={opcionesTipo(tipos)} tipoVacio={vacioTipo} tipo={par.tipo} onTipo={elegirTipo}
+        motivoVisible={Boolean(tipo) && r.motivoVisible} motivoOpciones={opcionesMotivo(dataMotivos)} motivoVacio={r.vacioMotivo}
+        motivo={par.motivo} onMotivo={(m) => set({ motivo: m, texto: "", goce: null })} esOtro={Boolean(motivo?.otro)}
+        texto={par.texto} onTexto={(t) => set({ texto: t })} />
+      </span>
+    );
+  }
+  if (separada && parte === "motivo") {
+    const conMotivo = Boolean(tipo) && r.motivoVisible;
+    return (
+      // El motivo y su goce van en la misma línea (centrados con el resto de la fila); lo de OK baja a la siguiente.
+      <span className="flex w-full flex-wrap items-center gap-x-2 gap-y-1.5" data-columna-motivo data-no-row-click onKeyDown={tecla}>
+        {conMotivo ? <QuePasoMotivo solo="motivo" variante={variante} movil={movil} nombre={nombre} disabled={guardando}
+        tipoOpciones={opcionesTipo(tipos)} tipoVacio={vacioTipo} tipo={par.tipo} onTipo={elegirTipo}
+        motivoVisible={Boolean(tipo) && r.motivoVisible} motivoOpciones={opcionesMotivo(dataMotivos)} motivoVacio={r.vacioMotivo}
+        motivo={par.motivo} onMotivo={(m) => set({ motivo: m, texto: "", goce: null })} esOtro={Boolean(motivo?.otro)}
+        texto={par.texto} onTexto={(t) => set({ texto: t })} /> : null}
+      {pendiente ? (
+          <span data-estado-pendiente className="flex basis-full flex-col gap-1.5">
+            {r.folio ? (
+              <input aria-label="Folio IMSS (obligatorio)" placeholder="Folio IMSS (obligatorio)" value={par.folio} maxLength={200}
+                onChange={(e) => set({ folio: e.target.value })}
+                className={`${movil ? "h-11 text-base" : "h-9 text-[13.5px] max-sm:h-11 max-sm:text-base"} min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30`} />
+            ) : null}
+            <span className="flex items-center gap-2">
+              <span className="flex min-w-0 flex-1"><GoceMotivo goce={goce} cambia={r.goceCambia} onCambio={(g) => set({ goce: g })} movil={movil} className="w-full" /></span>
+              <button type="button" disabled={Boolean(falta) || guardando} onClick={guardar}
+                className={`${boton} shrink-0 rounded-lg bg-blue-600 text-[13px] font-semibold text-white hover:bg-blue-700 disabled:opacity-45`}>OK</button>
+            </span>
+            {r.acta ? <span data-aviso-acta className="text-[12px] leading-snug text-amber-800">Sin motivo es injustificada: se creará un acta en borrador.</span> : null}
+          </span>
+        ) : comoCampo && par.tipo === ASISTENCIA ? (
+          <span className="text-[12.5px] text-slate-500">Pon sus horas abajo en «Checadas del reloj».</span>
+        ) : <Debajo registro={registro} conDetalle={!nuevo} goce={tipo && r.clase !== "parcial" && !r.acta && goce ? `${r.goceCambia ? "" : "🔒 "}${goceTxt(goce)}` : ""} />}
+        {!conMotivo && !pendiente && !actaFila(registro) && !registro.motivos_resumen ? <span className="text-slate-300">—</span> : null}
+      </span>
+    );
+  }
 
   return (
     <span className={`flex w-full flex-col gap-1.5 ${comoCampo ? "" : "min-w-[260px]"}`} data-estado-fila data-no-row-click onKeyDown={tecla}>

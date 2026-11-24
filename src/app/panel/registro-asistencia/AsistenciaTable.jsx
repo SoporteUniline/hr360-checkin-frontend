@@ -33,7 +33,7 @@ import {
   estadoHorasExtra, etiquetaHorasExtra, ordenarPorHorasExtra,
 } from "@/lib/asistencia/horasExtra.mjs";
 
-import { FIJA_RELOJ, fijaEstado } from "./columnasFijas";
+import { FIJA_RELOJ, derechaEstado, derechaMotivo, fijaEstado, fijaMotivo } from "./columnasFijas";
 import { permisoFila } from "@/lib/asistencia/tiposGoce.mjs";
 import { estadoMotivo } from "@/lib/asistencia/quePasoMotivo.mjs";
 
@@ -55,12 +55,13 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "comida", label: "Comida", extra: false },
   { key: "hrs_extra", label: "Horas extra", extra: false },
   { key: "dia", label: "Día (festivo / domingo)", extra: false },
-  { key: "estado_asistencia", label: "Estado · motivo", extra: false },
+  { key: "estado_asistencia", label: "Estado", extra: false },
+  { key: "motivo", label: "Motivo", extra: false },
   { key: "reloj", label: "Reloj", extra: false },
   { key: "notas", label: "Observaciones", extra: true },
 ];
 // Columnas nuevas del reloj: se muestran una vez aunque haya columnas guardadas (ver page.jsx).
-export const COLUMNAS_RELOJ_NUEVAS = ["dia", "estado_asistencia", "reloj"];
+export const COLUMNAS_RELOJ_NUEVAS = ["dia", "estado_asistencia", "motivo", "reloj"];
 
 const EXTRA_COLUMN_KEYS = new Set(
   COLUMNAS_ASISTENCIA.filter((col) => col.extra).map((col) => col.key),
@@ -935,9 +936,9 @@ export default function AsistenciaTable({
                 {colVisible("dia") && <TableHead className={TH_STICKY}>Día</TableHead>}
                 {colVisible("notas") && <TableHead className={TH_STICKY}>Observaciones</TableHead>}
                 {colVisible("estado_asistencia") && (
-                  <TableHead className={`${TH_STICKY} ${fijaEstado(colVisible("reloj"))} z-20`}>
+                  <TableHead className={`${TH_STICKY} ${fijaEstado()} z-20`} style={derechaEstado(colVisible("reloj"), colVisible("motivo"))}>
                     <div className="flex items-center gap-1">
-                      <span>Estado · motivo</span>
+                      <span>Estado</span>
                       <HeaderMultiFilter
                         selected={estadoAsistenciaSeleccionado}
                         onChange={setEstadoAsistenciaSeleccionado}
@@ -946,6 +947,9 @@ export default function AsistenciaTable({
                       />
                     </div>
                   </TableHead>
+                )}
+                {colVisible("motivo") && (
+                  <TableHead className={`${TH_STICKY} ${fijaMotivo()} z-20`} style={derechaMotivo(colVisible("reloj"))}>Motivo</TableHead>
                 )}
                 {colVisible("reloj") && <TableHead className={`${TH_STICKY} ${FIJA_RELOJ} z-20 text-center`}>Reloj</TableHead>}
               </TableRow>

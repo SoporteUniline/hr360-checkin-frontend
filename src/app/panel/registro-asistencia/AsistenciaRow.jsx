@@ -1,10 +1,11 @@
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Clock3 } from "lucide-react";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
+import { leerPar, suscribir } from "@/lib/asistencia/parFila.mjs";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import EtiquetaPermisoHoras from "./EtiquetaPermisoHoras";
 import CeldaEstadoDia from "./CeldaEstadoDia";
-import { FIJA_RELOJ, fijaEstado } from "./columnasFijas";
+import { FIJA_RELOJ, derechaEstado, derechaMotivo, fijaEstado, fijaMotivo } from "./columnasFijas";
 import CeldaObservaciones from "./CeldaObservaciones";
 import CeldasControlHorasExtra from "./CeldasControlHorasExtra";
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
@@ -67,6 +68,9 @@ export default function AsistenciaRow({
   const nombre = `${registro.nombre ?? ""} ${registro.apellido_paterno ?? ""}`.trim();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const abrirReloj = () => onAbrirReloj?.(registro);
+  // Mientras se edita el par Estado/Motivo (aparece OK debajo del motivo), las dos celdas se alinean arriba para que los
+  // dos desplegables queden en la misma línea.
+  const editandoPar = Boolean(useSyncExternalStore(suscribir, () => leerPar(registro.id), () => null));
 
   // Clic en la fila: abre el reloj del día. En solo lectura, el historial de checadas.
   const handleRowClick = (e) => {
@@ -180,10 +184,17 @@ export default function AsistenciaRow({
           </TableCell>
         )}
         {isColVisible("estado_asistencia") && (
-          <TableCell className={`!whitespace-normal ${fijaEstado(isColVisible("reloj"))} z-[1] bg-white`}>
+          <TableCell className={`!whitespace-normal ${fijaEstado()} z-[1] bg-white ${editandoPar ? "align-top" : ""}`} style={derechaEstado(isColVisible("reloj"), isColVisible("motivo"))}>
+            {/* Estado = qué pasó; Motivo = por qué y cómo se paga. Si la columna Motivo está oculta, va todo aquí. */}
             <CeldaEstadoDia registro={registro} tiposPermiso={tiposPermiso} readOnly={readOnly || !onAbrirReloj}
-              onAbrirReloj={onAbrirReloj} onGuardado={mutateAsistencia} />
+              onAbrirReloj={onAbrirReloj} onGuardado={mutateAsistencia} parte={isColVisible("motivo") ? "estado" : "ambas"} />
             {registro.permiso_horas && <div className="mt-1"><EtiquetaPermisoHoras permiso={registro.permiso_horas} /></div>}
+          </TableCell>
+        )}
+        {isColVisible("motivo") && (
+          <TableCell className={`!whitespace-normal ${fijaMotivo()} z-[1] bg-white ${editandoPar ? "align-top" : ""}`} style={derechaMotivo(isColVisible("reloj"))}>
+            <CeldaEstadoDia registro={registro} tiposPermiso={tiposPermiso} readOnly={readOnly || !onAbrirReloj}
+              onAbrirReloj={onAbrirReloj} onGuardado={mutateAsistencia} parte={isColVisible("estado_asistencia") ? "motivo" : "ambas"} />
           </TableCell>
         )}
         {isColVisible("reloj") && (

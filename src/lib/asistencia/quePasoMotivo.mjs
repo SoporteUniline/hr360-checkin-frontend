@@ -263,5 +263,13 @@ export function estadoMotivo(fila, tipos = null, { ley = true } = {}) {
   if (rol === "ley" && ley) return `${ICONO_ROL.ley} ${nombreTipo(t)}`;
   return null;
 }
+// El texto de estadoMotivo partido en dos columnas: «⌚ Entrada tarde» | «Permiso personal · 2 h · se descuentan».
+// «❌ Inasistencia injustificada» no tiene motivo. null si estadoMotivo no aplica (se usa el texto de siempre).
+export function partesEstadoMotivo(fila, tipos = null) {
+  const t = estadoMotivo(fila, tipos);
+  if (!t) return null;
+  const i = t.indexOf(" · ");
+  return i < 0 ? { estado: t, motivo: "" } : { estado: t.slice(0, i), motivo: t.slice(i + 3) };
+}
 // Texto de la fila: el nuevo «estado · motivo» o, para lo demás (sin checar, asistió, tipos anteriores), el de siempre.
 export const textoEstadoFila = (fila, tipos, estado) => estadoMotivo(fila, tipos) ?? textoConIcono(estado?.texto, estado?.clave);

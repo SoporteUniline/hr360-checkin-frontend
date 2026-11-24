@@ -221,7 +221,7 @@ try {
   const crudos = (await page.locator("thead th").allInnerTexts()).map((t) => t.replace(/\s+/g, " ").trim()).filter(Boolean);
   assert.ok(crudos.includes("Entrada") && crudos.includes("Salida"), `encabezados en letra normal: ${crudos.join(" | ")}`);
   const encabezados = crudos.map((t) => t.toUpperCase());
-  for (const c of ["EMPLEADO", "DEPARTAMENTO", "FECHA", "ENTRADA", "SALIDA", "JORNADA TRABAJADO DE PROGRAMADO", "COMIDA", "HORAS EXTRA", "DÍA", "ESTADO · MOTIVO", "RELOJ"]) {
+  for (const c of ["EMPLEADO", "DEPARTAMENTO", "FECHA", "ENTRADA", "SALIDA", "JORNADA TRABAJADO DE PROGRAMADO", "COMIDA", "HORAS EXTRA", "DÍA", "ESTADO", "MOTIVO", "RELOJ"]) {
     assert.ok(encabezados.some((h) => h.startsWith(c)), `falta la columna ${c}: ${encabezados.join(" | ")}`);
   }
   for (const c of ["TIPO", "EDITADO", "PAGO TRIPLE", "PRIMA DOM.", "% FESTIVO", "HRS COMIDA", "¿AUTORIZAR?"]) assert.ok(!encabezados.includes(c), `sobra ${c}`);
@@ -268,6 +268,8 @@ try {
   assert.match(await dlgA.locator("[data-reloj-vacio]").innerText(), /No tiene checadas\. ¿De qué hora a qué hora trabajó\?/);
   // Sin checadas, el reloj ofrece el mismo par que la fila: «Qué pasó» con Asistencia, Inasistencia y los días de ley.
   const quePaso = dlgA.locator("[data-reloj-que-paso]");
+  // Elegida en la fila, «Asistencia» llega ya puesta en el reloj.
+  assert.match(await quePaso.getByRole("combobox").first().innerText(), /Asistencia/, "el reloj conserva «Asistencia» elegida en la fila");
   const opcionesQuePaso = await textosOpciones(quePaso.getByRole("combobox").first());
   assert.ok(opcionesQuePaso.includes("Inasistencia") && opcionesQuePaso.includes("Asistencia") && !opcionesQuePaso.includes("Falta justificada"), `opciones de «Qué pasó»: ${opcionesQuePaso.join(" | ")}`);
   await dormir(500);

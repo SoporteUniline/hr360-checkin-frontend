@@ -263,7 +263,7 @@ try {
   const filaDe = (n) => page.locator("tr", { hasText: n }).first();
   await filaDe("Diego León").waitFor({ timeout: 30000 });
   // Lista: el tipo y debajo «Visita al médico · 2 h · las repone · con goce»; falta injustificada con su acta.
-  assert.match(await filaDe("Marta Díaz").innerText(), /⌚ Entrada después de tiempo · Visita al médico · 2 h · las repone/);
+  assert.match(await filaDe("Marta Díaz").innerText(), /⌚ Entrada después de tiempo[\s\S]*Visita al médico · 2 h · las repone/);
   const enlaceActa = filaDe("Pablo Soto").locator("[data-acta-enlace]");
   assert.equal(await enlaceActa.innerText(), "📄 Acta en borrador");
   assert.equal(await enlaceActa.getAttribute("href"), "/panel/actas-administrativas?acta=77");
@@ -422,7 +422,7 @@ try {
   await page.getByText("Marta Díaz").first().waitFor({ timeout: 30000 });
   await sinDesborde(page.locator("html"), "asistencias 390");
   const lineaM = page.locator("[data-permiso-movil]").first();
-  assert.match(await lineaM.innerText(), /⌚ Entrada después de tiempo · Visita al médico · 2 h · las repone/);
+  assert.match(await lineaM.innerText(), /⌚ Entrada después de tiempo[\s\S]*Visita al médico · 2 h · las repone/);
   const corta = await page.locator("[data-permiso-movil]").evaluateAll((els) => els.filter((e) => e.scrollHeight > e.clientHeight + 1).length);
   assert.equal(corta, 0, "línea del permiso sin cortar");
   assert.equal(await page.locator("[data-acta-movil]").first().innerText(), "📄 Acta en borrador");

@@ -185,6 +185,11 @@ export default function ControlAsistencia() {
         }
       }
       // Columnas del reloj (Día, Estado · motivo, Reloj): se muestran una vez; si luego las ocultan, se respeta.
+      // (24/11/2026) «Motivo» se separó de «Estado»: se muestra una vez a quien ya tenía columnas guardadas.
+      if (!window.localStorage.getItem("adamia-asistencia-col-motivo")) {
+        window.localStorage.setItem("adamia-asistencia-col-motivo", "1");
+        if (columnas.includes("estado_asistencia") && !columnas.includes("motivo")) columnas.splice(columnas.indexOf("estado_asistencia") + 1, 0, "motivo");
+      }
       if (!window.localStorage.getItem("adamia-asistencia-col-reloj")) {
         window.localStorage.setItem("adamia-asistencia-col-reloj", "1");
         for (const k of COLUMNAS_RELOJ_NUEVAS) if (!columnas.includes(k)) columnas.push(k);
