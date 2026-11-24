@@ -20,8 +20,13 @@ export default function OfflineClockSetup({ companySlug = null, companyId = null
       try {
         await synchronizeClockQueue();
         const context = { company, slug: companySlug };
-        await initializeClock(context);
-        if (!disposed) await prepareLocalFaces({ ...context, force: forceNow });
+        await initializeClock(context).then(() => (disposed ? null : prepareLocalFaces({ ...context, force: forceNow }))).catch(() => {});
+        // App del empleado: su rostro se compara solo con sus propias referencias (descarga personal, sin las de la empresa).
+        const employee = !companySlug && dataUser?.tipo_usuario === 'Empleado' ? Number(dataUser.id_empleado) : null;
+        if (!disposed && employee > 0) {
+          await initializeClock({ company, employee });
+          await prepareLocalFaces({ company, employee, force: forceNow });
+        }
       } catch { /* Keep downloaded references and retry automatically. */ }
       finally {
         busy = false;

@@ -2,10 +2,9 @@
 
 // «Continuar desde el celular»: la persona abre el enlace QR que le generó RH y registra su
 // rostro con la cámara frontal de su celular. Sin sesión. Muestra solo su nombre, la empresa y el aviso de uso del rostro
-// (el mismo texto y versión de Mi espacio). La cámara, las 3 lecturas y su promedio son los de Mi rostro
-// (useCapturaRostro). Backend: /checador/rostro-celular/publico/:token. Errores: src/lib/rostro/enlaceCelular.mjs.
-// Guía en vivo con color (óvalo y mensaje), «Registrar mi rostro» solo con la cara bien colocada y
-// confirmación final con la calidad de la toma («✅ Rostro correcto»).
+// (el mismo texto y versión de Mi espacio). La cámara y el registro guiado en 5 poses son los de Mi rostro
+// (useCapturaRostro + CapturaGuiada). Backend: POST /checador/rostro-celular/publico/:token con descriptores [{ pose, descriptor }];
+// un 409 gasta un intento del enlace y trae intentos_restantes. Errores: src/lib/rostro/enlaceCelular.mjs (409 ROSTRO_PARECIDO incluido).
 import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import axios from "axios";
@@ -13,8 +12,7 @@ import { AlertCircle, Camera, CheckCircle2, ShieldCheck } from "lucide-react";
 import { CONSENTIMIENTO_BIOMETRICO as C } from "@/lib/legal/documentos";
 import { useCapturaRostro } from "@/components/rostro/useCapturaRostro";
 import { cuentaRegresiva, errorPublico, segundosHasta, venceEn } from "@/lib/rostro/enlaceCelular.mjs";
-import { TONO_GUIA } from "@/lib/rostro/guia.mjs";
-import { porcentaje } from "@/lib/rostro/lecturas.mjs";
+import CapturaGuiada from "@/components/rostro/CapturaGuiada";
 
 // Instancia sin sesión: este enlace no usa ni manda la sesión del navegador.
 const api = axios.create({ baseURL: process.env.NEXT_PUBLIC_RUTA_BACKEND });
@@ -55,8 +53,9 @@ export default function RostroDesdeCelular({ params }) {
   const [acepto, setAcepto] = useState(false);
   const [vence, setVence] = useState(null);
   const [ahora, setAhora] = useState(() => Date.now());
-  const { videoRef, fase, guia, nivel, listo, calidad, aviso, encender, cancelar, registrar: leer, apagar, camaraVisible } = useCapturaRostro();
-  const tono = TONO_GUIA[nivel] ?? TONO_GUIA.info;
+  const captura = useCapturaRostro();
+  const { fase, aviso, encender, registrarGuiado, apagar, camaraVisible } = captura;
+  const [fotos, setFotos] = useState(0);
 
   useEffect(() => {
     let vivo = true;
@@ -76,21 +75,27 @@ export default function RostroDesdeCelular({ params }) {
     if (restantes === 0 && fase !== "listo" && fase !== "guardando" && !fin) { apagar(); setFin(errorPublico({ response: { data: { codigo: "ENLACE_VENCIDO" } } })); }
   }, [restantes, fase, fin, apagar]);
 
-  const registrar = () => leer(
-    (descriptor) => api.post(ruta(token), { descriptor_facial: descriptor, acepto_consentimiento: true, version: C.version }),
+  const registrar = async () => {
+    if (!(await encender())) return;
+    await registrarGuiado(
+    async (descriptores) => {
+      await api.post(ruta(token), { descriptores, acepto_consentimiento: true, version: C.version });
+      setFotos(descriptores.length);
+    },
     (e) => {
       const er = errorPublico(e);
       if (er.fin) { apagar(); setFin(er); }
       return er.texto;
     },
-  );
+    );
+  };
 
   if (fase === "listo") {
     return (
       <Marco>
         <Final exito titulo="✅ Rostro correcto: quedó bien registrado"
           texto={`${info?.nombre ? `${info.nombre}, tu` : "Tu"} rostro quedó registrado${info?.empresa ? ` en ${info.empresa}` : ""}. Ya puedes checar con él y cerrar esta página.`}
-          detalle={calidad != null ? `Las 3 lecturas coinciden entre sí (${porcentaje(calidad)} %): la toma salió bien.` : null} />
+          detalle={fotos ? `Se guardaron ${fotos} fotos de tu rostro (de frente y con movimientos): así te reconoce mejor.` : null} />
       </Marco>
     );
   }
@@ -121,28 +126,18 @@ export default function RostroDesdeCelular({ params }) {
             <input type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)} className="mt-0.5 size-6 shrink-0 accent-[#2563EB]" />
             <span>{C.acepto}</span>
           </label>
-          <button type="button" onClick={encender} disabled={!acepto || fase === "preparando"} className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#2563EB] text-base font-semibold text-white disabled:opacity-50">
+          <p className="mt-3 text-[15px] text-slate-600">Te pediremos 5 movimientos cortos: mirar al frente, subir y bajar un poco la cara y girarla un poco a cada lado. Las fotos se toman solas.</p>
+          <button type="button" onClick={registrar} disabled={!acepto || fase === "preparando"} className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#2563EB] text-base font-semibold text-white disabled:opacity-50">
             <Camera className="size-5" aria-hidden="true" />{fase === "preparando" ? "Preparando la cámara…" : "Continuar a la cámara"}
           </button>
           {!acepto ? <p className="mt-2 text-center text-xs text-slate-500">Marca la casilla para continuar.</p> : null}
         </section>
       ) : null}
 
-      <section className={camaraVisible ? "mt-5 space-y-3" : "hidden"} aria-label="Cámara">
-        <div className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-3xl bg-slate-900">
-          <video ref={videoRef} muted playsInline autoPlay aria-label="Vista de tu cámara frontal" className="size-full -scale-x-100 object-cover" />
-          <span className={`pointer-events-none absolute inset-x-[17%] inset-y-[14%] rounded-[50%] border-[3px] shadow-[0_0_0_999px_rgba(15,23,42,0.35)] transition-colors ${tono.ovalo}`} aria-hidden="true" data-ovalo={nivel} />
-        </div>
-        <p role="status" aria-live="polite" className={`min-h-12 rounded-xl border px-3 py-2.5 text-center text-[15px] font-semibold ${tono.caja}`} data-guia={nivel}>{guia}</p>
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
-          <button type="button" onClick={cancelar} disabled={fase !== "camara"} className="min-h-12 rounded-xl border border-slate-300 bg-white px-4 font-medium disabled:opacity-50">Cancelar</button>
-          <button type="button" onClick={registrar} disabled={!listo} className="min-h-12 rounded-xl bg-[#2563EB] px-4 text-base font-semibold text-white disabled:opacity-50">
-            {fase === "leyendo" ? "Leyendo…" : fase === "guardando" ? "Guardando…" : "Registrar mi rostro"}
-          </button>
-        </div>
-        {fase === "camara" && !listo ? <p className="text-center text-xs text-slate-500">El botón se activa cuando tu rostro esté bien colocado dentro del óvalo.</p> : null}
+      <section className={camaraVisible ? "mt-5" : "hidden"} aria-label="Cámara">
+        <CapturaGuiada captura={captura} forma="vertical" ovalo="inset-x-[17%] inset-y-[14%]" etiqueta="Vista de tu cámara frontal" />
       </section>
-      {aviso ? <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-[15px] text-red-700">{aviso.texto}</p> : null}
+      {aviso && !camaraVisible ? <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-[15px] text-red-700">{aviso.texto}</p> : null}
       <p className="mt-6 text-center text-xs leading-relaxed text-slate-500">Solo se guarda el patrón numérico de tu rostro, no la foto. Si tienes dudas, pregunta a Recursos Humanos.</p>
     </Marco>
   );

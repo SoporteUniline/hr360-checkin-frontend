@@ -69,7 +69,7 @@ export const schemaEmpleado = z
       .optional()
       .transform((v) => v ?? ""),
     metodo_chequeo: z
-      .enum(["codigo", "facial", "ambos"])
+      .enum(["codigo", "facial", "ambos", "codigo_cara"])
       .default("ambos")
       .optional(),
 

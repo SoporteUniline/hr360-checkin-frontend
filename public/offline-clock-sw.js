@@ -1,10 +1,10 @@
 import { synchronizeBackground } from './offline-clock/background-sync.mjs';
-const CACHE = 'adamia-clock-shell-v18';
+const CACHE = 'adamia-clock-shell-v19';
 const RUNTIME = 'adamia-runtime-assets-v1';
 const MAX_AGE = 7 * 86400000;
 const ASSETS = [
   '/app-offline.html', '/offline-clock/app-cache.mjs', '/offline-clock/background-sync.mjs',
-  '/reloj-offline.html', '/offline-clock/app.mjs', '/offline-clock/store.mjs', '/offline-clock/face.mjs', '/offline-clock/turn-state.mjs', '/offline-clock/style.css',
+  '/reloj-offline.html', '/offline-clock/app.mjs', '/offline-clock/store.mjs', '/offline-clock/face.mjs', '/offline-clock/rostro-reglas.mjs', '/offline-clock/turn-state.mjs', '/offline-clock/style.css',
   '/vendor/face-api/face-api-0.22.2.min.js',
   '/models/face_landmark_68_model-weights_manifest.json', '/models/face_landmark_68_model-shard1',
   '/models/face_recognition_model-weights_manifest.json', '/models/face_recognition_model-shard1', '/models/face_recognition_model-shard2',

@@ -448,8 +448,14 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
                       <SelectItem value="codigo">Código</SelectItem>
                       <SelectItem value="facial">Facial</SelectItem>
                       <SelectItem value="ambos">Ambos</SelectItem>
+                      <SelectItem value="codigo_cara">Código y cara</SelectItem>
                     </SelectContent>
                   </Select>
+                  {field.value === "codigo_cara" ? (
+                    <p className="text-sm text-muted-foreground" data-ayuda-codigo-cara>
+                      En el reloj escribe su código y la cámara confirma que es él. La cara sola no basta: es más rápido y más seguro.
+                    </p>
+                  ) : null}
                   <FormMessage />
                 </FormItem>
               )}

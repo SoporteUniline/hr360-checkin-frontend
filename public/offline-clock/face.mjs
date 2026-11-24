@@ -1,18 +1,51 @@
 import { isTurnConflict, validClockState, blocksQueue } from './turn-state.mjs?v=3';
+import { caraSola, unoAUno, coseno, debeReportar, UMBRAL_1A1, UMBRAL_EMPRESA } from './rostro-reglas.mjs?v=1';
+export { debeReportar, UMBRAL_1A1, UMBRAL_EMPRESA };
 export const MODEL = 'face-api-0.22.2-128-cosine-v1';
 export function fail(message, code = 'LOCAL_FACE_INVALID') {
   throw Object.assign(new Error(message), { code, response: { status: 422, data: { error: message, code } } });
 }
-export function cosine(a, b) {
-  if (!Array.isArray(a) || !Array.isArray(b) || a.length !== 128 || b.length !== 128 || !a.every(Number.isFinite) || !b.every(Number.isFinite)) return 0;
-  return a.reduce((sum, value, index) => sum + value * b[index], 0) / (Math.hypot(...a) * Math.hypot(...b)) || 0;
-}
-export function matchFace(descriptor, dataset, now = Date.now()) {
+// Same metric as before (kept for callers and tests); comparisons use rostro-reglas.mjs.
+export const cosine = coseno;
+function ready(dataset, now) {
   if (!dataset || !Array.isArray(dataset.employees) || dataset.model !== MODEL || Date.parse(dataset.expires_at) <= now || !Number.isFinite(Date.parse(dataset.expires_at))) fail('Abre el reloj de la empresa con internet para descargar o renovar los rostros automáticamente.', 'LOCAL_FACE_NOT_READY');
-  const matches = dataset.employees.map(employee => ({ employee, score: cosine(descriptor, employee.descriptor) })).filter(match => match.score >= 0.95).sort((a, b) => b.score - a.score);
-  if (!matches.length) fail('No se encontró coincidencia facial en este dispositivo. Mejora la iluminación y vuelve a intentar.', 'FACE_NOT_MATCHED');
-  if (matches.length > 1) fail('El rostro coincide con más de un empleado. RH debe revisar las referencias faciales.', 'FACE_AMBIGUOUS');
-  return matches[0];
+}
+// A failed comparison carries what RH sees later (never the descriptor): candidate, reason and scores.
+function refuse(message, code, result, metodo) {
+  const error = Object.assign(new Error(message), { code, response: { status: 422, data: { error: message, code } } });
+  if (result && result.motivo !== 'codigo_requerido') error.intento = { metodo, motivo: result.motivo, id_empleado: result.empleado ? Number(result.empleado.id) : null, mejor: result.mejor, segundo: result.segundo, id_segundo: result.idSegundo };
+  throw error;
+}
+// Company clock: face alone against every employee (best reference per person, with margin over the second person).
+// Employee app (dataset.mode === 'employee'): only the signed-in employee's own references, one to one.
+export function matchFace(descriptor, dataset, now = Date.now()) {
+  ready(dataset, now);
+  if (dataset.mode === 'employee') {
+    const own = dataset.employees.find(employee => Number(employee.id) === Number(dataset.employee)) || (dataset.employees.length === 1 ? dataset.employees[0] : null);
+    const result = unoAUno(descriptor, own, UMBRAL_1A1, 'sin_coincidencia');
+    if (result.motivo === 'sin_referencias') refuse('Aún no tienes tu rostro registrado. Regístralo en Mi espacio → Mi rostro.', 'FACE_NOT_REGISTERED', result, 'cara');
+    if (!result.ok) refuse('No te reconocimos. Mira de frente a la cámara, con buena luz, e intenta de nuevo.', 'FACE_NOT_MATCHED', result, 'cara');
+    return { employee: own, score: result.exacto };
+  }
+  const result = caraSola(descriptor, dataset.employees);
+  if (result.ok) return { employee: result.empleado, score: result.exacto, segundo: result.segundo };
+  if (result.motivo === 'codigo_requerido') refuse('Escribe tu código para checar.', 'CODE_REQUIRED', result, 'cara');
+  if (result.motivo === 'ambiguo') refuse('No pudimos distinguirte de otra persona. Escribe tu código y mira a la cámara.', 'FACE_AMBIGUOUS', result, 'cara');
+  refuse('No se encontró coincidencia facial en este dispositivo. Mejora la iluminación y vuelve a intentar.', 'FACE_NOT_MATCHED', result.motivo === 'sin_referencias' ? null : result, 'cara');
+}
+// «Código y cara»: the code identifies the person; the face is compared only with that person's references.
+export function matchFaceCode(descriptor, dataset, codeIdentity, now = Date.now()) {
+  ready(dataset, now);
+  const owners = dataset.employees.filter(employee => employee.code_identity === codeIdentity);
+  if (owners.length !== 1) {
+    const known = (dataset.code_references || []).filter(reference => reference.code_identity === codeIdentity);
+    if (owners.length === 0 && known.length === 1) refuse('Aún no tienes tu rostro registrado. Pide a Recursos Humanos que lo registre.', 'FACE_NOT_REGISTERED', { motivo: 'sin_referencias', empleado: { id: known[0].id }, mejor: null, segundo: null, idSegundo: null }, 'codigo_cara');
+    refuse('Ese código no existe. Revísalo e intenta de nuevo.', 'CODE_NOT_FOUND', { motivo: 'codigo_invalido', empleado: null, mejor: null, segundo: null, idSegundo: null }, 'codigo_cara');
+  }
+  const result = unoAUno(descriptor, owners[0], UMBRAL_1A1, 'codigo_no_coincide');
+  if (result.motivo === 'sin_referencias') refuse('Aún no tienes tu rostro registrado. Pide a Recursos Humanos que lo registre.', 'FACE_NOT_REGISTERED', result, 'codigo_cara');
+  if (!result.ok) refuse('La cara no coincide con ese código. Mira de frente a la cámara e intenta de nuevo.', 'FACE_CODE_NOT_MATCHED', result, 'codigo_cara');
+  return { employee: owners[0], score: result.exacto };
 }
 export function validateCaptureTime(dataset, captured_at, now = Date.now()) {
   const captured = Date.parse(captured_at), prepared = Date.parse(dataset.prepared_at), expires = Date.parse(dataset.expires_at);

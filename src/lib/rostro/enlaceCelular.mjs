@@ -44,6 +44,12 @@ export function errorPublico(e) {
   const codigo = e?.response?.data?.codigo;
   if (ERRORES[codigo]) return { codigo, ...ERRORES[codigo] };
   if (e?.response?.status === 404) return { codigo: "ENLACE_INVALIDO", ...ERRORES.ENLACE_INVALIDO };
+  // 409: el rostro se parece mucho al de otra persona registrada. Se puede volver a intentar (mensaje genérico, sin nombres).
+  if (e?.response?.status === 409 && (codigo === "ROSTRO_PARECIDO" || e?.response?.data?.code === "ROSTRO_PARECIDO")) {
+    const quedan = Number(e.response.data.intentos_restantes);
+    const texto = e.response.data.error || "Tu rostro se parece mucho al de otra persona registrada. Vuelve a tomar las fotos con buena luz.";
+    return { codigo: "ROSTRO_PARECIDO", titulo: "Vuelve a tomar las fotos", texto: Number.isFinite(quedan) ? `${texto} Te ${quedan === 1 ? "queda 1 intento" : `quedan ${quedan} intentos`} con este enlace.` : texto, fin: quedan === 0 };
+  }
   if (e?.response?.status === 429) return { codigo: "DEMASIADAS", titulo: "Demasiados intentos", texto: "Espera unos minutos e intenta de nuevo.", fin: false };
   return { codigo: codigo ?? "RED", titulo: "No pudimos continuar", texto: e?.response?.data?.error || "Revisa tu conexión a internet e intenta de nuevo.", fin: false };
 }
