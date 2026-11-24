@@ -36,8 +36,8 @@ function Opcion({ activa, children, onClick, compacta = false }) {
       type="button"
       aria-pressed={activa}
       onClick={onClick}
-      className={`w-full rounded-2xl border-2 px-4 text-left text-[15.5px] font-semibold transition-colors ${
-        compacta ? "min-h-12 text-center" : "min-h-14"
+      className={`w-full rounded-2xl border-2 px-4 text-left text-[18px] font-semibold leading-snug transition-colors ${
+        compacta ? "min-h-14 text-center" : "min-h-16 py-3"
       } ${activa ? "border-brand bg-blue-50 text-blue-900" : "border-slate-200 bg-white text-slate-800 active:bg-slate-50"}`}
     >
       {children}
@@ -84,7 +84,7 @@ function Respuesta({ paso, valor, alElegir }) {
             </Opcion>
           ))}
         </div>
-        <div className="mt-2 flex justify-between text-xs text-slate-500">
+        <div className="mt-2 flex justify-between text-[14px] text-slate-500">
           <span>0 · Nada probable</span>
           <span>10 · Muy probable</span>
         </div>
@@ -99,14 +99,15 @@ function Respuesta({ paso, valor, alElegir }) {
         maxLength={1000}
         value={valor ?? ""}
         onChange={(e) => alElegir(e.target.value, false)}
-        className="w-full rounded-2xl border-2 border-slate-200 p-3 text-[15.5px]"
+        className="w-full rounded-2xl border-2 border-slate-200 p-3 text-[18px]"
         placeholder="Escribe aquí (opcional). Evita poner nombres."
       />
     </label>
   );
 }
 
-export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, token = null }) {
+// pantallaCompleta: ocupa todo el alto disponible y deja «Anterior / Siguiente» fijos abajo (nada los tapa).
+export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, token = null, pantallaCompleta = false }) {
   const llave = vistaPrevia ? null : llaveBorrador(encuesta.id, token);
   const [r, setR] = useState({});
   const [i, setI] = useState(encuesta.tipo === "nom035" ? -1 : 0);
@@ -151,8 +152,8 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
         <p className="text-4xl" aria-hidden="true">
           🙌
         </p>
-        <h2 className="mt-3 text-xl font-extrabold text-slate-900">¡Gracias por contestar!</h2>
-        <p className="mt-2 text-[15px] text-slate-600">Tus respuestas ya se guardaron. Nadie de tu empresa las ve con tu nombre.</p>
+        <h2 className="mt-3 text-[24px] font-extrabold text-slate-900">¡Gracias por contestar!</h2>
+        <p className="mt-2 text-[17px] text-slate-600">Tus respuestas ya se guardaron. Nadie de tu empresa las ve con tu nombre.</p>
       </div>
     );
   }
@@ -161,24 +162,24 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
     const principal = encuesta.guias?.find((g) => g !== "I");
     return (
       <div className="space-y-4 px-5 py-6">
-        <h2 className="text-xl font-extrabold text-slate-900">{encuesta.nombre}</h2>
-        <p className="text-[15px] text-slate-700">
+        <h2 className="text-[24px] font-extrabold leading-tight text-slate-900">{encuesta.nombre}</h2>
+        <p className="text-[17px] leading-relaxed text-slate-700">
           Cuestionario oficial de la NOM-035 de la Secretaría del Trabajo. Considera tus condiciones de trabajo de los últimos dos meses; no
           hay respuestas buenas ni malas.
         </p>
         {tieneG1 ? (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-[14px] text-amber-950">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-[16px] leading-relaxed text-amber-950">
             <strong>Parte 1 · Guía I (con tu nombre y confidencial).</strong> Pregunta si viviste un acontecimiento grave en el trabajo para
             poder apoyarte. Solo la ven RH y el dueño.
           </div>
         ) : null}
         {principal ? (
-          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-3 text-[14px] text-blue-950">
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-[16px] leading-relaxed text-blue-950">
             <strong>Parte 2 · Guía {principal} (anónima).</strong> Nadie ve tu nombre junto a tus respuestas; los resultados se muestran en
             grupos de {MINIMO} o más.
           </div>
         ) : null}
-        <button type="button" onClick={() => setI(0)} className="min-h-14 w-full rounded-2xl bg-brand text-[16px] font-bold text-white">
+        <button type="button" onClick={() => setI(0)} className="min-h-14 w-full rounded-2xl bg-brand text-[18px] font-bold text-white">
           Empezar
         </button>
       </div>
@@ -189,13 +190,13 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
   const pct = avance(pasos, r);
 
   return (
-    <div className="flex min-h-[70vh] flex-col px-4 pb-4 pt-3">
+    <div className={`flex flex-col px-5 pt-4 ${pantallaCompleta ? "flex-1 pb-0" : "min-h-[70vh] pb-4"}`}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[13px] font-semibold text-slate-600">
+        <p className="text-[15px] font-semibold text-slate-600">
           Pregunta {i + 1} de {pasos.length}
         </p>
         <span
-          className={`rounded-full px-2.5 py-1 text-[12px] font-bold ${
+          className={`rounded-full px-3 py-1 text-[14px] font-bold ${
             confidencial ? "bg-amber-100 text-amber-900" : "bg-green-100 text-green-800"
           }`}
         >
@@ -212,32 +213,36 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
       >
         <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${pct}%` }} />
       </div>
-      <p className="mt-5 text-[11.5px] font-bold uppercase tracking-wider text-slate-500">{paso.seccion}</p>
-      {paso.encabezado ? <p className="mt-1 text-[14px] text-slate-600">{paso.encabezado}</p> : null}
-      <h2 className="mt-2 text-[21px] font-extrabold leading-snug text-slate-900" id="pregunta-actual">
+      <p className="mt-6 text-[13.5px] font-bold uppercase tracking-wide text-slate-500">{paso.seccion}</p>
+      {paso.encabezado ? <p className="mt-2 text-[18px] leading-relaxed text-slate-700">{paso.encabezado}</p> : null}
+      <h2 className="mt-2 text-[27px] font-extrabold leading-tight text-slate-900" id="pregunta-actual">
         {paso.pregunta?.texto ?? paso.texto}
       </h2>
-      {paso.ayuda ? <p className="mt-1 text-[13px] text-slate-500">{paso.ayuda}</p> : null}
-      {paso.tipo === "escala" ? <p className="mt-1 text-[13px] text-slate-500">Qué tan de acuerdo estás</p> : null}
-      <div className="mt-4 space-y-2" role="group" aria-labelledby="pregunta-actual">
+      {paso.ayuda ? <p className="mt-2 text-[16px] text-slate-500">{paso.ayuda}</p> : null}
+      {paso.tipo === "escala" ? <p className="mt-2 text-[16px] text-slate-500">Qué tan de acuerdo estás</p> : null}
+      <div className="mt-5 space-y-3" role="group" aria-labelledby="pregunta-actual">
         <Respuesta paso={paso} valor={r[paso.id]} alElegir={elegir} />
       </div>
-      <p className="mt-5 text-[12.5px] text-slate-500">
+      <p className="mt-6 text-[15px] leading-relaxed text-slate-500">
         {confidencial
           ? "Esta parte va con tu nombre para poder apoyarte. Solo la ven RH y el dueño; nunca sale en reportes."
           : `Nadie de tu empresa ve tu nombre junto a tus respuestas. Los resultados se muestran solo en grupos de ${MINIMO} o más personas.`}
       </p>
       {error ? (
-        <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-[15px] text-red-800">
           {error}
         </p>
       ) : null}
-      <div className="mt-auto flex gap-2 pt-5">
+      <div
+        className={`mt-auto flex gap-3 pt-5 ${
+          pantallaCompleta ? "sticky bottom-0 -mx-5 border-t border-slate-200 bg-white px-5 pb-[max(1rem,env(safe-area-inset-bottom))]" : ""
+        }`}
+      >
         <button
           type="button"
           disabled={i === 0 && encuesta.tipo !== "nom035"}
           onClick={() => setI((x) => Math.max(encuesta.tipo === "nom035" ? -1 : 0, x - 1))}
-          className="min-h-14 flex-1 rounded-2xl border-2 border-slate-200 bg-white text-[15.5px] font-bold text-slate-700 disabled:opacity-40"
+          className="min-h-14 flex-1 rounded-2xl border-2 border-slate-200 bg-white text-[17px] font-bold text-slate-700 disabled:opacity-40"
         >
           Anterior
         </button>
@@ -246,7 +251,7 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
             type="button"
             disabled={!completa || enviando || vistaPrevia}
             onClick={enviar}
-            className="min-h-14 flex-1 rounded-2xl bg-brand text-[15.5px] font-bold text-white disabled:opacity-50"
+            className="min-h-14 flex-1 rounded-2xl bg-brand text-[17px] font-bold text-white disabled:opacity-50"
           >
             {enviando ? "Enviando…" : "Enviar respuestas"}
           </button>
@@ -255,14 +260,14 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
             type="button"
             disabled={!respondido(paso, r)}
             onClick={() => setI((x) => x + 1)}
-            className="min-h-14 flex-1 rounded-2xl bg-brand text-[15.5px] font-bold text-white disabled:opacity-50"
+            className="min-h-14 flex-1 rounded-2xl bg-brand text-[17px] font-bold text-white disabled:opacity-50"
           >
             Siguiente
           </button>
         )}
       </div>
       {ultimo && !completa ? (
-        <p className="mt-2 text-center text-[12.5px] text-slate-500">Te faltan preguntas por contestar: usa «Anterior» para revisarlas.</p>
+        <p className="mt-2 text-center text-[15px] text-slate-500">Te faltan preguntas por contestar: usa «Anterior» para revisarlas.</p>
       ) : null}
     </div>
   );

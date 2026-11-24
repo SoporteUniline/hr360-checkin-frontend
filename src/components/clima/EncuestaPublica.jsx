@@ -11,7 +11,7 @@ export default function EncuestaPublica({ token }) {
   const url = `${BASE}/publica/${encodeURIComponent(token)}`;
   const { data, error } = useSWR(url, get, { revalidateOnFocus: false, shouldRetryOnError: false });
   return (
-    <main className="mx-auto min-h-dvh max-w-xl bg-white">
+    <main className="mx-auto flex min-h-dvh max-w-xl flex-col bg-white">
       <header className="flex items-center gap-2 border-b border-slate-200 px-4 py-3">
         <span className="size-7 rounded-lg bg-gradient-to-br from-brand to-brand-accent" aria-hidden="true" />
         <span className="text-sm font-bold tracking-[0.12em] text-slate-900">ADAMIA</span>
@@ -29,7 +29,7 @@ export default function EncuestaPublica({ token }) {
           <Vacio titulo="Ya contestaste esta encuesta" texto="¡Gracias por tu tiempo!" />
         </div>
       ) : (
-        <Contestar encuesta={data.encuesta} token={token} alEnviar={(cuerpo) => axios.post(`${url}/respuestas`, cuerpo)} />
+        <Contestar encuesta={data.encuesta} token={token} alEnviar={(cuerpo) => axios.post(`${url}/respuestas`, cuerpo)} pantallaCompleta />
       )}
     </main>
   );
