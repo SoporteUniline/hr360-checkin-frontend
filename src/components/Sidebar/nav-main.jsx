@@ -82,6 +82,8 @@ import {
 import { VISTAS_RH } from "@/lib/evaluaciones/vistas.mjs";
 import { useMenuEvaluaciones } from "./useMenuEvaluaciones";
 import useMonitorEquipo from "@/hooks/useMonitorEquipo";
+import { ContadorEncuestas, useMisEncuestas } from "@/components/clima/AvisoEncuestas";
+import { RUTA_PANEL as RUTA_MIS_ENCUESTAS } from "@/lib/clima/pendientes.mjs";
 const ICONOS_EVALUACION = {
   campanas: ClipboardList,
   plantillas: LayoutTemplate,
@@ -89,6 +91,16 @@ const ICONOS_EVALUACION = {
   configuracion: Settings2,
 };
 const dashboardItems = [
+  {
+    // RH o dueño que también son empleados (tienen ficha con su correo): contestan Clima y NOM-035 desde el panel.
+    // Solo aparece con ficha; el número son las que faltan por contestar.
+    title: "Mis encuestas",
+    url: RUTA_MIS_ENCUESTAS,
+    rol: "Recruiter",
+    icon: ClipboardList,
+    matchPrefix: RUTA_MIS_ENCUESTAS,
+    soloConFicha: true,
+  },
   {
     title: "Mis activos y uniformes",
     url: "/empleado/panel/mis-recursos",
@@ -604,7 +616,7 @@ const ITEM_NORMAL =
   "text-gray-700 [&_svg]:text-gray-400 hover:[&_svg]:text-[#2563EB]";
 // Módulo del rail contraído: icono + panel flotante con todos sus items.
 // `consulta` llega como prop porque aquí no está definida (sin ella, contraer el menú lanza ReferenceError).
-function RailModule({ icon: Icon, title, items, path, onNavigate, consulta = "" }) {
+function RailModule({ icon: Icon, title, items, path, onNavigate, consulta = "", contador = 0 }) {
   const [open, setOpen] = useState(false);
   const cierreRef = useRef(null);
   const abrir = () => {
@@ -663,6 +675,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate, consulta = "" 
           }`}
         >
           <Icon size={19} />
+          {contador ? <ContadorEncuestas n={contador} className="absolute -right-1 -top-1 ring-2 ring-white" /> : null}
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -723,8 +736,11 @@ export function NavMain({ consulta = "" } = {}) {
   const grupos = filtrarGrupos(menuGroups, activos, opcionesModulo);
   // «Monitor de mi equipo» solo para jefes (lo decide el servidor con la sesión).
   const { esJefe } = useMonitorEquipo();
+  // «Mis encuestas» de RH o dueño: solo con ficha de empleado (si no, el servidor responde SIN_FICHA y no se muestra).
+  const misEncuestas = useMisEncuestas(effectiveRole === "Recruiter");
+  const contadorDe = (item) => (item.url === RUTA_MIS_ENCUESTAS ? misEncuestas.pendientes : 0);
   const itemsInicio = dashboardItems.filter((item) =>
-    rutaPermitida(item.url, activos, opcionesModulo) && (!item.soloJefe || esJefe));
+    rutaPermitida(item.url, activos, opcionesModulo) && (!item.soloJefe || esJefe) && (!item.soloConFicha || misEncuestas.conFicha));
   const vistasEvaluacion = useMenuEvaluaciones(dataUser, effectiveRole === "Recruiter" && rutaPermitida("/panel/evaluaciones", activos, opcionesModulo));
   // Rol, app nativa (sin «Mi suscripción») y, en Evaluaciones, los permisos del servidor. Mientras no se
   // saben se muestran por rol, salvo «Por responder», que solo aparece si hay evaluaciones asignadas.
@@ -842,6 +858,7 @@ export function NavMain({ consulta = "" } = {}) {
                 path={path}
                 consulta={consulta}
                 onNavigate={handleClick}
+                contador={contadorDe(item)}
               />
             ))}
           {gruposVisibles.length > 0 && (
@@ -912,6 +929,7 @@ export function NavMain({ consulta = "" } = {}) {
                     {item.icon && <item.icon size={16} />}
                     <span>{item.title}</span>
                   </div>
+                  <ContadorEncuestas n={contadorDe(item)} />
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );
