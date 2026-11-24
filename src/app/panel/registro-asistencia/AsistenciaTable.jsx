@@ -35,6 +35,7 @@ import {
 
 import { FIJA_RELOJ, fijaEstado } from "./columnasFijas";
 import { permisoFila } from "@/lib/asistencia/tiposGoce.mjs";
+import { estadoMotivo } from "@/lib/asistencia/quePasoMotivo.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -532,13 +533,13 @@ export default function AsistenciaTable({
       comida_checada: textoComida(r.comida_checada, undefined, ahoraBase()) || "-",
       notas: r.notas ?? "-",
       notas_hrs_extra: r.notas_hrs_extra ?? "-",
-      estadoAsistencia: permisoFila(r)?.tipo || estadoFila(r).texto,
+      estadoAsistencia: estadoMotivo(r, tiposPermiso) || permisoFila(r)?.tipo || estadoFila(r).texto,
       dia: [diaFila(r).nombre, diaFila(r).pago].filter(Boolean).join(" · "),
       minutos_trabajados: r.minutos_trabajados ?? "-",
       minutos_comida: r.minutos_comida ?? "-",
       minutos_extra: r.minutos_extra ?? "-",
       minutos_extra_por_autorizar: r.minutos_extra_por_autorizar ?? "-",
-      motivos_resumen: [permisoFila(r)?.detalle, r.motivos_resumen].filter(Boolean).join(" · ") || "-",
+      motivos_resumen: [estadoMotivo(r, tiposPermiso) ? "" : permisoFila(r)?.detalle, r.motivos_resumen].filter(Boolean).join(" · ") || "-",
     };
   };
 

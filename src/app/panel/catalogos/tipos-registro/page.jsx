@@ -59,7 +59,7 @@ export default function TiposRegistro() {
         <EncabezadoPagina
           icono={BookOpen}
           titulo="Tipos de registro"
-          subtitulo="Qué pasó (el tipo), por qué (el motivo) y cuánto se paga. Los que tienen 🔒 los fija la ley o el sistema."
+          subtitulo="Dos campos: Qué pasó (el tipo) y Motivo (por qué). El goce y las horas se configuran en cada motivo; los días con 🔒 los fija la ley."
         />
       </div>
 
@@ -124,7 +124,7 @@ export default function TiposRegistro() {
         }}
       />
 
-      <MotivosPermiso />
+      <MotivosPermiso empresa={empresaConfig} variasEmpresas={(dataUser?.empresas?.length ?? 0) > 1} />
 
       <TipoRegistroFormDialog
         open={openForm}

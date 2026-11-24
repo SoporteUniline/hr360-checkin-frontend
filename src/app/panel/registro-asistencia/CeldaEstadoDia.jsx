@@ -1,33 +1,40 @@
 "use client";
 
-// «Estado · motivo» de una fila de Asistencias. Con checadas vivas el estado es solo lectura (lo calcula el reloj).
-// Sin checadas: select con dos grupos (lib/asistencia/tiposGoce.mjs):
-//  · «No vino»: tipos de día completo. Si el tipo pide motivo sale el catálogo de motivos (con «Otro…» para escribirlo);
-//    si pide folio (incapacidad), el folio; y el goce solo si el tipo se cambia al aplicar (preseleccionado). PUT /:id/estado-dia.
-//  · «Sí vino»: «Sí vino (sin permiso)» y los tipos parciales (entrada después, salida antes…): abren el reloj con ese
-//    tipo en «Permiso del día».
-// Debajo: «Visita al médico · 2 h · las repone · con goce» y, en una falta injustificada, «📄 Acta en borrador».
+// «Estado · motivo» de una fila de Asistencias (y del reloj sin checadas y la vista móvil).
+// Con checadas vivas (o sin permiso de edición) es solo lectura: «❌ Inasistencia injustificada», «📝 Inasistencia ·
+// Permiso personal · sin goce», «⌚ Entrada tarde · Visita al médico · 2 h · las repone» (lib/asistencia/quePasoMotivo.mjs).
+// Sin checadas: el par «Qué pasó» + «Motivo» (components/asistencia/QuePasoMotivo).
+//  · Inasistencia: motivo opcional (vacío = injustificada, se avisa del acta en borrador); goce del motivo (🔒 si no se
+//    cambia al aplicar). Días de ley: sin motivo, goce del tipo, folio en la incapacidad. Se guarda con OK:
+//    PUT /:id/estado-dia { id_tipo_permiso, id_motivo?, motivo_permiso? (texto de «Otro»), goce?, folio? }.
+//  · Asistencia, Entrada tarde, Salida temprano, Salir en medio turno: abren el reloj para poner sus horas (el parcial llega
+//    puesto en «Permiso del día», donde se elige su motivo).
+// Debajo: el resumen de motivos del reloj y, en una inasistencia injustificada, «📄 Acta en borrador».
 import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import { fetcherWithToken } from "@/lib/fetcher";
-import { checadasVivas, estadoFila, requisitoEstado, textoConIcono } from "@/lib/asistencia/relojDia.mjs";
+import { checadasVivas, estadoFila, textoConIcono } from "@/lib/asistencia/relojDia.mjs";
+import { permisoFila } from "@/lib/asistencia/tiposGoce.mjs";
 import {
-  GOCES, OTRO, cuerpoEstadoDia, gruposFila, listaMotivos, motivoFinal, normalizarTipo, permisoFila, puedeCambiar,
-} from "@/lib/asistencia/tiposGoce.mjs";
+  ASISTENCIA, aplicado, claseDe, cuerpoEstadoDia, estadoMotivo, faltaPar, opcionesMotivo, opcionesTipo, parDesdeFila, parVacio,
+  goceTxt, nombreTipo, tiposCaptura,
+} from "@/lib/asistencia/quePasoMotivo.mjs";
 import { actaFila, avisosRespuesta } from "@/lib/actasEstatus.mjs";
+import QuePasoMotivo, { GoceMotivo } from "@/components/asistencia/QuePasoMotivo";
 
-const SI_VINO = "si_vino";
+const CLAVE_MOTIVOS = "/checador/motivos-permiso";
 
-function Debajo({ registro }) {
-  const permiso = permisoFila(registro);
+function Debajo({ registro, conDetalle, goce = "" }) {
+  const permiso = conDetalle ? permisoFila(registro) : null;
   const acta = actaFila(registro);
   const resumen = registro.motivos_resumen || "";
-  if (!permiso?.detalle && !resumen && !acta) return null;
+  if (!permiso?.detalle && !resumen && !acta && !goce) return null;
   return (
-    <span className="flex max-w-[280px] flex-col gap-0.5 whitespace-normal text-[12px] leading-snug text-slate-500">
+    <span className="flex max-w-[300px] flex-col gap-0.5 whitespace-normal text-[12px] leading-snug text-slate-500">
+      {goce ? <span data-goce-guardado>{goce}</span> : null}
       {permiso?.detalle ? <span data-permiso-detalle>{permiso.detalle}</span> : null}
       {resumen ? <span>{resumen}</span> : null}
       {acta ? (
@@ -38,40 +45,45 @@ function Debajo({ registro }) {
   );
 }
 
-// `comoCampo`: dentro del reloj del día (sin checadas), con aspecto de campo; `soloNoVino` además quita «Sí vino».
-export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = false, onAbrirReloj, onGuardado, movil = false, soloNoVino = false, comoCampo = false }) {
-  const campoReloj = comoCampo || soloNoVino;
+// `comoCampo`: dentro del reloj sin checadas (campos con borde; «Asistencia» y los parciales se quedan en el reloj).
+export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = false, onAbrirReloj, onGuardado, movil = false, comoCampo = false }) {
   const { enqueueSnackbar } = useSnackbar();
-  const [pendiente, setPendiente] = useState(null); // { tipo, req, opcion, texto, goce }
+  const [cambio, setCambio] = useState(null); // par editado (null = el guardado)
   const [guardando, setGuardando] = useState(false);
-  // Una sola petición para toda la tabla (SWR la comparte); se pide desde que la fila puede elegir estado.
   const editable = !readOnly && checadasVivas(registro) === 0;
-  const { data: dataMotivos } = useSWR(editable ? "/checador/motivos-permiso" : null, fetcherWithToken, { revalidateOnFocus: false });
+  // Una sola petición para toda la tabla (SWR la comparte).
+  const { data: dataMotivos } = useSWR(editable ? CLAVE_MOTIVOS : null, fetcherWithToken, { revalidateOnFocus: false });
   const estado = estadoFila(registro);
-  const permiso = permisoFila(registro);
   const nombre = [registro.nombre, registro.apellido_paterno].filter(Boolean).join(" ");
+  const nuevo = estadoMotivo(registro, tiposPermiso);
 
-  if (checadasVivas(registro) > 0 || readOnly) {
+  if (!editable) {
     return (
       <span className="flex flex-col items-start gap-1" data-estado-fila>
-        <span className="whitespace-nowrap text-[13.5px] text-slate-800">{permiso?.tipo || textoConIcono(estado.texto, estado.clave)}</span>
-        <Debajo registro={registro} />
+        <span data-estado-motivo className="whitespace-normal text-[13.5px] leading-snug text-slate-800">
+          {nuevo ?? (permisoFila(registro)?.tipo || textoConIcono(estado.texto, estado.clave))}
+        </span>
+        <Debajo registro={registro} conDetalle={!nuevo} />
       </span>
     );
   }
 
-  const { noVino: tipos, siVino } = gruposFila(tiposPermiso);
-  const actual = tipos.some((t) => String(t.id) === String(registro.id_tipo_permiso)) ? String(registro.id_tipo_permiso) : "";
-  const valor = pendiente ? String(pendiente.tipo.id) : actual;
-  const motivos = listaMotivos(dataMotivos);
+  const guardado = parDesdeFila(registro, tiposPermiso, dataMotivos);
+  const par = cambio ?? guardado;
+  const tipos = tiposCaptura(tiposPermiso, { actual: guardado.tipo });
+  const tipo = par.tipo && par.tipo !== ASISTENCIA ? tipos.find((t) => String(t.id) === par.tipo) ?? null : null;
+  const { r, motivo, goce } = aplicado(par, tipo, dataMotivos);
+  const pendiente = cambio != null && cambio.tipo !== ASISTENCIA && JSON.stringify(cambio) !== JSON.stringify(guardado);
+  const falta = pendiente ? faltaPar(par, tipo, dataMotivos) : "";
+  const variante = comoCampo || movil ? "campo" : "fila";
 
-  const guardar = async (p) => {
+  const guardar = async () => {
+    if (!tipo || falta) return;
     setGuardando(true);
     try {
-      const cuerpo = cuerpoEstadoDia(p.tipo, { requisito: p.req, motivo: motivoFinal(p), folio: p.texto, goce: p.goce });
-      const res = await axios.put(`/checador/asistencias/${registro.id}/estado-dia`, cuerpo);
-      setPendiente(null);
-      enqueueSnackbar(`${nombre}: ${p.tipo.nombre}. Queda en el historial con tu nombre.`, { variant: "success" });
+      const res = await axios.put(`/checador/asistencias/${registro.id}/estado-dia`, cuerpoEstadoDia(par, tipo, dataMotivos));
+      setCambio(null);
+      enqueueSnackbar(`${nombre}: ${[nombreTipo(tipo), motivo?.otro ? par.texto.trim() : motivo?.nombre].filter(Boolean).join(" · ")}. Queda en el historial con tu nombre.`, { variant: "success" });
       for (const a of avisosRespuesta(res.data)) enqueueSnackbar(a, { variant: "info" });
       await onGuardado?.(res.data?.asistencia);
     } catch (e) {
@@ -80,74 +92,46 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
       setGuardando(false);
     }
   };
-  const elegir = (v) => {
-    if (v === SI_VINO) { setPendiente(null); onAbrirReloj?.(registro); return; }
-    if (v.startsWith("tp:")) { setPendiente(null); onAbrirReloj?.({ ...registro, _tipoParcial: v.slice(3) }); return; }
-    const tipo = tipos.find((t) => String(t.id) === v);
-    if (!tipo) return;
-    const p = { tipo, req: requisitoEstado(tipo), opcion: "", texto: "", goce: normalizarTipo(tipo).goce };
-    if (p.req || puedeCambiar(tipo).goce) setPendiente(p);
-    else guardar(p);
+  const elegirTipo = (v) => {
+    const t = tipos.find((x) => String(x.id) === v);
+    // Asistencia y los parciales: sus horas se ponen en el reloj.
+    if (v === ASISTENCIA || (t && claseDe(t) === "parcial")) {
+      setCambio(comoCampo ? parVacio(v === ASISTENCIA ? ASISTENCIA : "") : null);
+      onAbrirReloj?.(v === ASISTENCIA ? registro : { ...registro, _tipoParcial: v });
+      return;
+    }
+    setCambio(v ? parVacio(v) : null);
   };
-  const listo = pendiente && (pendiente.req === "folio" ? pendiente.texto.trim()
-    : pendiente.req === "motivo" ? motivoFinal(pendiente) : true);
-  const alto = movil ? "h-11 text-base" : "h-9 text-[13.5px]";
-  const campo = `${alto} min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30`;
-  const falta = /injustificad/i.test(estado.texto) || estado.clave === "falta";
-  const tecla = (e) => { if (e.key === "Enter" && listo) guardar(pendiente); if (e.key === "Escape") setPendiente(null); };
-  const set = (c) => setPendiente((p) => ({ ...p, ...c }));
+  const set = (c) => setCambio({ ...par, ...c });
+  const tecla = (e) => { if (e.key === "Enter" && pendiente && !falta) guardar(); if (e.key === "Escape") setCambio(null); };
+  // Sin tipo guardado (sin checar): la opción vacía dice el estado de hoy.
+  const vacioTipo = par.tipo ? null : comoCampo ? "Elige qué pasó…" : textoConIcono(estado.texto, estado.clave) || "Elige qué pasó…";
+  const boton = movil ? "h-11 px-4" : "h-9 px-3 max-sm:h-11";
 
   return (
-    <span className="flex w-full min-w-[240px] flex-col gap-1.5" data-estado-fila data-no-row-click>
-      {/* Se ve como texto (igual que el «Tipo» de antes); al tocarlo despliega las opciones. */}
-      <span className={`group relative inline-flex max-w-full items-center ${campoReloj ? "w-full" : "w-fit"}`}>
-        <select aria-label={`Estado de ${nombre}`} value={valor} disabled={guardando} onChange={(e) => elegir(e.target.value)}
-          className={campoReloj
-            ? `${alto} w-full cursor-pointer appearance-none truncate rounded-lg border border-slate-200 bg-white py-0 pl-2.5 pr-7 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30`
-            : `${alto} max-w-full cursor-pointer appearance-none truncate rounded-md border-0 bg-transparent py-0 pl-1 pr-6 text-slate-800 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30`}>
-          {!actual && !pendiente ? <option value="">{campoReloj ? "Elige qué pasó…" : permiso?.tipo || textoConIcono(estado.texto, falta ? "falta" : estado.clave) || "Elige el estado…"}</option> : null}
-          <optgroup label="No vino">
-            {tipos.map((t) => <option key={t.id} value={String(t.id)}>{t.nombre}{requisitoEstado(t) || puedeCambiar(t).goce ? "…" : ""}</option>)}
-          </optgroup>
-          {soloNoVino ? null : (
-            <optgroup label="Sí vino → poner sus horas en el reloj">
-              <option value={SI_VINO}>Sí vino (sin permiso)</option>
-              {siVino.map((t) => <option key={t.id} value={`tp:${t.id}`}>{t.nombre}</option>)}
-            </optgroup>
-          )}
-        </select>
-        <svg aria-hidden viewBox="0 0 20 20" className="pointer-events-none absolute right-1.5 h-3.5 w-3.5 text-slate-400 group-hover:text-slate-600" fill="currentColor"><path d="M5.5 7.5 10 12l4.5-4.5" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>
-      </span>
+    <span className={`flex w-full flex-col gap-1.5 ${comoCampo ? "" : "min-w-[260px]"}`} data-estado-fila data-no-row-click onKeyDown={tecla}>
+      <QuePasoMotivo variante={variante} movil={movil} nombre={nombre} disabled={guardando}
+        tipoOpciones={opcionesTipo(tipos)} tipoVacio={vacioTipo} tipo={par.tipo} onTipo={elegirTipo}
+        motivoVisible={Boolean(tipo) && r.motivoVisible} motivoOpciones={opcionesMotivo(dataMotivos)} motivoVacio={r.vacioMotivo}
+        motivo={par.motivo} onMotivo={(m) => set({ motivo: m, texto: "", goce: null })} esOtro={Boolean(motivo?.otro)}
+        texto={par.texto} onTexto={(t) => set({ texto: t })} />
       {pendiente ? (
         <span data-estado-pendiente className="flex flex-col gap-1.5">
-          {pendiente.req === "folio" ? (
-            <input aria-label="Folio IMSS (obligatorio)" placeholder="Folio IMSS (obligatorio)" value={pendiente.texto} maxLength={200} autoFocus
-              onChange={(e) => set({ texto: e.target.value })} onKeyDown={tecla} className={campo} />
+          {r.folio ? (
+            <input aria-label="Folio IMSS (obligatorio)" placeholder="Folio IMSS (obligatorio)" value={par.folio} maxLength={200}
+              onChange={(e) => set({ folio: e.target.value })}
+              className={`${movil ? "h-11 text-base" : "h-9 text-[13.5px] max-sm:h-11 max-sm:text-base"} min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30`} />
           ) : null}
-          {pendiente.req === "motivo" ? (
-            <select aria-label="Motivo" value={pendiente.opcion} autoFocus onChange={(e) => set({ opcion: e.target.value })} onKeyDown={tecla} className={campo}>
-              <option value="">Elige el motivo…</option>
-              {motivos.map((m) => <option key={m.id} value={m.nombre}>{m.nombre}</option>)}
-              <option value={OTRO}>Otro…</option>
-            </select>
-          ) : null}
-          {pendiente.req === "motivo" && pendiente.opcion === OTRO ? (
-            <input aria-label="Escribe el motivo" placeholder="Escribe el motivo" value={pendiente.texto} maxLength={120} autoFocus
-              onChange={(e) => set({ texto: e.target.value })} onKeyDown={tecla} className={campo} />
-          ) : null}
-          <span className="flex gap-1.5">
-            {puedeCambiar(pendiente.tipo).goce ? (
-              <select aria-label="Goce del día" value={pendiente.goce} onChange={(e) => set({ goce: e.target.value })} className={`${campo} flex-1`}>
-                {GOCES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-              </select>
-            ) : (
-              <span className={`${alto} inline-flex flex-1 items-center text-[13px] text-slate-500`}>🔒 {normalizarTipo(pendiente.tipo).goce === "con" ? "Con goce" : "Sin goce"}</span>
-            )}
-            <button type="button" disabled={!listo || guardando} onClick={() => guardar(pendiente)}
-              className={`${movil ? "h-11 px-4" : "h-9 px-3"} rounded-lg bg-blue-600 text-[13px] font-semibold text-white hover:bg-blue-700 disabled:opacity-45`}>OK</button>
+          <span className="flex items-center gap-2">
+            <span className="flex min-w-0 flex-1"><GoceMotivo goce={goce} cambia={r.goceCambia} onCambio={(g) => set({ goce: g })} movil={movil} className="w-full" /></span>
+            <button type="button" disabled={Boolean(falta) || guardando} onClick={guardar}
+              className={`${boton} shrink-0 rounded-lg bg-blue-600 text-[13px] font-semibold text-white hover:bg-blue-700 disabled:opacity-45`}>OK</button>
           </span>
+          {r.acta ? <span data-aviso-acta className="text-[12px] leading-snug text-amber-800">Sin motivo es injustificada: se creará un acta en borrador.</span> : null}
         </span>
-      ) : <Debajo registro={registro} />}
+      ) : comoCampo && par.tipo === ASISTENCIA ? (
+        <span className="text-[12.5px] text-slate-500">Pon sus horas abajo en «Checadas del reloj».</span>
+      ) : <Debajo registro={registro} conDetalle={!nuevo} goce={tipo && r.clase !== "parcial" && !r.acta && goce ? `${r.goceCambia ? "" : "🔒 "}${goceTxt(goce)}` : ""} />}
     </span>
   );
 }

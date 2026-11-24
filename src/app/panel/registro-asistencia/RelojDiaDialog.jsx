@@ -22,7 +22,8 @@ import {
   fechaTxt, hora12Txt, horarioMin, horarioNormal, minDeCampo, ordenar, origenTexto, puedeComida, quitarORestaurar,
   resumen, resumenServidor, separarExtra, vivos,
 } from "@/lib/asistencia/relojDia.mjs";
-import { cuerpoPermisoDia, errorPermiso, normalizarTipo, permisoInicial } from "@/lib/asistencia/tiposGoce.mjs";
+import { normalizarTipo } from "@/lib/asistencia/tiposGoce.mjs";
+import { cuerpoPermisoDia, faltaPar, parDesdePermiso, parVacio } from "@/lib/asistencia/quePasoMotivo.mjs";
 import PermisoDelDia from "./PermisoDelDia";
 import CeldaEstadoDia from "./CeldaEstadoDia";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
@@ -137,12 +138,13 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   const [permiso, setPermiso] = useState(undefined);
   const { data: tiposPermiso } = useTiposPermisoData();
   const tiposParciales = useMemo(() => (Array.isArray(data?.tipos_parciales) ? data.tipos_parciales : []), [data]);
-  const permisoGuardado = useMemo(() => permisoInicial(data?.permiso_dia, tiposParciales), [data, tiposParciales]);
+  const motivosPermiso = data?.motivos_permiso;
+  const permisoGuardado = useMemo(() => parDesdePermiso(data?.permiso_dia, motivosPermiso), [data, motivosPermiso]);
   useEffect(() => {
     if (data?.registros && regs == null) setRegs(desdeApi(data.registros, { fecha, zona }));
-    // Desde la fila «Sí vino → <tipo parcial>»: ese tipo queda puesto en «Permiso del día».
-    if (data && permiso === undefined) setPermiso(permisoInicial(data.permiso_dia, tiposParciales, data.permiso_dia ? null : registro?._tipoParcial));
-  }, [data, regs, fecha, zona, permiso, tiposParciales, registro?._tipoParcial]);
+    // Desde la fila (Entrada tarde, Salida temprano, Salir en medio turno): ese tipo queda puesto en «Permiso del día».
+    if (data && permiso === undefined) setPermiso(permisoGuardado ?? (registro?._tipoParcial ? parVacio(registro._tipoParcial) : null));
+  }, [data, regs, fecha, zona, permiso, permisoGuardado, registro?._tipoParcial]);
 
   const horario = data?.horario ?? null;
   const h = useMemo(() => horarioMin(horario), [horario]);
@@ -150,16 +152,20 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   const orden = useMemo(() => ordenar(lista), [lista]);
   const errs = useMemo(() => validar(lista), [lista]);
   const estadoSin = estadoFila(registro);
-  const tipoPermiso = permiso ? tiposParciales.find((t) => String(t.id) === String(permiso.id_tipo)) : null;
+  const tipoDe = (p) => (p ? tiposParciales.find((t) => String(t.id) === String(p.tipo)) ?? null : null);
+  const tipoPermiso = tipoDe(permiso);
+  // Sin motivo no hay permiso (retardo / salida antes como siempre): permiso_dia null.
+  const cuerpoPermiso = cuerpoPermisoDia(permiso, tipoPermiso, motivosPermiso);
   const calc = resumen(lista, horario, { tolerancia: Number(horario?.tolerancia_min ?? TOLERANCIA_MIN), estadoDia: estadoSin,
-    permiso: tipoPermiso ? { alcance: normalizarTipo(tipoPermiso).alcance } : null });
+    permiso: cuerpoPermiso ? { alcance: normalizarTipo(tipoPermiso).alcance } : null });
   // permiso_dia viaja solo si hay permiso o si había uno guardado (null = quitarlo): así el cuerpo de siempre no cambia.
-  const cuerpoPermiso = permiso ? cuerpoPermisoDia(permiso, tipoPermiso) : null;
-  const llevaPermiso = Boolean(permiso) || Boolean(permisoGuardado);
-  const cambioPermiso = permiso !== undefined && JSON.stringify(cuerpoPermiso) !== JSON.stringify(permisoGuardado ? cuerpoPermisoDia(permisoGuardado, tiposParciales.find((t) => String(t.id) === String(permisoGuardado.id_tipo))) : null);
+  const llevaPermiso = Boolean(cuerpoPermiso) || Boolean(permisoGuardado);
+  const cambioPermiso = permiso !== undefined
+    && JSON.stringify(cuerpoPermiso) !== JSON.stringify(cuerpoPermisoDia(permisoGuardado, tipoDe(permisoGuardado), motivosPermiso));
   // El servidor responde 400 a un permiso parcial sin checadas: se avisa antes.
-  const errorDelPermiso = errorPermiso(permiso) || (permiso && regs != null && vivos(lista).length === 0
-    ? "Si no vino, usa el estado del día en la fila (falta, vacaciones…), o carga sus horas." : "");
+  const errorDelPermiso = (cuerpoPermiso || permiso?.motivo ? faltaPar(permiso, tipoPermiso, motivosPermiso) : "")
+    || (cuerpoPermiso && regs != null && vivos(lista).length === 0
+      ? "Si no vino, elige «Inasistencia» o un día de ley en «Qué pasó», o carga sus horas." : "");
   // Cambios = el cuerpo del PUT ya no es el que se cargó.
   const firma = (rs) => JSON.stringify(cuerpoPut(ordenar(rs), { fecha, zona }));
   const inicial = useMemo(() => (data?.registros ? firma(desdeApi(data.registros, { fecha, zona })) : ""),
@@ -248,21 +254,19 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                 </section>
 
                 {sinVivos && !permiso ? (
-                  // Sin checadas: el mismo desplegable que la fila de Asistencias («No vino» y «Sí vino»). Un tipo de «No vino»
-                  // se guarda como estado del día (pide motivo/folio y goce si aplica) y cierra el reloj; uno de «Sí vino»
-                  // con permiso abre «Permiso del día» con ese tipo para poner sus horas aquí abajo.
+                  // Sin checadas: el mismo par «Qué pasó» + «Motivo» que la fila. Inasistencia y días de ley se guardan como
+                  // estado del día (OK) y cierran el reloj; Asistencia y los parciales se quedan aquí para poner sus horas
+                  // (el parcial pasa a «Permiso del día» con su motivo).
                   <section data-reloj-que-paso className="flex flex-col gap-2 rounded-xl border border-slate-200 px-4 py-3">
                     <h3 className={TITULO}>Qué pasó</h3>
                     <CeldaEstadoDia registro={registro} tiposPermiso={tiposPermiso} comoCampo
-                      onAbrirReloj={(r) => {
-                        if (r?._tipoParcial) setPermiso(permisoInicial(null, tiposParciales, r._tipoParcial));
-                      }}
+                      onAbrirReloj={(r) => { if (r?._tipoParcial) setPermiso(parVacio(r._tipoParcial)); }}
                       onGuardado={async (a) => { await onGuardado?.(a); onCerrar?.(true); }} />
-                    <p className="text-[12.5px] text-slate-500">Si no vino, elige el tipo (falta, vacaciones, incapacidad…). Si sí vino, elige «Sí vino» o el permiso y pon sus horas abajo.</p>
+                    <p className="text-[12.5px] text-slate-500">Si no vino, elige «Inasistencia» (con motivo si lo justificó) o el día de ley. Si sí vino, elige «Asistencia» o lo que pasó y pon sus horas abajo.</p>
                   </section>
                 ) : tiposParciales.length || permiso ? (
                   <PermisoDelDia permiso={permiso ?? null} onCambio={(p) => { setPermiso(p); setServidor({ general: "", renglones: {} }); }}
-                    tipos={tiposParciales} motivos={data?.motivos_permiso} regs={lista} horario={horario} error={permiso ? errorDelPermiso : ""}
+                    tipos={tiposParciales} motivos={motivosPermiso} regs={lista} horario={horario} error={permiso ? errorDelPermiso : ""}
                     origen={data?.permiso_dia?.origen === "permiso" ? data.permiso_dia.id_solicitud ?? true : null} />
                 ) : null}
 
