@@ -63,6 +63,7 @@ import {
   Settings2,
   MessageCircle,
   LayoutGrid,
+  Activity,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -182,7 +183,8 @@ const dashboardItems = [
     icon: LayoutGrid,
   },
   {
-    title: "Inicio",
+    // «Resumen» y no «Inicio»: la primera pantalla de RH es el Monitor.
+    title: "Resumen",
     url: "/panel/dashboard",
     rol: "Recruiter",
     icon: LayoutDashboard,
@@ -205,6 +207,12 @@ const menuGroups = [
     group: "CONTROL DE TIEMPO",
     groupIcon: ClockIcon,
     items: [
+      {
+        title: "Monitor",
+        url: "/panel/monitor",
+        rol: "Recruiter",
+        icon: Activity,
+      },
       {
         title: "Asistencias",
         url: "/panel/registro-asistencia",

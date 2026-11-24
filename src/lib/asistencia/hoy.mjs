@@ -304,51 +304,6 @@ export function describir(r) {
   return { chip, tono, detalle, detalleTono, resaltado, jornada, avance };
 }
 
-// Tarjetas de resumen = filtros. `es(r)` dice si la persona entra en la tarjeta.
-export const TARJETAS = [
-  { clave: "trabajando", titulo: "Trabajando", es: (r) => r.estado === "trabajando" },
-  { clave: "tarde", titulo: "Llegaron tarde", es: (r) => r.llegoTarde != null },
-  { clave: "no_ha_llegado", titulo: "No han llegado", es: (r) => r.estado === "no_ha_llegado" },
-  { clave: "en_comida", titulo: "En comida", es: (r) => r.estado === "en_comida" },
-  { clave: "ya_salio", titulo: "Ya salieron", es: (r) => r.estado === "ya_salio" },
-  { clave: "salio_antes", titulo: "Salieron antes", es: (r) => r.estado === "salio_antes" },
-  { clave: "falto", titulo: "Faltaron", es: (r) => r.estado === "falto" },
-];
-
-export function resumenHoy(resultados) {
-  const cuenta = Object.fromEntries(TARJETAS.map((t) => [t.clave, resultados.filter(t.es).length]));
-  const tardes = resultados.filter((r) => r.llegoTarde != null);
-  return {
-    cuenta,
-    programadosHoy: resultados.filter((r) => r.grupo !== "no_laboran").length,
-    promedioTarde: tardes.length ? Math.round(tardes.reduce((t, r) => t + r.llegoTarde, 0) / tardes.length) : null,
-    comidaExcedida: resultados.filter((r) => r.estado === "en_comida" && r.sePasoComida).length,
-    salieronConPermiso: resultados.filter((r) => r.estado === "ya_salio" && r.conPermiso).length,
-    atencion: resultados.filter((r) => r.grupo === "atencion").length,
-    noLaboran: resultados.filter((r) => r.grupo === "no_laboran").length,
-  };
-}
-
-export const GRUPOS = [
-  { clave: "atencion", titulo: "Requieren atención" },
-  { clave: "comida", titulo: "En comida" },
-  { clave: "trabajando", titulo: "Trabajando" },
-  { clave: "proximos", titulo: "Próximos" },
-  { clave: "salieron", titulo: "Ya salieron" },
-  { clave: "no_laboran", titulo: "No laboran hoy" },
-];
-
-// Grupos en orden (lo urgente primero); dentro de «Requieren atención»: Faltó, No ha llegado, Salió antes, comida pasada.
-export function agruparHoy(resultados, nombreDe = () => "") {
-  const porNombre = (a, b) => String(nombreDe(a)).localeCompare(String(nombreDe(b)), "es");
-  return GRUPOS.map((g) => ({
-    ...g,
-    filas: resultados
-      .filter((r) => r.grupo === g.clave)
-      .sort((a, b) => (a.prioridad ?? 0) - (b.prioridad ?? 0) || (a.orden ?? 0) - (b.orden ?? 0) || porNombre(a, b)),
-  })).filter((g) => g.filas.length);
-}
-
 // Hora actual en la zona de la empresa: { hoy: «YYYY-MM-DD», hora: «HH:mm», abs: minutos absolutos }.
 export function ahoraEn(zona, fecha = new Date()) {
   const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
