@@ -8,13 +8,18 @@
 // rostro», «Acércate un poco», «Más luz», «Mira de frente», «Rostro detectado ✅»… `listo` dice cuándo habilitar el
 // botón; solo cuentan las lecturas con la cara bien colocada, y al terminar se informa la calidad («✅ Rostro correcto»).
 // También lo usa «Probar rostro» de la ficha (lecturas: 1, como el checador; no guarda nada).
+// Registro GUIADO en 5 poses (registrarGuiado; regla pura en src/lib/rostro/poses.mjs): «Mira al frente», «Sube un poco la
+// cara»… La foto de cada pose se toma sola cuando la persona está en la pose, quieta y con buena luz, con el MISMO detector
+// rápido que usa el reloj al checar (opcionesRapidas), para que la huella registrada y la de la checada coincidan.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadBrowserFaceApi, opcionesRapidas } from "@/lib/faceapi-browser";
 import { promediarLecturas } from "@/lib/rostro/lecturas.mjs";
 import { brilloPromedio, carasDeFaceApi, GUIA_INICIAL, guiaRostro, OVALO_CELULAR } from "@/lib/rostro/guia.mjs";
+import { avance, descriptoresDe, estadoInicial, pasoActual, procesarCuadro, puedeSaltar, saltar, terminado } from "@/lib/rostro/poses.mjs";
 
 export const TOMA_BUENA = "✅ Rostro correcto";
 const INTERVALO_GUIA_MS = 300;
+const INTERVALO_GUIADO_MS = 120; // captura guiada: cuadros seguidos (la foto se toma tras 3 cuadros quietos en la pose)
 
 export function errorDeCamara(e) {
   if (["NotAllowedError", "PermissionDeniedError"].includes(e?.name)) return "Permite el acceso a la cámara para registrar tu rostro (en los ajustes del teléfono o del navegador).";
@@ -35,7 +40,7 @@ function medirBrillo(video, lienzoRef) {
   }
 }
 
-// fase: inicio · preparando · camara · leyendo · guardando · listo
+// fase: inicio · preparando · camara · leyendo · guiado · guardando · listo
 export function useCapturaRostro({ ovalo = OVALO_CELULAR, lecturas: LECTURAS = 3 } = {}) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -47,6 +52,9 @@ export function useCapturaRostro({ ovalo = OVALO_CELULAR, lecturas: LECTURAS = 3
   const [enVivo, setEnVivo] = useState(GUIA_INICIAL);
   const [calidad, setCalidad] = useState(null);
   const [aviso, setAviso] = useState(null);
+  // Captura guiada: { indice, actual, total, objetivo, flecha, texto, nivel, hechas, saltadas, puedeSaltar, error }
+  const [paso, setPaso] = useState(null);
+  const guiadoRef = useRef(null); // { estado, resolver, activo }
 
   const apagar = useCallback(() => {
     streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -59,7 +67,7 @@ export function useCapturaRostro({ ovalo = OVALO_CELULAR, lecturas: LECTURAS = 3
   }, [apagar]);
 
   // Lo que se ve en un cuadro: cajas y puntos de la cara → guía.
-  const evaluar = useCallback((resultados) => {
+  const evaluar = useCallback((resultados, exigirFrente = true) => {
     const v = videoRef.current;
     if (!v) return GUIA_INICIAL;
     return guiaRostro({
@@ -68,6 +76,7 @@ export function useCapturaRostro({ ovalo = OVALO_CELULAR, lecturas: LECTURAS = 3
       recuadro: { width: v.clientWidth, height: v.clientHeight },
       ovalo,
       brillo: medirBrillo(v, lienzoRef),
+      exigirFrente,
     });
   }, [ovalo]);
 
@@ -97,6 +106,7 @@ export function useCapturaRostro({ ovalo = OVALO_CELULAR, lecturas: LECTURAS = 3
     return () => { activo = false; clearTimeout(t); };
   }, [fase, evaluar]);
 
+  // Devuelve true si la cámara quedó lista.
   const encender = useCallback(async () => {
     setAviso(null);
     setCalidad(null);
@@ -114,14 +124,21 @@ export function useCapturaRostro({ ovalo = OVALO_CELULAR, lecturas: LECTURAS = 3
       await videoRef.current.play();
       setFase("camara");
       setGuia("");
+      return true;
     } catch (e) {
       apagar();
       setFase("inicio");
       setAviso({ ok: false, texto: errorDeCamara(e) });
+      return false;
     }
   }, [apagar]);
 
-  const cancelar = useCallback(() => { apagar(); setFase("inicio"); }, [apagar]);
+  const terminarGuiado = useCallback((resultado) => {
+    const g = guiadoRef.current;
+    guiadoRef.current = null;
+    if (g) { g.activo = false; g.resolver(resultado); }
+  }, []);
+  const cancelar = useCallback(() => { terminarGuiado(null); setPaso(null); apagar(); setFase("inicio"); }, [apagar, terminarGuiado]);
 
   // Toma LECTURAS lecturas de una sola cara bien colocada y las promedia. → { ok, descriptor, calidad } o { ok:false, error }.
   // Si falla vuelve a la cámara con el aviso. Con volverACamara también regresa a la cámara al salir bien.
@@ -167,13 +184,97 @@ export function useCapturaRostro({ ovalo = OVALO_CELULAR, lecturas: LECTURAS = 3
     }
   }, [apagar, leer]);
 
+  // ---- Captura guiada en 5 poses ----
+  const publicarPaso = useCallback((estado, mensaje) => {
+    const p = pasoActual(estado);
+    const a = avance(estado);
+    setPaso({ indice: estado.indice, actual: a.actual, total: a.total, hechas: a.hechas, saltadas: a.saltadas, objetivo: p?.pose ?? null,
+      flecha: p?.flecha ?? null, instruccion: p?.texto ?? "", texto: mensaje?.texto ?? p?.texto ?? "", nivel: mensaje?.nivel ?? "info",
+      puedeSaltar: puedeSaltar(estado, Date.now()), error: estado.error });
+  }, []);
+
+  // Recorre las poses hasta tener las fotos. → [{ pose, descriptor }] o null si se canceló.
+  const guiar = useCallback((conservarAviso = false) => new Promise((resolver) => {
+    const api = window.faceapi;
+    if (!api || !videoRef.current) { resolver(null); return; }
+    terminarGuiado(null);
+    const g = { estado: estadoInicial(Date.now()), resolver, activo: true };
+    guiadoRef.current = g;
+    if (!conservarAviso) setAviso(null);
+    setFase("guiado");
+    publicarPaso(g.estado, null);
+    const ciclo = async () => {
+      if (!g.activo || !vivoRef.current) return;
+      try {
+        await enCursoRef.current?.catch(() => {});
+        const caras = await api.detectAllFaces(videoRef.current, opcionesRapidas(api)).withFaceLandmarks().withFaceDescriptors();
+        if (!g.activo) return;
+        const guiaCuadro = evaluar(caras, false);
+        const [cara] = caras.length === 1 ? carasDeFaceApi(caras) : [];
+        const r = procesarCuadro(g.estado, { guia: guiaCuadro, posiciones: cara?.landmarks ?? null, descriptor: caras.length === 1 ? caras[0].descriptor : null }, Date.now());
+        g.estado = r.estado;
+        publicarPaso(g.estado, r.mensaje);
+        if (terminado(g.estado)) { terminarGuiado(descriptoresDe(g.estado)); return; }
+      } catch {
+        // Un cuadro fallido no detiene la guía.
+      }
+      if (g.activo) setTimeout(ciclo, INTERVALO_GUIADO_MS);
+    };
+    ciclo();
+  }), [evaluar, publicarPaso, terminarGuiado]);
+
+  const reintentarGuiado = useCallback(() => {
+    const g = guiadoRef.current;
+    if (!g) return;
+    g.estado = estadoInicial(Date.now());
+    setAviso(null);
+    publicarPaso(g.estado, null);
+  }, [publicarPaso]);
+
+  const saltarPose = useCallback(() => {
+    const g = guiadoRef.current;
+    if (!g) return;
+    g.estado = saltar(g.estado, Date.now());
+    publicarPaso(g.estado, null);
+    if (terminado(g.estado)) terminarGuiado(descriptoresDe(g.estado));
+  }, [publicarPaso, terminarGuiado]);
+
+  // «Saltar este paso» aparece solo pasados unos segundos: se revisa cada segundo mientras se guía.
+  useEffect(() => {
+    if (fase !== "guiado") return undefined;
+    const t = setInterval(() => { const g = guiadoRef.current; if (g) setPaso((p) => (p ? { ...p, puedeSaltar: puedeSaltar(g.estado, Date.now()) } : p)); }, 1000);
+    return () => clearInterval(t);
+  }, [fase]);
+
+  // Toma las 5 poses y llama guardar(descriptores, frente). Si guardar lanza, vuelve a empezar la guía con textoError(e).
+  const registrarGuiado = useCallback(async (guardar, textoError) => {
+    for (let repetir = false; ; repetir = true) {
+      const descriptores = await guiar(repetir);
+      if (!descriptores) return false;
+      setFase("guardando");
+      setGuia(`${TOMA_BUENA}. Guardando…`);
+      try {
+        await guardar(descriptores, descriptores.find((d) => d.pose === "frente")?.descriptor ?? null);
+        apagar();
+        setPaso(null);
+        setFase("listo");
+        return true;
+      } catch (e) {
+        setAviso({ ok: false, texto: textoError(e) });
+        // Con la cámara encendida se repiten las fotos y el aviso queda a la vista.
+        if (!vivoRef.current || !streamRef.current) return false;
+      }
+    }
+  }, [apagar, guiar]);
+
   const enCamara = fase === "camara";
   return {
     videoRef, fase, aviso, encender, cancelar, registrar, leer, apagar, calidad,
+    paso, registrarGuiado, reintentarGuiado, saltarPose,
     // Con la cámara abierta manda la guía en vivo; leyendo o guardando, el paso en curso.
     guia: enCamara ? enVivo.texto : guia,
     nivel: enCamara ? enVivo.nivel : fase === "guardando" ? "ok" : "info",
     listo: enCamara && enVivo.listo,
-    camaraVisible: ["camara", "leyendo", "guardando"].includes(fase),
+    camaraVisible: ["camara", "leyendo", "guiado", "guardando"].includes(fase),
   };
 }

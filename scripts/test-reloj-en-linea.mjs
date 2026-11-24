@@ -47,3 +47,15 @@ test("la confirmación de una checada repetida conserva los datos y pide una hor
   assert.match(data.pregunta, /Acabas de registrar tu entrada/);
   assert.deepEqual(data.reintentar, { id_empresa: 7, codigo: "1234", repetir: true });
 });
+
+test("kiosco «Código y cara»: la cara y el código van juntos en un solo POST a registrar-facial", async t => {
+  navegador(t, true);
+  const calls = [];
+  const api = { post: async (...args) => { calls.push(args); return { data: { success: true } }; } };
+  const cuerpo = { id_empresa: 7, codigo: "1234", descriptor_facial: Array(128).fill(0.1), captured_at: "2026-11-24T15:00:00.000Z" };
+  await registrarEnLinea(api, cuerpo);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], "/checador/reloj/registrar-facial");
+  assert.equal(calls[0][1].codigo, "1234");
+  assert.equal(calls[0][1].descriptor_facial.length, 128);
+});

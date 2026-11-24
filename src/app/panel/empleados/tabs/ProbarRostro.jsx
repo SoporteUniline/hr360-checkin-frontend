@@ -4,7 +4,7 @@
 // 1) Estado del rostro registrado con fecha y origen («Registrado desde el celular el 23 nov, 5:15 p.m.»), del historial
 //    rostro_actualizaciones (el mismo GET y la misma caché SWR que AvisoRostroApp).
 // 2) «Probar rostro»: enciende la cámara de la computadora y compara el rostro en vivo con el registrado, con la misma
-//    métrica y umbral del checador (coseno ≥ 0.95, src/lib/rostro/comparar.mjs). NO guarda nada y NO toca el formulario
+//    métrica y umbral del checador (coseno ≥ 0.95 contra la más parecida de sus fotos, src/lib/rostro/comparar.mjs). NO guarda nada y NO toca el formulario
 //    de la ficha (no cuenta como cambio sin guardar). Detector y guía en vivo: los del celular (useCapturaRostro).
 // Privacidad: no hay foto. El patrón guardado ya llega al navegador con GET /checador/empleados/:id (lo usa la ficha);
 // aquí se vuelve a pedir al abrir la prueba para comparar con lo que hay HOY en el servidor (p. ej. recién registrado
@@ -15,7 +15,7 @@ import { ScanFace } from "lucide-react";
 import axios from "@/lib/axios";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { useCapturaRostro } from "@/components/rostro/useCapturaRostro";
-import { compararRostro, descriptorGuardado, textoComparacion } from "@/lib/rostro/comparar.mjs";
+import { compararRostro, referenciasGuardadas, textoComparacion } from "@/lib/rostro/comparar.mjs";
 import { estadoRostro } from "@/lib/rostro/estadoRostro.mjs";
 import { OVALO_FICHA, TONO_GUIA } from "@/lib/rostro/guia.mjs";
 
@@ -41,7 +41,7 @@ export default function ProbarRostro({ idEmpleado, nombre, tieneRostro, sinGuard
     let vivo = true;
     setCargando(true);
     axios.get(`/checador/empleados/${idEmpleado}`)
-      .then(({ data: e }) => { if (vivo) referencia.current = descriptorGuardado(e?.descriptor_facial); })
+      .then(({ data: e }) => { if (vivo) referencia.current = referenciasGuardadas(e).length ? e : null; })
       .catch(() => { if (vivo) referencia.current = null; })
       .finally(() => { if (vivo) setCargando(false); });
     encender();

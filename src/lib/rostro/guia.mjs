@@ -63,9 +63,10 @@ export function deFrente(posiciones, limites = LIMITES) {
  * caras: [{ box: {x,y,width,height}, landmarks?: [{x,y}×68] }] en píxeles del video.
  * video: { width, height } (videoWidth/videoHeight). recuadro: { width, height } del elemento en pantalla.
  * ovalo: márgenes { x, y } en fracción del recuadro. brillo: 0–255 o null si no se pudo medir.
+ * exigirFrente: false en la captura guiada (las poses arriba/abajo/izquierda/derecha no miran de frente; ver poses.mjs).
  * → { nivel: "info" | "aviso" | "error" | "ok", clave, texto, listo }
  */
-export function guiaRostro({ caras, video, recuadro, ovalo = OVALO_CELULAR, brillo = null, limites = LIMITES }) {
+export function guiaRostro({ caras, video, recuadro, ovalo = OVALO_CELULAR, brillo = null, limites = LIMITES, exigirFrente = true }) {
   const lista = Array.isArray(caras) ? caras : [];
   const oscuro = Number.isFinite(brillo) && brillo < limites.brilloMinimo;
   if (!lista.length) return resultado(Number.isFinite(brillo) && brillo < limites.brilloSinCara ? "aviso" : "error", Number.isFinite(brillo) && brillo < limites.brilloSinCara ? "luz" : "ninguna");
@@ -81,7 +82,7 @@ export function guiaRostro({ caras, video, recuadro, ovalo = OVALO_CELULAR, bril
   const proporcion = c.width / ancho;
   if (proporcion < limites.anchoMinimo) return resultado("aviso", "cerca");
   if (proporcion > limites.anchoMaximo) return resultado("aviso", "lejos");
-  if (deFrente(lista[0].landmarks, limites) === false) return resultado("aviso", "frente");
+  if (exigirFrente && deFrente(lista[0].landmarks, limites) === false) return resultado("aviso", "frente");
   return resultado("ok", "bien");
 }
 

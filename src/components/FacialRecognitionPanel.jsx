@@ -24,6 +24,14 @@ const FacialRecognitionPanel = ({
   pantallaCompleta = false,
   // Mientras el reloj pregunta «¿Registrar otra vez?» no se reconoce a nadie más (la tarjeta quedaría tapada).
   pausado = false,
+  // «Código y cara» (kiosco): con un código escrito, la cara se compara SOLO contra esa persona (1 a 1).
+  codigoCara = null,
+  // { tipo: "listo" } al checar; { tipo: "fallo", mensaje } si el código no existe o la cara no coincide a tiempo.
+  onCodigoCara,
+  // La persona tiene «Código y cara»: la cara sola no basta y hay que pedirle su código.
+  onPedirCodigo,
+  // Botones del reloj debajo del aviso de estado (p. ej. «¿No te reconoce? Escribe tu código»).
+  accionInferior = null,
 }) => {
   // El análisis corre en un intervalo creado al encender la cámara: leer `continuo`
   // directo dejaba el valor de ese momento y el interruptor no surtía efecto hasta reiniciarla.
@@ -31,6 +39,14 @@ const FacialRecognitionPanel = ({
   continuoRef.current = continuo;
   const pausadoRef = useRef(pausado);
   pausadoRef.current = pausado;
+  const codigoCaraRef = useRef(codigoCara);
+  codigoCaraRef.current = codigoCara;
+  const avisosRef = useRef({ onCodigoCara, onPedirCodigo });
+  avisosRef.current = { onCodigoCara, onPedirCodigo };
+  const codigoCaraDesdeRef = useRef(0);
+  // Con código: unos segundos para que la cámara vea bien la cara antes de decir que no coincide.
+  const ESPERA_CODIGO_CARA_MS = 8000;
+  const PAUSA_PEDIR_CODIGO = 4000;
   const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("user");
   const [error, setError] = useState("");
@@ -277,6 +293,20 @@ const FacialRecognitionPanel = ({
 
   useEffect(() => () => cleanupAll(), []);
 
+  // Código y cara: se analiza el siguiente cuadro sin esperar; si en unos segundos no se confirma, se avisa al reloj.
+  useEffect(() => {
+    if (!codigoCara) return undefined;
+    codigoCaraDesdeRef.current = Date.now();
+    lastCheckTimeRef.current = 0;
+    retryIntervalRef.current = MIN_INTERVAL;
+    setError("");
+    const t = setTimeout(() => {
+      if (codigoCaraRef.current !== codigoCara) return;
+      avisosRef.current.onCodigoCara?.({ tipo: "fallo", mensaje: "No pudimos confirmar tu cara. Mira de frente a la cámara, con buena luz, e intenta de nuevo." });
+    }, ESPERA_CODIGO_CARA_MS + 1500);
+    return () => clearTimeout(t);
+  }, [codigoCara]);
+
   const startFaceDetection = () => {
     if (!videoRef.current || !canvasRef.current || !isOpen) return;
     if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
@@ -384,9 +414,11 @@ const FacialRecognitionPanel = ({
       const position = cachedPosition && Date.now() - cachedPosition.timestamp <= GPS_MAX_AGE
         ? cachedPosition : null;
       const descriptor = Array.from(detection.descriptor);
+      const codigo = codigoCaraRef.current;
       const payload = {
         captured_at: new Date().toISOString(),
         descriptor_facial: descriptor,
+        ...(codigo ? { codigo } : {}),
         id_empresa: idEmpresa,
         latitud_actual: position?.coords.latitude ?? null,
         longitud_actual: position?.coords.longitude ?? null,
@@ -442,6 +474,7 @@ const FacialRecognitionPanel = ({
           data?.empleado ? `${data.empleado.nombre ?? ""} ${data.empleado.apellido_paterno ?? ""}`.trim() : "", Date.now(), Boolean(data?.pending));
       }
       onSuccess(data);
+      if (codigo) avisosRef.current.onCodigoCara?.({ tipo: "listo" });
       if (continuoRef.current && !data?.requiereDecision) {
         // Reloj de la empresa: la cámara sigue encendida; pausa breve y listo para el siguiente.
         retryIntervalRef.current = PAUSA_TRAS_CHECAR;
@@ -455,8 +488,29 @@ const FacialRecognitionPanel = ({
       if (session !== sessionRef.current) return;
       const message =
         err.response?.data?.error || err.message || "Error en reconocimiento facial";
-      if (["GPS_INACCURATE", "GPS_REFRESH_REQUIRED", "OUTSIDE_AREA", "GPS_OUTSIDE_AREA"].includes(err.response?.data?.code)) locationRef.current = null;
-      const sinCoincidencia = /coincidencia facial/i.test(message);
+      const codigoError = err.response?.data?.code;
+      if (["GPS_INACCURATE", "GPS_REFRESH_REQUIRED", "OUTSIDE_AREA", "GPS_OUTSIDE_AREA"].includes(codigoError)) locationRef.current = null;
+      // «Código y cara» por cara sola: no es un error, se le pide su código (y no se vuelve a pedir enseguida).
+      if (codigoError === "CODE_REQUIRED" && !codigoCaraRef.current) {
+        retryIntervalRef.current = PAUSA_PEDIR_CODIGO;
+        setError("");
+        avisosRef.current.onPedirCodigo?.();
+        return;
+      }
+      if (codigoCaraRef.current) {
+        // Con código: si la cara aún no coincide se reintenta en silencio unos segundos; el código inexistente termina ya.
+        const reintentable = ["FACE_CODE_NOT_MATCHED", "FACE_NOT_MATCHED"].includes(codigoError) || (!codigoError && /coincidencia facial/i.test(message));
+        if (reintentable && Date.now() - codigoCaraDesdeRef.current < ESPERA_CODIGO_CARA_MS) {
+          retryIntervalRef.current = NO_MATCH_RAPIDO;
+          setError("");
+          return;
+        }
+        retryIntervalRef.current = NO_MATCH_INTERVAL;
+        setError("");
+        avisosRef.current.onCodigoCara?.({ tipo: "fallo", mensaje: message });
+        return;
+      }
+      const sinCoincidencia = codigoError === "FACE_NOT_MATCHED" || codigoError === "FACE_AMBIGUOUS" || /coincidencia facial/i.test(message);
       if (sinCoincidencia) {
         sinCoincidenciaDesdeRef.current ??= Date.now();
         if (Date.now() - sinCoincidenciaDesdeRef.current < GRACIA_SIN_COINCIDENCIA_MS) {
@@ -505,6 +559,7 @@ const FacialRecognitionPanel = ({
         color: "bg-green-600",
       };
     if (avisoRepetido) return { text: avisoRepetido, color: "bg-blue-600" };
+    if (codigoCara) return { text: "Mira a la cámara para confirmar que eres tú", color: "bg-blue-600" };
     if (countdown > 0)
       return { text: "Preparando captura...", color: "bg-gray-700" };
     if (acercate)
@@ -626,10 +681,15 @@ const FacialRecognitionPanel = ({
                   {(() => {
                     const { text, color } = getStatusMessage();
                     return (
-                      <div
-                        className={`absolute left-1/2 -translate-x-1/2 px-4 py-2 text-white text-sm font-medium shadow-lg ${color} bg-opacity-90 text-center ${pantallaCompleta ? "bottom-4 max-w-[calc(100%-2rem)] rounded-full" : "bottom-3 rounded-lg"}`}
-                      >
-                        {text}
+                      <div className={`absolute inset-x-0 flex flex-col items-center gap-2 px-4 ${pantallaCompleta ? "bottom-4" : "bottom-3"}`}>
+                        <div
+                          role="status"
+                          data-estado-camara
+                          className={`px-4 py-2 text-white text-sm font-medium shadow-lg ${color} bg-opacity-90 text-center ${pantallaCompleta ? "max-w-full rounded-full" : "rounded-lg"}`}
+                        >
+                          {text}
+                        </div>
+                        {accionInferior}
                       </div>
                     );
                   })()}

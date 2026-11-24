@@ -39,6 +39,7 @@ import { useAuth } from "@/context/AuthContext";
 import QRScanner from "./QRScanner";
 import { Button } from "./ui/button";
 import { registrarEnLinea } from '@/lib/reloj/registrarEnLinea.mjs';
+import TecladoCodigoCara from './Clock/TecladoCodigoCara';
 import ClockNavigation from './Clock/ClockNavigation';
 import { hora12 } from "@/lib/hora12.mjs";
 
@@ -106,9 +107,12 @@ export default function RelojChecador({
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const { getCurrentLocation, loading: loadingGPS } = useGPS();
-  // All methods identify the person checking in within this company. The
-  // signed-in employee only controls which history is visible on this page.
-  const submitMovement = payload => registrarEnLinea(axiosInstance, payload);
+  // Todo se registra en línea: el servidor identifica a la persona. En el kiosco la cara se busca en la empresa
+  // (o 1 a 1 si viene con código). En la app, `modo: "app"` hace que el servidor tome a la persona de la sesión y la
+  // compare solo con sus fotos. Los códigos (y el QR) siguen identificando a cualquiera de la empresa.
+  const submitMovement = payload => registrarEnLinea(axiosInstance, modoEmpleado && payload.descriptor_facial ? { ...payload, modo: "app" } : payload);
+  // Reloj de la empresa (/<slug>): kiosco a pantalla completa, sin desplazar. El del empleado conserva su diseño.
+  const kiosco = !modoEmpleado;
 
   // Prepare recognition while subscription and clock data are being checked.
   // Camera and GPS permissions are requested only by the visible facial panel.
@@ -297,6 +301,13 @@ export default function RelojChecador({
       setCodigoEmpleado("");
     } catch (err) {
       setCodigoEmpleado("");
+      // Persona con «Código y cara» que escribió solo su código: la cámara confirma enseguida que es ella (1 a 1).
+      if (kiosco && err.response?.data?.code === "METHOD_CODE_FACE" && !offline) {
+        setMostrarCamara(true);
+        setCodigoCara(codigo);
+        enqueueSnackbar("Ahora mira a la cámara para confirmar que eres tú.", { variant: "info" });
+        return;
+      }
       enqueueSnackbar(err.response?.data?.error || err.message || "Error al registrar", {
         variant: "error",
       });
@@ -317,7 +328,7 @@ export default function RelojChecador({
         ...(pendiente.repetir ? { repetir: true } : {}),
       };
 
-      const body = pendiente.tipo === "facial" ? {...payload, descriptor_facial: pendiente.descriptor_facial} : {...payload, codigo: pendiente.codigo};
+      const body = pendiente.tipo === "facial" ? {...payload, descriptor_facial: pendiente.descriptor_facial, ...(pendiente.codigo ? { codigo: pendiente.codigo } : {})} : {...payload, codigo: pendiente.codigo};
       try {
         dataResponse = (await submitMovement(body)).data;
       } catch (err) {
@@ -344,6 +355,28 @@ export default function RelojChecador({
     } finally {
       setRegistrando(false);
     }
+  };
+
+  // «Código y cara» (kiosco): el código elige a la persona y la cámara compara solo contra ella.
+  const [codigoCara, setCodigoCara] = useState(null);
+  const [tecladoCara, setTecladoCara] = useState(null); // { motivo: "boton" | "requerido" }
+  const tecladoCerradoRef = useRef(0);
+  const cerrarTecladoCara = () => { tecladoCerradoRef.current = Date.now(); setTecladoCara(null); };
+  // El código no se revisa en el aparato: va con la cara al servidor, que dice si no existe, si no tiene rostro o si no coincide.
+  const continuarCodigoCara = async (codigo) => {
+    setTecladoCara(null);
+    setMostrarCamara(true);
+    setCodigoCara(codigo);
+    return { ok: true };
+  };
+  const finCodigoCara = (evento) => {
+    setCodigoCara(null);
+    tecladoCerradoRef.current = Date.now();
+    if (evento?.tipo === "fallo") enqueueSnackbar(evento.mensaje, { variant: "error", autoHideDuration: 5000 });
+  };
+  const pedirCodigo = () => {
+    if (!kiosco || tecladoCara || codigoCara || Date.now() - tecladoCerradoRef.current < 5000) return;
+    setTecladoCara({ motivo: "requerido" });
   };
 
   const handleFacialResponse = (data) => {
@@ -374,7 +407,7 @@ export default function RelojChecador({
         // Cierre manual: después de «Sí, registrar» pregunta «salida temporal / cerrar turno»; la decisión
         // conserva repetir y el tipo (código o rostro) para no volver a chocar con el candado.
         const { codigo, descriptor_facial } = pregunta.reintentar;
-        setPendiente({ tipo: codigo ? "codigo" : "facial", codigo, descriptor_facial, repetir: true, opciones: data.opciones, mensaje: data.message });
+        setPendiente({ tipo: descriptor_facial ? "facial" : "codigo", codigo, descriptor_facial, repetir: true, opciones: data.opciones, mensaje: data.message });
         setMostrarModalTurno(true);
       } else {
         mostrarResultado(data);
@@ -490,9 +523,14 @@ export default function RelojChecador({
   if (error && !offline)
     return <ErrorPage message="No se pudieron cargar los registros." />;
 
-  // Reloj de la empresa (/<slug>): kiosco a pantalla completa, sin desplazar. El del empleado conserva su diseño.
-  const kiosco = !modoEmpleado;
   const conexion = estadoConexion({ offline });
+  const accionCodigoCara = !kiosco ? null : codigoCara ? (
+    <button type="button" onClick={() => finCodigoCara(null)}
+      className="min-h-11 rounded-full bg-white/95 px-4 text-sm font-semibold text-slate-800 shadow-lg">Cancelar · usar solo la cara</button>
+  ) : (
+    <button type="button" onClick={() => setTecladoCara({ motivo: "boton" })} data-boton-codigo-cara
+      className="min-h-11 rounded-full bg-white/95 px-4 text-sm font-semibold text-slate-800 shadow-lg">¿No te reconoce? Escribe tu código</button>
+  );
   const panelRostro = (
     <FacialRecognitionPanel
       isOpen={mostrarCamara}
@@ -504,7 +542,11 @@ export default function RelojChecador({
       handleOpenFacialModal={() => setMostrarCamara(false)}
       continuo={camaraFija}
       pantallaCompleta={kiosco || isMobile}
-      pausado={Boolean(pregunta)}
+      pausado={Boolean(pregunta) || Boolean(tecladoCara)}
+      codigoCara={kiosco ? codigoCara : null}
+      onCodigoCara={finCodigoCara}
+      onPedirCodigo={pedirCodigo}
+      accionInferior={accionCodigoCara}
     />
   );
 
@@ -755,6 +797,7 @@ export default function RelojChecador({
           />
         )}
 
+        {tecladoCara && <TecladoCodigoCara motivo={tecladoCara.motivo} onContinuar={continuarCodigoCara} onCancelar={cerrarTecladoCara} />}
         {pregunta && (
           <div className={kiosco ? "fixed inset-0 z-100 flex items-center justify-center bg-slate-900/40 p-4" : "fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-100 md:inset-0 md:flex md:items-center md:justify-center md:bg-slate-900/40 md:p-4"}>
             <div role="alertdialog" aria-labelledby="pregunta-repetida" className="mx-auto w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-200">

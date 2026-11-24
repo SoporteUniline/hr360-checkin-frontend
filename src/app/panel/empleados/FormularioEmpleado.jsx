@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BriefcaseBusiness, User, FolderOpen, ScanFace, Wallet } from "lucide-react";
+import { esRostroParecido, mensajeRegistro } from "@/lib/rostro/intentos.mjs";
 import { AnimatePresence, motion } from "framer-motion";
 import { ComboboxSucursal } from "@/components/ComboboxSucursal";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -110,6 +111,8 @@ export default function FormularioEmpleado({
   // persona haya actualizado desde su app mientras la ficha estaba abierta. También cuenta como cambio sin
   // guardar.
   const [rostroNuevo, setRostroNuevo] = useState(false);
+  // Registro guiado en la ficha: las 5 huellas [{ pose, descriptor }] van aparte del formulario (no son un campo editable).
+  const descriptoresRef = useRef(null);
   // Valores con los que abrió la ficha (o con los que se guardó por última vez): contra ellos se decide si
   // hay cambios sin guardar. Lo que llega del servidor después de abrir (turno asignado, áreas) se suma con
   // sincronizarCampo para no contarlo como cambio.
@@ -569,6 +572,10 @@ export default function FormularioEmpleado({
       if (selectedFile) {
         formData.append("file", selectedFile);
       }
+      // Rostro nuevo con varias poses (contrato rostro-multi); descriptor_facial sigue yendo con la de frente.
+      if (rostroNuevo && Array.isArray(descriptoresRef.current) && descriptoresRef.current.length) {
+        formData.append("descriptores", JSON.stringify(descriptoresRef.current));
+      }
 
       let idEmpleadoFinal = editar ? values.id_empleado : null;
 
@@ -688,10 +695,12 @@ export default function FormularioEmpleado({
     } catch (error) {
       console.log(error);
       const status = error.response?.status;
-      const mensaje =
-        error.response?.data?.error ||
-        error.response?.data?.message ||
-        "Error desconocido";
+      // 409 ROSTRO_PARECIDO: el rostro se parece mucho al de otra persona (mensaje genérico, sin decir a quién).
+      const mensaje = esRostroParecido(error)
+        ? mensajeRegistro(error)
+        : error.response?.data?.error ||
+          error.response?.data?.message ||
+          "Error desconocido";
 
       if (status === 403) {
         // En app nativa no mostrar enlace externo de suscripción
@@ -1015,8 +1024,9 @@ export default function FormularioEmpleado({
                             form={form}
                             soloLectura={soloLectura}
                             active={tab === "checador"}
-                            setDescriptor={(descriptor) => {
+                            setDescriptor={(descriptor, descriptores = null) => {
                               setRostroNuevo(true);
+                              descriptoresRef.current = descriptores;
                               form.setValue("descriptor_facial", descriptor);
                             }}
                           />

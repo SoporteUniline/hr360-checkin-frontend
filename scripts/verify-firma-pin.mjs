@@ -7,6 +7,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
 import crypto from "node:crypto";
+import { faceapiPoses, completarPoses } from "./rostro-faceapi-poses.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -122,6 +123,7 @@ try {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: "es-MX", hasTouch: true, permissions: ["camera"] });
   await ctx.addCookies([{ name: "token", value: jwt("Empleado"), url: base }]);
   await ctx.addInitScript(faceapiFalso);
+  await ctx.addInitScript({ content: faceapiPoses }); // Mi rostro: registro guiado en 5 poses (24/11/2026)
   await rutas(ctx);
   const pg = await ctx.newPage();
   pg.on("pageerror", (e) => errores.push(e.message));
@@ -245,30 +247,29 @@ try {
   assert.equal(estado.firmado, "pin");
   assert.ok(!estado.llamadas.some((l) => l.includes("evidencia")));
 
-  // 5) Mi rostro: sin aceptar el aviso no abre la cámara; aceptado, lee 3 veces y guarda la huella con la versión.
+  // 5) Mi rostro: sin aceptar el aviso no abre la cámara; aceptado, registro guiado de 5 poses y guarda las huellas con la versión.
   await pg.goto(base + "/empleado/panel/mi-rostro", { waitUntil: "domcontentloaded" });
   await pg.getByText("Aún no registras tu rostro").waitFor({ timeout: 20000 });
   const abrir = pg.getByRole("button", { name: "Registrar mi rostro" });
   assert.equal(await abrir.isDisabled(), true, "pide aceptar el aviso");
   await pg.getByText("Acepto, de forma expresa").click();
   await abrir.click();
-  // Guía en vivo: con la cara bien colocada dice «Rostro detectado ✅» y habilita el botón.
-  await pg.getByText("Rostro detectado ✅").waitFor({ timeout: 20000 });
-  for (let i = 0; i < 30 && await pg.getByRole("button", { name: "Registrar mi rostro" }).isDisabled(); i++) await dormir(100);
+  await pg.locator("[data-avance]").filter({ hasText: "1 de 5" }).waitFor({ timeout: 20000 });
   await sinDesborde("Mi rostro");
   await captura(pg, "mi-rostro-camara");
-  await pg.getByRole("button", { name: "Registrar mi rostro" }).click();
+  await completarPoses(pg);
   await pg.getByText("Listo, tu rostro quedó registrado.").waitFor({ timeout: 20000 });
   assert.equal(estado.rostro.acepto_consentimiento, true);
   assert.equal(estado.rostro.version, "2026-11-21");
-  assert.equal(estado.rostro.descriptor_facial.length, 128);
+  assert.deepEqual(estado.rostro.descriptores.map((d) => d.pose), ["frente", "arriba", "abajo", "izquierda", "derecha"]);
+  assert.ok(estado.rostro.descriptores.every((d) => d.descriptor.length === 128));
   await pg.getByText("Tu rostro está registrado").waitFor();
   assert.equal(await pg.evaluate(() => document.querySelector("video")?.srcObject ?? null), null, "apaga la cámara");
   await captura(pg, "mi-rostro-listo");
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK firma y PIN: guardar firma (celular: pantalla completa; computadora: en la página), crear PIN (reglas), cambiarlo con contraseña, firmar con PIN sin foto (PIN equivocado avisa), registrar rostro con aviso aceptado");
+  console.log("OK firma y PIN: guardar firma (celular: pantalla completa; computadora: en la página), crear PIN (reglas), cambiarlo con contraseña, firmar con PIN sin foto (PIN equivocado avisa), registrar rostro (5 poses guiadas) con aviso aceptado");
 } finally {
   await browser.close();
   try { process.kill(-next.pid); } catch { next.kill(); }

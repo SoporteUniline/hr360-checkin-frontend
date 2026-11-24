@@ -89,7 +89,7 @@ try {
     })), ["Funcionalidades", "Cotiza", "Contratar Plan", "Sobre Nosotros", "Reloj checador", "Registro de entradas y salidas con validación", "Reconocimiento offline preparado", "Los rostros de la empresa se descargan", "Cámara siempre encendida"]);
     assert.deepEqual(visibles, [], `${t.nombre}: textos que ya no deben verse`);
     assert.equal(await pg.locator("nav a[href='/']").count(), 0, `${t.nombre}: sin enlaces de la barra pública`);
-    const punto = await pg.locator("[title*='Reconocimiento'], [title*='rostros'], [title*='Sin conexión']").count();
+    const punto = await pg.locator("[title*='conexión']").count();
     assert.ok(punto >= 1, `${t.nombre}: indicador discreto de conexión con su texto en title`);
 
     // 3) Hora, código, teclado y «Registrar» dentro de la pantalla.
