@@ -87,3 +87,12 @@ test("Asistencias: las horas registradas con horario mandan sobre el cálculo", 
   assert.equal(estadoHorasExtra(repo).estado, "reposicion");
   assert.equal(estadoHorasExtra({ ...r, horas_extra_registradas: [] }).estado, "sin");
 });
+
+test("reporte de ley: horas extra con su horario y total del día", async () => {
+  const { lineasHorasExtra, totalDelDia } = await import("../src/lib/asistencia/horasExtraReporte.mjs");
+  const dia = { horasHM: "10:00", ley: { horasExtra: [{ desde: "2026-11-23 16:00:00", hasta: "2026-11-23 19:00:00", minutos: 180,
+    motivo: "Inventario", forma_pago: "Pago de horas extras", origen: "manual_rh" }] } };
+  assert.deepEqual(lineasHorasExtra(dia), ["Horas extra 4:00 p.m.–7:00 p.m. · 3 h · Inventario · Pago de horas extras · capturadas por RH"]);
+  assert.equal(totalDelDia(dia, "7:00"), "10:00");
+  assert.equal(totalDelDia({ horasHM: "7:00", ley: {} }, "6:58"), "6:58");
+});
