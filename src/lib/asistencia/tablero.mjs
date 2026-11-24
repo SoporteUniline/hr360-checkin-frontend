@@ -16,8 +16,13 @@ const MIN_DIA = 1440;
 const SALE_PRONTO = 30; // «sale en …» en su última media hora
 
 const COLUMNA_POR_ESTADO = {
-  por_entrar: "por_entrar", trabajando: "trabajando", en_comida: "comida", ya_salio: "salio", salio_antes: "salio",
-  no_ha_llegado: "no_ha_llegado", falto: "no_ha_llegado",
+  por_entrar: "por_entrar",
+  trabajando: "trabajando",
+  en_comida: "comida",
+  ya_salio: "salio",
+  salio_antes: "salio",
+  no_ha_llegado: "no_ha_llegado",
+  falto: "no_ha_llegado",
 };
 export const columnaTablero = (r) => COLUMNA_POR_ESTADO[r.estado] ?? "no_laboran";
 
@@ -41,8 +46,14 @@ export function enHoraExtra(r, ahora) {
 
 // Llegó después de su hora de siempre (más tolerancia) pero dentro de un permiso «llega tarde»: no es retardo.
 export function tardeConPermiso(r) {
-  return r.llegoTarde == null && r.permisoLlegada != null && r.entradaProg != null && r.primeraEntrada != null
-    && r.permisoLlegada > r.entradaProg && r.primeraEntrada > r.entradaProg + (r.dia?.toleranciaEntrada ?? 0);
+  return (
+    r.llegoTarde == null &&
+    r.permisoLlegada != null &&
+    r.entradaProg != null &&
+    r.primeraEntrada != null &&
+    r.permisoLlegada > r.entradaProg &&
+    r.primeraEntrada > r.entradaProg + (r.dia?.toleranciaEntrada ?? 0)
+  );
 }
 export const llegoTardeTablero = (r) => r.llegoTarde != null || tardeConPermiso(r);
 // Se fue antes de su hora: sin permiso (salió antes) o con uno que lo cubre.
@@ -70,19 +81,25 @@ export function resumenTablero(resultados, ahora) {
     },
     salio: (xs) => `${xs.filter(salioAntesTablero).length} salió antes`,
     por_entrar: (xs) => {
-      const proximas = xs.filter((r) => r.faltan > 0).map((r) => r.permisoLlegada ?? r.entradaProg).filter((m) => m != null);
+      const proximas = xs
+        .filter((r) => r.faltan > 0)
+        .map((r) => r.permisoLlegada ?? r.entradaProg)
+        .filter((m) => m != null);
       if (proximas.length) return `el próximo a las ${horaDe(Math.min(...proximas))}`;
       return xs.length ? "ya es su hora" : "nadie más hoy";
     },
     no_ha_llegado: (xs) => (xs.length ? "ya pasó su hora" : "todos llegaron"),
     tarde: (xs) => `${xs.filter(tardeConPermiso).length} con permiso`,
-    permiso: (xs) => `${xs.filter(conPermisoHoras).length} por horas · ${xs.filter((r) => columnaTablero(r) === "no_laboran").length} de día`,
+    permiso: (xs) =>
+      `${xs.filter(conPermisoHoras).length} por horas · ${xs.filter((r) => columnaTablero(r) === "no_laboran").length} de día`,
   };
-  return Object.fromEntries(CONTADORES_TABLERO.map(({ clave }) => {
-    const xs = de(clave);
-    const alerta = (clave === "no_ha_llegado" && xs.length > 0) || (clave === "comida" && xs.some((r) => r.sePasoComida));
-    return [clave, { n: xs.length, pie: pies[clave](xs), alerta }];
-  }));
+  return Object.fromEntries(
+    CONTADORES_TABLERO.map(({ clave }) => {
+      const xs = de(clave);
+      const alerta = (clave === "no_ha_llegado" && xs.length > 0) || (clave === "comida" && xs.some((r) => r.sePasoComida));
+      return [clave, { n: xs.length, pie: pies[clave](xs), alerta }];
+    })
+  );
 }
 
 // En «Ya salieron» el `orden` de estadoHoy mezcla escalas (salió antes: lo que faltó; ya salió: la hora): aquí, por hora.
@@ -123,7 +140,8 @@ export function fichaTablero(r, ahoraArg) {
       linea = `Entró ${horaDe(r.primeraEntrada)}${sale} · lleva ${dur(r.trabajados)}`;
       if (r.programados) barra = { avance: Math.min(1, Math.max(0, r.trabajados / r.programados)), tono };
       if (extra) chips.push({ texto: `Hora extra desde ${horaDe(r.salidaProg)}`, tono: "violeta" });
-      else if (r.debiaSalirHace != null) chips.push({ texto: `Sin checar salida · debía salir hace ${dur(r.debiaSalirHace)}`, tono: "rojo" });
+      else if (r.debiaSalirHace != null)
+        chips.push({ texto: `Sin checar salida · debía salir hace ${dur(r.debiaSalirHace)}`, tono: "rojo" });
       else if (r.salidaProg != null && ahora != null && r.salidaProg - ahora > 0 && r.salidaProg - ahora <= SALE_PRONTO) {
         chips.push({ texto: `Sale en ${dur(r.salidaProg - ahora)}`, tono: "celeste" });
       }
@@ -153,7 +171,12 @@ export function fichaTablero(r, ahoraArg) {
     case "por_entrar": {
       tono = "gris";
       const entra = horaDe(r.permisoLlegada ?? r.entradaProg);
-      linea = r.faltan > 0 ? `Entra ${entra} · en ${dur(r.faltan)}` : r.faltan === 0 ? `Entra ${entra} · ya es su hora` : `Entra ${entra} · en su tolerancia`;
+      linea =
+        r.faltan > 0
+          ? `Entra ${entra} · en ${dur(r.faltan)}`
+          : r.faltan === 0
+          ? `Entra ${entra} · ya es su hora`
+          : `Entra ${entra} · en su tolerancia`;
       if (r.permisoLlegada != null && r.permisoLlegada > r.entradaProg) chips.push({ texto: "Llega tarde con permiso", tono: "violeta" });
       break;
     }
