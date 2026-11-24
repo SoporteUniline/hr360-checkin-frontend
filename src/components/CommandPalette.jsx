@@ -45,6 +45,7 @@ import {
   Route,
   UserRound,
   MessageCircle,
+  Activity,
 } from "lucide-react";
 
 // ─── Nav items estáticos (espejo del sidebar) ────────────────────────────────
@@ -142,7 +143,7 @@ const ALL_NAV_ITEMS = [
   },
   // Recruiter — General
   {
-    title: "Inicio",
+    title: "Resumen",
     url: "/panel/dashboard",
     rol: "Recruiter",
     section: "General",
@@ -234,6 +235,13 @@ const ALL_NAV_ITEMS = [
     icon: Route,
   },
   // Control de tiempo
+  {
+    title: "Monitor",
+    url: "/panel/monitor",
+    rol: "Recruiter",
+    section: "Control de Tiempo",
+    icon: Activity,
+  },
   {
     title: "Asistencias",
     url: "/panel/registro-asistencia",

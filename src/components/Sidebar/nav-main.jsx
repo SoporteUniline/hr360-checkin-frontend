@@ -14,7 +14,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAuth } from "@/context/AuthContext";
-import { clockStore } from '@/lib/offline-clock';
+import { destinoRelojSinConexion, RUTA_RELOJ_EMPRESA } from '@/components/Clock/destinoReloj';
 import { Capacitor } from "@capacitor/core";
 import {
   UsersIcon,
@@ -63,6 +63,7 @@ import {
   Settings2,
   MessageCircle,
   LayoutGrid,
+  Activity,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -191,7 +192,8 @@ const dashboardItems = [
     icon: LayoutGrid,
   },
   {
-    title: "Inicio",
+    // «Resumen» y no «Inicio»: la primera pantalla de RH es el Monitor.
+    title: "Resumen",
     url: "/panel/dashboard",
     rol: "Recruiter",
     icon: LayoutDashboard,
@@ -214,6 +216,12 @@ const menuGroups = [
     group: "CONTROL DE TIEMPO",
     groupIcon: ClockIcon,
     items: [
+      {
+        title: "Monitor",
+        url: "/panel/monitor",
+        rol: "Recruiter",
+        icon: Activity,
+      },
       {
         title: "Asistencias",
         url: "/panel/registro-asistencia",
@@ -782,14 +790,9 @@ export function NavMain({ consulta = "" } = {}) {
   const navegar = async (href, reemplazar = false) => {
     // These items are buttons, so the global offline link handler cannot see them.
     if (!navigator.onLine || window.__adamiaOffline === true) {
-      if (href === '/seleccionar-reloj') {
-        const assigned = [...new Set([...(dataUser?.empresas || []), ...(dataUser?.empresas_detalle || []).map(company => company.id_empresa)].map(Number))].filter(id => Number.isInteger(id) && id > 0);
-        if (assigned.length === 1) {
-          try {
-            const profile = await (await clockStore()).getValue(`clock:company:${assigned[0]}`);
-            if (profile?.slug) { window.location.assign(`/${encodeURIComponent(profile.slug)}`); return; }
-          } catch { /* The offline gate still offers the available destinations. */ }
-        }
+      if (href === RUTA_RELOJ_EMPRESA) {
+        const destino = await destinoRelojSinConexion(dataUser);
+        if (destino !== RUTA_RELOJ_EMPRESA) { window.location.assign(destino); return; }
       }
       if (reemplazar) window.location.replace(href);
       else window.location.assign(href);

@@ -10,8 +10,6 @@ import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import AsistenciaTable from "./AsistenciaTable";
 import AsistenciaMatriz from "./AsistenciaMatriz";
 import VistaHoras from "./VistaHoras";
-import VistaHoy from "./VistaHoy";
-import EditarDiaAsistencia from "./EditarDiaAsistencia";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
@@ -19,7 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
-import { useSnackbar } from "notistack";
+import useRefrescoChecadas from "@/hooks/useRefrescoChecadas";
 import { cargarPeriodoCompleto, LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
 import { indiceFestivos as crearIndiceFestivos } from "@/lib/asistencia/calendario.mjs";
 import useSWR from "swr";
@@ -74,7 +72,6 @@ export default function AsistenciaDataContainer({
     total: 0,
   });
   const [cachedData, setCachedData] = useState(null);
-  const [diaEnVivo, setDiaEnVivo] = useState(null); // vista Hoy: día abierto en la ventana de edición («Ver día»)
   const localEvents = useLocalClockEvents({ company: idEmpresa, from: fechaInicio, to: fechaFin, search: debouncedFiltroEmpleado });
 
   const handleResetAll = () => {
@@ -105,46 +102,8 @@ export default function AsistenciaDataContainer({
     sortConfig.sortOrder,
   );
 
-  // Ref para siempre tener el mutate más reciente sin recrear el EventSource
-  const mutateRef = useRef(mutate);
-  useEffect(() => {
-    mutateRef.current = mutate;
-  }, [mutate]);
-  useEffect(() => {
-    // Solo recarga cuando cambió la cola de checadas: preparar el reloj ('perfil') no cambia datos y
-    // provocaría una segunda descarga completa del periodo.
-    const refresh = (event) => {
-      if (event?.detail?.motivo === 'perfil') return;
-      if (navigator.onLine && window.__adamiaOffline !== true) void mutateRef.current().catch(() => {});
-    };
-    window.addEventListener('adamia-queue', refresh);
-    return () => window.removeEventListener('adamia-queue', refresh);
-  }, []);
-
-  // SSE: actualización en tiempo real cuando llega una checada.
-  // Además de refrescar, se notifica con un toast discreto (máx. 1 cada 8 s
-  // para no saturar en horas pico de entrada).
-  const { enqueueSnackbar } = useSnackbar();
-  const lastToastRef = useRef(0);
-  useEffect(() => {
-    if (!idEmpresa) return;
-    const es = new EventSource(
-      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/eventos-checada?id_empresa=${idEmpresa}`,
-    );
-    es.addEventListener("checada", () => {
-      mutateRef.current();
-      const ahora = Date.now();
-      if (ahora - lastToastRef.current > 8000) {
-        lastToastRef.current = ahora;
-        enqueueSnackbar("Nueva checada recibida — registros actualizados", {
-          variant: "success",
-          autoHideDuration: 3500,
-        });
-      }
-    });
-    es.onerror = () => {};
-    return () => es.close();
-  }, [idEmpresa, enqueueSnackbar]);
+  // Cada checada (SSE) o la cola sin conexión recargan el periodo.
+  useRefrescoChecadas(idEmpresa, mutate);
 
   // Filtros activos del periodo: los usan las opciones por columna y Exportar.
   const filtrosPeriodo = {
@@ -303,12 +262,6 @@ export default function AsistenciaDataContainer({
             fechaFin={fechaFin}
             filtroEmpleado={debouncedFiltroEmpleado || ""}
           />
-        ) : vista === "envivo" ? (
-          <>
-            <VistaHoy registros={filasPeriodo} zona={zonaEmpresa} cargando={isLoading}
-              onAbrirDia={(r) => setDiaEnVivo({ idEmpleado: r.id_empleado, nombre: [r.nombre, r.apellido_paterno].filter(Boolean).join(" "), fecha: String(r.fecha ?? "").slice(0, 10) })} />
-            {diaEnVivo ? <EditarDiaAsistencia idEmpresa={idEmpresa} {...diaEnVivo} onCerrar={(huboCambios) => { setDiaEnVivo(null); if (huboCambios) mutate(); }} /> : null}
-          </>
         ) : vista === "matriz" ? (
           <><LocalClockCaptures events={localEvents} /><AsistenciaMatriz
             registros={filasPeriodo}

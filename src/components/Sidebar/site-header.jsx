@@ -3,6 +3,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Search } from "lucide-react";
 import AdamiaAI from "@/components/ia/AdamiaAI";
+import BotonRelojChecador from "@/components/Clock/BotonRelojChecador";
 
 export function SiteHeader() {
   const openPalette = () =>
@@ -26,8 +27,11 @@ export function SiteHeader() {
             ⌘K
           </kbd>
         </button>
-        {/* Adamia AI: solo RH y dueño (el componente no se muestra a empleados). */}
-        <AdamiaAI />
+        {/* Reloj checador y Adamia AI: solo RH y dueño (los componentes no se muestran a empleados). */}
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <BotonRelojChecador />
+          <AdamiaAI />
+        </div>
       </div>
     </header>
   );
