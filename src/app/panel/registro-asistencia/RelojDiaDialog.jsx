@@ -6,10 +6,10 @@
 // candado. Validación en vivo (lib/asistencia/relojDia.mjs) y errores del servidor por renglón.
 // En pantallas angostas (< 640 px) es una hoja a pantalla completa y cada checada es una tarjeta con controles de 44 px.
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";
-import { Lock, Plus, RotateCcw, Scissors, X } from "lucide-react";
+import { Lock, Plus, RotateCcw, Scissors, UtensilsCrossed, X } from "lucide-react";
 import axios from "@/lib/axios";
 import { cn } from "@/lib/utils";
 import { fetcherWithToken } from "@/lib/fetcher";
@@ -17,7 +17,7 @@ import { useEmpresaTimezone } from "@/context/AuthContext";
 import { useGuardiaSalida } from "@/components/cambios/CambiosPendientes";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import {
-  CONCEPTOS, TOLERANCIA_MIN, aHHMM, aMin, agregarComida, agregarRegistro, autorizaValor, claseEstado, conAutoriza,
+  CONCEPTOS, TOLERANCIA_MIN, aHHMM, aMin, agregarComida, pausaComidaTras, agregarRegistro, autorizaValor, claseEstado, conAutoriza,
   cuerpoPut, desdeApi, diaFila, durTexto, editado, errores as validar, erroresPorRenglon, estadoFila, etiquetaQuitar,
   fechaTxt, hora12Txt, horarioMin, horarioNormal, minDeCampo, ordenar, origenTexto, puedeComida, quitarORestaurar,
   resumen, resumenServidor, separarExtra, vivos, esMotivoOtro, textoMotivoOtro, motivoOtro, MAX_TEXTO_OTRO,
@@ -322,12 +322,28 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                   ) : null}
                   {orden.length ? (
                     <div className="overflow-hidden rounded-xl border border-slate-200 max-sm:flex max-sm:flex-col max-sm:gap-3 max-sm:overflow-visible max-sm:border-0">
-                      {orden.map((r, i) => (
-                        <Renglon key={r.k} r={r} n={i + 1} error={errs[r.k] || servidor.renglones[r.k]} motivos={data?.motivos ?? {}}
-                          autorizadores={data?.autorizadores ?? []} nocturno={Boolean(h?.nocturno)}
-                          onCambio={(c) => cambiar((p) => p.map((x) => (x.k === r.k ? { ...x, ...c } : x)))}
-                          onQuitar={() => cambiar((p) => quitarORestaurar(p, r.k))} />
-                      ))}
+                      {orden.map((r, i) => {
+                        const pausa = pausaComidaTras(orden, i);
+                        return (
+                          <Fragment key={r.k}>
+                            <Renglon r={r} n={i + 1} error={errs[r.k] || servidor.renglones[r.k]} motivos={data?.motivos ?? {}}
+                              autorizadores={data?.autorizadores ?? []} nocturno={Boolean(h?.nocturno)}
+                              onCambio={(c) => cambiar((p) => p.map((x) => (x.k === r.k ? { ...x, ...c } : x)))}
+                              onQuitar={() => cambiar((p) => quitarORestaurar(p, r.k))} />
+                            {pausa ? (
+                              <div data-comida-reloj className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-slate-100 bg-amber-50/70 px-4 py-2.5 text-[13.5px] text-amber-950 max-sm:rounded-xl max-sm:border max-sm:border-amber-200">
+                                <UtensilsCrossed className="h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+                                <span className="font-semibold">Comida</span>
+                                <span className="tabular-nums">
+                                  {hora12Txt(aHHMM(pausa.desde))} → {pausa.hasta != null ? hora12Txt(aHHMM(pausa.hasta)) : "aún no regresa"}
+                                  {pausa.minutos != null ? ` · ${durTexto(pausa.minutos) === "—" ? "0 min" : durTexto(pausa.minutos)}` : ""}
+                                </span>
+                                <span className="text-[12px] text-amber-800/80">marcada con «Salir a comer» en el reloj</span>
+                              </div>
+                            ) : null}
+                          </Fragment>
+                        );
+                      })}
                     </div>
                   ) : null}
                   <div className="flex flex-wrap gap-2.5">
@@ -347,7 +363,7 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                 <section data-calculo className="flex flex-col gap-1">
                   <h3 className={TITULO}>Cálculo automático</h3>
                   <Fila etiqueta="Trabajadas">
-                    {vista.hayRegs && !vista.abierto ? durTexto(vista.trabajadas) : "—"}
+                    {vista.hayRegs && !vista.abierto ? durTexto(vista.trabajadas) : vista.abierto && vista.trabajadas > 0 ? `${durTexto(vista.trabajadas)} · sigue en jornada` : "—"}
                     {calc.programadas ? <span className="block text-[12px] font-normal text-slate-400">de {durTexto(calc.programadas)} programado</span> : null}
                   </Fila>
                   <Fila etiqueta="Comida">{durTexto(vista.comida)}</Fila>
