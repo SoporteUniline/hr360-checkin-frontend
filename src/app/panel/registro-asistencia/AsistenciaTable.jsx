@@ -33,6 +33,8 @@ import {
   estadoHorasExtra, etiquetaHorasExtra, ordenarPorHorasExtra,
 } from "@/lib/asistencia/horasExtra.mjs";
 
+import { FIJA_RELOJ, fijaEstado } from "./columnasFijas";
+
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -931,7 +933,7 @@ export default function AsistenciaTable({
                 {colVisible("dia") && <TableHead className={TH_STICKY}>Día</TableHead>}
                 {colVisible("notas") && <TableHead className={TH_STICKY}>Observaciones</TableHead>}
                 {colVisible("estado_asistencia") && (
-                  <TableHead className={`${TH_STICKY} min-w-[250px]`}>
+                  <TableHead className={`${TH_STICKY} ${fijaEstado(colVisible("reloj"))} z-20`}>
                     <div className="flex items-center gap-1">
                       <span>ESTADO · MOTIVO</span>
                       <HeaderMultiFilter
@@ -943,7 +945,7 @@ export default function AsistenciaTable({
                     </div>
                   </TableHead>
                 )}
-                {colVisible("reloj") && <TableHead className={`${TH_STICKY} text-center`}>Reloj</TableHead>}
+                {colVisible("reloj") && <TableHead className={`${TH_STICKY} ${FIJA_RELOJ} z-20 text-center`}>Reloj</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>

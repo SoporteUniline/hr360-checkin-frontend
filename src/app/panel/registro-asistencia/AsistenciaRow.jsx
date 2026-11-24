@@ -4,6 +4,7 @@ import { useState } from "react";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import EtiquetaPermisoHoras from "./EtiquetaPermisoHoras";
 import CeldaEstadoDia from "./CeldaEstadoDia";
+import { FIJA_RELOJ, fijaEstado } from "./columnasFijas";
 import CeldaObservaciones from "./CeldaObservaciones";
 import CeldasControlHorasExtra from "./CeldasControlHorasExtra";
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
@@ -167,14 +168,14 @@ export default function AsistenciaRow({
           </TableCell>
         )}
         {isColVisible("estado_asistencia") && (
-          <TableCell className="!whitespace-normal">
+          <TableCell className={`!whitespace-normal ${fijaEstado(isColVisible("reloj"))} z-[1] bg-white`}>
             <CeldaEstadoDia registro={registro} tiposPermiso={tiposPermiso} readOnly={readOnly || !onAbrirReloj}
               onAbrirReloj={onAbrirReloj} onGuardado={mutateAsistencia} />
             {registro.permiso_horas && <div className="mt-1"><EtiquetaPermisoHoras permiso={registro.permiso_horas} /></div>}
           </TableCell>
         )}
         {isColVisible("reloj") && (
-          <TableCell className="text-center">
+          <TableCell className={`${FIJA_RELOJ} z-[1] bg-white text-center`}>
             {readOnly || !onAbrirReloj ? null : (
               <button type="button" onClick={abrirReloj} aria-label={`Abrir el reloj de ${nombre}`} title="Registros del reloj"
                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100">
