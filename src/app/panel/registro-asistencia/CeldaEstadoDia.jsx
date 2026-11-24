@@ -20,7 +20,7 @@ import { checadasVivas, estadoFila, textoConIcono } from "@/lib/asistencia/reloj
 import { permisoFila } from "@/lib/asistencia/tiposGoce.mjs";
 import {
   ASISTENCIA, aplicado, claseDe, cuerpoEstadoDia, estadoMotivo, faltaPar, opcionesMotivo, opcionesTipo, parDesdeFila, parVacio,
-  partesEstadoMotivo,
+  partesEstadoMotivo, textoColumnaEstado,
   goceTxt, nombreTipo, tiposCaptura,
 } from "@/lib/asistencia/quePasoMotivo.mjs";
 import { actaFila, avisosRespuesta } from "@/lib/actasEstatus.mjs";
@@ -72,7 +72,7 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
     if (parte === "estado") {
       return (
         <span data-estado-fila data-columna-estado className="whitespace-normal text-[13.5px] leading-snug text-slate-800">
-          {partes?.estado ?? (permisoFila(registro)?.tipo || textoConIcono(estado.texto, estado.clave))}
+          {textoColumnaEstado(registro, tiposPermiso)}
         </span>
       );
     }

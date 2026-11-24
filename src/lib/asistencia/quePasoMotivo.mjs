@@ -10,8 +10,8 @@
 //  · Tipos ocultos (`captura` 0) no se ofrecen, pero un registro viejo los muestra tal cual.
 // Los íconos van por `rol` del tipo, nunca por el nombre. Lo usan la fila de Asistencias, el reloj, la vista móvil,
 // Permisos y el catálogo. Probado en scripts/test-quepaso-motivo.mjs.
-import { durTexto, requisitoEstado, textoConIcono } from "./relojDia.mjs";
-import { HORAS_TXT, alcanceDe, goceDe, normalizarTipo, sinEmoji, tipoHorasDe } from "./tiposGoce.mjs";
+import { durTexto, estadoFila, requisitoEstado, textoConIcono } from "./relojDia.mjs";
+import { HORAS_TXT, alcanceDe, goceDe, normalizarTipo, permisoFila, sinEmoji, tipoHorasDe } from "./tiposGoce.mjs";
 
 const num = (v) => Number(v ?? 0);
 const si = (v) => v === true || v === 1 || v === "1";
@@ -272,6 +272,14 @@ export function partesEstadoMotivo(fila, tipos = null) {
   // El goce va en su propia columna («Goce»): aquí solo el porqué y las horas.
   const sinGoce = (m) => m.replace(/ · (con|sin) goce$/, "");
   return i < 0 ? { estado: t, motivo: "" } : { estado: t.slice(0, i), motivo: sinGoce(t.slice(i + 3)) };
+}
+// Lo que se ve en la columna «Estado» (qué pasó): «⌚ Entrada tarde», «❌ Inasistencia injustificada», «✅ Asistió»…
+// Es también el valor del filtro de esa columna, para que lo que se filtra sea literalmente lo que se ve.
+export function textoColumnaEstado(fila, tipos = null) {
+  const partes = partesEstadoMotivo(fila, tipos);
+  if (partes?.estado) return partes.estado;
+  const e = estadoFila(fila);
+  return permisoFila(fila)?.tipo || textoConIcono(e.texto, e.clave);
 }
 // Texto de la fila: el nuevo «estado · motivo» o, para lo demás (sin checar, asistió, tipos anteriores), el de siempre.
 export const textoEstadoFila = (fila, tipos, estado) => estadoMotivo(fila, tipos) ?? textoConIcono(estado?.texto, estado?.clave);
