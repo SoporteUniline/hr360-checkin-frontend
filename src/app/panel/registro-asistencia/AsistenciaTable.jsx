@@ -35,7 +35,7 @@ import {
 
 import { FIJA_RELOJ, derechaEstado, derechaMotivo, fijaEstado, fijaMotivo } from "./columnasFijas";
 import { permisoFila } from "@/lib/asistencia/tiposGoce.mjs";
-import { estadoMotivo } from "@/lib/asistencia/quePasoMotivo.mjs";
+import { estadoMotivo, textoColumnaEstado } from "@/lib/asistencia/quePasoMotivo.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -245,9 +245,9 @@ export default function AsistenciaTable({
   const estadoAsistenciaOptions = useMemo(
     () =>
       uniqueOptions(
-        optionSourceRows.map((registro) => estadoFila(registro).texto),
+        optionSourceRows.map((registro) => textoColumnaEstado(registro, tiposPermiso)),
       ),
-    [optionSourceRows],
+    [optionSourceRows, tiposPermiso],
   );
   const autorizacionOptions = useMemo(
     () =>
@@ -304,7 +304,7 @@ export default function AsistenciaTable({
       autorizacionSeleccionada.includes(toAutorizacion(registro));
     const pasaEstadoAsistencia =
       estadoAsistenciaSeleccionado.length === 0 ||
-      estadoAsistenciaSeleccionado.includes(estadoFila(registro).texto);
+      estadoAsistenciaSeleccionado.includes(textoColumnaEstado(registro, tiposPermiso));
 
     return (
       pasaEmpleado &&
@@ -336,6 +336,7 @@ export default function AsistenciaTable({
       festivoSeleccionado,
       autorizacionSeleccionada,
       estadoAsistenciaSeleccionado,
+      tiposPermiso,
       soloHorasExtra,
       soloSinComida,
     ],
