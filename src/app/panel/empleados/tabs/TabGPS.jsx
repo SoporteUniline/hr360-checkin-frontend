@@ -399,7 +399,7 @@ export default function TabGPS({ form, soloLectura }) {
                 lugares específicos
               </li>
               <li>
-                El botón <strong>"Usar mi ubicación"</strong> activa el GPS de
+                El botón <strong>&quot;Usar mi ubicación&quot;</strong> activa el GPS de
                 tu dispositivo
               </li>
               <li>

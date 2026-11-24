@@ -9,7 +9,7 @@ import { useSnackbar } from "notistack";
 import { Pencil, Search, Settings2 } from "lucide-react";
 import axios from "@/lib/axios";
 import { Button } from "@/components/ui/button";
-import { Chip, Kpi, mensajeError } from "@/components/nomina/comun";
+import { Kpi, mensajeError } from "@/components/nomina/comun";
 import { EncabezadoDetalle, Cargando, ErrorCarga, Tabla, celda } from "@/components/nomina/ModuloNomina";
 import FormConcepto, { CONDICION, FORMA } from "@/components/nomina/FormConcepto";
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";

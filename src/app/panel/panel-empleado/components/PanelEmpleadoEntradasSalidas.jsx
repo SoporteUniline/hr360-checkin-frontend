@@ -27,9 +27,13 @@ import {
  * Componente para mostrar las entradas y salidas del empleado
  * Relacionado con: src/app/panel/panel-empleado/page.jsx
  */
-export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
-  if (!datosEmpleado) return null;
+// El guard va en un envoltorio: los hooks de PanelEmpleadoEntradasSalidasContenido no pueden ir tras un return condicional.
+export default function PanelEmpleadoEntradasSalidas(props) {
+  if (!props.datosEmpleado) return null;
+  return <PanelEmpleadoEntradasSalidasContenido {...props} />;
+}
 
+function PanelEmpleadoEntradasSalidasContenido({ datosEmpleado }) {
   const promedios = datosEmpleado.entradas_salidas?.promedios || {};
   const registros = datosEmpleado.entradas_salidas?.registros || [];
 

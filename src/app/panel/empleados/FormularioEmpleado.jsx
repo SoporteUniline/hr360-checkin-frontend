@@ -1,6 +1,7 @@
 "use client";
 
 import useCamposPersonalizados from "@/hooks/useCamposPersonalizados";
+import Link from "next/link";
 import { CamposEmpleado } from "@/components/CamposEmpleado";
 import { parseCampos } from "@/lib/camposPersonalizados.mjs";
 import React, { Fragment, useCallback, useEffect, useRef, useState } from "react";
@@ -700,9 +701,9 @@ export default function FormularioEmpleado({
           ) : (
             <span>
               {mensaje}{" "}
-              <a href="/panel/mi-suscripcion" className="underline font-semibold">
+              <Link href="/panel/mi-suscripcion" className="underline font-semibold">
                 Mejorar plan →
-              </a>
+              </Link>
             </span>
           ),
           { variant: "warning", autoHideDuration: 6000 },
