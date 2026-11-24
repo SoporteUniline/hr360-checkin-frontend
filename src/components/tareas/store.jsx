@@ -85,6 +85,8 @@ export function TareasProvider({ modo = "panel", idEmpresa = null, children }) {
         const r = await axios.post(`${BASE}/envios/${idEnvio}/archivo`, fd, multipart);
         return r.data.key;
       } catch (e) {
+        // La firma muestra su error dentro de FirmaGrande (encima de la pantalla completa), no como aviso flotante.
+        if (esFirma) throw new Error(errorDe(e, "No se pudo subir tu firma. Intenta de nuevo."));
         enqueueSnackbar(errorDe(e, "No se pudo subir la imagen."), { variant: "error" });
         return null;
       }
