@@ -54,6 +54,7 @@ import { toPng } from "html-to-image";
 import { qrComoDataUrl } from "@/lib/qrImagen.mjs";
 import { copiarValores, hayCambiosPendientes, valoresIguales } from "@/lib/cambiosPendientes.mjs";
 import { useGuardiaSalida } from "@/components/cambios/CambiosPendientes";
+import EstadoCambios from "@/components/cambios/EstadoCambios";
 import { fechaParaInput } from "@/lib/fechaInput.mjs";
 
 // (23/11/2026) Campos que no cuentan como «cambios sin guardar»: las horas por día y de comida se recalculan solas a
@@ -1056,17 +1057,5 @@ export default function FormularioEmpleado({
         </div>
       </div>
     </Form>
-  );
-}
-
-// (23/11/2026) Estado junto al botón Guardar: punto + «Cambios sin guardar», o «Sin cambios» discreto.
-function EstadoCambios({ hayCambios }) {
-  return hayCambios ? (
-    <span data-estado-cambios="pendientes" role="status" className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-amber-700 sm:text-sm">
-      <span aria-hidden="true" className="size-2 rounded-full bg-amber-500" />
-      Cambios sin guardar
-    </span>
-  ) : (
-    <span data-estado-cambios="sin-cambios" role="status" className="shrink-0 text-xs text-gray-400 sm:text-sm">Sin cambios</span>
   );
 }
