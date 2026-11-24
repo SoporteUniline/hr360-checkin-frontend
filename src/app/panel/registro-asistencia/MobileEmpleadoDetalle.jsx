@@ -756,7 +756,8 @@ export default function MobileEmpleadoDetalle({
                     fecha: String(display.fecha).slice(0, 10) });
                   onOpenChange?.(false);
                 }}
-                className="flex min-h-12 w-full items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-semibold text-blue-800">
+                className="flex min-h-12 w-full items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-semibold
+                  text-blue-800">
                 Abrir el día: horas extra con horario y comida
               </button>
             </div>

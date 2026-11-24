@@ -94,7 +94,9 @@ export function resumenSemana(filas, otras = []) {
   const total = dias.reduce((t, [, m]) => t + m, 0);
   const avisos = dias.filter(([, m]) => m > TOPE_DIA_MIN)
     .map(([f, m]) => `${etiquetaDia(f)}: ${formatearMinutos(m)} extra; la ley permite ${formatearMinutos(TOPE_DIA_MIN)} por día.`);
-  if (total > TOPE_SEMANA_MIN) avisos.push(`La semana suma ${formatearMinutos(total)}; la ley permite ${formatearMinutos(TOPE_SEMANA_MIN)}. Se avisa, no se bloquea.`);
+  if (total > TOPE_SEMANA_MIN) {
+    avisos.push(`La semana suma ${formatearMinutos(total)}; la ley permite ${formatearMinutos(TOPE_SEMANA_MIN)}. Se avisa, no se bloquea.`);
+  }
   return { total, quedan: Math.max(0, TOPE_SEMANA_MIN - total), porDia: dias, avisos };
 }
 

@@ -45,7 +45,8 @@ export function diaParaLeer(registro, zona) {
       ? { rango: `${ver(c.salida)} – ${c.regreso ? ver(c.regreso) : "…"}`, minutos: c.minutos != null ? formatearMinutos(c.minutos) : null,
         origen: c.manual ? "manual" : "checada en el reloj", agrego: c.manual ? c.agrego?.nombre_usuario ?? null : null }
       : null,
-    permisos: (registro?.permisos_horas_dia ?? []).map((p) => `${TIPO_PERMISO[p.tipo_horas] ?? "Permiso"} ${corta(p.hora_inicio) ?? ""}${p.hora_fin ? `–${corta(p.hora_fin)}` : ""}`.trim()),
+    permisos: (registro?.permisos_horas_dia ?? [])
+      .map((p) => `${TIPO_PERMISO[p.tipo_horas] ?? "Permiso"} ${corta(p.hora_inicio) ?? ""}${p.hora_fin ? `–${corta(p.hora_fin)}` : ""}`.trim()),
     horasExtra: (registro?.horas_extra_registradas ?? []).map((h) => ({
       rango: `${ver(h.desde)} – ${ver(h.hasta)}`, minutos: formatearMinutos(Number(h.minutos) || 0), motivo: h.motivo,
     })),

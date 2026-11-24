@@ -21,7 +21,8 @@ import HorasExtraDia from "./HorasExtraDia";
 // Campos que el panel deja editar (para saber si hay cambios sin guardar).
 const EDITABLES = ["entrada", "salida", "id_tipo_permiso", "asistencia", "goce_sueldo", "hrs_comida", "autorizado_por", "notas", "es_festivo",
   "pago_triple", "prima_dominical", "porcentaje_dia_festivo"];
-const igual = (a, b) => String(a ?? "") === String(b ?? "") || (Number.isFinite(Number(a)) && a !== "" && b !== "" && a != null && b != null && Number(a) === Number(b));
+const vacio = (v) => v == null || v === "";
+const igual = (a, b) => String(a ?? "") === String(b ?? "") || (!vacio(a) && !vacio(b) && Number.isFinite(Number(a)) && Number(a) === Number(b));
 
 const si = (v) => Boolean(Number(v));
 
@@ -203,10 +204,6 @@ export default function PanelEditarAsistencia({
 
           </div>
           <div className="space-y-5">
-          <Seccion titulo="Horas extra">
-            <HorasExtraDia extra={extra} empleados={empleados} />
-          </Seccion>
-
           <Seccion titulo="Registro">
             <div className="grid grid-cols-2 gap-3">
               <Campo label="Tipo de registro" nota="Asistió y Goce los define el tipo.">
@@ -281,6 +278,12 @@ export default function PanelEditarAsistencia({
             </div>
           </Seccion>
           </div>
+          </div>
+          {/* Ancho completo: filas por día con desde, hasta, horas y motivo (Dia.dc.html). */}
+          <div className="mt-6 border-t border-slate-100 pt-5">
+            <Seccion titulo="Horas extra">
+              <HorasExtraDia extra={extra} empleados={empleados} />
+            </Seccion>
           </div>
         </div>
 

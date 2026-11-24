@@ -150,7 +150,8 @@ export function QuitarComida({ registro, comida, onGuardado }) {
         <p className="text-sm font-semibold text-slate-900">¿Quitar la comida?</p>
         <p className="mt-1 text-xs text-slate-500">Su día vuelve a quedar como lo checó el reloj. Queda en el historial.</p>
         <div className="mt-3 flex justify-end gap-2">
-          <button type="button" onClick={() => setAbierto(false)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600">
+          <button type="button" onClick={() => setAbierto(false)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold
+            text-slate-600">
             Cancelar
           </button>
           <button type="button" disabled={guardando} onClick={quitar}

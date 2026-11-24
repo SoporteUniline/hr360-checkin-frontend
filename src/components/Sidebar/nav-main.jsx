@@ -705,7 +705,8 @@ export function NavMain({ consulta = "" } = {}) {
   const grupos = filtrarGrupos(menuGroups, activos, opcionesModulo);
   // «Monitor de mi equipo» solo para jefes (lo decide el servidor con la sesión).
   const { esJefe } = useMonitorEquipo();
-  const itemsInicio = dashboardItems.filter((item) => rutaPermitida(item.url, activos, opcionesModulo) && (!item.soloJefe || esJefe));
+  const itemsInicio = dashboardItems.filter((item) =>
+    rutaPermitida(item.url, activos, opcionesModulo) && (!item.soloJefe || esJefe));
   const vistasEvaluacion = useMenuEvaluaciones(dataUser, effectiveRole === "Recruiter" && rutaPermitida("/panel/evaluaciones", activos, opcionesModulo));
   // Rol, app nativa (sin «Mi suscripción») y, en Evaluaciones, los permisos del servidor. Mientras no se
   // saben se muestran por rol, salvo «Por responder», que solo aparece si hay evaluaciones asignadas.

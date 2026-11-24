@@ -53,7 +53,9 @@ function DiaEquipo({ registro, zona, onCerrar }) {
         )}
         <section aria-label="Permisos del día">
           <h3 className="text-[10.5px] font-semibold uppercase tracking-[0.07em] text-slate-500">Permisos</h3>
-          {d.permisos.length ? d.permisos.map((p) => <Linea key={p} etiqueta="Permiso">{p}</Linea>) : <p className="py-2 text-sm text-slate-500">Sin permisos.</p>}
+          {d.permisos.length
+            ? d.permisos.map((p) => <Linea key={p} etiqueta="Permiso">{p}</Linea>)
+            : <p className="py-2 text-sm text-slate-500">Sin permisos.</p>}
         </section>
         <section aria-label="Horas extra">
           <h3 className="text-[10.5px] font-semibold uppercase tracking-[0.07em] text-slate-500">Horas extra</h3>
@@ -74,13 +76,18 @@ function Renglon({ r, onAbrir }) {
   return (
     <li>
       <button type="button" onClick={() => onAbrir(reg)} aria-label={`Ver día de ${nombreDe(reg)}`} data-estado={r.estado}
-        className="flex w-full min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
-        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-blue-50 text-[13px] font-bold text-blue-800">{iniciales(reg)}</span>
+        className="flex w-full min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 text-left hover:bg-slate-50
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+        <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-blue-50 text-[13px] font-bold text-blue-800">
+          {iniciales(reg)}
+        </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <b className="truncate text-[15px] text-slate-900">{nombreDe(reg)}</b>
           <span className="text-[13px] text-slate-600">{d.detalle}{d.resaltado ? <> · <b className="text-orange-800">{d.resaltado}</b></> : null}</span>
           {c.entrada ? (
-            <span className="text-xs tabular-nums text-slate-500">Entrada {c.entrada}{c.salida ? ` · Salida ${c.salida}` : ""}{c.comida ? ` · Comida ${c.comida.texto}` : ""}</span>
+            <span className="text-xs tabular-nums text-slate-500">
+              Entrada {c.entrada}{c.salida ? ` · Salida ${c.salida}` : ""}{c.comida ? ` · Comida ${c.comida.texto}` : ""}
+            </span>
           ) : null}
         </span>
         <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${CHIP[d.tono] ?? CHIP.neutro}`}>{d.chip}</span>
@@ -125,10 +132,12 @@ export default function MonitorEquipo() {
           </div>
         ) : (
           <>
-            <div role="group" aria-label="Resumen de hoy" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-4 sm:px-0 lg:grid-cols-7">
+            <div role="group" aria-label="Resumen de hoy" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:grid sm:grid-cols-4 sm:px-0
+              lg:grid-cols-7">
               {TARJETAS.map((t) => (
                 <button key={t.clave} type="button" aria-pressed={filtro === t.clave} onClick={() => setFiltro((f) => (f === t.clave ? null : t.clave))}
-                  className={`flex min-h-11 min-w-[104px] shrink-0 flex-col rounded-xl px-3 py-2 text-left ${filtro === t.clave ? "border-2 border-blue-600 bg-white" : "border border-slate-200 bg-white"}`}>
+                  className={`flex min-h-11 min-w-[104px] shrink-0 flex-col rounded-xl px-3 py-2 text-left sm:min-w-0 ${
+                    filtro === t.clave ? "border-2 border-blue-600 bg-white" : "border border-slate-200 bg-white"}`}>
                   <span className="text-xs font-semibold text-slate-600">{t.titulo}</span>
                   <span className="text-2xl font-bold tabular-nums text-slate-900">{resumen.cuenta[t.clave]}</span>
                 </button>
@@ -138,7 +147,8 @@ export default function MonitorEquipo() {
               <label htmlFor="equipo-buscar" className="sr-only">Buscar en mi equipo</label>
               <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
               <input id="equipo-buscar" type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar en mi equipo…"
-                className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-[15px] focus:border-blue-500 focus:outline-none sm:max-w-sm" />
+                className="h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-[15px] focus:border-blue-500 focus:outline-none
+                  sm:max-w-sm" />
             </div>
             {grupos.length ? grupos.map((g) => (
               <section key={g.clave} aria-label={`${g.titulo} (${g.filas.length})`} className="space-y-2">

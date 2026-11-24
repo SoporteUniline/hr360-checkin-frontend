@@ -96,7 +96,8 @@ export default function ChecadasDelDia({ empleado, activo = true, mutateAsistenc
         const editando = editingMovimientoId === c.id;
         const pausa = pausaTras.get(i);
         const filaPausa = pausa
-          ? <FilaPausa key={`pausa-${c.id ?? i}`} p={pausa} horaVer={horaVer} empleado={empleado} zona={zona} editable={editable} onGuardado={mutateAsistencia} />
+          ? <FilaPausa key={`pausa-${c.id ?? i}`} p={pausa} horaVer={horaVer} empleado={empleado} zona={zona} editable={editable}
+            onGuardado={mutateAsistencia} />
           : null;
         return [(
           <li key={c.id ?? i} className="flex items-center gap-3 px-3 py-2.5 text-sm">

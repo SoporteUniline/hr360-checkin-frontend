@@ -405,8 +405,9 @@ try {
   const panel = page.getByRole("dialog", { name: /Nocturno Prueba/ });
   // La ventana ofrece «Agregar comida» cuando el día tiene un solo tramo.
   await panel.getByRole("button", { name: "+ Agregar comida" }).waitFor({ timeout: 10000 });
-  // Sin tiempo extra ese día, la ventana no muestra controles de horas extra.
-  await panel.getByText("Sin horas extra este día").waitFor({ timeout: 10000 });
+  // Horas extra con horario: sin registros, la sección solo ofrece «+ Agregar día» (sin «Autoriza» ni forma de pago).
+  await panel.getByRole("button", { name: "+ Agregar día" }).waitFor({ timeout: 10000 });
+  assert.equal(await panel.getByLabel("Autoriza", { exact: true }).count(), 0);
   assert.equal(await panel.getByLabel("Forma de pago").count(), 0);
   await panel.getByLabel("Salida", { exact: true }).fill("06:00");
   if (process.env.CAPTURAS) { await dormir(600); await page.screenshot({ path: process.env.CAPTURAS + "/panel-editar.png" }); }

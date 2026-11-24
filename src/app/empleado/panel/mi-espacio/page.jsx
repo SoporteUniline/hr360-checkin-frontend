@@ -19,7 +19,9 @@ export default function EmployeeSpace() {
       {ver("/empleado/panel/mis-recursos") ? <MenuLink href="/empleado/panel/mis-recursos" icon={Package} title="Mis activos y uniformes" description="Consulta tus entregas y resguardos" /> : null}
       {ver("/empleado/panel/evaluaciones") ? <MenuLink href="/empleado/panel/evaluaciones" icon={ClipboardCheck} title="Mis evaluaciones" description="Evaluaciones, resultados y seguimiento" /> : null}
       {ver("/empleado/panel/solicitudes-equipo") ? <MenuLink href="/empleado/panel/solicitudes-equipo" icon={UsersRound} title="Solicitudes de mi equipo" description="Si tienes colaboradores asignados" /> : null}
-      {esJefe ? <MenuLink href={RUTA_MONITOR_EQUIPO} icon={Activity} title="Monitor de mi equipo" description="Quién está trabajando y quién falta hoy" /> : null}
+      {esJefe
+        ? <MenuLink href={RUTA_MONITOR_EQUIPO} icon={Activity} title="Monitor de mi equipo" description="Quién está trabajando y quién falta hoy" />
+        : null}
     </div><button onClick={logout} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border bg-white font-medium text-red-700"><LogOut className="size-4" />Cerrar sesión</button>
   </div>;
 }
