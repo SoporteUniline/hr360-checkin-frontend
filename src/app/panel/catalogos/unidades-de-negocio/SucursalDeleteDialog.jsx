@@ -43,7 +43,7 @@ export default function SucursalDeleteDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="bg-gradient-to-br from-red-500 to-red-600 p-3 rounded-lg shadow-md">
+            <div className="bg-red-600 p-3 rounded-lg shadow-md">
               <svg
                 className="w-6 h-6 text-white"
                 fill="none"

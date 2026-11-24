@@ -250,7 +250,7 @@ export default function ConfiguracionChecadorPage() {
       {/* Encabezado compacto homologado Adamia */}
       <div>
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-accent text-white shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand text-white shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
             <Clock size={20} />
           </div>
           <div>
@@ -263,7 +263,7 @@ export default function ConfiguracionChecadorPage() {
             </p>
           </div>
         </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-brand to-brand-accent" />
+        <div className="mt-3 h-[2.5px] rounded bg-brand" />
       </div>
 
       {dataUser?.empresas_detalle?.length > 1 && (
@@ -420,7 +420,7 @@ export default function ConfiguracionChecadorPage() {
           <Button
             type="submit"
             disabled={guardando || !isDirty}
-            className="min-w-36 gap-2 bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
+            className="min-w-36 gap-2 bg-brand font-semibold text-white"
           >
             {guardando ? (
               <>
@@ -450,7 +450,7 @@ export default function ConfiguracionChecadorPage() {
             <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
               Reclasifica los registros de asistencia pasados de esta empresa
               usando la tolerancia de entrada guardada actualmente. Solo
-              modifica registros del tipo "Asistencia" o "Retardo" que tengan
+              modifica registros del tipo &quot;Asistencia&quot; o &quot;Retardo&quot; que tengan
               horario programado. Esta acción es irreversible.
             </p>
           </div>
@@ -505,7 +505,7 @@ export default function ConfiguracionChecadorPage() {
                   <span className="block">
                     Esta acción recorrerá todos los registros de{" "}
                     <strong>asistencias pasadas</strong> de la empresa y los
-                    reclasificará como "Asistencia" o "Retardo" según la
+                    reclasificará como &quot;Asistencia&quot; o &quot;Retardo&quot; según la
                     tolerancia de entrada configurada actualmente.
                   </span>
                   <span className="block text-red-600 font-medium">

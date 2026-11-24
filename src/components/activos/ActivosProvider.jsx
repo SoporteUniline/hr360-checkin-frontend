@@ -10,12 +10,12 @@ import {
 } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { moduleState, resourceHref } from "@/lib/activos/module.mjs";
+import { moduleState, resourceHref, RAIZ_ACTIVOS, TIPO_DE_URL } from "@/lib/activos/module.mjs";
 import { useSnackbar } from "notistack";
 import { companiesFor } from "@/lib/activos/model.mjs";
 import { createApiRepository } from "@/lib/activos/apiRepository";
 import { Button } from "@/components/ui/button";
-import { RotateCcw, Package } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 const Context = createContext(null);
 export const useActivos = () => useContext(Context);
 
@@ -28,13 +28,11 @@ export function ActivosProvider({
   const { dataUser, isAuthChecked } = useAuth();
   const search = useSearchParams();
   const pathname = usePathname();
+  // Un solo módulo: el tipo viene de ?tipo= (inventario y categorías); sin él se ven ambos.
   const resourceType =
-    compact || self
+    compact || self || !pathname.startsWith(RAIZ_ACTIVOS)
       ? null
-      : pathname.startsWith("/panel/control-uniformes") ||
-        pathname.startsWith("/panel/control-activos/uniformes")
-      ? "uniform"
-      : "asset";
+      : TIPO_DE_URL[search.get("tipo")] ?? null;
   const router = useRouter();
   const companies = companiesFor(dataUser);
   const [selected, setSelected] = useState("");
@@ -70,7 +68,8 @@ export function ActivosProvider({
     );
   return (
     <CompanyProvider
-      key={`${userId}:${company.id}:${resourceType}`}
+      // Sin el tipo en la key: cambiar de pestaña o de Activos a Uniformes no vuelve a descargar todo.
+      key={`${userId}:${company.id}`}
       resourceType={resourceType}
       userId={userId}
       company={company}
@@ -79,36 +78,30 @@ export function ActivosProvider({
       }
       compact={compact}
       self={self}
-    >
-      {!compact && (
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <Package size={16} />{" "}
-            {resourceType === "uniform"
-              ? "Control de Uniformes"
-              : "Control de Activos"}
-          </div>
+      selectorEmpresa={
+        companies.length > 1 ? (
           <label className="grid gap-1 text-xs text-slate-500">
-            Empresa
-            <select
-              className="rounded-md border bg-white px-3 py-2 text-sm text-slate-800"
-              value={company.id}
-              onChange={(e) => {
-                setSelected(e.target.value);
-                router.push(
-                  resourceHref(resourceType, "", e.target.value, self)
-                );
-              }}
-            >
-              {companies.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
+              Empresa
+              <select
+                className="rounded-md border bg-white px-3 py-2 text-sm text-slate-800"
+                value={company.id}
+                onChange={(e) => {
+                  setSelected(e.target.value);
+                  router.push(
+                    resourceHref(resourceType, "", e.target.value, self)
+                  );
+                }}
+              >
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+        ) : null
+      }
+    >
       {children}
     </CompanyProvider>
   );
@@ -121,6 +114,7 @@ function CompanyProvider({
   compact,
   self,
   resourceType,
+  selectorEmpresa,
 }) {
   const { enqueueSnackbar } = useSnackbar();
   const [state, setState] = useState(null),
@@ -220,9 +214,11 @@ function CompanyProvider({
       ) : (
         <>
           {!compact && (
-            <div className="mb-4 flex items-center justify-end gap-3 text-xs text-slate-500">
+            <div className="mb-4 flex flex-wrap items-end justify-end gap-3 text-xs text-slate-500">
+              {/* Empresa y «Actualizar» en una sola fila. */}
+              {selectorEmpresa}
               <span aria-live="polite">
-                {busy ? "Guardando movimiento…" : "Datos de la empresa"}
+                {busy ? "Guardando movimiento…" : ""}
               </span>
               <Button
                 variant="ghost"

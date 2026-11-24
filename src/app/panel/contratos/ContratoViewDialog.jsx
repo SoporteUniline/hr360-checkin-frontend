@@ -20,7 +20,14 @@ import {
   fetchImageAsDataUrl,
   tryAddCompanyMarkToPdf,
 } from "@/lib/pdfCompanyLogo";
-import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
+import {
+  ADAMIA,
+  gradientLine,
+  applyAdamiaFont,
+  loadAdamiaMarca,
+  dibujarPieAdamia,
+} from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 import { Download, FileText, Loader2, Printer } from "lucide-react";
 
 dayjs.extend(utc);
@@ -301,13 +308,14 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
 
     // Tipografía corporativa Adamia (Poppins con fallback a Helvetica).
     const FONT = await applyAdamiaFont(doc);
+    const marcaAdamia = await loadAdamiaMarca();
 
     const pageWidth = 210;
     const pageHeight = 297;
     const marginLeft = 20;
     const marginRight = 20;
     const contentWidth = pageWidth - marginLeft - marginRight;
-    const systemLabel = "ADAMIA HR360";
+    const systemLabel = "ADAMIA";
     let y = marginLeft;
 
     const empresaNombre =
@@ -663,16 +671,6 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
     y += 18;
 
     const totalPages = doc.internal.getNumberOfPages();
-    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
       if (p === totalPages) {
@@ -723,35 +721,23 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
           },
         );
       }
-
-      const footerLineY = pageHeight - 14;
-      const footerTextY = pageHeight - 9;
-      gradientLine(doc, marginLeft, pageWidth - marginRight, footerLineY, 0.35);
-      doc.setFont(FONT, "bold");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...ADAMIA.blue);
-      doc.text("Adamia", marginLeft, footerTextY);
-      const brandW = doc.getTextWidth("Adamia");
-      doc.setFont(FONT, "normal");
-      doc.setTextColor(...ADAMIA.muted);
-      doc.text(" · Contratos", marginLeft + brandW, footerTextY);
-      doc.setFontSize(6.5);
-      doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Folio #${folio}`,
-        pageWidth / 2,
-        footerTextY,
-        { align: "center" },
-      );
-      doc.setFontSize(7.5);
-      doc.text(`Página ${p} de ${totalPages}`, pageWidth - marginRight, footerTextY, {
-        align: "right",
-      });
     }
 
-    const nombreArchivo = `Contrato_${String(folio).replace(
-      /[^a-zA-Z0-9_-]/g,
-      "_",
-    )}_${dayjs().format("YYYY-MM-DD")}.pdf`;
+    // Pie homologado ADAMIA en cada página (logotipo, fecha, Página X de Y).
+    dibujarPieAdamia(doc, {
+      font: FONT,
+      logo: marcaAdamia,
+      documento: "Contrato",
+      detalle: `Folio #${folio}`,
+      margenMm: marginLeft,
+    });
+
+    // Nombre sin datos personales: documento, folio, número de empleado y fecha.
+    const nombreArchivo = nombreArchivoPdf({
+      documento: "Contrato",
+      folio: item.folio || item.id,
+      empleado: item,
+    });
     return { doc, nombreArchivo };
   }
 
@@ -760,7 +746,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-[95vw] sm:max-w-xl p-0 overflow-hidden">
           <DialogHeader className="p-0">
-            <div className="bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] p-6">
+            <div className="bg-brand p-6">
               <div className="flex items-center gap-3">
                 <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
                   <FileText className="h-6 w-6 text-white" />
@@ -789,7 +775,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-[95vw] sm:max-w-3xl max-h-[85vh] overflow-y-auto p-0">
         <DialogHeader className="p-0">
-          <div className="bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] p-6">
+          <div className="bg-brand p-6">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
                 <FileText className="h-6 w-6 text-white" />
@@ -805,7 +791,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
         </DialogHeader>
 
         <div className="p-6 space-y-6">
-          <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border border-blue-100 rounded-xl p-5">
+          <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-5">
             <div className="font-semibold mb-4 text-gray-900">
               Información general
             </div>
@@ -833,7 +819,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-amber-50 via-white to-amber-50 border border-amber-100 rounded-xl p-5">
+          <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-5">
             <div className="font-semibold mb-4 text-gray-900">Vigencia</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
               <div>
@@ -846,7 +832,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-green-50 via-white to-green-50 border border-green-100 rounded-xl p-5">
+          <div className="bg-green-50/60 border border-green-100 rounded-xl p-5">
             <div className="font-semibold mb-4 text-gray-900">Compensación</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
               <div>
@@ -864,7 +850,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-orange-50 via-white to-orange-50 border border-orange-100 rounded-xl p-5">
+          <div className="bg-orange-50/60 border border-orange-100 rounded-xl p-5">
             <div className="font-semibold mb-4 text-gray-900">Jornada</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
               <div>
@@ -885,7 +871,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
           </div>
 
           {item.tipo_contrato !== "prestacion_servicios" ? (
-            <div className="bg-gradient-to-br from-purple-50 via-white to-purple-50 border border-purple-100 rounded-xl p-5">
+            <div className="bg-purple-50/60 border border-purple-100 rounded-xl p-5">
               <div className="font-semibold mb-4 text-gray-900">Prestaciones</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                 <div>
@@ -913,7 +899,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
           ) : null}
 
           {item.notas ? (
-            <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 border border-slate-200 rounded-xl p-5">
+            <div className="bg-slate-50/60 border border-slate-200 rounded-xl p-5">
               <div className="font-semibold mb-4 text-gray-900">Notas</div>
               <div className="text-sm">{item.notas}</div>
             </div>

@@ -33,6 +33,19 @@ export const firmaDigitalApi = {
 
     return res.data;
   },
+
+  // Firmar con el PIN: el servidor estampa la firma que la persona guardó en Mi espacio. Sin foto.
+  async firmarConPin(token, pin) {
+    const formData = new FormData();
+    formData.append("consentimiento", "true");
+    formData.append("metodo", "pin");
+    formData.append("pin", pin);
+    const res = await firmaDigitalPublicApi.post(
+      `/checador/firma-digital/publica/${encodeURIComponent(token)}/firmar`,
+      formData,
+    );
+    return res.data;
+  },
 };
 
 export const firmaDigitalAdminApi = {
@@ -72,6 +85,15 @@ export const firmaDigitalAdminApi = {
       },
     );
 
+    return res.data;
+  },
+
+  // Foto, fecha, método y dispositivo de quien firmó. Solo RH y dueño; cada consulta queda registrada.
+  async obtenerEvidencia({ idSolicitud, idEmpresa }) {
+    const res = await firmaDigitalPublicApi.get(
+      `/checador/firma-digital/solicitudes/${encodeURIComponent(idSolicitud)}/evidencia`,
+      { params: { id_empresa: idEmpresa }, headers: authHeaders() },
+    );
     return res.data;
   },
 

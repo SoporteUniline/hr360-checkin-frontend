@@ -199,7 +199,7 @@ export default function EstadoCivilTable({
         <div className="px-6 py-4 border-b border-gray-100 flex justify-end">
           <Button
             onClick={onCreate}
-            className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
+            className="bg-brand font-semibold text-white"
           >
             <Plus className="w-4 h-4 mr-2" />
             Nuevo estado civil
@@ -280,7 +280,7 @@ export default function EstadoCivilTable({
                         <Pencil className="h-4 w-4 text-[#2563EB]" />
                       </button>
                       <button
-                        onClick={() => onDelete(civ.id_estado_civil, key)}
+                        onClick={() => onDelete(civ.id_estado_civil)}
                         className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                         title="Eliminar"
                       >

@@ -38,8 +38,7 @@ export default function TurnoExtraDialog({ open, onOpenChange, empresas, turno, 
   const [confirmar, setConfirmar] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
-  // (19/11/2026) Se reinicia SOLO al abrirse. Antes dependía de `plantilla`, que con el turno en curso se
-  // recarga cada minuto, y borraba lo que el usuario estaba editando.
+  // Se reinicia SOLO al abrirse: `plantilla` se recarga cada minuto con el turno en curso y borraría lo editado.
   const abierto = useRef(false);
   const plantillaCargada = useRef(false);
   useEffect(() => {

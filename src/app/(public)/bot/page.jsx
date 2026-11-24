@@ -25,7 +25,7 @@ const respuestasFallback = [
   },
   {
     match: /contratar|comprar|prueba/i,
-    text: "Puedes iniciar aquí: https://planes.hr360.mx/contratar-plan o cotizar en https://planes.hr360.mx/cotiza",
+    text: "Puedes iniciar aquí: https://adamia.com.mx/contratar-plan o cotizar en https://adamia.com.mx/cotiza",
   },
   {
     match: /contacto|soporte|whatsapp/i,

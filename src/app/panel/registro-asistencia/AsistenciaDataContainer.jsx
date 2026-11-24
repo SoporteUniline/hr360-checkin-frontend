@@ -8,6 +8,7 @@ import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import AsistenciaTable from "./AsistenciaTable";
+import RelojDiaDialog from "./RelojDiaDialog";
 import AsistenciaMatriz from "./AsistenciaMatriz";
 import VistaHoras from "./VistaHoras";
 import TablePagination from "@/components/TablePagination";
@@ -17,7 +18,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
-import { useSnackbar } from "notistack";
+import useRefrescoChecadas from "@/hooks/useRefrescoChecadas";
 import { cargarPeriodoCompleto, LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
 import { indiceFestivos as crearIndiceFestivos } from "@/lib/asistencia/calendario.mjs";
 import useSWR from "swr";
@@ -102,46 +103,8 @@ export default function AsistenciaDataContainer({
     sortConfig.sortOrder,
   );
 
-  // Ref para siempre tener el mutate más reciente sin recrear el EventSource
-  const mutateRef = useRef(mutate);
-  useEffect(() => {
-    mutateRef.current = mutate;
-  }, [mutate]);
-  useEffect(() => {
-    // Solo recarga cuando cambió la cola de checadas; preparar el reloj ('perfil') no cambia datos
-    // (antes provocaba una segunda descarga completa del periodo al abrir la vista).
-    const refresh = (event) => {
-      if (event?.detail?.motivo === 'perfil') return;
-      if (navigator.onLine && window.__adamiaOffline !== true) void mutateRef.current().catch(() => {});
-    };
-    window.addEventListener('adamia-queue', refresh);
-    return () => window.removeEventListener('adamia-queue', refresh);
-  }, []);
-
-  // SSE: actualización en tiempo real cuando llega una checada.
-  // Además de refrescar, se notifica con un toast discreto (máx. 1 cada 8 s
-  // para no saturar en horas pico de entrada).
-  const { enqueueSnackbar } = useSnackbar();
-  const lastToastRef = useRef(0);
-  useEffect(() => {
-    if (!idEmpresa) return;
-    const es = new EventSource(
-      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/eventos-checada?id_empresa=${idEmpresa}`,
-    );
-    es.addEventListener("checada", () => {
-      mutateRef.current();
-      const ahora = Date.now();
-      if (ahora - lastToastRef.current > 8000) {
-        lastToastRef.current = ahora;
-        enqueueSnackbar("Nueva checada recibida — registros actualizados", {
-          variant: "success",
-          autoHideDuration: 3500,
-        });
-      }
-    });
-    es.onerror = () => {};
-    return () => es.close();
-  }, [idEmpresa, enqueueSnackbar]);
+  // Cada checada (SSE) o la cola sin conexión recargan el periodo.
+  useRefrescoChecadas(idEmpresa, mutate);
 
   // Filtros activos del periodo: los usan las opciones por columna y Exportar.
   const filtrosPeriodo = {
@@ -260,10 +223,13 @@ export default function AsistenciaDataContainer({
     handleFieldChange,
     handleSaveClick,
   } = useAsistenciaActions(mutate);
+  // El reloj del día: la forma de corregir horas en Asistencias (fila, icono, «Sí vino», horas extra por autorizar).
+  const [relojDe, setRelojDe] = useState(null);
+  const abrirDia = readOnly || controlHorasExtra ? handleEditClick : setRelojDe;
 
   // «Abrir en Asistencias» desde Control de horas extra: ?abrir=<id> abre su ventana de edición una vez.
   const searchParams = useSearchParams();
-  // Desde la pestaña Horas (19/11/2026): ?abrirEmpleado=<id_empleado>&fecha=YYYY-MM-DD abre el registro de ese día.
+  // Desde la pestaña Horas: ?abrirEmpleado=<id_empleado>&fecha=YYYY-MM-DD abre el registro de ese día.
   const abrirId = searchParams?.get("abrir");
   const abrirEmpleado = searchParams?.get("abrirEmpleado");
   const abrirFecha = searchParams?.get("fecha");
@@ -276,14 +242,12 @@ export default function AsistenciaDataContainer({
       : registros.find((x) => String(x.id_empleado) === String(abrirEmpleado) && String(x.fecha ?? "").slice(0, 10) === abrirFecha);
     if (!r) return;
     abiertoRef.current = clave;
-    handleEditClick(r);
-  }, [abrirId, abrirEmpleado, abrirFecha, registros, handleEditClick]);
+    abrirDia(r);
+  }, [abrirId, abrirEmpleado, abrirFecha, registros, abrirDia]);
 
 
-  // (19/11/2026) La página desestructura { ui, ... }: antes se devolvía el JSX suelto y, mientras
-  // cargaba, la tabla desaparecía (y el mensaje de error nunca se veía). Además, antes de saber la
-  // empresa (idEmpresa aún nulo) se pintaba «No hay registros». Ahora: un solo esqueleto hasta
-  // tener datos, con la misma forma de respuesta.
+  // Devuelve { ui, ... } con un solo esqueleto hasta tener datos (y empresa): así la tabla no desaparece al
+  // recargar, el error se ve y no se pinta «No hay registros» antes de saber la empresa.
   const sinDatosAun = !effectiveData && !localEvents.length && (isLoading || !idEmpresa);
   const base = { data: effectiveData, resumenHorasExtra, totalSinComida, control, cargando: true, localEvents, mutate };
   if (sinDatosAun) return { ...base, ui: <LoadingTable cols={9} rows={10} /> };
@@ -308,6 +272,7 @@ export default function AsistenciaDataContainer({
             fechaInicio={fechaInicio}
             fechaFin={fechaFin}
             cargando={isLoading && filasPeriodo.length === 0}
+            idEmpresa={idEmpresa}
           /></>
         ) : (
         <>
@@ -349,6 +314,7 @@ export default function AsistenciaDataContainer({
           control={control}
           estadosHorasExtra={estadosHorasExtra}
           ocultarRegistroMasivo={ocultarRegistroMasivo}
+          onAbrirReloj={readOnly || controlHorasExtra ? null : setRelojDe}
           footer={
             mostrarPaginacion && registros.length > 0 ? (
               <TablePagination
@@ -365,6 +331,10 @@ export default function AsistenciaDataContainer({
             ) : null
           }
         />
+
+        {relojDe ? (
+          <RelojDiaDialog registro={relojDe} onCerrar={() => setRelojDe(null)} onGuardado={() => mutate()} />
+        ) : null}
 
         {!mostrarPaginacion && !controlHorasExtra && registros.length > 0 && (
           <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded text-center">

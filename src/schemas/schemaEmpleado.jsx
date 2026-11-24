@@ -113,6 +113,13 @@ export const schemaEmpleado = z
     // Nómina - OPCIONALES
     sueldo: z.coerce.number().nullable().optional(),
     porcentaje: z.coerce.number().nullable().optional(),
+    // Nómina R1, D-1: medio de pago y monto fijo por transferencia (vacío = sin definir).
+    medio_pago: z.enum(["", "Transferencia", "Efectivo", "Mixto"]).nullable().optional(),
+    monto_transferencia: z
+      .union([z.number(), z.string(), z.null()])
+      .optional()
+      .transform((v) => (v === "" || v == null ? null : Number(v)))
+      .refine((v) => v == null || (Number.isFinite(v) && v >= 0), { message: "Escribe un monto válido" }),
 
     // Otros campos opcionales
     id_empresa: z

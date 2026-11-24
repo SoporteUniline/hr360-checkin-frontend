@@ -10,28 +10,31 @@
  * Los helpers son agnósticos de unidades (pt o mm): reciben el `doc` y
  * coordenadas en la unidad con la que se creó el documento.
  *
+ * Formato homologado de todo PDF: `dibujarPieAdamia` pone en cada
+ * página el logotipo ADAMIA, «Generado con ADAMIA · fecha» y «Página X de Y».
+ * El nombre del archivo descargado sale de `src/lib/nombreArchivo.mjs`.
+ *
  * Relación:
+ * - `src/lib/pdfMarcaAdamia.mjs` (helpers puros re-exportados aquí)
  * - `src/app/panel/reporte-horas/page.jsx` (primer documento con este tema)
  * - `src/lib/pdfUnifiedLayout.js` (permisos, aguinaldos, finiquitos, rutas)
  */
 
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
 
-// Colorimetría oficial ADAMIA (ver variables --adamia-* en globals.css)
-export const ADAMIA = {
-  blue: [37, 99, 235], // --adamia-blue #2563eb
-  purple: [124, 58, 237], // --adamia-purple #7c3aed
-  text: [31, 41, 55], // --adamia-text-primary #1f2937
-  text2: [75, 85, 99], // --adamia-text-secondary #4b5563
-  muted: [107, 114, 128], // #6b7280
-  hairline: [229, 231, 235], // #e5e7eb
-};
-
-// Proporción del logotipo public/assets/adamia.png (2160 x 1000)
-export const ADAMIA_LOGO_RATIO = 2160 / 1000;
-
-export const lerpColor = (a, b, t) =>
-  a.map((v, i) => Math.round(v + (b[i] - v) * t));
+// Colores, logotipo, línea degradada, pie y encabezado homologados viven en un
+// módulo puro (también lo usan las pruebas de Node).
+export {
+  ADAMIA,
+  ADAMIA_LOGO_RATIO,
+  lerpColor,
+  gradientLine,
+  mm,
+  fechaHoraGeneracion,
+  dibujarLogoAdamia,
+  dibujarPieAdamia,
+  dibujarEncabezadoAdamia,
+} from "@/lib/pdfMarcaAdamia.mjs";
 
 /**
  * Descarga un TTF del mismo origen y lo devuelve en base64 (o null).
@@ -82,17 +85,26 @@ export async function loadAdamiaLogo() {
   return await fetchImageAsDataUrl("/assets/adamia.png");
 }
 
+let marcaPromesa = null;
 /**
- * Línea horizontal degradada azul → morado (identidad Adamia),
- * dibujada por segmentos. Coordenadas en la unidad del documento.
+ * Logotipo ADAMIA recortado y ligero (public/assets/adamia-pdf.png, 46 KB) para
+ * el pie y el encabezado homologados. Se descarga una vez por sesión.
  */
-export function gradientLine(doc, x1, x2, y, width) {
-  const steps = 48;
-  const seg = (x2 - x1) / steps;
-  const overlap = Math.abs(seg) * 0.08;
-  doc.setLineWidth(width);
-  for (let i = 0; i < steps; i++) {
-    doc.setDrawColor(...lerpColor(ADAMIA.blue, ADAMIA.purple, i / (steps - 1)));
-    doc.line(x1 + i * seg, y, x1 + (i + 1) * seg + overlap, y);
+export async function loadAdamiaMarca() {
+  if (!marcaPromesa) {
+    marcaPromesa = fetchImageAsDataUrl("/assets/adamia-pdf.png").then((d) => {
+      if (!d) marcaPromesa = null; // reintenta la próxima vez
+      return d;
+    });
   }
+  return await marcaPromesa;
+}
+
+/**
+ * Lo necesario para el formato homologado: tipografía registrada en `doc` y
+ * logotipo. Uso: `const { font, logo } = await prepararMarcaAdamia(doc);`
+ */
+export async function prepararMarcaAdamia(doc) {
+  const [font, logo] = await Promise.all([applyAdamiaFont(doc), loadAdamiaMarca()]);
+  return { font, logo };
 }

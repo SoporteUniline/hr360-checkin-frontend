@@ -46,9 +46,13 @@ function pillEstadoAsistencia(estado, esFalta) {
  * Componente para mostrar las asistencias del empleado
  * Relacionado con: src/app/panel/panel-empleado/page.jsx
  */
-export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
-  if (!datosEmpleado) return null;
+// El guard va en un envoltorio: los hooks de PanelEmpleadoAsistenciasContenido no pueden ir tras un return condicional.
+export default function PanelEmpleadoAsistencias(props) {
+  if (!props.datosEmpleado) return null;
+  return <PanelEmpleadoAsistenciasContenido {...props} />;
+}
 
+function PanelEmpleadoAsistenciasContenido({ datosEmpleado }) {
   const stats = datosEmpleado.asistencias?.estadisticas || {};
   const asistencias = datosEmpleado.asistencias?.historial || [];
   const tiposAnalisis = datosEmpleado.asistencias?.tipos_analisis || [];
@@ -225,7 +229,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
+            className="h-full rounded-full bg-brand transition-all"
             style={{ width: `${porcentaje}%` }}
           />
         </div>

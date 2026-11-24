@@ -1,11 +1,7 @@
-import PublicVacancy from "@/components/reclutamiento/PublicVacancy";
+import { redirect } from "next/navigation";
 
-export const metadata = {
-  title: "Vista de prueba de vacante | ADAMIA",
-  robots: { index: false, follow: false },
-};
-
-export default async function PublicVacancyPage({ params }) {
-  const { workspaceId, vacancyId } = await params;
-  return <PublicVacancy workspaceId={workspaceId} vacancyId={vacancyId} />;
+// Enlace viejo de la vista de prueba: las vacantes reales viven en /vacante/<slug>; se manda a la bolsa de trabajo.
+export const metadata = { robots: { index: false, follow: false } };
+export default function Page() {
+  redirect("/bolsa-de-trabajo");
 }

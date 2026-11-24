@@ -360,7 +360,7 @@ export default function PanelEmpleadoDocumentos({
       <div className="bg-white border border-slate-200 rounded-[10px] p-3 sm:p-4">
         {/* Título + botones siempre en la misma fila */}
         <div className="flex items-center gap-2.5">
-          <div className="bg-gradient-to-br from-brand to-brand-accent p-2 rounded-lg flex-shrink-0">
+          <div className="bg-brand p-2 rounded-lg flex-shrink-0">
             <FolderOpen className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
@@ -433,7 +433,7 @@ export default function PanelEmpleadoDocumentos({
             </div>
             <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
+                className="h-full rounded-full bg-brand transition-all"
                 style={{ width: `${stats.completitud_pct}%` }}
               />
             </div>
@@ -1271,7 +1271,7 @@ function ModalSubirDocumento({
             <div className="space-y-1">
               <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
+                  className="h-full rounded-full bg-brand transition-all"
                   style={{ width: `${progreso}%` }}
                 />
               </div>

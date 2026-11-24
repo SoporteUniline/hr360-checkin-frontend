@@ -10,7 +10,7 @@ export default function HistorialEmpleadoDialog({ isOpen, onOpenChange, empleado
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="w-full overflow-hidden p-0 sm:max-w-2xl">
-        <DialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 p-6 text-white">
+        <DialogHeader className="bg-brand p-6 text-white">
           <div className="flex items-center gap-3">
             <Clock className="h-6 w-6" />
             <div>

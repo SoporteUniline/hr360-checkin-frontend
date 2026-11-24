@@ -7,32 +7,19 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from "@/components/ui/drawer";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Pencil, LogIn, LogOut, Save, X } from "lucide-react";
+import { ArrowLeft, Clock3, LogIn, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
-import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
-import { formatearMinutos, minutosTrabajados, salidaEsDiaSiguiente } from "@/lib/asistencia/jornada.mjs";
-import { sumarDias } from "@/lib/fechaHora.mjs";
+import { formatearMinutos, minutosTrabajados } from "@/lib/asistencia/jornada.mjs";
+import { extraFila } from "@/lib/asistencia/relojDia.mjs";
+import RelojDiaDialog from "./RelojDiaDialog";
+import CeldaEstadoDia from "./CeldaEstadoDia";
 import { cambiosRegistro } from "@/lib/asistencia/cambios.mjs";
 import { crearFormateadorCambios } from "./CeldaEditado";
-import HorasExtraMovil from "./HorasExtraMovil";
 import { quienCuando } from "@/lib/asistencia/historial.mjs";
-import useHorasExtra from "@/hooks/useHorasExtra";
-import {
-  cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar, estadoHorasExtra,
-} from "@/lib/asistencia/horasExtra.mjs";
+import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -67,23 +54,6 @@ const DIAS_ES = [
   "Sábado",
 ];
 
-const AVATAR_COLORS = [
-  "#F97316",
-  "#3B82F6",
-  "#10B981",
-  "#8B5CF6",
-  "#EF4444",
-  "#F59E0B",
-  "#EC4899",
-  "#14B8A6",
-];
-
-function getAvatarColor(str = "") {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++)
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
 
 function getInitials(nombre = "", apellido = "") {
   return `${nombre[0] || ""}${apellido[0] || ""}`.toUpperCase();
@@ -120,29 +90,6 @@ const ESTADO_STYLES = {
   },
 };
 
-function ToggleRow({ label, sublabel, checked, onChange, disabled }) {
-  return (
-    <div className="flex items-center justify-between py-3.5 px-4 border-b border-gray-100 last:border-b-0">
-      <div>
-        <p
-          className={cn(
-            "text-sm font-medium",
-            disabled ? "text-gray-400" : "text-gray-900",
-          )}
-        >
-          {label}
-        </p>
-        {sublabel && <p className="text-xs text-gray-400 mt-0.5">{sublabel}</p>}
-      </div>
-      <Switch
-        checked={!!checked}
-        onCheckedChange={onChange}
-        disabled={disabled}
-      />
-    </div>
-  );
-}
-
 export default function MobileEmpleadoDetalle({
   open,
   onOpenChange,
@@ -155,60 +102,20 @@ export default function MobileEmpleadoDetalle({
   const tz = useEmpresaTimezone(dataUser?.id_empresa);
 
   const { data: tiposPermisoData } = useTiposPermisoData();
-  const tiposPermiso = tiposPermisoData?.tiposPermiso ?? [];
 
   const { data: empleadosData } = useEmpleadosData(dataUser?.id_empresa);
   const empleados = empleadosData?.data ?? [];
 
   // Local copy of registro for optimistic updates after save
   const [localRegistro, setLocalRegistro] = useState(registro);
-
-  const {
-    editingRowId,
-    editingRowData,
-    isSaving,
-    handleEditClick,
-    handleCancelEdit,
-    handleFieldChange,
-    handleSaveClick,
-    handleRestoreOriginal,
-  } = useAsistenciaActions(mutateAsistencia, (saved) => {
-    if (saved) {
-      setLocalRegistro((prev) => ({
-        ...prev,
-        ...saved,
-        tipo_registro_nombre:
-          saved.id_tipo_permiso === prev.id_tipo_permiso
-            ? prev.tipo_registro_nombre
-            : tiposPermiso.find(
-                (tipo) => Number(tipo.id) === Number(saved.id_tipo_permiso),
-              )?.nombre,
-      }));
-    }
-  });
-
-  // Horas extra: al guardar se actualiza la copia local para ver el cambio sin cerrar.
-  const hx = useHorasExtra(mutateAsistencia, {
-    onGuardado: (items) =>
-      setLocalRegistro((prev) => {
-        const item = items.find((i) => i.registro.id === prev?.id);
-        return item ? { ...prev, ...item.cambios } : prev;
-      }),
-  });
-
-  const isEditing = localRegistro && editingRowId === localRegistro.id;
-  const currentData = isEditing ? editingRowData : localRegistro;
+  // El reloj del día (hoja a pantalla completa): la única forma de corregir horas, igual que en escritorio.
+  const [relojAbierto, setRelojAbierto] = useState(false);
 
   useEffect(() => {
     if (registro) {
       setLocalRegistro(registro);
     }
   }, [registro]);
-
-  // Cancel edit when the drawer closes
-  useEffect(() => {
-    if (!open && isEditing) handleCancelEdit();
-  }, [open]);
 
   if (!registro) return null;
 
@@ -236,12 +143,6 @@ export default function MobileEmpleadoDetalle({
   const horasTrabajadas = calcHours(display);
   const zonaRegistro = display.zona_horaria || tz;
   const infoExtra = estadoHorasExtra(display, zonaRegistro);
-  const autorizadorExtra = [display.nombre_extra_autorizador, display.apellido_paterno_extra_autorizador]
-    .filter(Boolean)
-    .join(" ") || (() => {
-      const p = empleados.find((e) => String(e.id_empleado) === String(display.extras_autorizadas_por));
-      return p ? `${p.nombre} ${p.apellido_paterno ?? ""}`.trim() : "";
-    })();
   const salidaProgramadaFmt = display.hora_salida_programada
     ? String(display.hora_salida_programada).slice(0, 5)
     : null;
@@ -282,60 +183,12 @@ export default function MobileEmpleadoDetalle({
   const diaNombre = fechaObj ? DIAS_ES[fechaObj.day()] : "";
   const esHoy = display.fecha === dayjs().tz(DB_TZ).format("YYYY-MM-DD");
 
-  // Edit mode — time input helpers
-  const fechaBase = currentData?.fecha
-    ? currentData.fecha.slice(0, 10)
-    : dayjs().format("YYYY-MM-DD");
-
-  const entradaEditFmt = currentData?.entrada
-    ? dayjs.tz(currentData.entrada, DB_TZ).tz(tz).format("HH:mm")
-    : "";
-  const salidaEditFmt = currentData?.salida
-    ? dayjs.tz(currentData.salida, DB_TZ).tz(tz).format("HH:mm")
-    : "";
-
-  const onEntradaChange = (hora) => {
-    if (!hora) {
-      handleFieldChange("entrada", null);
-      return;
-    }
-
-    handleFieldChange(
-      "entrada",
-      dayjs
-        .tz(`${fechaBase} ${hora}`, tz)
-        .tz(DB_TZ)
-        .format("YYYY-MM-DD HH:mm:ss"),
-    );
-    // Si ya hay salida, se recalcula su día respecto a la nueva entrada.
-    if (salidaEditFmt) {
-      const nuevaSalida = salidaConFecha(hora, salidaEditFmt);
-      const minuto = (v) => dayjs.tz(v, DB_TZ).format("YYYY-MM-DD HH:mm");
-      if (minuto(nuevaSalida) !== minuto(currentData.salida)) handleFieldChange("salida", nuevaSalida);
-    }
-  };
-
-  // Turno nocturno: si la salida es menor o igual a la entrada, cae al día siguiente.
-  const salidaConFecha = (horaEntrada, hora) =>
-    dayjs
-      .tz(`${salidaEsDiaSiguiente(horaEntrada, hora) ? sumarDias(fechaBase, 1) : fechaBase} ${hora}`, tz)
-      .tz(DB_TZ)
-      .format("YYYY-MM-DD HH:mm:ss");
-  const salidaDiaSiguiente =
-    Boolean(currentData?.entrada && currentData?.salida) &&
-    dayjs.tz(currentData.salida, DB_TZ).tz(tz).format("YYYY-MM-DD") >
-      dayjs.tz(currentData.entrada, DB_TZ).tz(tz).format("YYYY-MM-DD");
-
-  const onSalidaChange = (hora) => {
-    if (!currentData?.entrada) {
-      handleFieldChange("salida", null);
-      return;
-    }
-
-    handleFieldChange("salida", hora ? salidaConFecha(entradaEditFmt, hora) : null);
-  };
-
   return (
+    <>
+    {relojAbierto ? (
+      <RelojDiaDialog registro={typeof relojAbierto === "string" ? { ...display, _tipoParcial: relojAbierto } : display} onCerrar={() => setRelojAbierto(false)}
+        onGuardado={async (asistencia) => { if (asistencia) setLocalRegistro((prev) => ({ ...prev, ...asistencia })); await mutateAsistencia?.(); }} />
+    ) : null}
     <Drawer open={open} onOpenChange={onOpenChange} direction="bottom">
       <DrawerContent className="h-[95dvh] mt-0 flex flex-col bg-white p-0 rounded-t-3xl overflow-hidden">
         <DrawerTitle className="sr-only">Detalle de empleado</DrawerTitle>
@@ -347,45 +200,36 @@ export default function MobileEmpleadoDetalle({
         <div className="bg-white pt-5 pb-6 px-5 shrink-0 border-b border-gray-100">
           <div className="flex items-center justify-between mb-5">
             <button
-              onClick={() => {
-                if (isEditing) handleCancelEdit();
-                else onOpenChange(false);
-              }}
+              type="button"
+              aria-label="Volver"
+              onClick={() => onOpenChange(false)}
               className="w-11 h-11 flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm active:bg-gray-50"
             >
-              {isEditing ? (
-                <X className="w-5 h-5" />
-              ) : (
-                <ArrowLeft className="w-5 h-5" />
-              )}
+              <ArrowLeft className="w-5 h-5" />
             </button>
 
             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-              {isEditing
-                ? "Editando"
-                : `Empleado · ${currentIndex + 1}/${totalCount}`}
+              {`Empleado · ${currentIndex + 1}/${totalCount}`}
             </span>
 
-            {!isEditing ? (
-              <button
-                onClick={() => handleEditClick(localRegistro)}
-                className="w-11 h-11 flex items-center justify-center rounded-full border border-gray-200 bg-white text-gray-600 shadow-sm active:bg-gray-50"
-              >
-                <Pencil className="w-4 h-4" />
-              </button>
-            ) : (
-              <div className="w-11" />
-            )}
+            <button
+              type="button"
+              aria-label="Abrir el reloj del día"
+              onClick={() => { setRelojAbierto(true); onOpenChange?.(false); }}
+              className="w-11 h-11 flex items-center justify-center rounded-full border border-blue-200 bg-blue-50 text-blue-700 shadow-sm active:bg-blue-100"
+            >
+              <Clock3 className="w-5 h-5" />
+            </button>
           </div>
 
           <div className="flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-brand to-brand-accent flex items-center justify-center text-xl font-bold text-white mb-3 shrink-0 shadow-[0_8px_20px_rgba(37,99,235,0.32)]">
+            <div className="w-16 h-16 rounded-xl bg-brand flex items-center justify-center text-xl font-bold text-white mb-3 shrink-0 shadow-[0_8px_20px_rgba(37,99,235,0.32)]">
               {initials}
             </div>
             <h2 className="text-gray-900 text-xl font-extrabold tracking-tight leading-tight">
               {nombreCompleto}
             </h2>
-            <div className="mt-2 h-0.5 w-10 rounded-full bg-gradient-to-r from-brand to-brand-accent" />
+            <div className="mt-2 h-0.5 w-10 rounded-full bg-brand" />
             <p className="text-gray-500 text-sm mt-2">
               {display.departamento}
               {empresa ? ` · ${empresa}` : ""}
@@ -402,213 +246,14 @@ export default function MobileEmpleadoDetalle({
           </div>
         </div>
 
-        {/* ── Edit mode body ── */}
-        {isEditing ? (
-          <>
-            <div className="flex-1 overflow-y-auto bg-gray-50">
-              <div className="p-4 space-y-4">
-                {/* Tipo de registro */}
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
-                    Tipo de registro
-                  </p>
-                  <Select
-                    value={
-                      currentData.id_tipo_permiso
-                        ? String(currentData.id_tipo_permiso)
-                        : ""
-                    }
-                    onValueChange={(val) => {
-                      const sel = tiposPermiso.find(
-                        (t) => String(t.id) === val,
-                      );
-                      handleFieldChange("id_tipo_permiso", sel?.id);
-                      handleFieldChange(
-                        "tipo_registro_nombre",
-                        sel?.nombre || "",
-                      );
-                      handleFieldChange(
-                        "asistencia",
-                        sel?.cuenta_como_asistencia,
-                      );
-                      handleFieldChange("goce_sueldo", sel?.goce_sueldo);
-                    }}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Seleccionar tipo..." />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-60 overflow-y-auto">
-                      {tiposPermiso.map((tipo) => (
-                        <SelectItem key={tipo.id} value={String(tipo.id)}>
-                          {tipo.nombre}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm text-gray-700">
-                    {Number(currentData.correccion) ? "Editado" : "Sin editar"}
-                  </span>
-                  {currentData.valores_originales && (
-                    <button
-                      type="button"
-                      onClick={handleRestoreOriginal}
-                      disabled={isSaving}
-                      className="rounded-lg px-2 py-1 text-sm font-medium text-brand disabled:opacity-50"
-                    >
-                      Volver al original
-                    </button>
-                  )}
-                </div>
-
-                {/* Horarios */}
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
-                    Horarios
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">
-                        Entrada
-                      </p>
-                      <Input
-                        type="time"
-                        value={entradaEditFmt}
-                        onChange={(e) => onEntradaChange(e.target.value)}
-                      />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">
-                        Salida
-                      </p>
-                      <Input
-                        type="time"
-                        value={salidaEditFmt}
-                        onChange={(e) => onSalidaChange(e.target.value)}
-                      />
-                      {salidaDiaSiguiente && (
-                        <p className="mt-1 text-[11px] font-semibold text-blue-600">+1 día</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Estado toggles */}
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
-                    Estado
-                  </p>
-                  <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
-                    {/* Asistió y goce los define el tipo de registro; no se mueven por separado. */}
-                    <ToggleRow
-                      label="Asistió"
-                      sublabel="Lo define el tipo de registro"
-                      checked={Boolean(Number(currentData.asistencia))}
-                      onChange={() => {}}
-                      disabled
-                    />
-                    <ToggleRow
-                      label="Goce de sueldo"
-                      sublabel="Lo define el tipo de registro"
-                      checked={Boolean(Number(currentData.goce_sueldo))}
-                      onChange={() => {}}
-                      disabled
-                    />
-                    <ToggleRow
-                      label="Horas extra autorizadas"
-                      checked={currentData.hrs_extra}
-                      onChange={(val) => handleFieldChange("hrs_extra", val)}
-                    />
-                  </div>
-                </div>
-
-                {/* Autorizado por */}
-                {empleados.length > 0 && (
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
-                      Autorizado por
-                    </p>
-                    <Select
-                      value={
-                        currentData.autorizado_por
-                          ? String(currentData.autorizado_por)
-                          : "sin-autorizar"
-                      }
-                      onValueChange={(val) =>
-                        handleFieldChange(
-                          "autorizado_por",
-                          val === "sin-autorizar" ? null : val,
-                        )
-                      }
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Sin autorización" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-60 overflow-y-auto">
-                        <SelectItem value="sin-autorizar">
-                          Sin autorización
-                        </SelectItem>
-                        {empleados.map((emp) => (
-                          <SelectItem
-                            key={emp.id_empleado}
-                            value={String(emp.id_empleado)}
-                          >
-                            {emp.nombre} {emp.apellido_paterno}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {/* Notas */}
-                <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1.5">
-                    Notas
-                  </p>
-                  <Textarea
-                    value={currentData.notas || ""}
-                    onChange={(e) => handleFieldChange("notas", e.target.value)}
-                    placeholder="Observaciones..."
-                    rows={3}
-                    className="resize-none"
-                  />
-                </div>
-
-                <div className="h-4" />
-              </div>
-            </div>
-
-            {/* Edit footer */}
-            <div className="shrink-0 bg-white border-t border-gray-100 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] flex gap-3">
-              <button
-                onClick={handleCancelEdit}
-                disabled={isSaving}
-                className="flex-1 min-h-[48px] py-3 rounded-xl border border-gray-200 bg-white text-gray-700 text-sm font-semibold shadow-sm active:bg-gray-50 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveClick}
-                disabled={isSaving}
-                className="flex-1 min-h-[48px] py-3 rounded-xl bg-gradient-to-br from-brand to-[#4f46e5] text-white text-sm font-semibold shadow-[0_8px_20px_rgba(37,99,235,0.32)] flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-50"
-              >
-                <Save className="w-4 h-4" />
-                {isSaving ? "Guardando..." : "Guardar"}
-              </button>
-            </div>
-          </>
-        ) : (
-          /* ── View mode body ── */
+        {/* ── Cuerpo (sin modo edición: las horas se corrigen en el reloj) ── */}
           <div className="flex-1 overflow-y-auto bg-gray-50">
             {/* Today's record card */}
             <div className="m-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="text-center min-w-11 rounded-xl border border-gray-100 bg-white shadow-sm p-2">
-                    <div className="text-lg font-extrabold leading-none tabular-nums bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-transparent">
+                    <div className="text-lg font-extrabold leading-none tabular-nums text-brand ">
                       {diaNumero}
                     </div>
                     <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-1">
@@ -682,7 +327,7 @@ export default function MobileEmpleadoDetalle({
                   </div>
                 </div>
 
-                <div className="w-6 h-0.5 rounded-full bg-gradient-to-r from-brand to-brand-accent shrink-0" />
+                <div className="w-6 h-0.5 rounded-full bg-brand shrink-0" />
 
                 <div
                   className={cn(
@@ -736,7 +381,7 @@ export default function MobileEmpleadoDetalle({
                   <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
                     Horas
                   </div>
-                  <div className="text-base font-extrabold mt-0.5 tabular-nums bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-transparent">
+                  <div className="text-base font-extrabold mt-0.5 tabular-nums text-brand ">
                     {horasTrabajadas || "—"}
                   </div>
                 </div>
@@ -759,28 +404,23 @@ export default function MobileEmpleadoDetalle({
               </div>
             </div>
 
-            <HorasExtraMovil
-              key={`${display.id}-${infoExtra.estado}`}
-              registro={display}
-              info={infoExtra}
-              autorizador={autorizadorExtra}
-              guardando={hx.guardando}
-              onAutorizar={({ forma, notas }) =>
-                hx.guardar(
-                  [{ registro: display, cambios: cambiosAutorizar({ forma, notas, idAutorizador: hx.usuario.idEmpleado }) }],
-                  "Horas extra autorizadas.",
-                )
-              }
-              onNoAutorizar={() =>
-                hx.guardar(
-                  [{ registro: display, cambios: cambiosNoAutorizar(display, { quien: hx.usuario.nombre, zona: zonaRegistro }) }],
-                  "No autorizadas. Se paga hasta la salida del horario.",
-                )
-              }
-              onQuitar={() =>
-                hx.guardar([{ registro: display, cambios: cambiosQuitar(display, zonaRegistro) }], "Decisión quitada.")
-              }
-            />
+            {/* Estado del día (sin checadas) y horas extra por autorizar: lo mismo que la fila de escritorio. */}
+            <div className="mx-4 mb-3 flex flex-col gap-2.5 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm" data-estado-movil>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Estado del día</p>
+              <CeldaEstadoDia registro={display} tiposPermiso={tiposPermisoData} movil
+                onAbrirReloj={(r) => { setRelojAbierto(r?._tipoParcial ? String(r._tipoParcial) : true); onOpenChange?.(false); }}
+                onGuardado={async (asistencia) => { if (asistencia) setLocalRegistro((prev) => ({ ...prev, ...asistencia })); await mutateAsistencia?.(); }} />
+              {extraFila(display).tipo === "pendiente" ? (
+                <button type="button" onClick={() => { setRelojAbierto(true); onOpenChange?.(false); }}
+                  className="flex min-h-11 w-full items-center justify-center rounded-xl border border-violet-300 bg-violet-50 px-4 text-sm font-semibold text-violet-700">
+                  {extraFila(display).texto}: autorizar en el reloj
+                </button>
+              ) : null}
+              <button type="button" onClick={() => { setRelojAbierto(true); onOpenChange?.(false); }}
+                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-semibold text-blue-800">
+                <Clock3 className="h-4 w-4" aria-hidden />Abrir el reloj del día
+              </button>
+            </div>
 
             {/* Notes */}
             {display.notas && (
@@ -842,8 +482,8 @@ export default function MobileEmpleadoDetalle({
 
             <div className="h-6" />
           </div>
-        )}
       </DrawerContent>
     </Drawer>
+    </>
   );
 }

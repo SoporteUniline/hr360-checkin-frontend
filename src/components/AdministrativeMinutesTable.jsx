@@ -15,6 +15,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Eye, Pencil, Trash2 } from "lucide-react";
 import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
 import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
+import { ESTATUS_ACTA, claseEstatus, etiquetaEstatus } from "@/lib/actasEstatus.mjs";
 
 dayjs.locale("es");
 
@@ -99,8 +100,9 @@ export const AdministrativeTable = ({
     () => uniqueOptions(sourceRows.map((row) => formattedDate(row.fecha_incidente))),
     [sourceRows],
   );
+  // Siempre los cinco estatus (borrador y cancelada incluidos), más cualquier otro que traiga el servidor.
   const estatusOptions = useMemo(
-    () => uniqueOptions(sourceRows.map((row) => normalize(row.estatus))),
+    () => [...new Set([...ESTATUS_ACTA.map((e) => e.value), ...sourceRows.map((row) => normalize(row.estatus).toLowerCase()).filter(Boolean)])],
     [sourceRows],
   );
 
@@ -129,7 +131,7 @@ export const AdministrativeTable = ({
           fechaSeleccionada.includes(formattedDate(row.fecha_incidente));
         const passEstatus =
           estatusSeleccionado.length === 0 ||
-          estatusSeleccionado.includes(normalize(row.estatus));
+          estatusSeleccionado.includes(normalize(row.estatus).toLowerCase());
 
         return (
           passEmpresa &&
@@ -287,6 +289,7 @@ export const AdministrativeTable = ({
               values: estatusSeleccionado,
               options: estatusOptions,
               onChange: setEstatusSeleccionado,
+              formatOption: etiquetaEstatus,
             },
           ]}
           onClearAll={clearAllHeaderFilters}
@@ -349,6 +352,7 @@ export const AdministrativeTable = ({
                     selected={estatusSeleccionado}
                     onChange={setEstatusSeleccionado}
                     options={estatusOptions}
+                    formatOption={etiquetaEstatus}
                     placeholder="Estado"
                   />
                 </TableHead>
@@ -398,19 +402,10 @@ export const AdministrativeTable = ({
                   <TableCell>
                     {dayjs(acta.fecha_incidente).format("DD/MM/YYYY")}
                   </TableCell>
-                  <TableCell className="capitalize text-center">
-                    <span
-                      className={`px-3 py-1 rounded-2xl text-xs font-semibold ${
-                        acta.estatus === "elaborada"
-                          ? "bg-blue-200 text-blue-800"
-                          : acta.estatus === "cerrada"
-                          ? "bg-red-200 text-red-800"
-                          : acta.estatus === "notificada"
-                          ? "bg-emerald-200 text-emerald-800"
-                          : "bg-purple-200 text-purple-800"
-                      }`}
-                    >
-                      {acta.estatus}
+                  <TableCell className="text-center">
+                    <span data-estatus-acta={String(acta.estatus || "").toLowerCase()}
+                      className={`px-3 py-1 rounded-2xl text-xs font-semibold ${claseEstatus(acta.estatus)}`}>
+                      {etiquetaEstatus(acta.estatus)}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">

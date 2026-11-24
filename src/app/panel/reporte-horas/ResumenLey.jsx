@@ -1,8 +1,9 @@
 "use client";
 
-// Banda de la LFT + totales + tabla de todos los empleados del periodo (maqueta aprobada 19/11/2026).
+// Banda de la LFT + totales + tabla de todos los empleados del periodo.
 // Datos: GET /checador/reportes/horas-ley → reporte.ley (backend services/reporteLey.js).
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 
 const fmt = (m) => formatearMinutos(Number(m) || 0);
@@ -76,7 +77,7 @@ export default function ResumenLey({ reportes, onElegir }) {
               const dif = limite != null ? r.ley.trabajado - limite * (r.ley.semanas.length || 1) : null;
               return (
                 <tr key={r.empleado?.id_empleado ?? i} onClick={() => onElegir?.(i)} className="cursor-pointer border-t border-slate-100 tabular-nums hover:bg-slate-50">
-                  <td className="px-2 py-2 font-semibold text-slate-800">{r.empleado?.nombre_empleado}</td>
+                  <td className="px-2 py-2 font-semibold text-slate-800"><NombreEmpleado id={r.empleado?.id_empleado}>{r.empleado?.nombre_empleado}</NombreEmpleado></td>
                   <td className="px-2 py-2">{fmt(r.ley.trabajado)}</td>
                   <td className="px-2 py-2">{fmt(r.ley.programado)}</td>
                   <td className="px-2 py-2">

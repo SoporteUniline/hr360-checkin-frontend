@@ -49,8 +49,8 @@ export default function FaceReferenceSync() {
     };
     const online = () => { void refresh(true); };
     const visible = () => { void refresh(); };
-    // (19/11/2026) La primera pasada (perfil, rostros, motor facial) ya no compite con la carga de
-    // la pantalla: espera a que el navegador esté libre, con un mínimo de 8 s.
+    // La primera pasada (perfil, rostros, motor facial) no compite con la carga de la pantalla:
+    // espera a que el navegador esté libre, con un mínimo de 8 s.
     let idle = null;
     const start = setTimeout(() => {
       if (typeof window.requestIdleCallback === 'function') idle = window.requestIdleCallback(() => { void refresh(true); }, { timeout: 5000 });

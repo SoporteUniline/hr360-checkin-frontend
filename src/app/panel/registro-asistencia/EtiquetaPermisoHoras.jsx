@@ -1,6 +1,6 @@
 "use client";
 
-// Etiqueta del permiso por horas del día (20/11/2026): «Permiso · por reponer 3 h» con el detalle en el título.
+// Etiqueta del permiso por horas del día: «Permiso · por reponer 3 h» con el detalle en el título.
 import { etiquetaPermisoHoras } from "@/lib/asistencia/permisoHoras.mjs";
 
 const TONOS = {

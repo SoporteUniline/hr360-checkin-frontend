@@ -13,6 +13,7 @@
  *            redlab_back/modules/attendance/routes/vacacionesRoutes.js
  */
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
@@ -280,7 +281,6 @@ export default function VacacionesPage() {
       // Asegura que al cambiar de pestaña se carguen datos si faltan
       ensureRowDetalle(expandedTab, expandedRow);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expandedTab, expandedRow, empresaDetalleParam]);
 
   // Click sobre la fila: si está abierta, plegar SIEMPRE; si está cerrada, abrir con "cargados"
@@ -756,7 +756,7 @@ export default function VacacionesPage() {
                               >
                                 <ChevronRight className="h-4 w-4 text-gray-500" />
                               </span>
-                              {emp.nombre_completo}
+                              <NombreEmpleado id={emp.id_empleado}>{emp.nombre_completo}</NombreEmpleado>
                             </TableCell>
                             <TableCell>{emp.departamento}</TableCell>
                             <TableCell className="text-center">
@@ -999,7 +999,7 @@ export default function VacacionesPage() {
                                                           key={v.id}
                                                           className="flex items-center gap-3 rounded-md border bg-white p-3 shadow-sm transition hover:shadow-md"
                                                         >
-                                                          <div className="w-12 h-12 rounded-md text-white flex items-center justify-center font-extrabold text-xl bg-gradient-to-br from-[#2563EB] to-[#1d4ed8]">
+                                                          <div className="w-12 h-12 rounded-md text-white flex items-center justify-center font-extrabold text-xl bg-brand ">
                                                             {f.day}
                                                           </div>
                                                           <div className="min-w-0">
@@ -1123,7 +1123,7 @@ export default function VacacionesPage() {
                   {datosPagina.map((emp) => (
                     <TableRow key={emp.id_empleado}>
                       <TableCell className="font-semibold">
-                        {emp.nombre_completo}
+                        <NombreEmpleado id={emp.id_empleado}>{emp.nombre_completo}</NombreEmpleado>
                       </TableCell>
 
                       <TableCell>{emp.departamento}</TableCell>
@@ -1189,7 +1189,7 @@ export default function VacacionesPage() {
       {/* Diálogo de detalles */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-2xl">
-          <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+          <DialogHeader className="p-5 bg-brand text-white">
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <span className="grid size-9 place-items-center rounded-lg bg-white/15">
                 <CalendarDays className="size-5 text-white" />
@@ -1213,7 +1213,7 @@ export default function VacacionesPage() {
                         Nombre
                       </div>
                       <div className="font-semibold">
-                        {detalleData?.empleado?.nombre_completo}
+                        <NombreEmpleado id={detalleData?.empleado?.id_empleado}>{detalleData?.empleado?.nombre_completo}</NombreEmpleado>
                       </div>
                     </div>
                     <div>
@@ -1274,7 +1274,7 @@ export default function VacacionesPage() {
                         Nombre
                       </div>
                       <div className="font-semibold">
-                        {detalleData?.empleado?.nombre_completo}
+                        <NombreEmpleado id={detalleData?.empleado?.id_empleado}>{detalleData?.empleado?.nombre_completo}</NombreEmpleado>
                       </div>
                     </div>
                     <div>

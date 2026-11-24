@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
+import { useConfirmarSalida } from "@/components/cambios/CambiosPendientes";
 import { obtenerIniciales } from "@/lib/utils";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
@@ -36,6 +37,7 @@ export function NavUser() {
   const { isMobile, setOpenMobile } = useSidebar();
 
   const router = useRouter();
+  const confirmarSalida = useConfirmarSalida();
   const pathname = usePathname();
 
   const location = pathname.split("/")[1] || "panel";
@@ -111,7 +113,7 @@ export function NavUser() {
                   <DropdownMenuItem
                     onClick={() => {
                       if (isMobile) setOpenMobile(false);
-                      router.push(`/${location}/cuenta`);
+                      confirmarSalida(({ reemplazar }) => (reemplazar ? router.replace(`/${location}/cuenta`) : router.push(`/${location}/cuenta`)), { navega: true });
                     }}
                   >
                     <UserCircleIcon />
@@ -125,7 +127,7 @@ export function NavUser() {
             <DropdownMenuItem
               onClick={() => {
                 if (isMobile) setOpenMobile(false);
-                logout();
+                confirmarSalida(() => logout(), { navega: true });
               }}
             >
               <LogOutIcon />

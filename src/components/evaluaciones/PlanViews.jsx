@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useEvaluations, useEvaluationQuery } from "./EvaluationContext";
 import {
-  Heading,
   Panel,
   Field,
   Input,
@@ -13,10 +12,14 @@ import {
   DataTable,
   Notice,
   Modal,
+  QueryState,
+  Pagination,
+  ExportButton,
 } from "./ui";
-import { QueryState, Pagination, ExportButton } from "./ApiViews";
 import { dateText } from "@/lib/evaluaciones/model.mjs";
-export function PlanList({ campaignId, subjectId, embedded = false }) {
+// Planes de una persona en una campaña; se ven dentro del resultado de la persona (desde la campaña o
+// desde «Mis resultados»).
+export function PlanList({ campaignId, subjectId }) {
   const { api, perform, busy, actor } = useEvaluations();
   const [page, setPage] = useState(1),
     [status, setStatus] = useState(""),
@@ -39,41 +42,35 @@ export function PlanList({ campaignId, subjectId, embedded = false }) {
   };
   return (
     <>
-      {!embedded && (
-        <Heading
-          title="Planes de desarrollo"
-          description="Compromisos, avances y evidencias."
-          actions={
-            <ExportButton
-              kind="plans"
-              filters={{
-                ...(campaignId ? { campaignId: Number(campaignId) } : {}),
-                ...(subjectId ? { subjectId: Number(subjectId) } : {}),
-                ...(status ? { status } : {}),
-              }}
-            />
-          }
-        />
-      )}
       <Panel
         title="Seguimiento"
         actions={
           canManage && (
-            <Button
-              onClick={() => {
-                setMode("create");
-                setEditing({
-                  title: "",
-                  successMeasure: "",
-                  campaignId: campaignId || "",
-                  subjectId: subjectId || "",
-                  ownerId: subjectId || "",
-                  dueOn: "",
-                });
-              }}
-            >
-              Nuevo plan
-            </Button>
+            <>
+              <ExportButton
+                kind="plans"
+                filters={{
+                  ...(campaignId ? { campaignId: Number(campaignId) } : {}),
+                  ...(subjectId ? { subjectId: Number(subjectId) } : {}),
+                  ...(status ? { status } : {}),
+                }}
+              />
+              <Button
+                onClick={() => {
+                  setMode("create");
+                  setEditing({
+                    title: "",
+                    successMeasure: "",
+                    campaignId: campaignId || "",
+                    subjectId: subjectId || "",
+                    ownerId: subjectId || "",
+                    dueOn: "",
+                  });
+                }}
+              >
+                Nuevo plan
+              </Button>
+            </>
           )
         }
       >
@@ -185,22 +182,20 @@ function PlanEditor({ initial, mode, close }) {
                 status: "active",
               },
             ])
-          : api
-              .all("/team", {}, controller.signal)
-              .then((rows) => [
-                ...new Map(
-                  rows
-                    .filter((r) => r.campaignId)
-                    .map((r) => [
-                      r.campaignId,
-                      {
-                        id: r.campaignId,
-                        name: r.campaignName || r.campaign?.name,
-                        status: "active",
-                      },
-                    ])
-                ).values(),
-              ])
+          : api.all("/team", {}, controller.signal).then((rows) => [
+              ...new Map(
+                rows
+                  .filter((r) => r.campaignId)
+                  .map((r) => [
+                    r.campaignId,
+                    {
+                      id: r.campaignId,
+                      name: r.campaignName || r.campaign?.name,
+                      status: "active",
+                    },
+                  ])
+              ).values(),
+            ])
         : Promise.resolve([]),
     ])
       .then(([people, campaigns]) => {

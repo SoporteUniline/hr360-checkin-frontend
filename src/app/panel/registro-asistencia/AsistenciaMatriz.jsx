@@ -4,6 +4,7 @@
 // registro-asistencia. NO hace fetch: recibe los registros que la pantalla ya
 // cargó con su rango y filtros. Exporta a PDF (con logo) y Excel desde el front.
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { useMemo, useState } from "react";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -11,7 +12,10 @@ import timezone from "dayjs/plugin/timezone";
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet, FileDown, Loader2 } from "lucide-react";
 import { enqueueSnackbar } from "notistack";
-import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import { useAuth } from "@/context/AuthContext";
+import { prepararMarcaAdamia } from "@/lib/pdfAdamiaTheme";
+import { dibujarMatrizAsistencia } from "@/lib/asistencia/matrizPdf.mjs";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -57,8 +61,18 @@ export default function AsistenciaMatriz({
   fechaInicio,
   fechaFin,
   cargando = false,
+  idEmpresa = null,
 }) {
   const [exportando, setExportando] = useState(null); // 'excel' | 'pdf' | null
+  const { dataUser } = useAuth();
+  // Empresa para el encabezado del PDF («Todas las empresas» si se ven varias).
+  const empresasDetalle = dataUser?.empresas_detalle ?? [];
+  const empresaNombre =
+    (idEmpresa && idEmpresa !== "all"
+      ? empresasDetalle.find((e) => Number(e.id_empresa) === Number(idEmpresa))?.nombre
+      : empresasDetalle.length === 1
+        ? empresasDetalle[0]?.nombre
+        : "Todas las empresas") || dataUser?.empresa?.nombre_empresa || "";
 
   const dias = useMemo(() => {
     if (!fechaInicio || !fechaFin) return [];
@@ -88,6 +102,7 @@ export default function AsistenciaMatriz({
         mapa.set(key, {
           key,
           nombre,
+          id_empleado: r.id_empleado,
           nip: r.nip || "",
           diasMap: {},
         });
@@ -197,74 +212,24 @@ export default function AsistenciaMatriz({
 
       const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
-      // Encabezado con logo + degradado de marca.
-      let startY = 12;
-      try {
-        const logo = await fetchImageAsDataUrl("/assets/adamia.png");
-        if (logo) doc.addImage(logo, "PNG", 10, 6, 26, 9);
-      } catch {
-        // sin logo, seguimos
-      }
-      doc.setFontSize(13);
-      doc.setTextColor(31, 41, 55);
-      doc.text("Reporte de asistencia", 40, 11);
-      doc.setFontSize(9);
-      doc.setTextColor(107, 114, 128);
-      doc.text(
-        `Del ${dayjs(fechaInicio).format("DD/MM/YYYY")} al ${dayjs(fechaFin).format("DD/MM/YYYY")}`,
-        40,
-        16,
-      );
-      doc.setDrawColor(37, 99, 235);
-      doc.setLineWidth(0.6);
-      doc.line(10, 19, 287, 19);
-      startY = 22;
-
-      const head = [
-        [
-          "No.",
-          "Nombre completo",
-          ...dias.map((d) => `${d.format("DD")}\n${LETRA_DIA[d.day()]}`),
-          "Pres.",
-          "Faltas",
-          "Total",
-          "% Aus.",
-        ],
-      ];
-      const body = empleados.map((emp, i) => [
-        i + 1,
-        emp.nombre,
-        ...dias.map((d) => CELDA[emp.diasMap[d.format("YYYY-MM-DD")] || "sin"].code),
-        emp.presentes,
-        emp.faltas,
-        emp.total,
-        `${emp.pctAusencia}%`,
-      ]);
-
-      const first = 2;
-      const last = dias.length + 1;
-      autoTable(doc, {
-        head,
-        body,
-        startY,
-        theme: "grid",
-        styles: { fontSize: 5.5, halign: "center", cellPadding: 0.6 },
-        headStyles: { fillColor: [31, 41, 55], fontSize: 5.5 },
-        columnStyles: { 1: { halign: "left", cellWidth: 32 } },
-        didParseCell: (data) => {
-          if (data.section !== "body") return;
-          if (data.column.index >= first && data.column.index <= last) {
-            const emp = empleados[data.row.index];
-            const d = dias[data.column.index - first];
-            const tipo = emp.diasMap[d.format("YYYY-MM-DD")] || "sin";
-            const c = CELDA[tipo];
-            data.cell.styles.textColor = c.rgb;
-            if (c.fill) data.cell.styles.fillColor = c.fill;
-            data.cell.styles.fontStyle = "bold";
-          }
-        },
+      // Formato homologado ADAMIA (encabezado y pie): src/lib/asistencia/matrizPdf.mjs.
+      const { font, logo } = await prepararMarcaAdamia(doc);
+      dibujarMatrizAsistencia(doc, autoTable, {
+        dias,
+        empleados,
+        celdas: CELDA,
+        letras: LETRA_DIA,
+        periodo: `Del ${dayjs(fechaInicio).format("DD/MM/YYYY")} al ${dayjs(fechaFin).format("DD/MM/YYYY")}`,
+        empresaNombre,
+        font,
+        logo,
       });
-      doc.save(`asistencia_${fechaInicio}_a_${fechaFin}.pdf`);
+      doc.save(
+        nombreArchivoPdf({
+          documento: "Reporte asistencia",
+          periodo: { inicio: fechaInicio, fin: fechaFin },
+        }),
+      );
     } catch (e) {
       enqueueSnackbar("No se pudo exportar a PDF", { variant: "error" });
     } finally {
@@ -314,7 +279,7 @@ export default function AsistenciaMatriz({
         <Button
           onClick={exportarPDF}
           disabled={cargando || exportando !== null || !empleados.length}
-          className="h-9 rounded-xl bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
+          className="h-9 rounded-xl bg-brand font-semibold text-white"
         >
           {exportando === "pdf" ? (
             <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
@@ -387,7 +352,7 @@ export default function AsistenciaMatriz({
                     }`}
                     title={emp.nombre}
                   >
-                    {emp.nombre}
+                    <NombreEmpleado id={emp.id_empleado}>{emp.nombre}</NombreEmpleado>
                   </td>
                   {dias.map((d) => {
                     const c = celdaDe(emp, d);

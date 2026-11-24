@@ -3,14 +3,29 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { faceapi, loadFaceApiModels, isFaceApiReady } from "@/lib/faceapi";
 import { useSnackbar } from "notistack";
+import { useAuth } from "@/context/AuthContext";
+import ConsentimientoRostro from "./ConsentimientoRostro";
+import AvisoRostroApp from "./AvisoRostroApp";
+import FirmaPinRh from "./FirmaPinRh";
+import RostroCelular from "./RostroCelular";
+import ProbarRostro from "./ProbarRostro";
+import { useSWRConfig } from "swr";
+import { ScanFace } from "lucide-react";
+import { mensajeListo } from "@/lib/rostro/enlaceCelular.mjs";
 
 export default function TabReconocimiento({
   renderCampos = () => null,
+  form,
   setDescriptor,
   soloLectura,
   active,
 }) {
   const { enqueueSnackbar } = useSnackbar();
+  const { dataUser } = useAuth();
+  const valores = form?.getValues?.() ?? {};
+  const idEmpresa = valores.id_empresa;
+  const empresaNombre = (dataUser?.empresas_detalle ?? []).find((e) => Number(e.id_empresa) === Number(idEmpresa))?.nombre;
+  const nombreEmpleado = [valores.nombre, valores.apellido_paterno, valores.apellido_materno].filter(Boolean).join(" ");
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const intervalRef = useRef(null);
@@ -20,6 +35,15 @@ export default function TabReconocimiento({
   const [loadingModels, setLoadingModels] = useState(true);
   const [cameraActive, setCameraActive] = useState(false);
   const [descriptorReady, setDescriptorReady] = useState(false);
+  const [rostroCelular, setRostroCelular] = useState(false);
+  const { mutate } = useSWRConfig();
+  // Registrado desde el celular: se actualiza el estado y el aviso del rostro de la ficha, sin recargar.
+  // No se toca el formulario: al guardar la ficha no se reenvía un rostro (ver rostroCapturado en FormularioEmpleado).
+  const idEmpleadoFicha = valores.id_empleado;
+  const alRegistrarDesdeCelular = useCallback(() => {
+    setRostroCelular(true);
+    if (idEmpleadoFicha) mutate(`/checador/mi-espacio/rostro/empleado/${idEmpleadoFicha}`);
+  }, [idEmpleadoFicha, mutate]);
   const [guidance, setGuidance] = useState({
     level: "info",
     text: "Alinea tu rostro en el centro",
@@ -240,7 +264,7 @@ export default function TabReconocimiento({
       level: "success",
       text: "Descriptor capturado exitosamente ✅",
     });
-    enqueueSnackbar("Descriptor capturado exitosamente", {
+    enqueueSnackbar("Rostro capturado. Guarda la ficha para conservarlo.", {
       variant: "success",
     });
   };
@@ -299,112 +323,85 @@ export default function TabReconocimiento({
     return null;
   }
 
+  const tieneRostro = rostroCelular || descriptorReady || (Array.isArray(valores.descriptor_facial) && valores.descriptor_facial.length > 0);
+  const tonoGuia = {
+    success: "border-green-200 bg-green-50 text-green-800",
+    warning: "border-amber-200 bg-amber-50 text-amber-900",
+    error: "border-red-200 bg-red-50 text-red-700",
+  }[guidance.level] ?? "border-slate-200 bg-slate-50 text-slate-700";
+
+  // Tres columnas en vez de una tira angosta: 1) documento (consentimiento),
+  // 2) firma y PIN + aviso del rostro desde la app, 3) reconocimiento facial (instrucciones, cámara y botones).
+  // Por ancho del contenedor (no de la ventana): 3 columnas ≥ 1024 px; 2 + 1 en tableta; apiladas en teléfono.
   return (
-    <div className="flex flex-col items-center gap-6 py-4">
+    <div className="@container w-full space-y-4 py-2">
       {renderCampos("inicio", true)}
-      {loadingModels ? (
-        <div className="flex flex-col items-center gap-3 py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2563EB]"></div>
-          <p className="text-gray-600 font-medium">Cargando modelos de reconocimiento facial...</p>
+      <div className="grid grid-cols-1 items-start gap-4 @2xl:grid-cols-2 @5xl:grid-cols-3" data-reconocimiento-columnas>
+        <div className="min-w-0" data-columna="documento">
+          <ConsentimientoRostro idEmpresa={idEmpresa} idEmpleado={valores.id_empleado} nombre={nombreEmpleado} empresa={empresaNombre} />
         </div>
-      ) : (
-        <>
-          {/* Información de ayuda */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 max-w-md">
-            <div className="flex items-start gap-3">
-              <div className="bg-[#2563EB] p-2 rounded-lg flex-shrink-0">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold text-gray-900 mb-1">Reconocimiento facial</h4>
-                <p className="text-sm text-gray-600">
-                  Posiciona tu rostro en el centro del cuadro. Asegúrate de tener buena iluminación y estar en un lugar sin distracciones.
-                </p>
-              </div>
-            </div>
+        <div className="grid min-w-0 gap-4" data-columna="firma">
+          <FirmaPinRh idEmpleado={valores.id_empleado} />
+          <AvisoRostroApp idEmpleado={valores.id_empleado} />
+        </div>
+        <section aria-labelledby="t-reconocimiento" className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 text-sm @2xl:col-span-2 @5xl:col-span-1" data-columna="reconocimiento">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <h3 id="t-reconocimiento" className="flex items-center gap-2 font-semibold text-slate-900"><ScanFace className="size-4 text-brand" aria-hidden="true" /> Reconocimiento facial</h3>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${tieneRostro ? "bg-green-50 text-green-800" : "bg-slate-100 text-slate-600"}`} data-rostro-estado>
+              {rostroCelular ? "Registrado desde el celular" : descriptorReady ? "Capturado: falta guardar" : tieneRostro ? "Rostro registrado" : "Sin rostro"}
+            </span>
           </div>
-
+          {valores.id_empleado ? <ProbarRostro idEmpleado={valores.id_empleado} nombre={nombreEmpleado} tieneRostro={tieneRostro} sinGuardar={descriptorReady} onAbrir={stopCamera} /> : null}
+          <p className="mt-1 text-slate-600">Rostro al centro del cuadro, con buena luz y sin otras personas atrás.</p>
+          {rostroCelular ? (
+            <p role="status" className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-green-800">{mensajeListo(nombreEmpleado)} Ya lo usa para checar.</p>
+          ) : null}
           {renderCampos("instrucciones", true)}
-
-          {/* Video con marco mejorado */}
-          <div className="relative">
-            <div className="absolute -inset-4 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur opacity-20"></div>
-            <div className="relative bg-white p-4 rounded-2xl shadow-lg">
-              <div className="relative w-[300px] h-[300px] rounded-xl overflow-hidden bg-gray-900">
-                <video
-                  ref={videoRef}
-                  width={300}
-                  height={300}
-                  className="w-full h-full object-cover"
-                  muted
-                  autoPlay
-                  playsInline
-                />
-                <canvas
-                  ref={canvasRef}
-                  className="absolute top-0 left-0 w-full h-full"
-                />
-              </div>
+          {loadingModels ? (
+            <div className="flex flex-col items-center gap-3 py-12" role="status">
+              <div className="h-10 w-10 animate-spin rounded-full border-b-2 border-[#2563EB] motion-reduce:animate-none"></div>
+              <p className="text-slate-600">Preparando la cámara…</p>
             </div>
-          </div>
-
-          {renderCampos("camara", true)}
-
-          {/* Estado de guía con colores */}
-          <div className={`px-4 py-2 rounded-lg font-medium text-sm ${
-            guidance.level === "success"
-              ? "bg-green-50 text-green-700 border border-green-200"
-              : guidance.level === "warning"
-              ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
-              : guidance.level === "error"
-              ? "bg-red-50 text-red-700 border border-red-200"
-              : "bg-gray-50 text-gray-700 border border-gray-200"
-          }`}>
-            {guidance.text}
-          </div>
-
-          {/* Botones con colores ADAMIA */}
-          {!soloLectura && (
-            <div className="flex gap-3">
-              <Button
-                type="button"
-                onClick={toggleCamera}
-                className={
-                  cameraActive
-                    ? "bg-red-500 hover:bg-red-600 text-white font-medium shadow-sm"
-                    : "bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
-                }
-              >
-                {cameraActive ? "Detener cámara" : "Iniciar cámara"}
-              </Button>
-              <Button
-                type="button"
-                onClick={handleCapture}
-                disabled={!cameraActive}
-                className="bg-gray-800 hover:bg-gray-900 text-white font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Capturar descriptor
-              </Button>
+          ) : (
+            <div className="mt-3 grid gap-3">
+              <div className="relative mx-auto aspect-square w-full max-w-[300px] overflow-hidden rounded-xl bg-slate-900">
+                <video ref={videoRef} width={300} height={300} className="h-full w-full object-cover" muted autoPlay playsInline aria-label="Vista de la cámara de esta computadora" />
+                <canvas ref={canvasRef} className="absolute left-0 top-0 h-full w-full" />
+              </div>
+              {renderCampos("camara", true)}
+              <p role="status" className={`rounded-lg border px-3 py-2 text-center font-medium ${tonoGuia}`}>{guidance.text}</p>
+              {!soloLectura && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button type="button" onClick={toggleCamera}
+                    className={`min-h-11 font-semibold ${cameraActive ? "border border-slate-300 bg-white text-slate-800 hover:bg-slate-50" : "bg-[#2563EB] text-white hover:bg-[#1d4ed8]"}`}>
+                    {cameraActive ? "Detener cámara" : "Iniciar cámara"}
+                  </Button>
+                  <Button type="button" onClick={handleCapture} disabled={!cameraActive}
+                    className="min-h-11 bg-slate-800 font-semibold text-white hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-50">
+                    Capturar rostro
+                  </Button>
+                </div>
+              )}
+              {renderCampos("controles", true)}
+              {descriptorReady && (
+                <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-green-800">Rostro capturado. Se guarda al guardar la ficha.</p>
+              )}
             </div>
           )}
-
-          {renderCampos("controles", true)}
-
-          {/* Indicador de éxito */}
-          {descriptorReady && (
-            <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-              <div className="bg-green-500 p-2 rounded-full">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <p className="font-semibold text-green-700">Rostro detectado ✅</p>
+          {/* También en modo «ver»: el QR guarda el rostro directo en el servidor (con su permiso de RH), no
+              depende de guardar la ficha. Antes se ocultaba y en la ficha abierta en solo lectura no aparecía. */}
+          {valores.id_empleado || !soloLectura ? (
+            <div className="mt-4 grid gap-2 border-t border-slate-100 pt-4" data-rostro-celular-bloque>
+              <p className="text-slate-600">{soloLectura ? "¿Registrar o actualizar su rostro? La persona puede tomarlo con su celular." : "¿Es difícil con la cámara de la computadora? La persona puede tomarlo con su celular."}</p>
+              {valores.id_empleado ? (
+                <RostroCelular idEmpleado={valores.id_empleado} nombre={nombreEmpleado} onRegistrado={alRegistrarDesdeCelular} onAbrir={stopCamera} />
+              ) : (
+                <p className="text-xs text-slate-500">Guarda primero al empleado para usar esta opción.</p>
+              )}
             </div>
-          )}
-        </>
-      )}
+          ) : null}
+        </section>
+      </div>
       {renderCampos("fin", true)}
     </div>
   );

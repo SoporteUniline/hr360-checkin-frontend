@@ -1,5 +1,7 @@
 // Verificación en navegador real (Chromium + Next compilado) de Asistencias en CELULAR:
-// pestaña «H. extra», aviso en la tarjeta y autorizar / no autorizar / quitar desde el detalle.
+// pestaña «H. extra», aviso en la tarjeta y, desde el detalle, el reloj del día para autorizar la extra.
+// (24/11/2026) Los botones Autorizar / No autorizar / Quitar con forma de pago se quitaron: la extra se autoriza en el
+// reloj con «¿Quién autoriza?» y lo demás lo decide la ley por semana (detalle en verify-reloj-dia.mjs).
 // Todas las respuestas del backend son sintéticas; ninguna petición sale a internet.
 // Uso: npm run build && node scripts/verify-asistencias-movil.mjs
 import assert from "node:assert/strict";
@@ -7,6 +9,7 @@ import { createHmac, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
+import { elegir, textosOpciones, valorDe } from "./lib/desplegable.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -40,7 +43,7 @@ const reg = (i, extra) => ({
 });
 const registros = [
   reg(0, { nombre: "SinExtra" }),
-  reg(1, { nombre: "Pendiente", salida: `${hoy} 18:42:00` }),
+  reg(1, { nombre: "Pendiente", salida: `${hoy} 18:42:00`, checadas_vivas: 1, minutos_extra: 102, minutos_extra_por_autorizar: 102 }),
   reg(2, { nombre: "Autorizada", salida: `${hoy} 19:20:00`, hrs_extra: 1, nombre_extra_autorizador: "Laura", apellido_paterno_extra_autorizador: "Gómez", forma_pago_extras: "Tiempo por tiempo" }),
   reg(3, { nombre: "NoAut", correccion: 1, valores_originales: JSON.stringify({ salida: `${hoy} 18:15:00` }) }),
 ];
@@ -70,6 +73,13 @@ try {
     if (p.endsWith("/checador/asistencias") && req.method() === "GET") {
       return json({ registros, total: registros.length, page: 1, aplicarPaginacion: true, total_presentes: 4, total_empleados: 4 });
     }
+    if (/\/checador\/asistencias\/\d+\/reloj$/.test(p)) {
+      return json({ ok: true, asistencia: { id: 1, nombre: "Pendiente Prueba", departamento: "Operación", fecha: hoy },
+        horario: { entrada: "09:00", salida: "17:00", salida_comida: null, regreso_comida: null }, dia: { tipo: "normal", nombre: "Día normal", pago: "" },
+        registros: [{ id: 1, entrada: `${hoy} 09:00:00`, salida: `${hoy} 18:42:00`, entrada_reloj: `${hoy} 09:00:00`, salida_reloj: `${hoy} 18:42:00`,
+          concepto: "jornada", motivo: null, origen: "reloj", anulado: false, id_autoriza: null, autoriza_no: false }],
+        motivos: { permisos: [], correccion: [{ clave: "olvido", nombre: "Olvidó checar" }] }, autorizadores: [{ id: 7, nombre: "RH Prueba" }] });
+    }
     if (/\/checador\/asistencias\/\d+$/.test(p) && req.method() === "PUT") {
       puts.push(JSON.parse(req.postData() || "{}"));
       return json({ asistencia: {} });
@@ -80,6 +90,8 @@ try {
   const esperarPuts = async (n) => { for (let i = 0; i < 60 && puts.length < n; i++) await dormir(100); assert.equal(puts.length, n, JSON.stringify(puts)); };
 
   await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
+  // En celular Asistencias también abre en «Hoy»: la vista móvil de registros está en la pestaña «Registros».
+  await page.getByRole("tab", { name: "Registros" }).click();
   await page.getByText("SinExtra Prueba").first().waitFor({ timeout: 30000 });
 
   // Tarjeta: aviso de horas por autorizar; pestaña «H. extra» con las 3 que tienen tiempo extra.
@@ -90,33 +102,23 @@ try {
   await page.getByText("SinExtra Prueba").waitFor({ state: "detached", timeout: 10000 });
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/movil-lista.png" });
 
-  // Detalle de la pendiente: forma de pago, nota y Autorizar.
+  // Detalle de la pendiente: sin forma de pago; el botón morado abre el reloj (hoja a pantalla completa) para separar y autorizar.
   await page.getByText("Pendiente Prueba").first().click();
-  const tarjeta = page.getByRole("region", { name: "Horas extra" });
-  await tarjeta.waitFor({ timeout: 10000 });
-  assert.match(await tarjeta.innerText(), /Por autorizar[\s\S]*1 h 42 min/);
-  await tarjeta.getByLabel("Forma de pago").selectOption("Tiempo por tiempo");
-  await tarjeta.getByLabel("Nota de horas extra").fill("Inventario");
+  const porAutorizar = page.getByRole("button", { name: "1 h 42 min por autorizar: autorizar en el reloj" });
+  await porAutorizar.waitFor({ timeout: 10000 });
+  assert.equal(await page.getByLabel("Forma de pago").count(), 0, "sin forma de pago");
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/movil-detalle.png" });
-  await tarjeta.getByRole("button", { name: "Autorizar", exact: true }).click();
-  await esperarPuts(1);
-  assert.deepEqual(puts[0], { hrs_extra: 1, forma_pago_extras: "Tiempo por tiempo", notas_hrs_extra: "Inventario", extras_autorizadas_por: 7 });
-  // El detalle se actualiza sin cerrarse.
-  await tarjeta.getByText("Autorizadas", { exact: true }).waitFor({ timeout: 10000 });
-  await tarjeta.getByRole("button", { name: "Quitar autorización" }).click();
-  await esperarPuts(2);
-  assert.deepEqual(puts[1], { hrs_extra: 0 });
-  await tarjeta.getByRole("button", { name: "No autorizar", exact: true }).click();
-  await esperarPuts(3);
-  assert.equal(puts[2].salida, `${hoy} 17:00:00`);
-  assert.match(puts[2].notas_hrs_extra, /^No autorizadas por RH Prueba · salida del reloj .* 18:42$/);
-  await tarjeta.getByText("No autorizadas", { exact: true }).waitFor({ timeout: 10000 });
-  await page.getByText("6:42 p.m. reloj").waitFor({ timeout: 10000 });
-  if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/movil-noaut.png" });
+  await porAutorizar.click();
+  const hoja = page.getByRole("dialog", { name: /Pendiente Prueba/ });
+  await hoja.getByRole("button", { name: "Separar 1 h 42 min después de las 5:00 p.m. como hora extra" }).click();
+  await elegir(hoja.getByLabel("Quién autoriza"), "7");
+  await hoja.getByRole("button", { name: "Guardar" }).waitFor();
+  assert.equal(await hoja.getByRole("button", { name: "Guardar" }).isDisabled(), false);
+  assert.equal(puts.length, 0, "nada se guarda con el PUT viejo de la asistencia");
 
   assert.deepEqual(errores, [], "sin errores de JavaScript en la página");
   exito = true;
-  console.log("OK celular · pestaña H. extra (3) · aviso en tarjeta · autorizar con forma y nota · quitar · no autorizar (salida 17:00, reloj tachado)");
+  console.log("OK celular · pestaña H. extra (3) · aviso en tarjeta · detalle sin forma de pago · «por autorizar» abre el reloj · separar y quién autoriza");
 } finally {
   await browser.close();
   next.kill();

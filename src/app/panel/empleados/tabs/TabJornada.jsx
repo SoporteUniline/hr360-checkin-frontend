@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
+import AvisoLimiteLegal from "@/components/asistencia/AvisoLimiteLegal";
 import {
   Select,
   SelectContent,
@@ -31,7 +32,12 @@ const DIAS_SEMANA = [
   "Domingo",
 ];
 
-export default function TabJornada({ renderCampos = () => null, form, soloLectura, empleadoId }) {
+
+// El turno asignado se pide UNA vez por ficha abierta: la pestaña se desmonta al cambiar y, si se volviera a pedir,
+// pisaría el turno que RH eligió sin guardar.
+const turnoYaCargado = new WeakMap(); // form.control → id del empleado cuyo turno ya se cargó
+
+export default function TabJornada({ renderCampos = () => null, form, soloLectura, empleadoId, sincronizarCampo }) {
   const [diasSeleccionados, setDiasSeleccionados] = useState([]);
   const [entradaComun, setEntradaComun] = useState("");
   const [salidaComun, setSalidaComun] = useState("");
@@ -131,7 +137,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
     });
 
     // Actualiza los horarios en el formulario
-    form.setValue("horarios", actualizados, { shouldValidate: true });
+    form.setValue("horarios", actualizados, { shouldValidate: true, shouldDirty: true });
 
     // 🔄 Limpiar campos comunes
     setEntradaComun("");
@@ -147,7 +153,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
     const actualizados = horarios.map((h) =>
       h.dia === dia ? { ...h, [campo]: valor } : h,
     );
-    form.setValue("horarios", actualizados, { shouldValidate: true });
+    form.setValue("horarios", actualizados, { shouldValidate: true, shouldDirty: true });
   };
 
   useEffect(() => {
@@ -202,6 +208,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
 
   useEffect(() => {
     if (!empleadoId) return;
+    if (turnoYaCargado.get(form.control) === empleadoId) return;
 
     // Si el usuario ya cambió manualmente el tipo de horario
     // durante esta edición, no pisamos su selección.
@@ -212,6 +219,18 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
     if (tipoModificado) return;
 
     let cancelado = false;
+
+    // El turno que ya tiene asignado viene del servidor: es la base de la ficha, no un cambio sin guardar.
+    const fijarTurno = (tipo, idTurno) => {
+      turnoYaCargado.set(form.control, empleadoId);
+      if (sincronizarCampo) {
+        sincronizarCampo("tipo_horario", tipo);
+        sincronizarCampo("id_turno", idTurno);
+        return;
+      }
+      form.setValue("tipo_horario", tipo, { shouldDirty: false, shouldValidate: false });
+      form.setValue("id_turno", idTurno, { shouldDirty: false, shouldValidate: false });
+    };
 
     const cargarTurnoEmpleado = async () => {
       try {
@@ -231,39 +250,15 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
         const turnoId = turno?.id_turno;
 
         if (turnoId) {
-          form.setValue("tipo_horario", "turno", {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
-
-          form.setValue("id_turno", String(turnoId), {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
+          fijarTurno("turno", String(turnoId));
         } else {
-          form.setValue("tipo_horario", "personalizado", {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
-
-          form.setValue("id_turno", null, {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
+          fijarTurno("personalizado", null);
         }
       } catch (error) {
         if (cancelado) return;
 
         if (error?.response?.status === 404) {
-          form.setValue("tipo_horario", "personalizado", {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
-
-          form.setValue("id_turno", null, {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
+          fijarTurno("personalizado", null);
         } else {
           console.error("Error cargando turno del empleado:", error);
         }
@@ -279,7 +274,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
     return () => {
       cancelado = true;
     };
-  }, [empleadoId, form]);
+  }, [empleadoId, form, sincronizarCampo]);
 
   const seleccionarTurno = async (valor) => {
     try {
@@ -316,9 +311,9 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
   return (
     <section className="space-y-6">
       {/* Header de la sección */}
-      <div className="bg-gradient-to-br from-orange-50 via-white to-orange-50 border-2 border-orange-100 rounded-xl p-6">
+      <div className="border border-slate-200 bg-white rounded-xl p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-3 rounded-lg shadow-md">
+          <div className="bg-brand p-3 rounded-lg shadow-md">
             <svg
               className="w-6 h-6 text-white"
               fill="none"
@@ -385,7 +380,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                 }}
                 className={`rounded-lg border-2 p-4 text-left transition ${
                   tipoHorario === "turno"
-                    ? "border-indigo-500 bg-indigo-50"
+                    ? "border-brand bg-blue-50"
                     : "border-gray-200 bg-white hover:border-gray-300"
                 }`}
               >
@@ -412,7 +407,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                 }}
                 className={`rounded-lg border-2 p-4 text-left transition ${
                   tipoHorario === "personalizado"
-                    ? "border-indigo-500 bg-indigo-50"
+                    ? "border-brand bg-blue-50"
                     : "border-gray-200 bg-white hover:border-gray-300"
                 }`}
               >
@@ -474,6 +469,8 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
           </div>
 
           {renderCampos("tipo_horario", true)}
+
+          <AvisoLimiteLegal horarios={horarios} />
 
           {isSubmitted && errors.horarios && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">

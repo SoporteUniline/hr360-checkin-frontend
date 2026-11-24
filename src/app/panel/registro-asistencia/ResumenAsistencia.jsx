@@ -108,7 +108,7 @@ export default function ResumenAsistencia({
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-gray-100 bg-white px-6 py-4 shadow-sm">
       <div className="flex items-baseline gap-3">
-        <div className="text-[38px] font-extrabold leading-none tracking-tight tabular-nums bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-transparent">
+        <div className="text-[38px] font-extrabold leading-none tracking-tight tabular-nums text-brand ">
           {cargando ? "—" : `${pct}%`}
         </div>
         <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 leading-tight">

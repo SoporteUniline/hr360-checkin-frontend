@@ -67,7 +67,8 @@ export async function getScope(request, self = false) {
     );
     return response.json();
   };
-  const { user } = await api("/users/verify/token");
+  const sesion = await api("/users/verify/token");
+  const { user } = sesion;
   const actorId = id.safeParse(user?.id_usuario ?? user?.id);
   ensure(actorId.success, "Sesión no válida.", 401);
   const role = String(user.tipo_usuario || "").trim();
@@ -84,6 +85,14 @@ export async function getScope(request, self = false) {
     companyId.success && Number(companyId.data) <= 2147483647,
     "Selecciona una empresa válida.",
     400,
+  );
+  // Módulos por empresa: con «Activos y uniformes» apagado o sin derecho no se lee ni se escribe nada.
+  // La sesión trae las claves activas de sus empresas (sin dato = servidor sin módulos: se permite).
+  const activosEmpresa = sesion.modulos && !sesion.modulos.todos ? sesion.modulos.modulos?.[String(companyId.data)] : null;
+  ensure(
+    !Array.isArray(activosEmpresa) || activosEmpresa.includes("activos"),
+    "El módulo de Activos y uniformes no está activo para tu empresa.",
+    403,
   );
   const pool = activosPool();
   if (!self) {

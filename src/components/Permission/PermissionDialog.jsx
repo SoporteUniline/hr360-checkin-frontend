@@ -8,13 +8,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "../ui/textarea";
@@ -24,6 +17,19 @@ import axios from "@/lib/axios";
 import Cookies from "js-cookie";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { CalendarCheck2, Save } from "lucide-react";
+// El empleado también pide permisos por horas (llega tarde, sale antes, sale y regresa): mismos campos y
+// validación que el panel de RH. RH confirma o cambia «se repone / se rebaja» al aprobar.
+import CamposPermisoHoras, { datosPermisoHoras, erroresPermisoHoras } from "@/app/panel/permisos/CamposPermisoHoras";
+import { horarioPermiso } from "@/lib/asistencia/permisoHoras.mjs";
+// Tipos de registro con goce: el empleado elige tipo y motivo; el goce y el trato de las horas los decide RH.
+import useSWR from "swr";
+import { fetcherWithToken } from "@/lib/fetcher";
+import CamposQuePaso from "@/app/panel/permisos/CamposQuePaso";
+import { tipoHorasDe } from "@/lib/asistencia/tiposGoce.mjs";
+import { camposSolicitud, claseDe, faltaPar, parDesdeSolicitud, parVacio } from "@/lib/asistencia/quePasoMotivo.mjs";
+
+const CAMPOS_HORAS = { modalidad: "dias", tipo_horas: "", tratamiento: "", hora_inicio: "", hora_fin: "" };
+const corta = (h) => (h ? String(h).slice(0, 5) : "");
 
 export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
   const { dataUser } = useAuth();
@@ -35,6 +41,8 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
     motivo: "",
     estado: "Pendiente",
     id_empleado: dataUser?.id_empleado ?? "",
+    par: parVacio(),
+    ...CAMPOS_HORAS,
   };
 
   const [form, setForm] = useState(initialForm);
@@ -43,6 +51,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
   const savingRef = useRef(false);
 
   const isReadOnly = mode === "ver";
+  const { data: dataMotivos } = useSWR(open ? "/checador/motivos-permiso" : null, fetcherWithToken, { revalidateOnFocus: false });
   const isEdit = mode === "editar";
   const isCreate = mode === "crear";
 
@@ -56,11 +65,18 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
           motivo: selected?.motivo ?? "",
           estado: selected.estado,
           id_empleado: selected.id_empleado,
+          modalidad: selected.modalidad === "horas" ? "horas" : "dias",
+          tipo_horas: selected.tipo_horas ?? "",
+          tratamiento: selected.tratamiento ?? "",
+          hora_inicio: corta(selected.hora_inicio),
+          hora_fin: corta(selected.hora_fin),
+          par: parDesdeSolicitud(selected, dataMotivos),
         });
       } else {
         setForm(initialForm);
       }
       setErrors([]);
+      parTocado.current = false;
     } else {
       setForm(initialForm);
       setErrors([]);
@@ -70,11 +86,26 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
   const { data: tiposPermisoResponse, error: tiposError, isLoading: tiposLoading } = useTiposPermisoData();
 
   const arrayTiposPermiso = tiposPermisoResponse?.tiposPermiso;
+  const tipoSel = (arrayTiposPermiso ?? []).find((t) => String(t.id) === String(form.id_tipo_permiso)) ?? null;
+  // Un tipo que abarca parte del día ya dice si llega tarde, sale antes o sale y regresa.
+  const parcial = Boolean(tipoSel && claseDe(tipoSel) === "parcial");
+  const porHoras = parcial || form.modalidad === "horas";
+  // El empleado elige qué pasó y el motivo; el goce y el trato de las horas los pone el motivo y RH.
+  const nuevos = () => camposSolicitud(form.par, tipoSel, dataMotivos, { rh: false });
+  // El motivo guardado se vuelve a leer cuando llega el catálogo de motivos, mientras no se haya tocado.
+  const parTocado = useRef(false);
+  useEffect(() => {
+    if (open && selected && mode !== "crear" && dataMotivos && !parTocado.current) setForm((f) => ({ ...f, par: parDesdeSolicitud(selected, dataMotivos) }));
+  }, [open, selected, mode, dataMotivos]);
 
   const validateForm = () => {
     const validationErrors = [];
     if (!form.id_tipo_permiso)
       validationErrors.push("Selecciona el tipo de permiso.");
+    // Las vacaciones no llevan motivo (descuentan del saldo).
+    const faltaMotivo = tipoSel ? faltaPar(form.par, tipoSel, dataMotivos, { motivoObligatorio: true }) : "";
+    if (faltaMotivo) validationErrors.push(faltaMotivo);
+    if (porHoras) return [...validationErrors, ...erroresPermisoHoras(form, { conTipo: parcial })];
     if (!form.fecha_inicio)
       validationErrors.push("La fecha de inicio es obligatoria.");
     if (!form.fecha_fin) validationErrors.push("La fecha fin es obligatoria.");
@@ -164,6 +195,8 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
         motivo: form.motivo || null,
         estado: "Pendiente",
         id_empleado: empleadoId,
+        ...(porHoras ? datosPermisoHoras(form) : { modalidad: "dias" }),
+        ...nuevos(),
       };
 
       await axios.post(`/checador/solicitudes-permiso`, payload, {
@@ -218,6 +251,8 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
         motivo: form.motivo || null,
         id_empleado: empleadoId,
         estado: "Pendiente",
+        ...(porHoras ? datosPermisoHoras(form) : { modalidad: "dias" }),
+        ...nuevos(),
       };
 
       await axios.put(`/checador/solicitudes-permiso/${selected.id}`, payload, {
@@ -242,10 +277,6 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
       setSaving(false);
     }
   };
-
-  const arrayFiltered = arrayTiposPermiso?.filter((permiso) => {
-    return Number(permiso.es_permiso) === 1 || Number(permiso.descuenta_vacaciones) === 1;
-  });
 
   return (
     <Dialog open={open} onOpenChange={(value) => { if (!savingRef.current) setOpen(value); }}>
@@ -272,33 +303,31 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
           {tiposLoading && <p role="status" className="text-sm text-slate-500">Cargando tipos de permiso…</p>}
           {tiposError && <p role="alert" className="text-sm text-red-700">No pudimos cargar los tipos de permiso. Cierra e intenta de nuevo.</p>}
           {isReadOnly && <p className="text-sm font-medium">Estado: {selected?.estado} · {selected?.tipo_permiso_nombre}</p>}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {isReadOnly && porHoras ? <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900">{horarioPermiso({ ...selected, hora_inicio: form.hora_inicio, hora_fin: form.hora_fin })} · {form.fecha_inicio?.split("-").reverse().join("/")}</p> : null}
+          {!isReadOnly && !parcial ? (
             <div className="space-y-2">
-              <Label htmlFor="request-type">Tipo de permiso</Label>
-              <Select
-                value={form.id_tipo_permiso}
-                onValueChange={(val) =>
-                  setForm((prev) => ({
-                    ...prev,
-                    id_tipo_permiso: val,
-                  }))
-                }
-                disabled={isReadOnly || saving}
-              >
-                <SelectTrigger id="request-type" className="w-full min-h-11 bg-white text-base">
-                  <SelectValue placeholder="Selecciona un tipo de permiso" />
-                </SelectTrigger>
-
-                <SelectContent className="max-h-60 overflow-y-auto">
-                  {arrayFiltered?.map((permiso) => (
-                    <SelectItem key={permiso.id} value={String(permiso.id)}>
-                      {permiso.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>¿Por cuánto tiempo?</Label>
+              <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-slate-200" role="radiogroup" aria-label="Duración del permiso">
+                {[["dias", "Días completos"], ["horas", "Unas horas"]].map(([valor, texto]) => (
+                  <button key={valor} type="button" role="radio" aria-checked={form.modalidad === valor} disabled={saving}
+                    onClick={() => setForm((f) => ({ ...f, modalidad: valor }))}
+                    className={`px-3 text-sm font-semibold transition ${form.modalidad === valor ? "bg-blue-600 text-white" : "bg-white text-slate-600"}`}>
+                    {texto}
+                  </button>
+                ))}
+              </div>
+              {porHoras ? <p className="text-xs text-slate-500">Para llegar tarde, salir antes o salir y regresar el mismo día.</p> : null}
             </div>
+          ) : null}
+          <CamposQuePaso tipos={arrayTiposPermiso} idTipo={form.id_tipo_permiso} rh={false} movil conVacaciones motivos={dataMotivos}
+            disabled={isReadOnly || saving} par={form.par} onPar={(par) => { parTocado.current = true; setForm((f) => ({ ...f, par })); }}
+            onTipo={(val) => {
+              const t = (arrayTiposPermiso ?? []).find((x) => String(x.id) === val);
+              setForm((prev) => ({ ...prev, id_tipo_permiso: val, ...(t && claseDe(t) === "parcial" ? { modalidad: "horas", tipo_horas: tipoHorasDe(t) } : {}) }));
+            }} />
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {porHoras ? null : (<>
             <div className="space-y-2">
               <Label htmlFor="request-start">Fecha inicial</Label>
               <Input
@@ -331,10 +360,13 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
                 disabled={isReadOnly || saving}
               />
             </div>
+            </>)}
           </div>
 
+          {porHoras && !isReadOnly ? <CamposPermisoHoras form={form} setForm={setForm} tipoFijo={parcial} sinTratamiento={parcial} /> : null}
+
           <div className="space-y-2">
-            <Label htmlFor="request-reason">Motivo</Label>
+            <Label htmlFor="request-reason">Observaciones</Label>
             <Textarea
               id="request-reason"
               rows={4}

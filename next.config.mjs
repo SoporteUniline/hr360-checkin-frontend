@@ -18,6 +18,11 @@ const nextConfig = {
         source: "/internal/diagnostico/reloj",
         destination: "/api/diagnostico/reloj",
       },
+      {
+        // «No pudimos cargar tu equipo»: /api/solicitudes-equipo llegaba al backend (HTML «Cannot GET»).
+        source: "/internal/solicitudes-equipo/:path*",
+        destination: "/api/solicitudes-equipo/:path*",
+      },
     ];
   },
   images: {
@@ -31,6 +36,34 @@ const nextConfig = {
         hostname: "hr360-redlab.s3.us-west-1.amazonaws.com",
       },
     ],
+  },
+
+  // Activos y uniformes es un solo módulo en /panel/activos. Las rutas viejas de los dos
+  // módulos redirigen a su equivalente (la consulta, p. ej. ?empresa=, se conserva sola).
+  async redirects() {
+    const viejo = "/panel/:modulo(control-activos|control-uniformes)";
+    const a = (source, destination) => ({ source, destination, permanent: false });
+    return [
+      a("/panel/control-activos/activos/:resto*", "/panel/activos/inventario/:resto*?tipo=activos"),
+      a("/panel/control-activos/uniformes/:resto*", "/panel/activos/inventario/:resto*?tipo=uniformes"),
+      a("/panel/control-uniformes/prendas/:resto*", "/panel/activos/inventario/:resto*?tipo=uniformes"),
+      a("/panel/control-activos/categorias", "/panel/activos/ajustes/categorias?tipo=activos"),
+      a("/panel/control-uniformes/categorias", "/panel/activos/ajustes/categorias?tipo=uniformes"),
+      a(`${viejo}/entregas/nueva`, "/panel/activos/entregar"),
+      a(`${viejo}/devoluciones`, "/panel/activos/recibir"),
+      a(`${viejo}/empleados/:resto*`, "/panel/activos/personas/:resto*"),
+      a(`${viejo}/mantenimiento`, "/panel/activos/revision"),
+      a(`${viejo}/movimientos`, "/panel/activos/historial"),
+      a(`${viejo}/:ajuste(ubicaciones|paquetes)`, "/panel/activos/ajustes/:ajuste"),
+      a(`${viejo}/:seccion(entregas|resguardos|solicitudes)/:resto*`, "/panel/activos/:seccion/:resto*"),
+      a(viejo, "/panel/activos"),
+      // Evaluaciones: «Tablero» era el mismo «Resumen»; resultados y planes viven en cada
+      // campaña o en «Mis resultados». La entrada del módulo decide la pestaña según el rol.
+      a("/panel/evaluaciones/:vista(tablero|resultados|seguimiento)", "/panel/evaluaciones"),
+      a("/empleado/panel/evaluaciones/:vista(tablero|resultados|seguimiento)", "/empleado/panel/evaluaciones"),
+      // El blog vive en /blog; la página vieja estaba apagada.
+      a("/blog-y-noticias", "/blog"),
+    ];
   },
 
   async headers() {

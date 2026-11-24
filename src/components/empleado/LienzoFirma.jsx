@@ -1,0 +1,88 @@
+"use client";
+
+// Lienzo para dibujar la firma con el dedo o el mouse. Guarda los trazos en coordenadas relativas para volver a
+// pintarlos igual al girar el teléfono o cambiar el tamaño. ref expone: aPng() → Blob PNG, borrar().
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
+import { puntoEnLienzo } from "@/lib/firma/pantallaFirma.mjs";
+
+// alto: clases de altura del recuadro (por omisión h-44; a pantalla completa «h-full»).
+// rotado: el lienzo se muestra girado 90° (iPhone en vertical, FirmaGrande): el toque se traduce a su sistema.
+const LienzoFirma = forwardRef(function LienzoFirma({ onCambio, deshabilitado, etiqueta = "Dibuja tu firma con el dedo o el mouse", alto = "h-44", rotado = false }, ref) {
+  const canvasRef = useRef(null);
+  const trazos = useRef([]);
+  const dibujando = useRef(null);
+
+  const pintar = useCallback(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    // Tamaño propio del lienzo (sin la rotación): clientWidth/Height no cambian al girarlo con CSS.
+    const width = c.clientWidth;
+    const height = c.clientHeight;
+    if (!width || !height) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    c.width = Math.round(width * dpr);
+    c.height = Math.round(height * dpr);
+    const ctx = c.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = "#172554";
+    ctx.lineWidth = 2.3;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    for (const t of trazos.current) {
+      if (t.length < 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(t[0].x * width, t[0].y * height);
+      t.slice(1).forEach((p) => ctx.lineTo(p.x * width, p.y * height));
+      ctx.stroke();
+    }
+  }, []);
+
+  useEffect(() => {
+    pintar();
+    const o = new ResizeObserver(pintar);
+    if (canvasRef.current) o.observe(canvasRef.current);
+    return () => o.disconnect();
+  }, [pintar]);
+
+  useImperativeHandle(ref, () => ({
+    aPng: () => new Promise((resolve, reject) => canvasRef.current.toBlob((b) => (b ? resolve(b) : reject(new Error("No se pudo generar la imagen."))), "image/png")),
+    borrar: () => { trazos.current = []; dibujando.current = null; pintar(); onCambio?.(false); },
+  }), [pintar, onCambio]);
+
+  const punto = (e) => puntoEnLienzo(e, canvasRef.current.getBoundingClientRect(), rotado);
+
+  return (
+    <div className={`relative ${alto} w-full overflow-hidden rounded-xl border border-slate-300 bg-white`}>
+      <canvas
+        ref={canvasRef}
+        aria-label={etiqueta}
+        className="size-full touch-none"
+        onPointerDown={(e) => {
+          if (deshabilitado || !e.isPrimary || (e.pointerType === "mouse" && e.button !== 0)) return;
+          e.preventDefault();
+          canvasRef.current.setPointerCapture(e.pointerId);
+          dibujando.current = e.pointerId;
+          trazos.current.push([punto(e)]);
+        }}
+        onPointerMove={(e) => {
+          if (dibujando.current !== e.pointerId) return;
+          e.preventDefault();
+          const t = trazos.current.at(-1);
+          const p = punto(e);
+          const u = t.at(-1);
+          if (Math.hypot(p.x - u.x, p.y - u.y) < 0.002) return;
+          t.push(p);
+          onCambio?.(true);
+          pintar();
+        }}
+        onPointerUp={(e) => { if (dibujando.current === e.pointerId) dibujando.current = null; }}
+        onPointerCancel={() => { dibujando.current = null; }}
+      />
+      <span className="pointer-events-none absolute inset-x-6 bottom-9 border-t border-dashed border-slate-300" />
+    </div>
+  );
+});
+
+export default LienzoFirma;

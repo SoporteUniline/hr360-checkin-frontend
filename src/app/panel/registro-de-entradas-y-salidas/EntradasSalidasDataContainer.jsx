@@ -63,8 +63,8 @@ export default function EntradasSalidasDataContainer({
   }, [mutate]);
 
   useEffect(() => {
-    // Solo recarga cuando cambió la cola de checadas; preparar el reloj ('perfil') no cambia datos
-    // (antes provocaba una segunda descarga completa del periodo al abrir la vista).
+    // Solo recarga cuando cambió la cola de checadas: preparar el reloj ('perfil') no cambia datos y
+    // provocaría una segunda descarga completa del periodo.
     const refresh = (event) => {
       if (event?.detail?.motivo === 'perfil') return;
       if (navigator.onLine && window.__adamiaOffline !== true) void mutateRef.current().catch(() => {});

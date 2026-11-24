@@ -2,12 +2,12 @@
 // y qué campos se guardan en cada acción. Se prueba con node:test (scripts/test-horas-extra.mjs).
 //
 // Reglas:
-// - (19/11/2026, pedido del dueño) Cuenta como hora extra TODO lo trabajado por encima de lo
+// - Cuenta como hora extra TODO lo trabajado por encima de lo
 //   programado (mismo número que «Balance del día»): quedarse después de la salida, llegar antes
 //   y no checar la salida a comer. Desde UMBRAL_MINUTOS. La empresa decide o corrige.
 // - Estados: "pendiente" (hay tiempo de más sin decidir), "autorizada" (hrs_extra = 1),
 //   "no_autorizada" (constancia «No autorizadas por …» en notas_hrs_extra) y "sin".
-// - (20/11/2026, permisos por horas) "reposicion": autorizada con forma FORMA_REPOSICION. Ese tiempo
+// - "reposicion": autorizada con forma FORMA_REPOSICION. Ese tiempo
 //   cubre horas que el empleado debía (cuenta de horas): NO es hora extra ni suma a dobles/triples.
 // - No autorizar NO borra la checada: si salió después de su horario, la salida pagada pasa a la del
 //   horario (el backend guarda la original en valores_originales); en todos los casos queda la
@@ -86,7 +86,18 @@ export function minutosDeMas(registro) {
   return trabajados == null || programados == null ? null : trabajados - programados;
 }
 
+// Horas extra registradas con su horario en el panel del día (horas_extra_registradas): mandan sobre el cálculo.
+export function minutosRegistrados(registro) {
+  const lista = Array.isArray(registro?.horas_extra_registradas) ? registro.horas_extra_registradas : [];
+  return lista.length ? lista.reduce((t, r) => t + (Number(r.minutos) || 0), 0) : null;
+}
+
 export function estadoHorasExtra(registro, zona = DB_TZ) {
+  const registradas = minutosRegistrados(registro);
+  if (registradas != null) {
+    const reposicion = registro.horas_extra_registradas.every((r) => r.forma_pago === FORMA_REPOSICION);
+    return { estado: reposicion ? "reposicion" : "autorizada", minutos: registradas, registradas: true };
+  }
   const minutos = minutosDeMas(registro);
   if (Number(registro?.hrs_extra)) {
     const estado = registro?.forma_pago_extras === FORMA_REPOSICION ? "reposicion" : "autorizada";

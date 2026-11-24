@@ -14,12 +14,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAuth } from "@/context/AuthContext";
-import { clockStore } from '@/lib/offline-clock';
+import { destinoRelojSinConexion, RUTA_RELOJ_EMPRESA } from '@/components/Clock/destinoReloj';
 import { Capacitor } from "@capacitor/core";
 import {
   UsersIcon,
   ClipboardCheck,
-  Clock3,
   CircleUserRoundIcon,
   ClockIcon,
   ClockArrowUp,
@@ -30,6 +29,8 @@ import {
   Store,
   HeartHandshake,
   Gift,
+  Wallet,
+  Megaphone,
   HandCoins,
   MapPin,
   Route,
@@ -55,9 +56,13 @@ import {
   CalendarClock,
   TriangleAlert,
   Package,
-  Shirt,
-  Wrench,
-  ArrowLeftRight,
+  ListChecks,
+  PenLine,
+  ClipboardList,
+  Settings2,
+  MessageCircle,
+  LayoutGrid,
+  Activity,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -65,15 +70,37 @@ import {
   ChevronsUpDown,
   Search,
 } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useModulosActivos } from "@/components/modulos/useModulos";
+import { useConfirmarSalida } from "@/components/cambios/CambiosPendientes";
+import { filtrarGrupos, rutaPermitida } from "@/lib/modulos/menu.mjs";
 import {
   RECRUITMENT_NAV,
   isRecruitmentNavActive,
 } from "@/components/reclutamiento/navigation";
-const recruitmentEnabled =
-  process.env.NEXT_PUBLIC_RECRUITMENT_ENABLED === "true";
+import { VISTAS_RH } from "@/lib/evaluaciones/vistas.mjs";
+import { useMenuEvaluaciones } from "./useMenuEvaluaciones";
+import useMonitorEquipo from "@/hooks/useMonitorEquipo";
+import { ContadorEncuestas, useMisEncuestas } from "@/components/clima/AvisoEncuestas";
+import { RUTA_PANEL as RUTA_MIS_ENCUESTAS } from "@/lib/clima/pendientes.mjs";
+const ICONOS_EVALUACION = {
+  campanas: ClipboardList,
+  plantillas: LayoutTemplate,
+  "mis-pendientes": PenLine,
+  configuracion: Settings2,
+};
 const dashboardItems = [
+  {
+    // RH o dueño que también son empleados (tienen ficha con su correo): contestan Clima y NOM-035 desde el panel.
+    // Solo aparece con ficha; el número son las que faltan por contestar.
+    title: "Mis encuestas",
+    url: RUTA_MIS_ENCUESTAS,
+    rol: "Recruiter",
+    icon: ClipboardList,
+    matchPrefix: RUTA_MIS_ENCUESTAS,
+    soloConFicha: true,
+  },
   {
     title: "Mis activos y uniformes",
     url: "/empleado/panel/mis-recursos",
@@ -89,10 +116,25 @@ const dashboardItems = [
     matchPrefix: "/empleado/panel/evaluaciones",
   },
   {
+    title: "Encuestas",
+    url: "/empleado/panel/encuestas",
+    rol: "Empleado",
+    icon: ClipboardList,
+    matchPrefix: "/empleado/panel/encuestas",
+  },
+  {
     title: "Solicitudes de mi equipo",
     url: "/empleado/panel/solicitudes-equipo",
     rol: "Empleado",
     icon: ClipboardCheck,
+  },
+  {
+    // Solo si es jefe (GET /checador/mi-equipo/hoy dice es_jefe).
+    title: "Monitor de mi equipo",
+    url: "/empleado/panel/monitor-equipo",
+    rol: "Empleado",
+    icon: UsersIcon,
+    soloJefe: true,
   },
   {
     title: "Empresas",
@@ -131,6 +173,12 @@ const dashboardItems = [
     icon: Gift,
   },
   {
+    title: "Pop-ups de la página",
+    url: "/dashboard/popups",
+    rol: "Admin",
+    icon: Megaphone,
+  },
+  {
     title: "Mensajes sistema",
     url: "/dashboard/mensajes-sistema",
     rol: "Admin",
@@ -149,7 +197,21 @@ const dashboardItems = [
     icon: Landmark,
   },
   {
-    title: "Inicio",
+    title: "WhatsApp (reclutamiento)",
+    url: "/dashboard/whatsapp",
+    rol: "Admin",
+    icon: MessageCircle,
+  },
+  // Módulos por empresa: qué incluye cada plan (los extras de una empresa, en su detalle).
+  {
+    title: "Módulos por plan",
+    url: "/dashboard/modulos",
+    rol: "Admin",
+    icon: LayoutGrid,
+  },
+  {
+    // «Resumen» y no «Inicio»: la primera pantalla de RH es el Monitor.
+    title: "Resumen",
     url: "/panel/dashboard",
     rol: "Recruiter",
     icon: LayoutDashboard,
@@ -173,16 +235,16 @@ const menuGroups = [
     groupIcon: ClockIcon,
     items: [
       {
+        title: "Monitor",
+        url: "/panel/monitor",
+        rol: "Recruiter",
+        icon: Activity,
+      },
+      {
         title: "Asistencias",
         url: "/panel/registro-asistencia",
         rol: "Recruiter",
         icon: ClipboardCheck,
-      },
-      {
-        title: "Control de horas extra",
-        url: "/panel/horas-extra",
-        rol: "Recruiter",
-        icon: Clock3,
       },
       {
         title: "Turnos extra",
@@ -287,23 +349,24 @@ const menuGroups = [
         icon: FolderClosed,
       },
       {
-        title: "Finiquitos y liquidaciones",
-        url: "/panel/finiquitos-y-liquidaciones",
-        rol: "Recruiter",
-        icon: HandCoins,
-      },
-      {
-        title: "Aguinaldos",
-        url: "/panel/aguinaldos",
-        rol: "Recruiter",
-        icon: Gift,
-      },
-      {
         title: "Mapa de rutas",
         url: "/panel/mapa-de-rutas",
         rol: "Recruiter",
         icon: Route,
       },
+    ],
+  },
+  {
+    // Nómina es su propio módulo; incluye Finiquitos y Aguinaldos porque también son pagos.
+    // Nóminas/Bonos/Préstamos también son pestañas del módulo.
+    group: "NÓMINA",
+    groupIcon: Wallet,
+    items: [
+      { title: "Nóminas", url: "/panel/nomina", rol: "Recruiter", icon: Wallet },
+      { title: "Bonos y descuentos", url: "/panel/nomina/bonos", matchPrefix: true, rol: "Recruiter", icon: ReceiptText },
+      { title: "Préstamos", url: "/panel/nomina/prestamos", matchPrefix: true, rol: "Recruiter", icon: Landmark },
+      { title: "Finiquitos y liquidaciones", url: "/panel/finiquitos-y-liquidaciones", rol: "Recruiter", icon: HandCoins },
+      { title: "Aguinaldos", url: "/panel/aguinaldos", rol: "Recruiter", icon: Gift },
     ],
   },
   {
@@ -417,216 +480,83 @@ const menuGroups = [
     ],
   },
   {
-    group: "CONTROL DE ACTIVOS",
+    // Un solo módulo con pestañas Inicio · Inventario · Personas y Ajustes (src/app/panel/activos).
+    group: "ACTIVOS Y UNIFORMES",
     groupIcon: Monitor,
     items: [
       {
-        title: "Resumen de activos",
-        url: "/panel/control-activos",
+        title: "Activos y uniformes",
+        url: "/panel/activos",
+        matchPrefix: "/panel/activos",
         rol: "Recruiter",
         icon: LayoutDashboard,
-      },
-      {
-        title: "Inventario de activos",
-        url: "/panel/control-activos/activos",
-        matchPrefix: "/panel/control-activos/activos",
-        rol: "Recruiter",
-        icon: Monitor,
-      },
-      {
-        title: "Categorías de activos",
-        url: "/panel/control-activos/categorias",
-        rol: "Recruiter",
-        icon: Package,
-      },
-      {
-        title: "Asignaciones y préstamos",
-        url: "/panel/control-activos/entregas",
-        matchPrefix: "/panel/control-activos/entregas",
-        rol: "Recruiter",
-        icon: Package,
-      },
-      {
-        title: "Devoluciones de activos",
-        url: "/panel/control-activos/devoluciones",
-        rol: "Recruiter",
-        icon: ArrowLeftRight,
-      },
-      {
-        title: "Activos por empleado",
-        url: "/panel/control-activos/empleados",
-        matchPrefix: "/panel/control-activos/empleados",
-        rol: "Recruiter",
-        icon: UsersIcon,
-      },
-      {
-        title: "Resguardos de activos",
-        url: "/panel/control-activos/resguardos",
-        matchPrefix: "/panel/control-activos/resguardos",
-        rol: "Recruiter",
-        icon: FileText,
-      },
-      {
-        title: "Mantenimiento",
-        url: "/panel/control-activos/mantenimiento",
-        rol: "Recruiter",
-        icon: Wrench,
-      },
-      {
-        title: "Incidencias de activos",
-        url: "/panel/control-activos/solicitudes",
-        rol: "Recruiter",
-        icon: TriangleAlert,
-      },
-      {
-        title: "Paquetes de equipo",
-        url: "/panel/control-activos/paquetes",
-        rol: "Recruiter",
-        icon: BriefcaseBusiness,
-      },
-      {
-        title: "Ubicaciones de activos",
-        url: "/panel/control-activos/ubicaciones",
-        rol: "Recruiter",
-        icon: Building,
-      },
-      {
-        title: "Movimientos de activos",
-        url: "/panel/control-activos/movimientos",
-        rol: "Recruiter",
-        icon: BookOpen,
       },
     ],
   },
   {
-    group: "CONTROL DE UNIFORMES",
-    groupIcon: Shirt,
+    // Tareas y Checklists son dos módulos, cada uno con su entrada y sus vistas.
+    group: "TAREAS",
+    groupIcon: ListChecks,
     items: [
-      {
-        title: "Resumen de uniformes",
-        url: "/panel/control-uniformes",
-        rol: "Recruiter",
-        icon: LayoutDashboard,
-      },
-      {
-        title: "Prendas y existencias",
-        url: "/panel/control-uniformes/prendas",
-        matchPrefix: "/panel/control-uniformes/prendas",
-        rol: "Recruiter",
-        icon: Shirt,
-      },
-      {
-        title: "Categorías de uniformes",
-        url: "/panel/control-uniformes/categorias",
-        rol: "Recruiter",
-        icon: Package,
-      },
-      {
-        title: "Entregas de uniformes",
-        url: "/panel/control-uniformes/entregas",
-        matchPrefix: "/panel/control-uniformes/entregas",
-        rol: "Recruiter",
-        icon: Package,
-      },
-      {
-        title: "Devoluciones y cambios",
-        url: "/panel/control-uniformes/devoluciones",
-        rol: "Recruiter",
-        icon: ArrowLeftRight,
-      },
-      {
-        title: "Uniformes por empleado",
-        url: "/panel/control-uniformes/empleados",
-        matchPrefix: "/panel/control-uniformes/empleados",
-        rol: "Recruiter",
-        icon: UsersIcon,
-      },
-      {
-        title: "Comprobantes de entrega",
-        url: "/panel/control-uniformes/resguardos",
-        matchPrefix: "/panel/control-uniformes/resguardos",
-        rol: "Recruiter",
-        icon: FileText,
-      },
-      {
-        title: "Prendas en revisión",
-        url: "/panel/control-uniformes/mantenimiento",
-        rol: "Recruiter",
-        icon: Wrench,
-      },
-      {
-        title: "Solicitudes de uniformes",
-        url: "/panel/control-uniformes/solicitudes",
-        rol: "Recruiter",
-        icon: TriangleAlert,
-      },
-      {
-        title: "Dotaciones por puesto",
-        url: "/panel/control-uniformes/paquetes",
-        rol: "Recruiter",
-        icon: BriefcaseBusiness,
-      },
-      {
-        title: "Ubicaciones de uniformes",
-        url: "/panel/control-uniformes/ubicaciones",
-        rol: "Recruiter",
-        icon: Building,
-      },
-      {
-        title: "Movimientos de uniformes",
-        url: "/panel/control-uniformes/movimientos",
-        rol: "Recruiter",
-        icon: BookOpen,
-      },
+      { title: "Tablero", url: "/panel/tareas", rol: "Recruiter", icon: LayoutDashboard },
+      { title: "Proyectos", url: "/panel/tareas/proyectos", matchPrefix: true, rol: "Recruiter", icon: FolderClosed },
     ],
   },
   {
+    group: "CHECKLISTS",
+    groupIcon: ClipboardCheck,
+    items: [
+      { title: "Checklists", url: "/panel/checklists", rol: "Recruiter", icon: ListChecks },
+      { title: "Revisar", url: "/panel/checklists/revisar", matchPrefix: true, rol: "Recruiter", icon: ShieldCheck },
+      { title: "Cumplimiento", url: "/panel/checklists/cumplimiento", matchPrefix: true, rol: "Recruiter", icon: BarChart3 },
+    ],
+  },
+  {
+    // Una entrada por vista de RH (src/lib/evaluaciones/vistas.mjs); se ocultan las que el servidor no permite
+    // (useMenuEvaluaciones). «Campañas» sigue resaltado en el resultado de una persona (/panel/evaluaciones/resultados/…).
     group: "EVALUACIÓN DE DESEMPEÑO",
     groupIcon: BarChart3,
+    items: VISTAS_RH.map((v) => ({
+      title: v.texto,
+      url: `/panel/evaluaciones/${v.path}`,
+      matchPrefix: v.path === "campanas" ? "/panel/evaluaciones" : true,
+      rol: "Recruiter",
+      icon: ICONOS_EVALUACION[v.path],
+      vistaEvaluacion: v,
+    })),
+  },
+  {
+    // Clima organizacional y NOM-035 (src/components/clima/ModuloClima.jsx): una dirección por vista.
+    group: "CLIMA Y NOM-035",
+    groupIcon: HeartHandshake,
     items: [
-      {
-        title: "Resumen de evaluaciones",
-        url: "/panel/evaluaciones",
+      { title: "Resultados", url: "/panel/clima", rol: "Recruiter", icon: LayoutDashboard },
+      { title: "Encuestas y plantillas", url: "/panel/clima/encuestas", matchPrefix: true, rol: "Recruiter", icon: ClipboardList },
+      { title: "NOM-035", url: "/panel/clima/nom035", rol: "Recruiter", icon: ShieldCheck },
+    ],
+  },
+  // Reclutamiento depende del módulo de la empresa; NEXT_PUBLIC_RECRUITMENT_ENABLED="false" queda como interruptor
+  // de emergencia que lo oculta para todos (filtrarGrupos).
+  {
+    group: "RECLUTAMIENTO Y SELECCIÓN",
+    groupIcon: BriefcaseBusiness,
+    items: [
+      ...RECRUITMENT_NAV.map((item) => ({
+        title: item.label,
+        url: item.href,
+        icon: item.icon,
         rol: "Recruiter",
-        icon: LayoutDashboard,
-      },
+        matchPrefix: item.matchPrefix,
+      })),
+      // Bandeja real de WhatsApp (R1): ruta propia, fuera del layout demo de /panel/reclutamiento.
       {
-        title: "Campañas",
-        url: "/panel/evaluaciones/campanas",
+        title: "Conversaciones (WhatsApp)",
+        url: "/panel/whatsapp",
+        icon: MessageCircle,
         rol: "Recruiter",
-        icon: ClipboardCheck,
-        matchPrefix: "/panel/evaluaciones/campanas",
-      },
-      {
-        title: "Plantillas de evaluación",
-        url: "/panel/evaluaciones/plantillas",
-        rol: "Recruiter",
-        icon: LayoutTemplate,
-        matchPrefix: "/panel/evaluaciones/plantillas",
-      },
-      {
-        title: "Tablero de desempeño",
-        url: "/panel/evaluaciones/tablero",
-        rol: "Recruiter",
-        icon: BarChart3,
       },
     ],
   },
-  ...(recruitmentEnabled
-    ? [
-        {
-          group: "RECLUTAMIENTO Y SELECCIÓN",
-          groupIcon: BriefcaseBusiness,
-          items: RECRUITMENT_NAV.map((item) => ({
-            title: item.label,
-            url: item.href,
-            icon: item.icon,
-            rol: "Recruiter",
-            matchPrefix: item.matchPrefix,
-          })),
-        },
-      ]
-    : []),
   {
     group: "AJUSTES",
     groupIcon: SlidersHorizontal,
@@ -648,6 +578,13 @@ const menuGroups = [
         url: "/panel/configuracion-checador",
         rol: "Recruiter",
         icon: SlidersHorizontal,
+      },
+      // Qué módulos usa la empresa: prender, apagar y contratar.
+      {
+        title: "Módulos",
+        url: "/panel/modulos",
+        rol: "Recruiter",
+        icon: LayoutGrid,
       },
       {
         title: "Usuarios con acceso",
@@ -678,7 +615,8 @@ const ITEM_ACTIVO =
 const ITEM_NORMAL =
   "text-gray-700 [&_svg]:text-gray-400 hover:[&_svg]:text-[#2563EB]";
 // Módulo del rail contraído: icono + panel flotante con todos sus items.
-function RailModule({ icon: Icon, title, items, path, onNavigate }) {
+// `consulta` llega como prop porque aquí no está definida (sin ella, contraer el menú lanza ReferenceError).
+function RailModule({ icon: Icon, title, items, path, onNavigate, consulta = "", contador = 0 }) {
   const [open, setOpen] = useState(false);
   const cierreRef = useRef(null);
   const abrir = () => {
@@ -690,8 +628,8 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
   };
   const moduloActivo = items.some((item) =>
     item.children
-      ? item.children.some((child) => isRecruitmentNavActive(path, child))
-      : isRecruitmentNavActive(path, item),
+      ? item.children.some((child) => isRecruitmentNavActive(path, child, consulta))
+      : isRecruitmentNavActive(path, item, consulta),
   );
   const enlace = (it) => (
     <button
@@ -702,7 +640,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
         onNavigate(it.url);
       }}
       className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[12.5px] font-medium transition-colors ${
-        isRecruitmentNavActive(path, it)
+        isRecruitmentNavActive(path, it, consulta)
           ? "bg-[#f0f5ff] font-semibold text-[#1d4ed8]"
           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
       }`}
@@ -711,7 +649,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
         <it.icon
           size={15}
           className={
-            isRecruitmentNavActive(path, it)
+            isRecruitmentNavActive(path, it, consulta)
               ? "text-[#2563EB]"
               : "text-gray-400"
           }
@@ -737,6 +675,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
           }`}
         >
           <Icon size={19} />
+          {contador ? <ContadorEncuestas n={contador} className="absolute -right-1 -top-1 ring-2 ring-white" /> : null}
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -768,11 +707,23 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
     </Popover>
   );
 }
-export function NavMain() {
+// «CONTROL DE TIEMPO» → «Control de tiempo» (los nombres de módulo se guardan en mayúsculas).
+const tituloGrupo = (t) => { const s = String(t ?? "").toLocaleLowerCase("es-MX"); return s.charAt(0).toLocaleUpperCase("es-MX") + s.slice(1); };
+
+// `consulta`: la vista de la URL (?vista=…), para resaltar «Entrevistas» y no «Conversaciones» en /panel/whatsapp.
+export function NavMainConConsulta() {
+  const params = useSearchParams();
+  const vista = params?.get("vista");
+  return <NavMain consulta={vista ? `vista=${vista}` : ""} />;
+}
+
+export function NavMain({ consulta = "" } = {}) {
   const router = useRouter();
   const path = usePathname();
   const { dataUser } = useAuth();
   const { state: sidebarState, isMobile, setOpenMobile } = useSidebar();
+  // Con cambios sin guardar (p. ej. la ficha del empleado) pregunta antes de navegar.
+  const confirmarSalida = useConfirmarSalida();
   const [open, setOpen] = useState();
   const [busqueda, setBusqueda] = useState("");
   // Colapso por módulo: todos abiertos por defecto; se recuerda en localStorage.
@@ -780,6 +731,26 @@ export function NavMain() {
   const [isNative, setIsNative] = useState(false);
   const effectiveRole =
     dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
+  // Módulos por empresa: fuera lo que la empresa no tiene activo. Llega junto con la sesión (sin parpadeo).
+  const { activos, opciones: opcionesModulo } = useModulosActivos();
+  const grupos = filtrarGrupos(menuGroups, activos, opcionesModulo);
+  // «Monitor de mi equipo» solo para jefes (lo decide el servidor con la sesión).
+  const { esJefe } = useMonitorEquipo();
+  // «Mis encuestas» de RH o dueño: solo con ficha de empleado (si no, el servidor responde SIN_FICHA y no se muestra).
+  const misEncuestas = useMisEncuestas(effectiveRole === "Recruiter");
+  const contadorDe = (item) => (item.url === RUTA_MIS_ENCUESTAS ? misEncuestas.pendientes : 0);
+  const itemsInicio = dashboardItems.filter((item) =>
+    rutaPermitida(item.url, activos, opcionesModulo) && (!item.soloJefe || esJefe) && (!item.soloConFicha || misEncuestas.conFicha));
+  const vistasEvaluacion = useMenuEvaluaciones(dataUser, effectiveRole === "Recruiter" && rutaPermitida("/panel/evaluaciones", activos, opcionesModulo));
+  // Rol, app nativa (sin «Mi suscripción») y, en Evaluaciones, los permisos del servidor. Mientras no se
+  // saben se muestran por rol, salvo «Por responder», que solo aparece si hay evaluaciones asignadas.
+  const itemVisible = (item) => {
+    if (item.rol && item.rol !== effectiveRole) return false;
+    if (isNative && item.url === "/panel/mi-suscripcion") return false;
+    const v = item.vistaEvaluacion;
+    if (!v) return true;
+    return vistasEvaluacion ? vistasEvaluacion.has(v.path) : !v.soloConPendientes;
+  };
   useEffect(() => {
     if (typeof window !== "undefined") {
       setIsNative(
@@ -814,12 +785,12 @@ export function NavMain() {
     );
   };
   // ¿Hay al menos un módulo contraído? (para alternar expandir/contraer todo)
-  const hayContraidos = menuGroups.some(
+  const hayContraidos = grupos.some(
     (g) => gruposAbiertos[g.group] === false,
   );
   const toggleTodos = () => {
     const next = {};
-    menuGroups.forEach((g) => {
+    grupos.forEach((g) => {
       next[g.group] = hayContraidos ? true : false;
     });
     setGruposAbiertos(persistirGrupos(next));
@@ -837,23 +808,24 @@ export function NavMain() {
       }
       return false;
     });
-  const handleClick = async (href) => {
+  const handleClick = (href) => {
     if (isMobile) setOpenMobile(false);
+    confirmarSalida(({ reemplazar }) => { navegar(href, reemplazar); }, { navega: true });
+  };
+  // reemplazar: la guardia de cambios pide reemplazar su entrada extra del historial en vez de agregar otra.
+  const navegar = async (href, reemplazar = false) => {
     // These items are buttons, so the global offline link handler cannot see them.
     if (!navigator.onLine || window.__adamiaOffline === true) {
-      if (href === '/seleccionar-reloj') {
-        const assigned = [...new Set([...(dataUser?.empresas || []), ...(dataUser?.empresas_detalle || []).map(company => company.id_empresa)].map(Number))].filter(id => Number.isInteger(id) && id > 0);
-        if (assigned.length === 1) {
-          try {
-            const profile = await (await clockStore()).getValue(`clock:company:${assigned[0]}`);
-            if (profile?.slug) { window.location.assign(`/${encodeURIComponent(profile.slug)}`); return; }
-          } catch { /* The offline gate still offers the available destinations. */ }
-        }
+      if (href === RUTA_RELOJ_EMPRESA) {
+        const destino = await destinoRelojSinConexion(dataUser);
+        if (destino !== RUTA_RELOJ_EMPRESA) { window.location.assign(destino); return; }
       }
-      window.location.assign(href);
+      if (reemplazar) window.location.replace(href);
+      else window.location.assign(href);
       return;
     }
-    router.push(href);
+    if (reemplazar) router.replace(href);
+    else router.push(href);
   };
   let perfilRoute = "/home/cuenta";
   if (effectiveRole === "Recruiter") {
@@ -865,21 +837,17 @@ export function NavMain() {
   if (sidebarState === "collapsed" && !isMobile) {
     const gruposVisibles =
       effectiveRole !== "Admin"
-        ? menuGroups
+        ? grupos
             .map((g) => ({
               ...g,
-              items: g.items.filter(
-                (item) =>
-                  (!item.rol || item.rol === effectiveRole) &&
-                  (!isNative || item.url !== "/panel/mi-suscripcion"),
-              ),
+              items: g.items.filter(itemVisible),
             }))
             .filter((g) => g.items.length > 0)
         : [];
     return (
       <SidebarGroup>
         <SidebarGroupContent className="flex flex-col items-center gap-1 pt-1">
-          {dashboardItems
+          {itemsInicio
             .filter((item) => !item.rol || item.rol === effectiveRole)
             .map((item) => (
               <RailModule
@@ -888,7 +856,9 @@ export function NavMain() {
                 title={item.title}
                 items={[item]}
                 path={path}
+                consulta={consulta}
                 onNavigate={handleClick}
+                contador={contadorDe(item)}
               />
             ))}
           {gruposVisibles.length > 0 && (
@@ -901,6 +871,7 @@ export function NavMain() {
               title={g.group}
               items={g.items}
               path={path}
+              consulta={consulta}
               onNavigate={handleClick}
             />
           ))}
@@ -940,7 +911,7 @@ export function NavMain() {
           </div>
         )}
         <SidebarMenu>
-          {dashboardItems.map((item) => {
+          {itemsInicio.map((item) => {
             if (item.rol && item.rol !== effectiveRole) return null;
             if (buscando && !normalizar(item.title).includes(q)) return null;
             return (
@@ -949,7 +920,7 @@ export function NavMain() {
                   tooltip={item.title}
                   onClick={() => handleClick(item.url)}
                   className={`${
-                    isRecruitmentNavActive(path, item)
+                    isRecruitmentNavActive(path, item, consulta)
                       ? ITEM_ACTIVO
                       : ITEM_NORMAL
                   } cursor-pointer flex justify-between`}
@@ -958,40 +929,47 @@ export function NavMain() {
                     {item.icon && <item.icon size={16} />}
                     <span>{item.title}</span>
                   </div>
+                  <ContadorEncuestas n={contadorDe(item)} />
                 </SidebarMenuButton>
               </SidebarMenuItem>
             );
           })}
           {effectiveRole !== "Admin" &&
-            menuGroups.map((group) => {
+            grupos.map((group) => {
               const grupoCoincide = buscando
                 ? normalizar(group.group).includes(q)
                 : false;
               const itemsVisibles = filtrarItems(
-                group.items.filter(
-                  (item) =>
-                    (!item.rol || item.rol === effectiveRole) &&
-                    (!isNative || item.url !== "/panel/mi-suscripcion"),
-                ),
+                group.items.filter(itemVisible),
                 grupoCoincide,
               );
               if (itemsVisibles.length === 0) return null;
+              const grupoActivo = itemsVisibles.some((item) => [item.url, ...(item.children ?? []).map((c) => c.url)].filter(Boolean).some((u) => path === u || path?.startsWith(`${u}/`)) || (typeof item.matchPrefix === "string" && path?.startsWith(item.matchPrefix)));
               // Al buscar siempre se muestra expandido; si no, manda el usuario.
               const abierto = buscando
                 ? true
                 : gruposAbiertos[group.group] !== false;
               return (
-                <div key={group.group} className="mt-3">
+                <div key={group.group} className="mt-1.5">
+                  {/* Títulos de módulo más legibles: texto normal en azul marino, su ícono y el módulo donde
+                      estás resaltado (antes: MAYÚSCULAS grises con mucho espaciado). */}
                   <button
                     type="button"
                     onClick={() => toggleGrupo(group.group)}
-                    className="w-full px-1 mb-2 text-[11px] font-semibold uppercase tracking-widest text-gray-500 cursor-pointer flex items-center justify-between select-none transition-colors hover:text-gray-800"
+                    className={`group/titulo mb-0.5 flex w-full cursor-pointer select-none items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left text-[13.5px] font-semibold transition-colors hover:bg-slate-100 ${
+                      grupoActivo ? "text-[#2563EB]" : "text-[#080d36]"
+                    }`}
                     aria-expanded={abierto}
                   >
-                    <span>{group.group}</span>
+                    {group.groupIcon ? (
+                      <span className={`grid size-6 shrink-0 place-items-center rounded-md ${grupoActivo ? "bg-[#2563EB] text-white" : "bg-blue-50 text-[#2563EB]"}`}>
+                        <group.groupIcon size={14} strokeWidth={2.2} />
+                      </span>
+                    ) : null}
+                    <span className="min-w-0 flex-1 truncate">{tituloGrupo(group.group)}</span>
                     <ChevronDown
-                      size={14}
-                      className={`shrink-0 text-gray-400 transition-transform duration-200 ${
+                      size={15}
+                      className={`shrink-0 text-slate-400 transition-transform duration-200 group-hover/titulo:text-slate-600 ${
                         abierto ? "" : "-rotate-90"
                       }`}
                     />
@@ -1012,7 +990,7 @@ export function NavMain() {
                               }
                             }}
                             className={`${
-                              isRecruitmentNavActive(path, item)
+                              isRecruitmentNavActive(path, item, consulta)
                                 ? ITEM_ACTIVO
                                 : ITEM_NORMAL
                             } cursor-pointer flex justify-between`}
@@ -1044,7 +1022,7 @@ export function NavMain() {
                                       tooltip={child.title}
                                       onClick={() => handleClick(child.url)}
                                       className={`${
-                                        isRecruitmentNavActive(path, child)
+                                        isRecruitmentNavActive(path, child, consulta)
                                           ? ITEM_ACTIVO
                                           : ITEM_NORMAL
                                       } cursor-pointer flex items-center gap-2 text-sm`}

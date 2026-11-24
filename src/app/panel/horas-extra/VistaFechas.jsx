@@ -1,9 +1,7 @@
 "use client";
 
-// «Control de horas extra» por fechas (maqueta aprobada 19/11/2026): días arriba, horas abajo.
-// Clic en un día: sus registros (horario, checadas, tiempo de más, alertas), decidir Sí/No y
-// «Abrir en Asistencias» (esa persona, ese día, con su ventana de edición abierta).
-// Lógica: lib/asistencia/matrizHorasExtra.mjs.
+// «Control de horas extra» por fechas: días arriba, horas abajo; clic en un día abre sus registros y «Abrir en
+// Asistencias». Lógica: lib/asistencia/matrizHorasExtra.mjs.
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import dayjs from "dayjs";
@@ -15,6 +13,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { CeldaAutorizarExtra } from "../registro-asistencia/CeldaHorasExtra";
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { duracionCorta, formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 import { quienCuando } from "@/lib/asistencia/historial.mjs";
 import { cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar, DB_TZ } from "@/lib/asistencia/horasExtra.mjs";
@@ -91,7 +90,7 @@ export default function VistaFechas({ registros, dias, zonaDe, estados, tope, re
               return (
                 <tr key={f.id} aria-label={f.nombre} className="border-t border-slate-100">
                   <td className="sticky left-0 z-[5] bg-white px-3 py-1.5 text-left">
-                    <b className="block leading-tight text-slate-900">{f.nombre}</b>
+                    <b className="block leading-tight text-slate-900"><NombreEmpleado id={Number(f.id) > 0 ? f.id : null}>{f.nombre}</NombreEmpleado></b>
                     <small className="text-[11px] text-slate-500">{f.departamento}</small>
                   </td>
                   {dias.map((d) => {

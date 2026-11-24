@@ -98,7 +98,7 @@ jobs:
         run: node --test scripts/test-activos-modules.mjs scripts/test-activos-api.mjs
 
       - name: Asistencias — cálculo de horas y exportación
-        run: node --test scripts/test-jornada-asistencia.mjs scripts/test-consulta-periodo.mjs scripts/test-cambios-asistencia.mjs scripts/test-calendario-asistencia.mjs scripts/test-horas-extra.mjs scripts/test-historial-asistencia.mjs scripts/test-semana-horas.mjs scripts/test-turnos-extra.mjs scripts/test-motivo-pendiente.mjs scripts/test-hora12.mjs scripts/test-masivo-asistencia.mjs scripts/test-control-horas-extra.mjs scripts/test-matriz-horas-extra.mjs scripts/test-permiso-horas.mjs scripts/test-fecha-hora.mjs scripts/test-reloj-recientes.mjs scripts/test-facial-startup.mjs scripts/test-faceapi-browser.mjs scripts/test-faceapi-preload.mjs scripts/test-offline-clock-registration.mjs scripts/test-automatic-clock.mjs scripts/test-offline-clock.mjs scripts/test-local-clock-events.mjs scripts/test-diagnostico-reloj.mjs
+        run: node --test scripts/test-fecha-input.mjs scripts/test-jornada-asistencia.mjs scripts/test-asistencias-hoy.mjs scripts/test-monitor.mjs scripts/test-pausas-dia.mjs scripts/test-pin-rh.mjs scripts/test-pantalla-firma.mjs scripts/test-qr-imagen.mjs scripts/test-consulta-periodo.mjs scripts/test-cambios-asistencia.mjs scripts/test-calendario-asistencia.mjs scripts/test-horas-extra.mjs scripts/test-horas-extra-dia.mjs scripts/test-reloj-dia.mjs scripts/test-tipos-goce.mjs scripts/test-quepaso-motivo.mjs scripts/test-monitor-equipo.mjs scripts/test-historial-asistencia.mjs scripts/test-semana-horas.mjs scripts/test-turnos-extra.mjs scripts/test-motivo-pendiente.mjs scripts/test-hora12.mjs scripts/test-masivo-asistencia.mjs scripts/test-control-horas-extra.mjs scripts/test-matriz-horas-extra.mjs scripts/test-permiso-horas.mjs scripts/test-fecha-hora.mjs scripts/test-activos.mjs scripts/test-evaluaciones.mjs scripts/test-reloj-recientes.mjs scripts/test-facial-startup.mjs scripts/test-faceapi-browser.mjs scripts/test-faceapi-preload.mjs scripts/test-offline-clock-registration.mjs scripts/test-automatic-clock.mjs scripts/test-offline-clock.mjs scripts/test-local-clock-events.mjs scripts/test-diagnostico-reloj.mjs scripts/test-popups.mjs scripts/test-consentimiento.mjs scripts/test-nomina.mjs scripts/test-rutas-internas.mjs scripts/test-fetch-seguro.mjs scripts/test-pdf-marca.mjs scripts/test-html-seguro.mjs scripts/test-postulacion-token.mjs scripts/test-reloj-comida-cola.mjs scripts/test-reporte-comida.mjs scripts/test-limite-legal.mjs scripts/test-whatsapp.mjs scripts/test-whatsapp-agente.mjs scripts/test-whatsapp-agenda.mjs scripts/test-whatsapp-adjuntos.mjs scripts/test-whatsapp-calendario.mjs scripts/test-whatsapp-salud.mjs scripts/test-modulos.mjs scripts/test-reclutamiento-adaptador.mjs scripts/test-proceso-whatsapp.mjs scripts/test-rostro-celular.mjs scripts/test-bolsa-trabajo.mjs scripts/test-cambios-pendientes.mjs scripts/test-rostro-guia.mjs scripts/test-mi-cuenta.mjs scripts/test-datos-vivos.mjs scripts/test-clima.mjs scripts/test-clima-aviso.mjs
 
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación
@@ -164,6 +164,28 @@ jobs:
     outputs:
       deploy_sha: ${{ github.sha }}
     steps:
+      # (23/11/2026, «CONFIRMO limpieza automática en dev») El disco del servidor se llenó y los despliegues fallaron
+      # («No space left on device»). Antes de cada despliegue: conservar solo las 3 versiones más recientes del
+      # frontend en ~/adamia/releases y borrar imágenes/capas de Docker sin usar de más de 72 h. Docker nunca borra la
+      # imagen de un contenedor existente (en marcha o detenido), así que no toca lo que está corriendo.
+      - name: Liberar espacio en Lightsail
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -u
+            echo "Espacio antes:"; df -h / | tail -1
+            releases="$HOME/adamia/releases"
+            if [ -d "$releases" ]; then
+              ls -1dt "$releases"/frontend-dev-* 2>/dev/null | tail -n +4 | xargs -r rm -rf --
+            fi
+            docker image prune -af --filter "until=72h" || true
+            docker builder prune -af --filter "until=72h" || true
+            echo "Espacio después:"; df -h / | tail -1
+
       - name: Download prebuilt frontend image
         uses: actions/download-artifact@v4
         with:

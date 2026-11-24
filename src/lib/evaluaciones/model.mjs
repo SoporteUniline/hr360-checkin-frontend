@@ -1,5 +1,6 @@
-// Contrato y reglas puras compartidas por la demostración y sus pruebas.
-export const SCHEMA_VERSION = 1;
+// Reglas puras de pantalla del módulo de evaluaciones (plantillas, respuestas, fechas y textos).
+// Se quitaron las funciones que solo usaba la demostración (cálculo de resultados,
+// asignaciones, campañas, CSV): esas reglas viven en el backend (modules/performance/services).
 export const PERSPECTIVES = {
   descending: "Descendente · Jefe",
   ascending: "Ascendente · Colaboradores",
@@ -26,18 +27,6 @@ export const PRESETS = {
     weights: { descending: 40, ascending: 25, peer: 25, self: 10 },
   },
   custom: { label: "Personalizada", weights: { descending: 50, hr: 50 } },
-};
-export const DEFAULT_SETTINGS = {
-  employeeScore: true,
-  employeeCategories: true,
-  employeeComments: true,
-  employeePlan: true,
-  managerResults: true,
-  requireApproval: true,
-  requireReceipt: true,
-  anonymousPeers: true,
-  anonymousAscending: true,
-  minimumResponses: 3,
 };
 export const SCALE = ["Muy bajo", "Bajo", "Moderado", "Alto", "Muy alto"].map(
   (label, i) => ({
@@ -75,17 +64,8 @@ export const numeric = (value) =>
     : null;
 export const round = (value) =>
   value === null ? null : Math.round((value + Number.EPSILON) * 100) / 100;
-export const average = (values) =>
-  values.length ? values.reduce((sum, n) => sum + n, 0) / values.length : null;
 export const scoreText = (score) =>
   score === null || score === undefined ? "—" : Number(score).toFixed(2);
-export function validDate(value) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || "")) return false;
-  const date = new Date(`${value}T12:00:00Z`);
-  return (
-    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
-  );
-}
 export function civilToday(timezone = "America/Mexico_City") {
   return new Intl.DateTimeFormat("en-CA", {
     timeZone: timezone,
@@ -93,16 +73,6 @@ export function civilToday(timezone = "America/Mexico_City") {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date());
-}
-export function campaignStatus(c) {
-  const today = civilToday(c.timezone);
-  return ["active", "scheduled"].includes(c.status)
-    ? c.dueOn < today
-      ? "overdue"
-      : c.opensOn > today
-        ? "scheduled"
-        : "active"
-    : c.status;
 }
 export const dateText = (value) =>
   value
@@ -115,12 +85,6 @@ export const dateText = (value) =>
     : "Sin fecha";
 export const questions = (template) =>
   template.categories.flatMap((category) => category.questions);
-export const bandFor = (template, score) =>
-  score === null
-    ? { label: "Sin resultado", color: "gray" }
-    : template.bands.find(
-        (band) => round(score) >= band.min && round(score) <= band.max,
-      ) || { label: "Por clasificar", color: "gray" };
 export const isScored = (question) =>
   question.type !== "text" && question.scored !== false;
 export function newQuestion() {
@@ -351,34 +315,6 @@ export function validateAnswers(template, answers, complete = false) {
         );
   return errors;
 }
-export function responseScore(template, answers) {
-  const categories = template.categories.map((category) => {
-    const entries = category.questions
-      .filter(isScored)
-      .map((q) => ({
-        value: answerScore(q, answers[q.id]),
-        weight: category.questionWeights === "custom" ? Number(q.weight) : 1,
-      }))
-      .filter((e) => e.value !== null);
-    const total = entries.reduce((s, e) => s + e.weight, 0);
-    return {
-      id: category.id,
-      name: category.name,
-      weight: Number(category.weight),
-      score: total
-        ? entries.reduce((s, e) => s + e.value * e.weight, 0) / total
-        : null,
-    };
-  });
-  // Una categoría positiva sin respuestas no se convierte en cero ni se redistribuye.
-  const incomplete = categories.some((c) => c.weight > 0 && c.score === null);
-  return {
-    score: incomplete
-      ? null
-      : categories.reduce((s, c) => s + ((c.score ?? 0) * c.weight) / 100, 0),
-    categories,
-  };
-}
 export function progress(assignment) {
   const list = questions(assignment.template);
   return {
@@ -386,256 +322,4 @@ export function progress(assignment) {
     answered: list.filter((q) => answerPresent(q, assignment.answers[q.id]))
       .length,
   };
-}
-export function candidateEvaluators(people, subject, perspective) {
-  return people.filter(
-    (p) =>
-      p.active !== false &&
-      (perspective === "self"
-        ? p.id === subject.id
-        : p.id !== subject.id &&
-          (perspective === "descending"
-            ? p.id === subject.managerId
-            : perspective === "ascending"
-              ? p.managerId === subject.id
-              : perspective === "peer"
-                ? p.level === subject.level
-                : perspective === "hr"
-                  ? p.role === "hr"
-                  : false)),
-  );
-}
-export function makeAssignments(campaign, people, templates) {
-  const assignments = [];
-  for (const subjectId of campaign.subjectIds) {
-    const person = people.find((p) => p.id === subjectId);
-    if (!person) continue;
-    for (const group of campaign.groups) {
-      const template = templates.find((t) => t.id === group.templateId);
-      if (!template) continue;
-      for (const evaluator of candidateEvaluators(people, person, group.key))
-        assignments.push({
-          id: uid("assignment"),
-          campaignId: campaign.id,
-          subjectId,
-          evaluatorId: evaluator.id,
-          perspective: group.key,
-          status: "pending",
-          template: copy(template),
-          answers: {},
-          categoryComments: {},
-          comment: "",
-          privateNote: "",
-          submittedAt: null,
-          updatedAt: null,
-        });
-    }
-  }
-  return assignments;
-}
-export function validateCampaign(campaign, assignments, people, templates) {
-  const errors = [];
-  if (!campaign.name.trim()) errors.push("Escribe el nombre de la campaña.");
-  for (const field of ["periodStart", "periodEnd", "opensOn", "dueOn"])
-    if (!validDate(campaign[field]))
-      errors.push("Completa fechas válidas para el periodo y la campaña.");
-  if (campaign.periodStart > campaign.periodEnd)
-    errors.push("El inicio del periodo debe ser anterior al fin.");
-  if (campaign.opensOn > campaign.dueOn)
-    errors.push("La fecha límite debe ser igual o posterior a la apertura.");
-  if (!campaign.subjectIds.length)
-    errors.push("Selecciona al menos un evaluado.");
-  if (
-    !campaign.groups.length ||
-    Math.abs(
-      campaign.groups.reduce((s, g) => s + Number(g.weight || 0), 0) - 100,
-    ) > 0.001
-  )
-    errors.push("Los pesos de las perspectivas deben sumar 100%.");
-  if (
-    !Number.isInteger(Number(campaign.settings.minimumResponses)) ||
-    campaign.settings.minimumResponses < 3 ||
-    campaign.settings.minimumResponses > 20
-  )
-    errors.push("El mínimo agrupado debe ser un entero de 3 a 20.");
-  const primaryTemplate = templates.find((t) => t.id === campaign.templateId);
-  if (!primaryTemplate || primaryTemplate.archived)
-    errors.push("Selecciona una plantilla principal disponible.");
-  const groups = new Set();
-  for (const group of campaign.groups) {
-    if (groups.has(group.key) || !PERSPECTIVES[group.key])
-      errors.push("Las perspectivas deben ser válidas y no repetirse.");
-    groups.add(group.key);
-    if (
-      numeric(group.weight) === null ||
-      group.weight <= 0 ||
-      group.weight > 100
-    )
-      errors.push("Cada perspectiva necesita un peso mayor a cero.");
-    const template = templates.find((t) => t.id === group.templateId);
-    if (!template || template.archived || validateTemplate(template).length)
-      errors.push(`Revisa la plantilla de ${PERSPECTIVES[group.key]}.`);
-  }
-  const seen = new Set();
-  for (const a of assignments) {
-    const subject = people.find((p) => p.id === a.subjectId),
-      evaluator = people.find((p) => p.id === a.evaluatorId);
-    const key = `${a.subjectId}:${a.evaluatorId}:${a.perspective}`;
-    if (seen.has(key)) errors.push("Hay asignaciones repetidas.");
-    seen.add(key);
-    if (
-      !subject ||
-      !evaluator ||
-      !campaign.subjectIds.includes(a.subjectId) ||
-      !groups.has(a.perspective) ||
-      !candidateEvaluators(people, subject, a.perspective).some(
-        (p) => p.id === a.evaluatorId,
-      )
-    )
-      errors.push(
-        "Hay asignaciones que no corresponden a la relación elegida.",
-      );
-  }
-  for (const subjectId of campaign.subjectIds)
-    for (const group of campaign.groups) {
-      const matches = assignments.filter(
-        (a) => a.subjectId === subjectId && a.perspective === group.key,
-      );
-      const name = people.find((p) => p.id === subjectId)?.name || subjectId;
-      if (!matches.length)
-        errors.push(`${name}: falta evaluador ${PERSPECTIVES[group.key]}.`);
-      const anonymous =
-        group.key === "peer"
-          ? campaign.settings.anonymousPeers
-          : group.key === "ascending"
-            ? campaign.settings.anonymousAscending
-            : false;
-      if (
-        anonymous &&
-        matches.length < Number(campaign.settings.minimumResponses)
-      )
-        errors.push(
-          `${name}: ${PERSPECTIVES[group.key]} necesita al menos ${campaign.settings.minimumResponses} evaluadores para mostrar resultados agrupados.`,
-        );
-    }
-  return [...new Set(errors)];
-}
-export function personResult(state, campaign, subjectId) {
-  const all = state.assignments.filter(
-    (a) => a.campaignId === campaign.id && a.subjectId === subjectId,
-  );
-  const groups = campaign.groups.map((group) => {
-    const rows = all.filter((a) => a.perspective === group.key),
-      done = rows.filter((a) => a.status === "submitted");
-    const anon =
-      group.key === "peer"
-        ? campaign.settings.anonymousPeers
-        : group.key === "ascending"
-          ? campaign.settings.anonymousAscending
-          : false;
-    const privateGroup =
-      anon && done.length < Number(campaign.settings.minimumResponses);
-    const scored = done.map((a) => responseScore(a.template, a.answers));
-    const values = scored.map((r) => r.score).filter((s) => s !== null);
-    return {
-      ...group,
-      total: rows.length,
-      done: done.length,
-      privateGroup,
-      score: privateGroup ? null : average(values),
-      categories: privateGroup ? [] : scored.flatMap((r) => r.categories),
-      comments: privateGroup ? [] : done.map((a) => a.comment).filter(Boolean),
-    };
-  });
-  const complete =
-    all.length > 0 &&
-    groups.every((g) => g.total > 0 && g.done === g.total && g.score !== null);
-  const score = complete
-    ? groups.reduce((sum, g) => sum + (g.score * Number(g.weight)) / 100, 0)
-    : null;
-  const byCategory = new Map();
-  for (const group of groups) {
-    const ids = [...new Set(group.categories.map((c) => c.id))];
-    for (const id of ids) {
-      const cs = group.categories.filter(
-        (c) => c.id === id && c.score !== null,
-      );
-      if (!cs.length) continue;
-      const current = byCategory.get(id) || {
-        id,
-        name: cs[0].name,
-        weighted: 0,
-        weight: 0,
-      };
-      current.weighted +=
-        average(cs.map((c) => c.score)) * Number(group.weight);
-      current.weight += Number(group.weight);
-      byCategory.set(id, current);
-    }
-  }
-  const publication = state.publications.find(
-    (p) => p.campaignId === campaign.id && p.subjectId === subjectId,
-  );
-  return {
-    subjectId,
-    campaignId: campaign.id,
-    score: round(score),
-    complete,
-    groups,
-    categories: [...byCategory.values()].map((c) => ({
-      id: c.id,
-      name: c.name,
-      score: round(c.weighted / c.weight),
-    })),
-    done: all.filter((a) => a.status === "submitted").length,
-    total: all.length,
-    publication,
-  };
-}
-export function scopeSubjects(state, role, actorId) {
-  return role === "hr" || role === "direction"
-    ? state.people
-    : role === "manager"
-      ? state.people.filter((p) => p.managerId === actorId)
-      : state.people.filter((p) => p.id === actorId);
-}
-export function canSeeResult(state, role, actorId, campaign, subjectId) {
-  if (role === "hr" || role === "direction") return true;
-  const result = personResult(state, campaign, subjectId);
-  if (subjectId === actorId) return !!result.publication?.publishedAt;
-  return (
-    role === "manager" &&
-    campaign.settings.managerResults &&
-    state.people.some((p) => p.id === subjectId && p.managerId === actorId) &&
-    !!result.publication?.publishedAt
-  );
-}
-export function csvText(rows) {
-  return (
-    "\ufeff" +
-    rows
-      .map((row) =>
-        row
-          .map((v) => {
-            let s = String(v ?? "");
-            if (/^[\s\u0000-\u001f]*[=+@-]/.test(s)) s = "'" + s;
-            return '"' + s.replace(/"/g, '""') + '"';
-          })
-          .join(","),
-      )
-      .join("\r\n")
-  );
-}
-
-export function comparisonKey(campaign) {
-  return JSON.stringify(
-    campaign.groups
-      .map((g) => ({
-        key: g.key,
-        weight: Number(g.weight),
-        templateId: g.templateId,
-        version: g.templateSnapshot?.version || 1,
-      }))
-      .sort((a, b) => a.key.localeCompare(b.key)),
-  );
 }

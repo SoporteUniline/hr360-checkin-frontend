@@ -83,7 +83,6 @@ export default function ContratosPage() {
         setOpenView(true);
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
   const [deleteRow, setDeleteRow] = useState(null);
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
@@ -172,9 +171,8 @@ export default function ContratosPage() {
     if (page > totalPages) setPage(1);
   }, [headerFilterMeta, page, limit]);
 
-  // Estadísticas del universo completo. Se prefieren las del servidor
-  // (`estadisticas`); el cálculo local es fallback e IMPRECISO porque solo ve
-  // la página actual (antes esto hacía que las tarjetas mostraran números mal).
+  // Estadísticas del universo completo: se prefieren las del servidor (`estadisticas`); el cálculo local es
+  // fallback e IMPRECISO porque solo ve la página actual.
   const stats = useMemo(() => {
     const s = estadisticas;
     if (s && (s.total || s.activos || s.porVencer || s.vencidos)) {
@@ -333,7 +331,7 @@ export default function ContratosPage() {
               Exportar
             </Button>
             <Button
-              className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white shadow-sm hover:opacity-95"
+              className="bg-brand font-semibold text-white shadow-sm hover:opacity-95"
               onClick={() => {
                 setSeedItem(null);
                 setEditItem(null);
@@ -446,7 +444,7 @@ export default function ContratosPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <div className="flex items-center gap-3 mb-2">
-              <div className="bg-gradient-to-br from-red-500 to-red-600 p-3 rounded-lg shadow-md">
+              <div className="bg-red-600 p-3 rounded-lg shadow-md">
                 <svg
                   className="w-6 h-6 text-white"
                   fill="none"

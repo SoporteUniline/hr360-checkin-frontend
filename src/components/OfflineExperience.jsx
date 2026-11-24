@@ -6,6 +6,9 @@ import { ensureOfflineCache } from '@/lib/axios';
 import { clockStore, installOfflineWorker, initializeClock, warmOfflineAssets, synchronizeClockQueue, resolveClockDecision, retryClockEvent, discardClockEvent } from '@/lib/offline-clock';
 import { isTurnConflict } from '../../public/offline-clock/turn-state.mjs';
 
+// Opciones que manda el servidor al cerrar un tramo (incluye «Salir a comer»).
+const ETIQUETA_ACCION = { salida_comida: 'Salir a comer', salida: 'Registrar salida', salida_temporal: 'Salida temporal', cerrar_turno: 'Cerrar turno' };
+
 export default function OfflineExperience() {
   const { dataUser } = useAuth();
   const pathname = usePathname();
@@ -134,7 +137,7 @@ export default function OfflineExperience() {
         {event.status === 'review' && !isTurnConflict(event) && !['GPS_INACCURATE', 'GPS_REFRESH_REQUIRED'].includes(event.errorCode) && <button type="button" disabled={offline} onClick={() => { void retryClockEvent(event).catch(() => {}); }} className="mt-1 rounded border border-blue-400 px-2 py-1 disabled:opacity-50">Reintentar envío</button>}
         {event.status === 'review' && ['GPS_INACCURATE', 'GPS_REFRESH_REQUIRED'].includes(event.errorCode) && <p className="mt-1 text-xs">Reintentar conserva la misma ubicación. Descarta esta captura y realiza una nueva checada con ubicación precisa.</p>}
         {event.status === 'review' && <button type="button" onClick={() => { void discard(event); }} className="mt-1 ml-2 rounded border border-blue-400 px-2 py-1">Descartar captura</button>}
-        {event.status === 'decision' && <div className="mt-1 flex gap-2">{[['salida_temporal', 'Salida temporal'], ['cerrar_turno', 'Cerrar turno']].map(([action, label]) => <button key={action} type="button" onClick={() => { void resolveClockDecision(event, action).catch(() => {}); }} className="rounded border border-blue-400 px-2 py-1">{label}</button>)}</div>}
+        {event.status === 'decision' && <div className="mt-1 flex flex-wrap gap-2">{(event.opciones?.length ? event.opciones : ['salida_temporal', 'cerrar_turno']).map((action) => [action, ETIQUETA_ACCION[action] || action]).map(([action, label]) => <button key={action} type="button" onClick={() => { void resolveClockDecision(event, action).catch(() => {}); }} className="rounded border border-blue-400 px-2 py-1">{label}</button>)}</div>}
       </li>)}
     </ul></details>}
     <p className="mt-2 text-xs">Las capturas descartadas no registran asistencia.</p>

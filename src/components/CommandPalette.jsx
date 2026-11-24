@@ -2,10 +2,13 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirmarSalida } from "@/components/cambios/CambiosPendientes";
 import { Command } from "cmdk";
 import axiosInstance from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
 import { RECRUITMENT_NAV } from "@/components/reclutamiento/navigation";
+import { useModulosActivos } from "@/components/modulos/useModulos";
+import { rutaPermitida } from "@/lib/modulos/menu.mjs";
 import { isNativeClient } from "@/lib/native-app";
 import {
   Users,
@@ -13,7 +16,6 @@ import {
   BriefcaseBusiness,
   FileText,
   CalendarClock,
-  Clock3,
   ClipboardList,
   ReceiptText,
   ClipboardCheck,
@@ -41,6 +43,8 @@ import {
   HandCoins,
   Route,
   UserRound,
+  MessageCircle,
+  Activity,
 } from "lucide-react";
 
 // ─── Nav items estáticos (espejo del sidebar) ────────────────────────────────
@@ -49,6 +53,7 @@ const ALL_NAV_ITEMS = [
   {title:"Evaluación de desempeño",url:"/panel/evaluaciones",rol:"Recruiter",section:"Evaluaciones",icon:ClipboardCheck},
   {title:"Campañas de evaluación",url:"/panel/evaluaciones/campanas",rol:"Recruiter",section:"Evaluaciones",icon:ClipboardCheck},
   {title:"Plantillas de evaluación",url:"/panel/evaluaciones/plantillas",rol:"Recruiter",section:"Evaluaciones",icon:ClipboardCheck},
+  {title:"Configuración de evaluaciones",url:"/panel/evaluaciones/configuracion",rol:"Recruiter",section:"Evaluaciones",icon:ClipboardCheck},
   {title:"Mis evaluaciones",url:"/empleado/panel/evaluaciones",rol:"Empleado",section:"Evaluaciones",icon:ClipboardCheck},
   {
     title: "Solicitudes de mi equipo",
@@ -128,9 +133,16 @@ const ALL_NAV_ITEMS = [
     section: "Admin",
     icon: Landmark,
   },
+  {
+    title: "WhatsApp (reclutamiento)",
+    url: "/dashboard/whatsapp",
+    rol: "Admin",
+    section: "Admin",
+    icon: MessageCircle,
+  },
   // Recruiter — General
   {
-    title: "Inicio",
+    title: "Resumen",
     url: "/panel/dashboard",
     rol: "Recruiter",
     section: "General",
@@ -151,6 +163,13 @@ const ALL_NAV_ITEMS = [
     section: "Reclutamiento y selección",
     icon: item.icon,
   })),
+  {
+    title: "Conversaciones de WhatsApp",
+    url: "/panel/whatsapp",
+    rol: "Recruiter",
+    section: "Reclutamiento y selección",
+    icon: MessageCircle,
+  },
   {
     title: "Panel empleado",
     url: "/panel/panel-empleado",
@@ -216,18 +235,18 @@ const ALL_NAV_ITEMS = [
   },
   // Control de tiempo
   {
+    title: "Monitor",
+    url: "/panel/monitor",
+    rol: "Recruiter",
+    section: "Control de Tiempo",
+    icon: Activity,
+  },
+  {
     title: "Asistencias",
     url: "/panel/registro-asistencia",
     rol: "Recruiter",
     section: "Control de Tiempo",
     icon: ClipboardCheck,
-  },
-  {
-    title: "Control de horas extra",
-    url: "/panel/horas-extra",
-    rol: "Recruiter",
-    section: "Control de Tiempo",
-    icon: Clock3,
   },
   {
     title: "Entradas y salidas",
@@ -496,6 +515,7 @@ export function CommandPalette() {
   const [isNative, setIsNative] = useState(false);
   const debounceRef = useRef(null);
   const router = useRouter();
+  const confirmarSalida = useConfirmarSalida();
   const { dataUser } = useAuth();
 
   useEffect(() => {
@@ -504,6 +524,7 @@ export function CommandPalette() {
     }
   }, []);
 
+  const { activos: activosModulo, opciones: opcionesModulo } = useModulosActivos();
   // Rol efectivo: "User" → "Recruiter", igual que en NavMain
   const effectiveRole =
     dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
@@ -515,11 +536,12 @@ export function CommandPalette() {
     return ALL_NAV_ITEMS.filter(
       (item) =>
         item.rol === effectiveRole &&
+        rutaPermitida(item.url, activosModulo, opcionesModulo) && // (03/12/2026) módulos por empresa
         (!isNative || item.url !== "/panel/mi-suscripcion") &&
         (item.title.toLowerCase().includes(q) ||
           item.section.toLowerCase().includes(q)),
     ).slice(0, 6);
-  }, [query, effectiveRole, isNative]);
+  }, [query, effectiveRole, isNative, activosModulo, opcionesModulo]);
 
   // Abrir/cerrar con Cmd+K / Ctrl+K
   useEffect(() => {
@@ -574,7 +596,7 @@ export function CommandPalette() {
 
   const handleSelect = (route) => {
     setOpen(false);
-    router.push(route);
+    confirmarSalida(({ reemplazar }) => (reemplazar ? router.replace(route) : router.push(route)), { navega: true });
   };
 
   if (!open) return null;

@@ -400,7 +400,6 @@ const NewActaModal = ({
         shouldDirty: false,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     open,
     mode,
@@ -508,7 +507,7 @@ const NewActaModal = ({
           )}
         >
           {/* Header - Diseño ADAMIA (patrón Contratos) */}
-          <DialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-t-lg">
+          <DialogHeader className="bg-brand text-white p-6 rounded-t-lg">
             <div className="flex items-center gap-3">
               <FileText className="h-6 w-6" />
               <DialogTitle className="text-white text-lg font-semibold">
@@ -530,7 +529,7 @@ const NewActaModal = ({
                   ====================== */}
 
               {/* Información básica */}
-              <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border border-blue-100 rounded-xl p-5 space-y-4">
+              <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-[#2563EB] p-2 rounded-lg">
                     <User className="h-4 w-4 text-white" />
@@ -776,7 +775,7 @@ const NewActaModal = ({
               </div>
 
               {/* Incidente */}
-              <div className="bg-gradient-to-br from-green-50 via-white to-emerald-50 border border-green-100 rounded-xl p-5 space-y-4">
+              <div className="bg-green-50/60 border border-green-100 rounded-xl p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-emerald-600 p-2 rounded-lg">
                     <CalendarDays className="h-4 w-4 text-white" />
@@ -841,7 +840,7 @@ const NewActaModal = ({
               </div>
 
               {/* Hechos y testigos */}
-              <div className="bg-gradient-to-br from-yellow-50 via-white to-amber-50 border border-yellow-100 rounded-xl p-5 space-y-4">
+              <div className="bg-yellow-50/60 border border-yellow-100 rounded-xl p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-yellow-500 p-2 rounded-lg">
                     <FileText className="h-4 w-4 text-white" />
@@ -894,7 +893,7 @@ const NewActaModal = ({
               </div>
 
               {/* Sanción */}
-              <div className="bg-gradient-to-br from-purple-50 via-white to-fuchsia-50 border border-purple-100 rounded-xl p-5 space-y-4">
+              <div className="bg-purple-50/60 border border-purple-100 rounded-xl p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-[#7C3AED] p-2 rounded-lg">
                     <ShieldAlert className="h-4 w-4 text-white" />
@@ -951,7 +950,7 @@ const NewActaModal = ({
               </div>
 
               {/* Elaboración */}
-              <div className="bg-gradient-to-br from-teal-50 via-white to-cyan-50 border border-teal-100 rounded-xl p-5 space-y-4">
+              <div className="bg-teal-50/60 border border-teal-100 rounded-xl p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-teal-600 p-2 rounded-lg">
                     <FileSignature className="h-4 w-4 text-white" />
@@ -1058,7 +1057,7 @@ const NewActaModal = ({
               </div>
 
               {/* Declaraciones */}
-              <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
+              <div className="bg-slate-50/60 border border-slate-200 rounded-xl p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-slate-700 p-2 rounded-lg">
                     <FileText className="h-4 w-4 text-white" />

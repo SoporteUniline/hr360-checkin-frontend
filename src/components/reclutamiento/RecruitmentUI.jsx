@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import { FlaskConical, Search, X, Inbox, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, X, Inbox, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,20 +29,6 @@ export function PageSurface({ title, description, children, footer }) {
   );
 }
 
-export function DemoBanner({ publicView = false }) {
-  return (
-    <div className={s.demo}>
-      <FlaskConical size={17} />
-      <div>
-        <strong>Vista de diseño · datos de ejemplo.</strong>{" "}
-        {publicView
-          ? "Esta prueba funciona en este navegador. No envía correos ni postulaciones reales."
-          : "Tus pruebas se guardan solo en este navegador. No modifican empleados ni envían correos."}{" "}
-        Usa datos ficticios.
-      </div>
-    </div>
-  );
-}
 export function Badge({ status, stage }) {
   const item = stage ? STAGES.find((value) => value.id === stage) : VACANCY_STATUSES[status];
   return (
@@ -177,7 +163,7 @@ export function Modal({
     </Dialog>
   );
 }
-export function ConfirmDialog({ title, description, confirmLabel, onConfirm, onClose }) {
+export function ConfirmDialog({ title, description, confirmLabel, onConfirm, onClose, busy = false }) {
   return (
     <Modal
       title={title}
@@ -185,10 +171,10 @@ export function ConfirmDialog({ title, description, confirmLabel, onConfirm, onC
       onClose={onClose}
       footer={
         <>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={busy}>
             Cancelar
           </Button>
-          <Button className={s.primary} onClick={onConfirm}>
+          <Button className={s.primary} onClick={onConfirm} loading={busy} disabled={busy}>
             {confirmLabel}
           </Button>
         </>
@@ -210,7 +196,11 @@ export function Person({ candidate }) {
       </span>
       <div>
         <div className={s.personName}>{candidate.name}</div>
-        <div className={s.small}>{candidate.email}</div>
+        <div className={s.small}>
+          {candidate.origin === "whatsapp"
+            ? `WhatsApp · ${candidate.phone}`
+            : candidate.email || candidate.phone}
+        </div>
       </div>
     </div>
   );

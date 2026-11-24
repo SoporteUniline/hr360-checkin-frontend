@@ -6,6 +6,7 @@
 // - Puestos: /api/checador/empleados/puestos?empresa=ID
 // Relacionado con: redlab_back/modules/attendance/controllers/reporteHorasController.js
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,10 +33,14 @@ import RangoFechasModal from "@/components/filtros/RangoFechasModal";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import { loadAdamiaMarca, dibujarPieAdamia } from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 import { BarChart3, FileDown, FileSpreadsheet, Search } from "lucide-react";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import ResumenLey, { Chip } from "./ResumenLey";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
+import { textoComida, resumenComida } from "@/lib/reporte/comida.mjs";
+import { lineasHorasExtra, totalDelDia } from "@/lib/asistencia/horasExtraReporte.mjs";
 
 function fmtDate(d) {
   const dd = new Date(d);
@@ -55,13 +60,16 @@ function humanDate(isoDate) {
   });
 }
 
-function fileDate(isoDate) {
-  // Devuelve DD_MM_YYYY para nombre de archivo
-  const d = new Date(isoDate + "T00:00:00Z");
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const yy = d.getUTCFullYear();
-  return `${dd}_${mm}_${yy}`;
+// Nombre de los archivos del reporte (PDF y Excel): documento, número de
+// empleado (si es uno solo) y periodo; nunca el nombre del empleado.
+function nombreArchivoReporte(reportes, fechaInicio, fechaFin, extension) {
+  const unico = reportes.length === 1 ? reportes[0]?.empleado : null;
+  return nombreArchivoPdf({
+    documento: "Reporte horas",
+    empleado: unico,
+    periodo: { inicio: fechaInicio, fin: fechaFin },
+    extension,
+  });
 }
 
 function EstadoPill({ value }) {
@@ -314,8 +322,7 @@ export default function ReporteHorasPage() {
       const auth = {
         headers: { Authorization: `Bearer ${Cookies.get("token") || ""}` },
       };
-      // Una sola llamada para todos los empleados, con el cálculo de la LFT por semana
-      // (antes: una llamada por empleado).
+      // Una sola llamada para todos los empleados, con el cálculo de la LFT por semana.
       const { data: respuesta } = await axios.get(`/checador/reportes/horas-ley`, {
         params: { fechaInicio, fechaFin, empleados: ids.join(",") },
         ...auth,
@@ -461,7 +468,8 @@ export default function ReporteHorasPage() {
               <td>${humanDate(d.fecha)}</td>
               <td style="text-align:center">${e}</td>
               <td style="text-align:center">${s}</td>
-              <td style="text-align:center">${totalHorasTrabajadas}</td>
+              <td style="text-align:center">${totalDelDia(d, totalHorasTrabajadas)}</td>
+              <td style="text-align:center${d.comida?.excedente > 0 ? ';color:#dc2626' : ''}">${textoComida(d.comida)}</td>
               <td style="text-align:center"><span class="badge ${badge}">${
                 d.estado || ""
               }</span></td>
@@ -472,7 +480,7 @@ export default function ReporteHorasPage() {
               Array.isArray(d.movimientos) && d.movimientos.length > 1
                 ? `
               <tr>
-                <td colspan="7" class="details">
+                <td colspan="8" class="details">
                   ${d.movimientos
                     .filter((m) => m.entrada && m.salida)
                     .map((m) => {
@@ -497,6 +505,7 @@ export default function ReporteHorasPage() {
             `
                 : ""
             }
+            ${lineasHorasExtra(d).length ? `<tr><td colspan="8" class="details">${lineasHorasExtra(d).join("\n")}</td></tr>` : ""}
           `;
           })
           .join("");
@@ -536,6 +545,7 @@ export default function ReporteHorasPage() {
                   <th>Entrada</th>
                   <th>Salida</th>
                   <th>Horas</th>
+                  <th>Comida</th>
                   <th>Estado</th>
                   <th>Motivo</th>
                   <th>Notas</th>
@@ -558,6 +568,9 @@ export default function ReporteHorasPage() {
                   <td><div class="h">Horas Extra</div><div class="v">${
                     r.resumen.horasExtrasLaboradas || "0:00"
                   }</div><div class="s">autorizadas</div></td>
+                  <td><div class="h">Comida</div><div class="v">${
+                    resumenComida(r.resumen.comida).valor
+                  }</div><div class="s">${resumenComida(r.resumen.comida).detalle}</div></td>
                 </tr>
               </table>
             </div>
@@ -578,20 +591,7 @@ export default function ReporteHorasPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      let xlsName = "reporte_horas_multiples.xls";
-      if (reportes.length === 1) {
-        const emp = (reportes[0]?.empleado?.nombre_empleado || "empleado")
-          .replace(/[\\/:*?"<>|]/g, "")
-          .replace(/\s+/g, " ")
-          .trim();
-        const fi = fileDate(fechaInicio);
-        const ff = fileDate(fechaFin);
-        xlsName = `${emp}_${fi}_al_${ff}.xls`;
-      } else {
-        const fi = fileDate(fechaInicio);
-        const ff = fileDate(fechaFin);
-        xlsName = `reporte_horas_${fi}_al_${ff}.xls`;
-      }
+      const xlsName = nombreArchivoReporte(reportes, fechaInicio, fechaFin, "xls");
       a.download = xlsName;
       document.body.appendChild(a);
       a.click();
@@ -665,6 +665,7 @@ export default function ReporteHorasPage() {
 
       // Logotipo oficial (mismo asset del sitio); proporción 2160x1000.
       const logoDataUrl = await fetchImageAsDataUrl("/assets/adamia.png");
+      const marcaAdamia = await loadAdamiaMarca(); // logotipo del pie homologado
       const LOGO_RATIO = 2160 / 1000;
 
       const pageWidth = pdf.internal.pageSize.getWidth();
@@ -825,9 +826,14 @@ export default function ReporteHorasPage() {
             value: r.resumen?.horasExtrasLaboradas || "0:00",
             sub: "autorizadas",
           },
+          {
+            label: "Comida",
+            value: resumenComida(r.resumen?.comida).valor,
+            sub: resumenComida(r.resumen?.comida).detalle,
+          },
         ];
         const boxH = 52;
-        const boxW = contentW / 4;
+        const boxW = contentW / items.length;
         pdf.setDrawColor(...HAIRLINE);
         pdf.setLineWidth(0.6);
         pdf.line(marginX, y, pageWidth - marginX, y);
@@ -911,7 +917,8 @@ export default function ReporteHorasPage() {
             humanDate(d.fecha),
             fmtHora(primeraEntrada),
             fmtHora(ultimaSalida),
-            totalHorasTrabajadas || "0:00",
+            totalDelDia(d, totalHorasTrabajadas) || "0:00",
+            textoComida(d.comida) || "—",
             estado,
             stripEmojis(d.motivo) || "—",
             String(d.notas || "—"),
@@ -931,7 +938,7 @@ export default function ReporteHorasPage() {
               rows.push([
                 {
                   content: detalle,
-                  colSpan: 7,
+                  colSpan: 8,
                   styles: {
                     font: FONT,
                     fontStyle: "normal",
@@ -944,6 +951,12 @@ export default function ReporteHorasPage() {
                 },
               ]);
             }
+          }
+          // Horas extra registradas con su horario: la ley pide a qué hora se trabajaron.
+          if (lineasHorasExtra(d).length) {
+            rows.push([{ content: lineasHorasExtra(d).join("\n"), colSpan: 8,
+              styles: { font: FONT, fontStyle: "normal", fontSize: 6.8, textColor: MUTED, cellPadding: { top: 4, bottom: 5, left: 16, right: 6 },
+                lineWidth: { bottom: 0.6 }, lineColor: HAIRLINE } }]);
           }
         });
         return rows;
@@ -988,6 +1001,7 @@ export default function ReporteHorasPage() {
               "Entrada",
               "Salida",
               "Horas",
+              "Comida",
               "Estado",
               "Motivo",
               "Notas",
@@ -1019,9 +1033,10 @@ export default function ReporteHorasPage() {
             0: { cellWidth: 62 },
             1: { cellWidth: 60, halign: "center" },
             2: { cellWidth: 60, halign: "center" },
-            3: { cellWidth: 42, halign: "center" },
-            4: { cellWidth: 56, halign: "center" },
-            5: { cellWidth: 80 },
+            3: { cellWidth: 38, halign: "center" },
+            4: { cellWidth: 70, halign: "center", fontSize: 6.6 },
+            5: { cellWidth: 50, halign: "center" },
+            6: { cellWidth: 66 },
           },
           didParseCell: (data) => {
             if (data.section === "head") {
@@ -1039,46 +1054,15 @@ export default function ReporteHorasPage() {
         drawSignatures(afterY + 56);
       });
 
-      // Pie de página en todas las hojas: línea degradada, marca y numeración.
-      const totalPages = pdf.getNumberOfPages();
-      for (let page = 1; page <= totalPages; page++) {
-        pdf.setPage(page);
-        const lineY = pageHeight - footerReserved + 6;
-        const textY = lineY + 14;
-        gradientLine(marginX, pageWidth - marginX, lineY, 0.8);
-        pdf.setFont(FONT, "bold");
-        pdf.setFontSize(7.5);
-        pdf.setTextColor(...BLUE);
-        pdf.text("Adamia", marginX, textY);
-        const brandW = pdf.getTextWidth("Adamia");
-        pdf.setFont(FONT, "normal");
-        pdf.setTextColor(...MUTED);
-        pdf.text("  ·  Reporte de Horas", marginX + brandW, textY);
-        pdf.text(
-          `Página ${page} de ${totalPages}`,
-          pageWidth - marginX,
-          textY,
-          {
-            align: "right",
-          },
-        );
-      }
+      // Pie homologado ADAMIA en cada hoja (logotipo, fecha, Página X de Y).
+      dibujarPieAdamia(pdf, {
+        font: FONT,
+        logo: marcaAdamia,
+        documento: "Reporte de horas trabajadas",
+        margenMm: (marginX * 25.4) / 72,
+      });
 
-      const r0 = reportes[0];
-      let filename = "reporte_horas_multiples.pdf";
-      if (reportes.length === 1) {
-        const emp = (r0?.empleado?.nombre_empleado || "empleado")
-          .replace(/[\\/:*?"<>|]/g, "")
-          .replace(/\s+/g, " ")
-          .trim();
-        const fi = fileDate(fechaInicio);
-        const ff = fileDate(fechaFin);
-        filename = `${emp}_${fi}_al_${ff}.pdf`;
-      } else {
-        const fi = fileDate(fechaInicio);
-        const ff = fileDate(fechaFin);
-        filename = `reporte_horas_${fi}_al_${ff}.pdf`;
-      }
+      const filename = nombreArchivoReporte(reportes, fechaInicio, fechaFin, "pdf");
       pdf.save(filename);
       enqueueSnackbar("PDF guardado", { variant: "success" });
     } catch (err) {
@@ -1216,7 +1200,7 @@ export default function ReporteHorasPage() {
             <Button
               onClick={handleGenerar}
               disabled={loading}
-              className="h-[38px] w-full rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+              className="h-[38px] w-full rounded-md bg-brand font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
             >
               {loading ? "Generando…" : "Generar reporte"}
             </Button>
@@ -1275,7 +1259,7 @@ export default function ReporteHorasPage() {
             </Button>
             <Button
               onClick={handleGuardarPDF}
-              className="h-9 gap-2 rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+              className="h-9 gap-2 rounded-md bg-brand font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
               disabled={exporting !== null}
             >
               <FileDown className="h-4 w-4" /> Guardar PDF
@@ -1289,7 +1273,7 @@ export default function ReporteHorasPage() {
         >
           {!reportes || reportes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
-              <div className="grid h-[52px] w-[52px] place-items-center rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-violet-50">
+              <div className="grid h-[52px] w-[52px] place-items-center rounded-xl border border-blue-100 bg-blue-50/60 ">
                 <BarChart3 className="h-6 w-6 text-brand" />
               </div>
               <div className="mt-3 text-sm font-bold text-gray-900">
@@ -1344,7 +1328,7 @@ export default function ReporteHorasPage() {
                             Empleado
                           </div>
                           <div className="text-sm font-bold text-gray-900 leading-tight">
-                            {reporte.empleado?.nombre_empleado}
+                            <NombreEmpleado id={reporte.empleado?.id_empleado}>{reporte.empleado?.nombre_empleado}</NombreEmpleado>
                           </div>
                         </div>
                         <div className="px-3 border-r border-gray-300">
@@ -1378,7 +1362,7 @@ export default function ReporteHorasPage() {
                     <div className="lg:col-span-4">
                       <section
                         data-summary-section="true"
-                        className={`grid ${reporte.ley ? "grid-cols-5" : "grid-cols-4"} gap-0 border border-gray-300 rounded-sm overflow-hidden bg-gray-50`}
+                        className={`grid ${reporte.ley ? "grid-cols-6" : "grid-cols-5"} gap-0 border border-gray-300 rounded-sm overflow-hidden bg-gray-50`}
                         aria-label="Resumen del periodo"
                       >
                         {(reporte.ley
@@ -1388,12 +1372,14 @@ export default function ReporteHorasPage() {
                               ["Extra dobles", formatearMinutos(reporte.ley.dobles)],
                               ["Extra triples", formatearMinutos(reporte.ley.triples)],
                               ["Por autorizar", formatearMinutos(reporte.ley.porAutorizar)],
+                              ["Comida", resumenComida(reporte.resumen?.comida).valor],
                             ]
                           : [
                               ["Total Horas", reporte.resumen?.totalHoras || "0:00"],
                               ["Días", reporte.resumen?.diasTrabajados || "0"],
                               ["Promedio", reporte.resumen?.promedioHoras || "0:00"],
                               ["Horas Extra", reporte.resumen?.horasExtrasLaboradas || "0:00"],
+                              ["Comida", resumenComida(reporte.resumen?.comida).valor],
                             ]
                         ).map(([etiqueta, valor], i) => (
                           <div key={etiqueta} className={`text-center px-2 py-3 bg-gray-50 ${i ? "border-l border-gray-300" : ""}`}>
@@ -1423,6 +1409,9 @@ export default function ReporteHorasPage() {
                           </th>
                           <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
                             Horas
+                          </th>
+                          <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
+                            Comida
                           </th>
                           <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
                             Estado
@@ -1520,7 +1509,10 @@ export default function ReporteHorasPage() {
                                     : "-"}
                                 </td>
                                 <td className="p-2 border text-center align-top">
-                                  {totalHorasTrabajadas}
+                                  {totalDelDia(d, totalHorasTrabajadas)}
+                                </td>
+                                <td className={`p-2 border text-center align-top text-xs ${d.comida?.excedente > 0 ? "font-semibold text-red-600" : "text-zinc-600"}`}>
+                                  {textoComida(d.comida) || <span className="text-zinc-400">—</span>}
                                 </td>
                                 <td className="p-2 border text-center align-top">
                                   <EstadoPill value={d.estado} />
@@ -1564,7 +1556,7 @@ export default function ReporteHorasPage() {
                                   data-detail-row="true"
                                 >
                                   <td
-                                    colSpan={reporte.ley ? 8 : 7}
+                                    colSpan={reporte.ley ? 9 : 8}
                                     className="p-2 pl-6 border-t text-xs text-zinc-600 font-mono"
                                   >
                                     <div
@@ -1608,6 +1600,13 @@ export default function ReporteHorasPage() {
                                   </td>
                                 </tr>
                               ) : null}
+                              {lineasHorasExtra(d).length ? (
+                                <tr className="bg-emerald-50/40" data-horas-extra-row="true">
+                                  <td colSpan={reporte.ley ? 9 : 8} className="border-t p-2 pl-6 text-xs text-emerald-900">
+                                    {lineasHorasExtra(d).map((linea) => <p key={linea}>{linea}</p>)}
+                                  </td>
+                                </tr>
+                              ) : null}
                             </Fragment>
                           );
                         })}
@@ -1632,7 +1631,14 @@ export default function ReporteHorasPage() {
                             </tr>
                           ))}
                           <tr>
-                            <td colSpan={8} className="p-2 text-left text-[11px] text-slate-500">
+                            <td colSpan={9} className="p-2 text-left text-[11px] text-slate-500">
+                              {reporte.ley.dias_sin_historial > 0 && (
+                                // Días anteriores al historial de horarios: se midieron con el horario actual.
+                                <span className="mb-1 block font-semibold text-amber-700" data-sin-historial="true">
+                                  {reporte.ley.dias_sin_historial === 1 ? "1 día se midió" : `${reporte.ley.dias_sin_historial} días se midieron`} con el horario actual
+                                  (sin historial de horarios para esas fechas).
+                                </span>
+                              )}
                               Registro de jornada conforme a la LFT (reforma DOF 1/may/2026). Horas extra: máx. 4 h al día en 4 días por
                               semana; las primeras horas de la semana hasta el tope del año van al doble y el excedente al triple; jornada
                               total máx. 12 h al día. Solo cuentan las autorizadas en Asistencias. Horas, no pesos.
@@ -1677,7 +1683,7 @@ export default function ReporteHorasPage() {
               del filtro.
             </DialogDescription>
           </DialogHeader>
-          <div className="h-[2.5px] bg-gradient-to-r from-brand to-brand-accent" />
+          <div className="h-[2.5px] bg-brand" />
 
           <div className="p-6 space-y-4 text-sm">
             <div className="space-y-2">
@@ -1775,7 +1781,7 @@ export default function ReporteHorasPage() {
                 setEmpleadoIds(tempEmpleadoIds);
                 setOpenSelector(false);
               }}
-              className="rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+              className="rounded-md bg-brand font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
             >
               Aplicar selección
             </Button>

@@ -14,9 +14,14 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
+import { BonosEmpleado, MedioPago } from "./PagoNominaEmpleado";
+import { useModulosActivos } from "@/components/modulos/useModulos";
 
 export default function TabNomina({ renderCampos = () => null, form, soloLectura }) {
   const periodoPago = form.watch("periodo_pago");
+  // Bonos y descuentos son del módulo de Nómina: con Nómina apagado no se muestran (el sueldo sí, es de la ficha).
+  const { activos } = useModulosActivos();
+  const conNomina = !activos || activos.has("nomina");
 
   const sueldoLabel =
     {
@@ -30,9 +35,9 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
 
   return (
     <section className="space-y-6">
-      <div className="bg-gradient-to-br from-green-50 via-white to-green-50 border-2 border-green-100 rounded-xl p-6">
+      <div className="border border-slate-200 bg-white rounded-xl p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="bg-gradient-to-br from-green-500 to-green-600 p-3 rounded-lg shadow-md">
+          <div className="bg-brand p-3 rounded-lg shadow-md">
             <svg
               className="w-6 h-6 text-white"
               fill="none"
@@ -187,7 +192,7 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
                         const value = e.target.value;
                         field.onChange(value ? parseFloat(value) : null);
                         if (form.getValues("forma_calculo") === "$") {
-                          form.setValue("porcentaje", null);
+                          form.setValue("porcentaje", null, { shouldDirty: true });
                         }
                       }}
                     />
@@ -217,7 +222,7 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
                         const value = e.target.value;
                         field.onChange(value ? parseFloat(value) : null);
                         if (form.getValues("forma_calculo") === "%") {
-                          form.setValue("sueldo", null);
+                          form.setValue("sueldo", null, { shouldDirty: true });
                         }
                       }}
                     />
@@ -230,6 +235,14 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
           {renderCampos("porcentaje", true)}
           {renderCampos("fin", true)}
         </div>
+      </div>
+      {/* Nómina R1: cómo se le paga y qué bonos o descuentos tiene. */}
+      <div className="rounded-xl border-2 border-gray-100 bg-white p-6">
+        <h3 className="text-lg font-bold text-gray-900">Pago en la nómina</h3>
+        <p className="mb-4 text-sm text-gray-600">Cómo recibe su pago y sus bonos o descuentos de cada periodo.</p>
+        <MedioPago form={form} soloLectura={soloLectura} />
+        <h4 className="mb-2 mt-6 font-semibold text-gray-900">Bonos y descuentos</h4>
+        {conNomina ? <BonosEmpleado idEmpleado={form.watch("id_empleado")} soloLectura={soloLectura} /> : null}
       </div>
     </section>
   );

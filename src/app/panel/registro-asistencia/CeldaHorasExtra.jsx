@@ -1,12 +1,7 @@
 "use client";
 
-// Horas extra en dos columnas (pedido del 18/11/2026: «más bonito y limpio»):
-// - «Horas extra»: solo el tiempo después de la salida del horario (+ casilla para el masivo).
-// - «¿Autorizar?»: selector Sí | No. Tocar la opción ya elegida la quita (vuelve a «por autorizar»).
-//   «⋯» abre forma de pago y nota.
-// - (20/11/2026, permisos por horas) Si el empleado debe horas aparece una tercera opción, «Repone»,
-//   sugerida con el aviso «Debe 2 h»: autoriza con la forma «Reposición de tiempo por tiempo», que baja
-//   su cuenta de horas y no se paga como hora extra.
+// Horas extra en dos columnas: «Horas extra» (solo el tiempo tras la salida) y «¿Autorizar?» (Sí | No; tocar la
+// elegida la quita). Si el empleado debe horas aparece «Repone»: autoriza como reposición y no se paga.
 
 import { useState } from "react";
 import { MoreHorizontal } from "lucide-react";
@@ -67,8 +62,7 @@ function DetalleAutorizar({ registro, minutos, onAutorizar, children }) {
   );
 }
 
-// Columna «Horas extra»: solo el tiempo.
-// (La casilla para elegir filas ahora está junto al nombre: acciones masivas.)
+// Columna «Horas extra»: solo el tiempo (la casilla de selección está junto al nombre).
 export default function CeldaHorasExtra({ info }) {
   const { estado, minutos } = info;
   if (estado === "sin") {

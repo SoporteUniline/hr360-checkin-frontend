@@ -30,7 +30,14 @@ import { useAuth } from "@/context/AuthContext";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
-import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
+import {
+  ADAMIA,
+  gradientLine,
+  applyAdamiaFont,
+  loadAdamiaMarca,
+  dibujarPieAdamia,
+} from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 import { Download, FileText } from "lucide-react";
 
 export default function AguinaldoViewDialog({
@@ -127,6 +134,7 @@ export default function AguinaldoViewDialog({
 
     const doc = new jsPDF("p", "mm", "a4");
     const FONT = await applyAdamiaFont(doc);
+    const marcaAdamia = await loadAdamiaMarca();
     const pageWidth = 210;
     const pageHeight = 297;
     const marginLeft = 20;
@@ -303,15 +311,6 @@ export default function AguinaldoViewDialog({
     });
 
     const totalPages = doc.internal.getNumberOfPages();
-    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
       if (p === totalPages) {
@@ -344,31 +343,23 @@ export default function AguinaldoViewDialog({
           align: "center",
         });
       }
-      gradientLine(doc, marginLeft, pageWidth - marginRight, pageHeight - 14, 0.35);
-      doc.setFont(FONT, "bold");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...ADAMIA.blue);
-      doc.text("Adamia", marginLeft, pageHeight - 9);
-      const adamiaW = doc.getTextWidth("Adamia");
-      doc.setFont(FONT, "normal");
-      doc.setTextColor(...ADAMIA.muted);
-      doc.text(" · Aguinaldos", marginLeft + adamiaW, pageHeight - 9);
-      doc.setFontSize(7);
-      doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado}`,
-        pageWidth / 2,
-        pageHeight - 9,
-        { align: "center" },
-      );
-      doc.text(`Página ${p} de ${totalPages}`, pageWidth - marginRight, pageHeight - 9, {
-        align: "right",
-      });
     }
 
-    const nombreArchivo = `Nomina_Aguinaldos_${
-      maestro.año_fiscal || "NA"
-    }_${String(maestro.id_calculo || "").padStart(3, "0")}.pdf`;
-    doc.save(nombreArchivo.replace(/\s+/g, "_"));
+    // Pie homologado ADAMIA en cada página (logotipo, fecha, Página X de Y).
+    dibujarPieAdamia(doc, {
+      font: FONT,
+      logo: marcaAdamia,
+      documento: "Nómina de aguinaldos",
+      detalle: `Año fiscal ${maestro.año_fiscal || "—"}`,
+      margenMm: marginLeft,
+    });
+
+    doc.save(
+      nombreArchivoPdf({
+        documento: `Nomina aguinaldos ${maestro.año_fiscal || ""}`,
+        folio: maestro.id_calculo,
+      }),
+    );
   };
 
   /**
@@ -380,6 +371,7 @@ export default function AguinaldoViewDialog({
 
     const doc = new jsPDF("p", "mm", "a4");
     const FONT = await applyAdamiaFont(doc);
+    const marcaAdamia = await loadAdamiaMarca();
     const pageWidth = 210;
     const pageHeight = 297;
     const marginLeft = 20;
@@ -590,15 +582,6 @@ export default function AguinaldoViewDialog({
     });
 
     const totalPages = doc.internal.getNumberOfPages();
-    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
       if (p === totalPages) {
@@ -640,31 +623,24 @@ export default function AguinaldoViewDialog({
           align: "center",
         });
       }
-      gradientLine(doc, marginLeft, pageWidth - marginRight, pageHeight - 14, 0.35);
-      doc.setFont(FONT, "bold");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...ADAMIA.blue);
-      doc.text("Adamia", marginLeft, pageHeight - 9);
-      const adamiaW = doc.getTextWidth("Adamia");
-      doc.setFont(FONT, "normal");
-      doc.setTextColor(...ADAMIA.muted);
-      doc.text(" · Aguinaldos", marginLeft + adamiaW, pageHeight - 9);
-      doc.setFontSize(7);
-      doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado}`,
-        pageWidth / 2,
-        pageHeight - 9,
-        { align: "center" },
-      );
-      doc.text(`Página ${p} de ${totalPages}`, pageWidth - marginRight, pageHeight - 9, {
-        align: "right",
-      });
     }
 
-    const nombreArchivo = `Aguinaldo_${maestro.año_fiscal || "NA"}_${String(
-      empleado,
-    ).replace(/\s+/g, "_")}.pdf`;
-    doc.save(nombreArchivo);
+    // Pie homologado ADAMIA en cada página (logotipo, fecha, Página X de Y).
+    dibujarPieAdamia(doc, {
+      font: FONT,
+      logo: marcaAdamia,
+      documento: "Recibo de aguinaldo",
+      detalle: `Año fiscal ${maestro.año_fiscal || "—"}`,
+      margenMm: marginLeft,
+    });
+
+    // Nombre sin datos personales: documento, número de empleado y fecha.
+    doc.save(
+      nombreArchivoPdf({
+        documento: `Aguinaldo ${maestro.año_fiscal || ""}`,
+        empleado: ag,
+      }),
+    );
   };
 
   const generarPDF = () => {
@@ -1060,7 +1036,7 @@ export default function AguinaldoViewDialog({
       <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-4xl xl:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col p-0">
         {/* Header - patrón Contratos */}
         <DialogHeader className="p-0 flex-shrink-0">
-          <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6">
+          <div className="bg-brand text-white p-6">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
                 <FileText className="h-6 w-6 text-white" />
@@ -1115,7 +1091,7 @@ export default function AguinaldoViewDialog({
               </div>
 
               {/* Total General */}
-              <div className="bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] text-white p-4 sm:p-6 rounded-xl text-center shadow-sm">
+              <div className="bg-brand text-white p-4 sm:p-6 rounded-xl text-center shadow-sm">
                 <div className="text-xs sm:text-sm uppercase tracking-wider mb-2 opacity-90 font-bold">
                   Total general a pagar
                 </div>

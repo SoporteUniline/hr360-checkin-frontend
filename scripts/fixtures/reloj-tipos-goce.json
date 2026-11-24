@@ -1,0 +1,173 @@
+{
+ "ok": true,
+ "asistencia": {
+  "id": 2,
+  "id_empleado": 15,
+  "nombre": "Diego León",
+  "departamento": "Ventas",
+  "fecha": "2026-11-24"
+ },
+ "horario": {
+  "entrada": "09:00",
+  "salida": "17:00",
+  "salida_comida": "13:00",
+  "regreso_comida": "14:00"
+ },
+ "dia": {
+  "tipo": "normal",
+  "nombre": "Día normal",
+  "pago": ""
+ },
+ "registros": [
+  {
+   "id": 234,
+   "entrada": "2026-11-24 11:00:00",
+   "salida": "2026-11-24 13:00:00",
+   "entrada_reloj": "2026-11-24 11:00:00",
+   "salida_reloj": "2026-11-24 13:00:00",
+   "concepto": "jornada",
+   "motivo": null,
+   "origen": "reloj",
+   "anulado": false,
+   "id_autoriza": null,
+   "autoriza_no": false
+  },
+  {
+   "id": 235,
+   "entrada": "2026-11-24 14:00:00",
+   "salida": "2026-11-24 17:00:00",
+   "entrada_reloj": "2026-11-24 14:00:00",
+   "salida_reloj": "2026-11-24 17:00:00",
+   "concepto": "jornada",
+   "motivo": null,
+   "origen": "reloj",
+   "anulado": false,
+   "id_autoriza": null,
+   "autoriza_no": false
+  }
+ ],
+ "motivos": {
+  "permisos": [
+   {
+    "clave": "tp:44",
+    "nombre": "Entrada después de tiempo"
+   },
+   {
+    "clave": "tp:40",
+    "nombre": "Falta justificada"
+   },
+   {
+    "clave": "tp:45",
+    "nombre": "Salida antes de tiempo"
+   },
+   {
+    "clave": "tp:46",
+    "nombre": "Salida entre jornada"
+   }
+  ],
+  "correccion": [
+   {
+    "clave": "olvido",
+    "nombre": "Olvidó checar"
+   },
+   {
+    "clave": "reloj",
+    "nombre": "Falla del reloj"
+   },
+   {
+    "clave": "captura",
+    "nombre": "Error de captura"
+   },
+   {
+    "clave": "fuera",
+    "nombre": "Trabajó fuera de la sucursal"
+   },
+   {
+    "clave": "duplicada",
+    "nombre": "Checada duplicada"
+   }
+  ]
+ },
+ "autorizadores": [
+  {
+   "id": 16,
+   "nombre": "Ana Ruiz"
+  }
+ ],
+ "permiso_dia": {
+  "id_tipo": 44,
+  "motivo": "Visita al médico",
+  "goce": "con",
+  "horas": "reponen",
+  "minutos_no_trabajados": 120,
+  "alcance": "entrada",
+  "origen": "reloj"
+ },
+ "tipos_parciales": [
+  {
+   "id": 44,
+   "nombre": "Entrada después de tiempo",
+   "alcance": "entrada",
+   "goce": "con",
+   "horas": "reponen",
+   "cambia_al_aplicar": 1
+  },
+  {
+   "id": 45,
+   "nombre": "Salida antes de tiempo",
+   "alcance": "salida",
+   "goce": "con",
+   "horas": "reponen",
+   "cambia_al_aplicar": 1
+  },
+  {
+   "id": 46,
+   "nombre": "Salida entre jornada",
+   "alcance": "medio",
+   "goce": "con",
+   "horas": "reponen",
+   "cambia_al_aplicar": 1
+  }
+ ],
+ "motivos_permiso": [
+  {
+   "id": 1,
+   "nombre": "Visita al médico",
+   "global": true
+  },
+  {
+   "id": 2,
+   "nombre": "Permiso personal",
+   "global": true
+  },
+  {
+   "id": 3,
+   "nombre": "Trámite",
+   "global": true
+  }
+ ],
+ "resumen": {
+  "entrada": "2026-11-24 11:00:00",
+  "salida": "2026-11-24 17:00:00",
+  "abierto": false,
+  "minutos_trabajados": 300,
+  "minutos_comida": 60,
+  "minutos_extra": 0,
+  "minutos_extra_total": 0,
+  "minutos_extra_no_autorizadas": 0,
+  "minutos_extra_por_autorizar": 0,
+  "minutos_sin_separar": 0,
+  "checadas_vivas": 2,
+  "estado": {
+   "clave": "just",
+   "texto": "Entró tarde con permiso",
+   "atencion": false
+  },
+  "estado_calculado": {
+   "clave": "just",
+   "texto": "Entró tarde con permiso",
+   "atencion": false
+  }
+ },
+ "migracion": true
+}

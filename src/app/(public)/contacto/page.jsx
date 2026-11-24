@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import AceptoLegal from "@/components/legal/AceptoLegal";
+import { DOCS_AVISO, registrarAceptacion } from "@/lib/legal/aceptacion";
 
 const canales = [
   {
@@ -14,7 +16,7 @@ const canales = [
   {
     title: "Teléfono y WhatsApp",
     value: "+52 317 128 8029",
-    href: "tel:+523173887959",
+    href: "tel:+523171288029",
     description: "Atención comercial y operativa.",
     icon: "📱",
   },
@@ -35,7 +37,8 @@ export default function ContactoPage() {
     mensaje: "",
   });
 
-  const whatsappNumber = "523173887959";
+  const [aceptaAviso, setAceptaAviso] = useState(false);
+  const whatsappNumber = "523171288029";
 
   const handleChange = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
@@ -56,6 +59,13 @@ export default function ContactoPage() {
       );
       return;
     }
+
+    if (!aceptaAviso) {
+      window.alert("Para continuar, acepta el Aviso de privacidad.");
+      return;
+    }
+    // Constancia de la aceptación (no detiene el envío si falla).
+    registrarAceptacion({ contexto: "contacto", documentos: DOCS_AVISO, nombre, correo: email, telefono });
 
     const body = [
       "Hola ADAMIA, quiero solicitar información.",
@@ -199,22 +209,14 @@ export default function ContactoPage() {
               </label>
 
               <div className="md:col-span-2">
+                <AceptoLegal id="contacto-acepto" className="mb-4" checked={aceptaAviso} onChange={setAceptaAviso} />
                 <button
                   type="submit"
                   className="inline-flex items-center rounded-xl bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-3 font-bold text-white shadow-lg transition hover:-translate-y-0.5"
                 >
                   Enviar por WhatsApp →
                 </button>
-                <p className="mt-3 text-xs text-[var(--adamia-text-secondary)]">
-                  Al enviar, aceptas nuestro{" "}
-                  <Link
-                    href="/politicas"
-                    className="text-[var(--adamia-blue)] underline"
-                  >
-                    Aviso de Privacidad
-                  </Link>
-                  .
-                </p>
+
               </div>
             </form>
           </article>

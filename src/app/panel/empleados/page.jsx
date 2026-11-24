@@ -64,7 +64,6 @@ export default function RegistroEmpleados() {
   const [limit, setLimit] = useState(10);
   const [modoFormulario, setModoFormulario] = useState(false);
   const [editar, setEditar] = useState(false);
-  const [soloLectura, setSoloLectura] = useState(false);
   const [values, setValues] = useState(null);
   const [sincronizandoEmpleados, setSincronizandoEmpleados] = useState(false);
   const [modalImportacionAbierto, setModalImportacionAbierto] = useState(false);
@@ -117,9 +116,8 @@ export default function RegistroEmpleados() {
   useEffect(() => {
     const idParam = searchParams.get("id");
     if (!idParam) return;
-    // modo=editar abre en edición; por defecto, solo lectura.
-    const editarParam = searchParams.get("modo") === "editar";
-    abrirFormulario({ id_empleado: idParam }, editarParam, !editarParam);
+    // Siempre abre editable (también con ?modo=editar, que sigue funcionando).
+    abrirFormulario({ id_empleado: idParam });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
@@ -191,11 +189,9 @@ export default function RegistroEmpleados() {
   };
   // console.log(dataUser);
 
-  const abrirFormulario = async (
-    empleado = null,
-    modoEditar = false,
-    lectura = false,
-  ) => {
+  // «En cuanto entre ya pueda editar»: un empleado existente abre directo en edición (sin el paso de solo
+  // lectura con botón «Editar»); sin empleado, abre el alta.
+  const abrirFormulario = async (empleado = null) => {
     if (!empleado) {
       if (!idEmpresa || idEmpresa === "all") {
         setMensajeCapacidad(
@@ -221,9 +217,8 @@ export default function RegistroEmpleados() {
     console.log(empleado);
 
     setValues(empleado);
-    setEditar(modoEditar);
+    setEditar(Boolean(empleado));
     setModoFormulario(true);
-    setSoloLectura(lectura);
   };
 
   const resetFilters = () => {
@@ -336,9 +331,6 @@ export default function RegistroEmpleados() {
             limit={limit}
             setModoFormulario={setModoFormulario}
             modoFormulario={modoFormulario}
-            soloLectura={soloLectura}
-            setEditar={setEditar}
-            setSoloLectura={setSoloLectura}
             mutate={mutate}
           />
         </div>
@@ -391,9 +383,6 @@ export default function RegistroEmpleados() {
             limit={limit}
             setModoFormulario={setModoFormulario}
             modoFormulario={modoFormulario}
-            soloLectura={soloLectura}
-            setEditar={setEditar}
-            setSoloLectura={setSoloLectura}
             mutate={mutate}
           />
         ) : (
@@ -459,7 +448,7 @@ export default function RegistroEmpleados() {
                     ? "Selecciona una empresa específica para sincronizar"
                     : "Sincronizar empleados activos con los relojes checadores"
                 }
-                className="h-9.5 rounded-md border-indigo-200 bg-white px-4 text-[13px] font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 hover:text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-9.5 rounded-md border-blue-200 bg-white px-4 text-[13px] font-semibold text-blue-700 shadow-sm hover:bg-blue-50 hover:text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <RefreshCw
                   className={`mr-2 h-4 w-4 ${
@@ -576,8 +565,8 @@ export default function RegistroEmpleados() {
       >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-indigo-50">
-              <RefreshCw className="h-5 w-5 text-indigo-600" />
+            <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-blue-50">
+              <RefreshCw className="h-5 w-5 text-brand" />
             </div>
 
             <DialogTitle>Sincronizar empleados con el reloj</DialogTitle>
@@ -628,7 +617,7 @@ export default function RegistroEmpleados() {
               type="button"
               onClick={sincronizarEmpleadosConReloj}
               disabled={sincronizandoEmpleados}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-brand hover:bg-blue-700"
             >
               <RefreshCw
                 className={`mr-2 h-4 w-4 ${
@@ -750,7 +739,7 @@ export default function RegistroEmpleados() {
                 <Button
                   type="button"
                   onClick={() => setModalResultadoAbierto(false)}
-                  className="bg-indigo-600 hover:bg-indigo-700"
+                  className="bg-brand hover:bg-blue-700"
                 >
                   Listo
                 </Button>

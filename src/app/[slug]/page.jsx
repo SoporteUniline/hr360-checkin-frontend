@@ -6,6 +6,7 @@ import RelojChecador from "@/components/RelojChecador";
 import OfflineClockSetup from '@/components/Clock/OfflineClockSetup';
 import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
 import { clockStore } from '@/lib/offline-clock';
+import { validadaHoy, validadaReciente, guardarValidada, olvidarValidada } from "@/lib/reloj/suscripcionDia.mjs";
 
 function RedirectingPage({ message }) {
   const router = useRouter();
@@ -48,24 +49,53 @@ export default function ChecadorPage() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    let vigente = true;
+    // Consulta la empresa y su suscripción. Devuelve { id, nombre } si está activa; lanza si no se pudo consultar.
+    const consultar = async () => {
+      const res = await axiosInstance.get(`/empresas/slug/${slug}`);
+      const id = res.data.id_empresa;
+      const nombre = res.data.nombre || res.data.nombre_empresa || "";
+      const response = await fetch(`/api/empresas/check-subscription/${id}`, { cache: "no-store" });
+      const statusData = await response.json();
+      if (!statusData.hasActivePlan) return { id, nombre, activa: false };
+      guardarValidada(`slug:${slug}`, { idEmpresa: id, nombre });
+      guardarValidada(`empresa:${id}`);
+      return { id, nombre, activa: true };
+    };
+
     const fetchAndValidate = async () => {
+      // Validado hoy, o activo en los últimos 7 días: abre directo y revalida en segundo plano para que la
+      // primera apertura del día no espere a la red. Si resulta inactiva, se bloquea.
+      const hoy = validadaHoy(`slug:${slug}`);
+      const reciente = hoy ?? validadaReciente(`slug:${slug}`);
+      if (reciente?.idEmpresa) {
+        setNombreEmpresa(reciente.nombre || "");
+        setIdEmpresa(reciente.idEmpresa);
+        setLoading(false);
+        loadBrowserFaceApi().catch(() => {});
+        if (!hoy) {
+          consultar().then((r) => {
+            if (!vigente || r.activa) return;
+            olvidarValidada(`slug:${slug}`);
+            setError("Suscripción inactiva");
+          }).catch(() => {}); // Sin red: sigue abierto con la validación reciente.
+        }
+        return;
+      }
       try {
-        const res = await axiosInstance.get(`/empresas/slug/${slug}`);
-        const id = res.data.id_empresa;
-        setNombreEmpresa(res.data.nombre || res.data.nombre_empresa || "");
-
-        const response = await fetch(`/api/empresas/check-subscription/${id}`, {
-          cache: "no-store",
-        });
-
-        const statusData = await response.json();
-        if (!statusData.hasActivePlan) {
+        const r = await consultar();
+        if (!vigente) return;
+        setNombreEmpresa(r.nombre);
+        if (!r.activa) {
+          olvidarValidada(`slug:${slug}`);
           setError("Suscripción inactiva");
           return;
         }
-
-        setIdEmpresa(id);
+        setIdEmpresa(r.id);
+        // Los modelos del rostro (7 MB) se bajan después de validar para no competir por la red con la validación.
+        loadBrowserFaceApi().catch(() => {});
       } catch (err) {
+        if (!vigente) return;
         if (err.response?.status === 404) {
           setError("Empresa no encontrada");
         } else {
@@ -76,15 +106,12 @@ export default function ChecadorPage() {
           else setError("Error de conexión");
         }
       } finally {
-        setLoading(false);
+        if (vigente) setLoading(false);
       }
     };
 
-    if (slug) {
-      // Download models during access validation, without requesting devices.
-      loadBrowserFaceApi().catch(() => {});
-      fetchAndValidate();
-    }
+    if (slug) fetchAndValidate();
+    return () => { vigente = false; };
   }, [slug]);
 
   if (loading)

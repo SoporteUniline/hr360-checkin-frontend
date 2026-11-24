@@ -49,7 +49,7 @@ npx eslint --ext .js,.jsx,.mjs src/components/evaluaciones src/lib/evaluaciones 
 npm run build
 ```
 
-Para navegador: `node scripts/verify-evaluaciones.cjs` requiere Playwright/Chromium de pruebas disponibles. El script arranca Next y un servidor de autenticación ficticio en el mismo proceso supervisor. Variables opcionales documentadas al inicio del script: ruta de Playwright, binario Chromium, directorio de salida, puerto y sustitución de fuente. No requiere credenciales reales.
+Para navegador: `node scripts/verify-evaluaciones-api.cjs` (el de la demostración, `verify-evaluaciones.cjs`, se eliminó el 20/11/2026) requiere Playwright/Chromium de pruebas disponibles. El script arranca Next y un servidor de autenticación ficticio en el mismo proceso supervisor. Variables opcionales documentadas al inicio del script: ruta de Playwright, binario Chromium, directorio de salida, puerto y sustitución de fuente. No requiere credenciales reales.
 
 ## Límites de esta verificación
 

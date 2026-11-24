@@ -1,7 +1,12 @@
-"use client";
+import LandingHome from "@/components/landing/home/LandingHome";
+import AdamiaChatWidget from "@/components/landing/AdamiaChatWidget";
 
-import MarketingLanding from "@/components/landing/MarketingLanding";
-
+// El asistente comercial va fuera de .lh para que los estilos de la página y los del chat no se mezclen.
 export default function LandingHomePage() {
-  return <MarketingLanding />;
+  return (
+    <>
+      <LandingHome />
+      <AdamiaChatWidget />
+    </>
+  );
 }

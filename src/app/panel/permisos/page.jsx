@@ -110,7 +110,6 @@ export default function PermisosPage() {
         setOpenView(true);
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
   const [deleteId, setDeleteId] = useState(null);
 

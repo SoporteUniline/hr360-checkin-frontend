@@ -15,6 +15,7 @@ import {
   CalendarDays,
   Users,
   FileText,
+  LayoutGrid,
 } from "lucide-react";
 import Image from "next/image";
 import React, { useState } from "react";
@@ -24,6 +25,7 @@ import SuscripcionEmpresaTab from "./SuscripcionEmpresaTab";
 import PagosEmpresaTab from "./PagosEmpresaTab";
 import PagoAdelantadoEmpresaTab from "./PagoAdelantadoEmpresaTab";
 import NuevaEmpresa from "./NuevaEmpresa";
+import { ModulosEmpresaAdmin } from "@/components/modulos/ModulosAdmin";
 import { fetchCompanySummary, getValidity, money } from "./empresaResumen";
 import styles from "./detalleEmpresa.module.css";
 
@@ -37,6 +39,8 @@ const sections = [
     label: "Anticipos y cobertura",
     icon: CalendarDays,
   },
+  // Módulos por empresa: extras y quitados (con nota) sobre lo que incluye su plan.
+  { value: "modulos", label: "Módulos", icon: LayoutGrid },
 ];
 
 export default function DetalleEmpresa({
@@ -169,6 +173,9 @@ export default function DetalleEmpresa({
         </TabsContent>
         <TabsContent value="pagoAdelantado">
           <PagoAdelantadoEmpresaTab empresa={item} />
+        </TabsContent>
+        <TabsContent value="modulos">
+          <ModulosEmpresaAdmin idEmpresa={item.id_empresa} />
         </TabsContent>
       </Tabs>
     </section>

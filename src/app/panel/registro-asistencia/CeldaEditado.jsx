@@ -43,7 +43,9 @@ export function crearFormateadorCambios({ tiposPermiso, empleados, zona }) {
 // Columna "Editado": etiqueta ámbar con el detalle de qué cambió (antes → después).
 export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
   const [abierto, setAbierto] = useState(false);
-  const editado = Boolean(Number(registro?.correccion));
+  // Editado: la asistencia se corrigió a mano o alguna checada del reloj se corrigió ese día.
+  const corregidas = Number(registro?.checadas_corregidas) || 0;
+  const editado = Boolean(Number(registro?.correccion)) || corregidas > 0;
   // Historial completo (quién, cuándo, antes → después): se pide solo al abrir el detalle.
   const { data: historial, isLoading: cargandoHistorial } = useSWR(
     abierto && editado && registro?.id ? `/checador/asistencias/${registro.id}/cambios` : null,
@@ -97,6 +99,11 @@ export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
                 </li>
               ))}
             </ul>
+          ) : corregidas > 0 ? (
+            <p className="text-xs text-slate-700">
+              Se corrigi{corregidas > 1 ? "eron" : "ó"} <b>{corregidas} checada{corregidas > 1 ? "s" : ""}</b> del reloj.
+              {registro?.motivos_resumen ? <> Motivo: <b>{registro.motivos_resumen}</b>.</> : null}
+            </p>
           ) : (
             <p className="text-xs text-slate-600">
               Este registro se marcó como editado, pero no tiene guardados sus valores
@@ -148,7 +155,7 @@ export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
               }}
               className="text-xs font-semibold text-blue-600 hover:underline"
             >
-              Ver checadas del reloj de este día
+              Abrir el reloj de este día
             </button>
           </div>
         )}

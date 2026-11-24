@@ -1131,3 +1131,169 @@
     transition: none !important;
   }
 }
+
+/* (22/11/2026) Firmar con PIN: elegir método y escribir el PIN. */
+.methodChoice {
+  display: grid;
+  gap: 12px;
+  margin: 8px 0 24px;
+}
+.methodOption {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 72px;
+  padding: 16px 18px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #dfe5ef;
+  border-radius: 14px;
+  color: #19243b;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.methodOption:hover {
+  border-color: #2563eb;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.1);
+}
+.methodOption > svg:first-child {
+  flex: none;
+  color: #2563eb;
+}
+.methodOption > svg:last-child {
+  flex: none;
+  margin-left: auto;
+  color: #9aa6ba;
+}
+.methodOption span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.methodOption strong {
+  font-size: 15px;
+}
+.methodOption small {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #64748b;
+}
+.methodOption .methodWarning {
+  color: #b45309;
+  font-weight: 600;
+}
+.methodSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 0 18px;
+  padding: 8px 0;
+  min-height: 44px;
+  background: none;
+  border: 0;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pinLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #19243b;
+  margin-bottom: 8px;
+}
+.pinInput {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  height: 56px;
+  padding: 0 16px;
+  font-size: 26px;
+  letter-spacing: 0.5em;
+  text-align: center;
+  border: 1px solid #cfd8e6;
+  border-radius: 12px;
+  background: #fff;
+  color: #080d36;
+}
+.pinHelp {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #64748b;
+}
+
+/* (23/11/2026) Firma a pantalla completa: ocupa todo el celular, respeta el área segura (muesca y barra de inicio) y
+   en horizontal deja el lienzo amplio con el botón de firmar a la mano. */
+button.signatureBox {
+  width: 100%;
+  height: 150px;
+  padding: 0;
+  cursor: pointer;
+  display: block;
+  border-style: dashed;
+}
+button.signatureBox:disabled { cursor: not-allowed; opacity: 0.6; }
+button.signatureBox:focus-visible { outline: 3px solid #2563eb55; outline-offset: 2px; }
+.signaturePreview { width: 100%; height: 100%; object-fit: contain; display: block; }
+.signatureLabelText { font-size: 13px; font-weight: 600; color: #172554; }
+.firmaPantalla {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100vh;
+  height: 100dvh;
+  background: #f4f7fc;
+  padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+.firmaPantallaBarra { display: flex; align-items: center; gap: 8px; min-height: 44px; }
+.firmaPantallaBarra strong { flex: 1; min-width: 0; font-size: 14px; color: #0f172a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.firmaPantallaBoton {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: white;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+}
+.firmaPantallaBoton:disabled { opacity: 0.45; }
+.firmaPantallaLienzo {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border: 1.5px dashed #94a3b8;
+  border-radius: 14px;
+  overflow: hidden;
+  background: white;
+}
+.firmaPantallaLienzo canvas { width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; }
+.firmaPantallaLienzo .signaturePlaceholder { font-size: 14px; text-align: center; padding: 0 24px 24px; }
+.firmaPantallaLienzo .signatureLine { bottom: 30%; }
+.firmaPantallaNombre {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(30% - 26px);
+  text-align: center;
+  font-size: 12px;
+  color: #64748b;
+  pointer-events: none;
+}
+.firmaPantallaPie { display: flex; align-items: center; gap: 12px; }
+.firmaPantallaConsent { flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 8px; font-size: 12.5px; line-height: 1.35; color: #334155; }
+.firmaPantallaConsent input { width: 22px; height: 22px; flex: none; margin-top: 1px; accent-color: #2563eb; }
+.firmaPantallaFirmar { min-height: 52px; font-size: 15px; padding: 12px 24px; }
+@media (orientation: portrait) {
+  .firmaPantallaPie { flex-direction: column; align-items: stretch; }
+  .firmaPantallaFirmar { width: 100%; }
+}

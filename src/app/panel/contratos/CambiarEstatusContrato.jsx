@@ -133,7 +133,7 @@ export default function CambiarEstatusContrato({
           <Button
             onClick={guardar}
             disabled={saving || !estatus || sinCambio || faltaMotivo}
-            className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white hover:opacity-95"
+            className="bg-brand font-semibold text-white hover:opacity-95"
           >
             {saving ? "Guardando…" : "Guardar cambio"}
           </Button>

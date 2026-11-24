@@ -428,9 +428,6 @@ export function RutaMap({
  * - Relación: modal "Ver ubicación" en `page.jsx`
  */
 export function ModalPointMap({ point }) {
-  if (!point) return null;
-
-  const modalKey = `mr-modal-${point?.id_registro || point?.secuencia || "none"}`;
   const mapRef = useRef(null);
 
   useEffect(() => {
@@ -455,6 +452,10 @@ export function ModalPointMap({ point }) {
       }, 0);
     };
   }, []);
+
+  // Los hooks van antes de este return: React exige el mismo orden en cada render.
+  if (!point) return null;
+  const modalKey = `mr-modal-${point?.id_registro || point?.secuencia || "none"}`;
 
   return (
     <div className="h-[70vh] min-h-[420px] rounded-xl overflow-hidden border" style={{ borderColor: "var(--mr-border)" }}>

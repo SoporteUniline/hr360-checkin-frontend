@@ -163,8 +163,8 @@ export default function ImportarEmpleadosDialog({
     >
       <DialogContent className="sm:max-w-[620px]">
         <DialogHeader>
-          <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-indigo-50">
-            <Upload className="h-5 w-5 text-indigo-600" />
+          <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-blue-50">
+            <Upload className="h-5 w-5 text-brand" />
           </div>
 
           <DialogTitle>Importar empleados</DialogTitle>
@@ -244,7 +244,7 @@ export default function ImportarEmpleadosDialog({
               </label>
 
               <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-gray-300 p-4 hover:bg-gray-50">
-                <Images className="h-5 w-5 text-indigo-600" />
+                <Images className="h-5 w-5 text-brand" />
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-gray-800">
@@ -365,7 +365,7 @@ export default function ImportarEmpleadosDialog({
               type="button"
               onClick={importarEmpleados}
               disabled={!excelFile || importando}
-              className="bg-indigo-600 hover:bg-indigo-700"
+              className="bg-brand hover:bg-blue-700"
             >
               {importando ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

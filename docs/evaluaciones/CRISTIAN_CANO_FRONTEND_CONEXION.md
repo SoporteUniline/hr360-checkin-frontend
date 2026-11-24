@@ -4,7 +4,7 @@ Este archivo es para la persona que va a conectar las pantallas reales del módu
 
 Hoy esas pantallas viven en `hr360-checkin-frontend` y leen datos de prueba del navegador (`localStorage`, prefijo `adamia:desempeno:demo:v1`). La lógica de esa demostración está en:
 
-- `hr360-checkin-frontend/src/lib/evaluaciones/demoStore.mjs`
+- `hr360-checkin-frontend/src/lib/evaluaciones/demoStore.mjs` (eliminado el 20/11/2026: no lo usaba ninguna pantalla)
 - `hr360-checkin-frontend/src/lib/evaluaciones/model.mjs`
 
 El backend real está en `hr360-checkin-backend/modules/performance`. Las fases 1 a 7 ya están implementadas y probadas. Este documento describe esa API tal como quedó, no un diseño futuro. Si en algún momento el código y este archivo no coinciden, manda el código.

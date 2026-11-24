@@ -112,7 +112,7 @@ export default function FormularioAsistenciasMasivas({
       {/* Modal */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header (Diseño ADAMIA) */}
-        <div className="flex items-center justify-between p-6 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-t-2xl">
+        <div className="flex items-center justify-between p-6 bg-brand text-white rounded-t-2xl">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/15 rounded-lg">
               <Calendar className="w-6 h-6 text-white" />

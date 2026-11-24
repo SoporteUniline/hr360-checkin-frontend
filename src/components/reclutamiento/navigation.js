@@ -9,6 +9,9 @@ import {
 } from "lucide-react";
 
 export const RECRUITMENT_BASE = "/panel/reclutamiento";
+export const ENTREVISTAS_REAL = "/panel/whatsapp?vista=entrevistas";
+// Entradas del menú que distinguen la vista por la consulta (?vista=…) además de la ruta.
+const CON_CONSULTA = [ENTREVISTAS_REAL];
 export const RECRUITMENT_NAV = [
   {
     key: "dashboard",
@@ -49,7 +52,8 @@ export const RECRUITMENT_NAV = [
     label: "Entrevistas",
     title: "Agenda de entrevistas",
     description: "Organiza las conversaciones de tu equipo y registra su seguimiento.",
-    href: `${RECRUITMENT_BASE}/entrevistas`,
+    // La agenda real (citas de WhatsApp), no la maqueta de /panel/reclutamiento/entrevistas.
+    href: ENTREVISTAS_REAL,
     icon: CalendarDays,
   },
   {
@@ -69,9 +73,16 @@ export const RECRUITMENT_NAV = [
     icon: Layers,
   },
 ];
-export const isRecruitmentNavActive = (path, item) =>
-  path === (item.href || item.url) ||
-  (item.matchPrefix && path.startsWith(`${item.href || item.url}/`));
+// `consulta`: la búsqueda actual sin «?» (p. ej. «vista=entrevistas»). Una entrada con consulta solo se activa con ella;
+// la entrada de la misma ruta sin consulta (Conversaciones) no se activa cuando la consulta es de otra entrada.
+export const isRecruitmentNavActive = (path, item, consulta = "") => {
+  const url = item.href || item.url || "";
+  const [base, q] = url.split("?");
+  const actual = consulta ? `${path}?${consulta}` : path;
+  if (q) return actual === url;
+  if (path === base && CON_CONSULTA.includes(actual)) return false;
+  return path === base || (!!item.matchPrefix && path.startsWith(`${base}/`));
+};
 export const vacancyHref = (id, tab = "vacancy") =>
   `${RECRUITMENT_BASE}/vacantes/${encodeURIComponent(id)}${
     tab === "vacancy" ? "" : `?seccion=${encodeURIComponent(tab)}`

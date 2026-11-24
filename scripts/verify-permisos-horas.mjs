@@ -6,6 +6,7 @@ import { createHmac, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
+import { elegir, textosOpciones, valorDe } from "./lib/desplegable.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -63,7 +64,9 @@ try {
     if (req.method() === "OPTIONS") return json({});
     const p = url.pathname;
     if (p.endsWith("/users/verify/token")) return json({ user: usuario });
-    if (p.endsWith("/checador/tiposPermiso")) return json({ tiposPermiso: [{ id: 14, nombre: "Asistencia" }, { id: 30, nombre: "Permiso personal", es_permiso: 1 }] });
+    if (p.endsWith("/checador/tiposPermiso")) return json({ tiposPermiso: [{ id: 14, nombre: "Asistencia" }, { id: 30, nombre: "Permiso personal", es_permiso: 1, goce_sueldo: 1 }] });
+    // (24/11/2026) Motivo del catálogo de motivos (tipos de registro con goce; ver verify-tipos-goce.mjs).
+    if (p.endsWith("/checador/motivos-permiso")) return json({ ok: true, motivos: [{ id: 1, nombre: "Visita al médico", global: true }, { id: 6, nombre: "Otro", global: true }] });
     if (p.endsWith("/checador/asistencias") && req.method() === "GET") return json({ registros, total: registros.length, page: 1, aplicarPaginacion: false });
     if (/\/checador\/asistencias\/\d+$/.test(p) && req.method() === "PUT") {
       const cuerpo = JSON.parse(req.postData() || "{}");
@@ -98,23 +101,16 @@ try {
     return json({});
   });
 
-  // 1) Asistencias: etiqueta del permiso y «Repone» solo para quien debe horas.
+  // 1) Asistencias: etiqueta del permiso.
   await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
+  await page.getByRole("tab", { name: "Registros" }).click(); // (22/11/2026) Asistencias abre en «Hoy»
   await page.getByText("Juan", { exact: false }).first().waitFor({ timeout: 30000 });
   const filaPermiso = page.locator("tr", { hasText: "Permiso · por reponer 3 h" });
   await filaPermiso.waitFor({ timeout: 15000 });
   assert.equal(await filaPermiso.getByText("Permiso · por reponer 3 h").getAttribute("title"), "Llega tarde · hasta 11:00 a.m. · va a su cuenta de horas");
-  const filaJuan = page.locator("tr", { hasText: "Juan" }).filter({ hasText: "3 h" }).filter({ hasNotText: "Permiso" }).first();
-  await filaJuan.getByRole("button", { name: "Repone", exact: true }).waitFor({ timeout: 15000 });
-  assert.match(await filaJuan.innerText(), /Debe 3 h/);
-  assert.ok(pedidosCuenta.some((x) => x === "300,301"), JSON.stringify(pedidosCuenta));
-  const filaPedro = page.locator("tr", { hasText: "Pedro" }).first();
-  assert.equal(await filaPedro.getByRole("button", { name: "Repone" }).count(), 0, "quien no debe horas solo ve Sí / No");
-  await filaJuan.getByRole("button", { name: "Repone", exact: true }).click();
-  for (let i = 0; i < 60 && !puts.length; i++) await dormir(100);
-  assert.deepEqual(puts[0], { id: 2, cuerpo: { hrs_extra: 1, forma_pago_extras: "Reposición de tiempo por tiempo", extras_autorizadas_por: 7 } });
-  // Tras reponer baja lo que debe (se vuelve a pedir la cuenta) y el botón queda marcado.
-  await page.waitForFunction(() => [...document.querySelectorAll("button[aria-pressed=true]")].some((b) => b.textContent.trim() === "Repone"), null, { timeout: 15000 });
+  // (24/11/2026) «Repone» ya no está en la tabla: las horas extra se deciden en el reloj de cada fila con «¿Quién
+  // autoriza?» y dobles/triples/tiempo por tiempo lo decide la ley por semana (ver verify-reloj-dia.mjs).
+  assert.equal(await page.getByRole("button", { name: "Repone", exact: true }).count(), 0, "sin «Repone» en la tabla");
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/permiso-horas-asistencias.png" });
 
   // 2) Permisos › Nuevo permiso › Por horas.
@@ -130,21 +126,23 @@ try {
     await empresaSel.click();
     await page.getByRole("option", { name: "Empresa prueba" }).click();
   }
-  await dialogo.getByRole("combobox").filter({ hasText: "Seleccionar tipo" }).click();
-  await page.getByRole("option", { name: "Permiso personal" }).click();
+  // (24/11/2026) «Qué pasó» + «Motivo» (verify-quepaso-motivo.mjs): un tipo propio marcado como permiso se sigue pidiendo.
+  await elegir(dialogo.getByLabel("Qué pasó"), { label: "Permiso personal" });
   await dialogo.getByText("Juan Prueba").waitFor({ timeout: 10000 });
   await dialogo.getByRole("checkbox").first().check();
   await dialogo.locator('input[type="date"]').fill("2026-11-24");
-  await dialogo.getByLabel("Tipo de permiso por horas").selectOption("sale_regresa");
+  await elegir(dialogo.getByLabel("Tipo de permiso por horas"), "sale_regresa");
   await dialogo.getByLabel("Desde qué hora").fill("10:00");
   await dialogo.getByLabel("Hasta qué hora").fill("12:00");
   await dialogo.getByRole("radio", { name: /Se repone/ }).click();
+  await elegir(dialogo.getByLabel("Motivo", { exact: true }), { label: "Visita al médico" });
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/permiso-horas-form.png" });
   await dialogo.getByRole("button", { name: "Guardar" }).click();
   for (let i = 0; i < 60 && !posts.length; i++) await dormir(100);
   assert.deepEqual(posts[0], {
     id_empleado: 300, id_tipo_permiso: 30, motivo: null, modalidad: "horas", tipo_horas: "sale_regresa", tratamiento: "repone",
     hora_inicio: "10:00", hora_fin: "12:00", fecha_inicio: "2026-11-24", fecha_fin: "2026-11-24",
+    id_motivo_permiso: 1, goce: "con",
   });
 
   // 3) Cuenta de horas en la ficha: debe 3 h, condonar 1 h con nota.
@@ -170,7 +168,7 @@ try {
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK permisos por horas · etiqueta en Asistencias · «Repone» solo si debe horas y baja la cuenta · alta por horas (sale y regresa, se repone) · cuenta en la ficha (condonar con nota)");
+  console.log("OK permisos por horas · etiqueta en Asistencias (sin «Repone»: la extra se decide en el reloj) · alta por horas (sale y regresa, se repone) · cuenta en la ficha (condonar con nota)");
 } finally {
   await browser.close();
   next.kill();

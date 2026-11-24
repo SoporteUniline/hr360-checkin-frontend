@@ -55,23 +55,21 @@ test("menús separan movimientos, saldos y partidas sin modificar resguardos ori
   assert.equal(state.deliveries[0].lines.length, 2);
   assert.equal(moduleState(state, null), state);
 });
-test("enlaces conservan módulo, empresa y autoservicio", () => {
-  assert.equal(
-    resourceHref("uniform", "/entregas/nueva?empleado=2", "4"),
-    "/panel/control-uniformes/entregas/nueva?empleado=2&empresa=4"
-  );
-  assert.equal(
-    resourceHref("asset", "/uniformes/8/editar", "4"),
-    "/panel/control-uniformes/prendas/8/editar?empresa=4"
-  );
-  assert.equal(
-    resourceHref("uniform", "/activos/7", "4"),
-    "/panel/control-activos/activos/7?empresa=4"
-  );
-  assert.equal(
-    resourceHref(null, "/resguardos/5", "4", true),
-    "/empleado/panel/mis-recursos/resguardos/5?empresa=4"
-  );
+test("enlaces del módulo único: tipo en ?tipo=, empresa y autoservicio", () => {
+  // Un solo módulo /panel/activos; los componentes piden sus rutas de siempre.
+  assert.equal(resourceHref("uniform", "/entregas/nueva?empleado=2", "4"), "/panel/activos/entregar?empleado=2&empresa=4");
+  assert.equal(resourceHref("asset", "/uniformes/8/editar", "4"), "/panel/activos/inventario/8/editar?tipo=uniformes&empresa=4");
+  assert.equal(resourceHref("uniform", "/activos/7", "4"), "/panel/activos/inventario/7?tipo=activos&empresa=4");
+  assert.equal(resourceHref(null, "/devoluciones?empleado=3", "4"), "/panel/activos/recibir?empleado=3&empresa=4");
+  assert.equal(resourceHref(null, "/empleados/3", "4"), "/panel/activos/personas/3?empresa=4");
+  assert.equal(resourceHref("uniform", "/categorias", "4"), "/panel/activos/ajustes/categorias?tipo=uniformes&empresa=4");
+  assert.equal(resourceHref(null, "/paquetes", "4"), "/panel/activos/ajustes/paquetes?empresa=4");
+  assert.equal(resourceHref(null, "/mantenimiento", "4"), "/panel/activos/revision?empresa=4");
+  assert.equal(resourceHref(null, "/movimientos", "4"), "/panel/activos/historial?empresa=4");
+  assert.equal(resourceHref(null, "/resguardos/5", "4"), "/panel/activos/resguardos/5?empresa=4");
+  assert.equal(resourceHref(null, "", "4"), "/panel/activos?empresa=4");
+  assert.equal(resourceHref(null, "/resguardos/5", "4", true), "/empleado/panel/mis-recursos/resguardos/5?empresa=4");
+  assert.equal(resourceHref(null, "/resguardos", "4", true), "/empleado/panel/mis-recursos?empresa=4");
 });
 test("fotografías rechazan contenido activo disfrazado de PNG", async () => {
   const svg = Buffer.from(

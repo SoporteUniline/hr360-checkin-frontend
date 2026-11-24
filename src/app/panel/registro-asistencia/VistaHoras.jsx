@@ -1,9 +1,9 @@
 "use client";
 
-// Pestaña «Horas» de Asistencias (maqueta aprobada 19/11/2026): horas de la semana legal de cada
-// empleado contra el límite de la LFT, quién se está excediendo o va a pasar, extras y alertas.
+// Pestaña «Horas»: horas de la semana legal por empleado contra el límite de la LFT.
 // Datos: GET /checador/reportes/horas-ley (semana completa elegida). Lógica: lib/asistencia/semanaHoras.mjs
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
@@ -14,7 +14,7 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import { duracionCorta, formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 import { ordenarFilas, resumenSemana, semanaInicial, semanasDelRango } from "@/lib/asistencia/semanaHoras.mjs";
 
-// (19/11/2026) Clic en un día (o en su alerta) abre el registro de ese día en la Lista para corregirlo.
+// Clic en un día (o en su alerta) abre el registro de ese día en la Lista para corregirlo.
 export const enlaceDia = (idEmpleado, nombre, fecha) =>
   `/panel/registro-asistencia?${new URLSearchParams({ fecha, empleado: nombre ?? "", abrirEmpleado: String(idEmpleado ?? "") })}`;
 const irAlDia = (e, idEmpleado, nombre, fecha) => {
@@ -162,7 +162,7 @@ function TablaHoras({ visibles, semana, hoy, orden, ordenarPor, abierto, setAbie
             return (
               <FilaHoras key={id} idEmpleado={id} nombre={nombre} abierto={abiertoAqui} onClick={() => setAbierto(abiertoAqui ? null : id)} alertas={s.alertas} dias={s.dias}>
                 <td className="px-2 py-1.5">
-                  <p className="font-semibold leading-tight text-slate-900">{nombre}</p>
+                  <p className="font-semibold leading-tight text-slate-900"><NombreEmpleado id={id}>{nombre}</NombreEmpleado></p>
                   <p className="truncate text-[11px] text-slate-500">{r.empleado?.departamento || r.empleado?.puesto || ""}</p>
                 </td>
                 {s.dias.map((d) => {
@@ -203,7 +203,7 @@ function TablaHoras({ visibles, semana, hoy, orden, ordenarPor, abierto, setAbie
                 <td className="whitespace-nowrap px-2 py-1.5">
                   {s.autorizadas || s.porAutorizar ? (
                     <Link href={`/panel/horas-extra?semana=${semana.inicio}&empleado=${encodeURIComponent(nombre ?? "")}`} onClick={(e) => e.stopPropagation()}
-                      className="group/hx rounded-md hover:underline" title="Ver sus horas extra en Control de horas extra">
+                      className="group/hx rounded-md hover:underline" title="Ver su semana en Asistencias (las extra se autorizan en el reloj de cada día)">
                       {s.autorizadas ? <b>{fmt(s.autorizadas)}</b> : <span className="text-slate-400">0 min</span>}
                       <span className="block text-[11px] text-slate-500 group-hover/hx:text-blue-600">{s.triples ? `${fmt(s.triples)} triples` : `${fmt(s.dobles)} dobles`} ›</span>
                     </Link>
