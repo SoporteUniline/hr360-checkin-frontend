@@ -768,6 +768,7 @@ export default function MobileAsistenciaView({
             </div>
           )}
         </div>
+        {abrirFormulario ? (
         <button
           onClick={abrirFormulario}
           className="flex items-center gap-1.5 bg-brand text-white text-xs font-semibold px-4 min-h-[44px] rounded-xl shadow-[0_8px_20px_rgba(37,99,235,0.32)] shrink-0 active:opacity-90"
@@ -775,6 +776,7 @@ export default function MobileAsistenciaView({
           <Plus className="w-3.5 h-3.5" />
           Masivo
         </button>
+        ) : null}
       </div>
 
       {/* ─── Drawers ─── */}

@@ -19,8 +19,8 @@ import BotonAgregarComida from "./BotonAgregarComida";
 import HorasExtraDia from "./HorasExtraDia";
 
 // Campos que el panel deja editar (para saber si hay cambios sin guardar).
-const EDITABLES = ["entrada", "salida", "id_tipo_permiso", "asistencia", "goce_sueldo", "hrs_comida", "autorizado_por", "notas", "es_festivo",
-  "pago_triple", "prima_dominical", "porcentaje_dia_festivo"];
+// Domingo, festivo, pagos y horas de comida ya no se capturan: los calcula el servidor (calendario y checadas).
+const EDITABLES = ["entrada", "salida", "id_tipo_permiso", "asistencia", "goce_sueldo", "autorizado_por", "notas"];
 const vacio = (v) => v == null || v === "";
 const igual = (a, b) => String(a ?? "") === String(b ?? "") || (!vacio(a) && !vacio(b) && Number.isFinite(Number(a)) && Number(a) === Number(b));
 
@@ -42,26 +42,6 @@ function Campo({ label, children, nota }) {
       {children}
       {nota && <span className="text-[11px] font-normal text-slate-400">{nota}</span>}
     </label>
-  );
-}
-
-function SiNo({ valor, onChange, disabled }) {
-  return (
-    <div className="inline-flex rounded-lg border border-slate-200 p-0.5">
-      {[["0", "No"], ["1", "Sí"]].map(([v, t]) => (
-        <button
-          key={v}
-          type="button"
-          disabled={disabled}
-          onClick={() => onChange(v === "1" ? 1 : 0)}
-          className={`rounded-md px-3 py-1 text-xs font-semibold ${
-            (si(valor) ? "1" : "0") === v ? "bg-brand text-white" : "text-slate-500"
-          } disabled:opacity-60`}
-        >
-          {t}
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -205,7 +185,7 @@ export default function PanelEditarAsistencia({
           </div>
           <div className="space-y-5">
           <Seccion titulo="Registro">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3">
               <Campo label="Tipo de registro" nota="Asistió y Goce los define el tipo.">
                 <Select
                   value={datos.id_tipo_permiso ? String(datos.id_tipo_permiso) : ""}
@@ -224,15 +204,6 @@ export default function PanelEditarAsistencia({
                     ))}
                   </SelectContent>
                 </Select>
-              </Campo>
-              <Campo label="Hrs comida">
-                <Input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={datos.hrs_comida || 0}
-                  onChange={(e) => handleFieldChange("hrs_comida", e.target.value)}
-                />
               </Campo>
             </div>
             <Campo label="Autorizado por (incidencia)">
@@ -257,24 +228,14 @@ export default function PanelEditarAsistencia({
           </Seccion>
 
           <Seccion titulo="Calendario y pagos">
-            <div className="grid grid-cols-2 gap-3">
-              <Campo label="Domingo" nota={avisoDe("es_domingo") || "Según la fecha del registro"}>
-                <SiNo valor={datos.es_domingo} onChange={() => {}} disabled />
-              </Campo>
-              <Campo label="Festivo" nota={avisoDe("es_festivo") || "Según el catálogo; puedes marcar uno adicional"}>
-                <SiNo valor={datos.es_festivo} onChange={(v) => handleFieldChange("es_festivo", v)} />
-              </Campo>
-              <Campo label="Pago triple">
-                <SiNo valor={datos.pago_triple} onChange={(v) => handleFieldChange("pago_triple", v)} />
-              </Campo>
-              <Campo label="Prima dominical %">
-                <Input type="number" step="0.1" min="0" value={datos.prima_dominical || 0}
-                  onChange={(e) => handleFieldChange("prima_dominical", e.target.value)} />
-              </Campo>
-              <Campo label="% día festivo">
-                <Input type="number" step="0.1" min="0" value={datos.porcentaje_dia_festivo || 0}
-                  onChange={(e) => handleFieldChange("porcentaje_dia_festivo", e.target.value)} />
-              </Campo>
+            {/* Solo lectura: lo pone la ley o el catálogo de días (antes eran campos editables). */}
+            <div className="rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-sm text-slate-700" data-calendario-lectura>
+              <p className="font-semibold">
+                {si(registro.es_festivo) ? "Festivo" : si(registro.es_domingo) ? "Domingo" : "Día normal"}
+              </p>
+              <p className="text-[12px] text-slate-500">
+                {avisoDe("es_festivo") || avisoDe("es_domingo") || "Lo pone la ley o el catálogo de días de la empresa; no se edita aquí."}
+              </p>
             </div>
           </Seccion>
           </div>

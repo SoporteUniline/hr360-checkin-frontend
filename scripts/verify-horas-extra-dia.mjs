@@ -1,3 +1,5 @@
+// (24/11/2026) En Asistencias el día ya se corrige en el reloj (verify-reloj-dia.mjs); esta ventana sigue abriéndose
+// desde el Monitor («Ver día de …»), así que la verificación entra por ahí con el reloj del navegador fijo en el lunes 23.
 // Verificación en navegador real (Chromium + Next compilado) del panel del día: comida manual (se ve como manual, con
 // quién la agregó, Editar y Quitar), «+ Agregar comida» no se ofrece con comida o pausa, y horas extra con horario
 // (propuesta del reloj, varios días, repetir, tope de la semana, validación y guardado con el botón Guardar).
@@ -66,6 +68,7 @@ try {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: "es-MX", timezoneId: "America/Mexico_City" });
   await ctx.addCookies([{ name: "token", value: token(), url: base }]);
   const page = await ctx.newPage();
+  await page.clock.setFixedTime(new Date("2026-11-23T18:00:00Z")); // lunes 23, 12:00 en CDMX
   const errores = [];
   page.on("pageerror", (e) => errores.push(e.message));
   await page.route("**/*", async (route) => {
@@ -111,12 +114,12 @@ try {
     return json({});
   });
 
-  await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
-  await page.getByRole("tab", { name: "Registros" }).click();
-  await page.getByText("Alondra", { exact: false }).first().waitFor({ timeout: 30000 });
+  await page.goto(base + "/panel/monitor", { waitUntil: "domcontentloaded" });
+  const verDia = (n) => page.getByRole("button", { name: `Ver día de ${n}` });
+  await verDia("Alondra Munguía").waitFor({ timeout: 30000 });
 
   // 1) Comida manual: se ve como manual, con quién la agregó; Editar y Quitar. No se ofrece agregar otra.
-  await page.locator("tr", { hasText: "Alondra Munguía" }).first().locator("td").nth(2).click();
+  await verDia("Alondra Munguía").click();
   const panel = page.getByRole("dialog", { name: /Alondra Munguía/ });
   const comida = panel.locator('[data-pausa="comida"]');
   await comida.waitFor({ timeout: 10000 });
@@ -140,7 +143,7 @@ try {
   await panel.waitFor({ state: "hidden", timeout: 10000 });
 
   // 2) Horas extra: propuesta del reloj → Autorizar; + Agregar día; Repetir; tope; validación; Guardar.
-  await page.locator("tr", { hasText: "Beto Ruiz" }).first().locator("td").nth(2).click();
+  await verDia("Beto Ruiz").click();
   const p2 = page.getByRole("dialog", { name: /Beto Ruiz/ });
   const propuesta = p2.locator("[data-propuesta-reloj]");
   await propuesta.waitFor({ timeout: 10000 });
@@ -192,12 +195,10 @@ try {
   assert.deepEqual([cuerpo.id_autoriza, cuerpo.forma_pago, cuerpo.quitar], [7, "Tiempo por tiempo", []]);
   await p2.waitFor({ state: "hidden", timeout: 10000 });
 
-  // 3) Celular (390): Asistencias en celular abre el mismo panel del día desde el detalle de la persona.
+  // 3) Celular (390): el Monitor abre el mismo panel del día.
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
-  await page.getByRole("tab", { name: "Registros" }).click();
-  await page.getByText("Alondra Munguía").first().click();
-  await page.getByRole("button", { name: "Abrir el día: horas extra con horario y comida" }).click();
+  await page.goto(base + "/panel/monitor", { waitUntil: "domcontentloaded" });
+  await verDia("Alondra Munguía").click();
   const p3 = page.getByRole("dialog", { name: /Alondra Munguía/ });
   await p3.locator('[data-fila-extra="2026-11-26"]').waitFor({ timeout: 15000 });
   const sobra = await p3.evaluate((el) => el.scrollWidth - el.clientWidth);
@@ -215,9 +216,10 @@ try {
     await page.screenshot({ path: `${capturas}/390-panel-horas-extra.png` });
   }
 
-  assert.deepEqual(errores, [], "sin errores de JavaScript");
+  // #418 (texto distinto al hidratar): el servidor pinta con la fecha real y el navegador con el reloj fijo en el 23.
+  assert.deepEqual(errores.filter((e) => !/Minified React error #418/.test(e)), [], "sin errores de JavaScript");
   exito = true;
-  console.log("OK · comida manual (manual, quién, Editar → PUT, Quitar → DELETE, sin «Agregar comida») · horas extra con horario "
+  console.log("OK (desde el Monitor) · comida manual (manual, quién, Editar → PUT, Quitar → DELETE, sin «Agregar comida») · horas extra con horario "
     + "(propuesta del reloj, repetir, tope 9 h, validación, Guardar → PUT con varios días, autoriza y forma) · 390 sin desbordar");
 } finally {
   await browser.close();
