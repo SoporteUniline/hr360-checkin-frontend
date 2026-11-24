@@ -1,4 +1,5 @@
-// Monitor: tarjetas, grupos (uno por persona), la razón en texto de cada fila y el Tablero (columnas, contadores, tarjetas). Uso: node --test scripts/test-monitor.mjs
+// Monitor: tarjetas, grupos (uno por persona), la razón en texto de cada fila, el Tablero (columnas, contadores, tarjetas) y
+// las vistas Línea del día y Lista (eje, tramos, ahora, orden y estado). Uso: node --test scripts/test-monitor.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { minutosAbsolutos } from "../src/lib/fechaHora.mjs";
@@ -9,6 +10,9 @@ import {
 import {
   columnasTablero, columnaTablero, COLUMNAS_CELULAR, contadorTablero, enHoraExtra, fichaTablero, resumenTablero, tardeConPermiso,
 } from "../src/lib/asistencia/tablero.mjs";
+import {
+  claveVistaMonitor, ejeLineaDia, estadoVista, horarioVista, lineaDia, ordenUrgencia, posicionEnEje, vistaValida, VISTAS_MONITOR,
+} from "../src/lib/asistencia/vistasMonitor.mjs";
 
 const HOY = "2026-11-23";
 const a = (hora) => minutosAbsolutos(HOY, hora);
@@ -258,4 +262,118 @@ test("tablero: línea, barra y chips de cada tarjeta", () => {
   const noche = f(reg({ hora_entrada_programada: "22:00:00", hora_salida_programada: "06:00:00", hora_salida_comida_programada: "02:00:00",
     hora_regreso_comida_programada: "02:30:00", ...conTramos([], "21:58") }), "23:00");
   assert.equal(texto(noche), "Entró 9:58 p.m. · sale 6:00 a.m. · lleva 1 h 2 min | Come 2:00 a.m.");
+});
+
+// —— Línea del día y Lista (vistasMonitor.mjs) ——
+const ahoraA = (r, hora) => ({ ...estado(r, hora), ahora: a(hora), dia: { ...diaDesdeRegistro(r), registro: r } });
+
+test("vista elegida: por defecto Tablero, solo valores conocidos, una clave por usuario", () => {
+  assert.deepEqual(VISTAS_MONITOR.map((v) => v.titulo), ["Tablero", "Línea del día", "Lista"]);
+  assert.equal(vistaValida(null), "tablero");
+  assert.equal(vistaValida("lista"), "lista");
+  assert.equal(vistaValida("linea"), "linea");
+  assert.equal(vistaValida("<script>"), "tablero");
+  assert.equal(claveVistaMonitor(7), "adamia.monitor.vista.7");
+  assert.notEqual(claveVistaMonitor(7), claveVistaMonitor(8));
+});
+
+test("orden de urgencia: el de las secciones del Tablero en celular", () => {
+  const filas = [
+    ahoraA(reg({ nombre: "Sale", ...conTramos([["07:00", "10:00"]]), hora_entrada_programada: "07:00:00", hora_salida_programada: "10:00:00" }), "10:42"),
+    ahoraA(reg({ nombre: "Trabaja", ...conTramos([], "08:55") }), "10:42"),
+    ahoraA(reg({ nombre: "Descansa", tipo_registro_nombre: "Día de Descanso" }), "10:42"),
+    ahoraA(reg({ nombre: "Llega", hora_entrada_programada: "12:00:00", hora_salida_programada: "20:00:00" }), "10:42"),
+    ahoraA(reg({ nombre: "Falta" }), "10:42"),
+    ahoraA(reg({ nombre: "Come", ...conTramos([["08:00", "10:30"]]), comida_checada: { salida: t("10:30"), regreso: null, minutos_programados: 30 } }), "10:42"),
+  ];
+  assert.deepEqual(ordenUrgencia(filas, (r) => r.nombre).map((r) => r.nombre), ["Falta", "Come", "Trabaja", "Llega", "Sale", "Descansa"]);
+});
+
+test("chip de estado y horario de la Lista", () => {
+  const e = (r, h) => estadoVista(ahoraA(reg(r), h));
+  assert.deepEqual(e(conTramos([], "08:55"), "10:42"), { texto: "Trabajando", tono: "azul" });
+  assert.deepEqual(e(conTramos([], "08:55"), "18:10"), { texto: "Hora extra", tono: "violeta" });
+  assert.deepEqual(e(conTramos([], "08:55"), "18:30"), { texto: "Sin checar salida", tono: "rojo" });
+  assert.deepEqual(e({}, "10:42"), { texto: "No ha llegado", tono: "rojo" });
+  assert.deepEqual(e({}, "14:00"), { texto: "Faltó", tono: "rojo" });
+  assert.deepEqual(e(conTramos([["09:00", "12:00"]]), "12:30"), { texto: "Salió antes", tono: "rojo" });
+  assert.deepEqual(e({ tipo_registro_nombre: "Vacaciones" }, "10:42"), { texto: "Vacaciones", tono: "violeta" });
+  assert.equal(horarioVista(ahoraA(reg(), "10:42")), "9:00 a.m.–6:00 p.m.");
+  assert.equal(horarioVista(ahoraA(reg({ tipo_registro_nombre: "Vacaciones" }), "10:42")), "Sin horario hoy");
+});
+
+test("eje: de la entrada más temprana a la salida más tardía o ahora, con margen y a la hora", () => {
+  const filas = [ahoraA(reg(), "10:42"), ahoraA(reg({ hora_entrada_programada: "07:00:00", hora_salida_programada: "15:00:00" }), "10:42")];
+  const eje = ejeLineaDia(filas, a("10:42"));
+  assert.deepEqual([eje.desde, eje.hasta, eje.paso], [a("06:00"), a("19:00"), 120]);
+  assert.deepEqual(eje.horas.map((h) => h.texto), ["6 a.m.", "8 a.m.", "10 a.m.", "12 p.m.", "2 p.m.", "4 p.m.", "6 p.m."]);
+  assert.deepEqual([eje.horas[0].pos, posicionEnEje(a("12:30"), eje), posicionEnEje(a("23:00"), eje)], [0, 50, 100]);
+  // Ahora después de todas las salidas: el eje llega hasta ahora (+ margen). Una entrada real antes de su horario cuenta.
+  const tarde = ejeLineaDia([ahoraA(reg(conTramos([["08:20", "18:00"]])), "21:10")], a("21:10"));
+  assert.deepEqual([tarde.desde, tarde.hasta], [a("07:00"), a("22:00")]);
+  // Día corto: 1 h entre marcas; sin nadie con horario, al menos 4 h alrededor de ahora.
+  assert.equal(ejeLineaDia([ahoraA(reg({ hora_salida_programada: "14:00:00" }), "10:00")], a("10:00")).paso, 60);
+  const vacio = ejeLineaDia([ahoraA(reg({ tipo_registro_nombre: "Vacaciones" }), "10:00")], a("10:00"));
+  assert.equal(vacio.hasta - vacio.desde, 240);
+  assert.equal(ejeLineaDia([], null), null);
+  // Turno nocturno de ayer (22:00–06:00, sigue abierto): el eje empieza ayer a las 9 p.m. y marca cada 3 h si pasa de 24 h.
+  const AYER = "2026-11-22";
+  const noche = reg({ fecha: AYER, hora_entrada_programada: "22:00:00", hora_salida_programada: "06:00:00", tramos_checadas: [], tramos_abiertos: 1,
+    entrada_tramo_abierto: `${AYER} 22:05:00`, entrada: `${AYER} 22:05:00` });
+  const ejeNoche = ejeLineaDia([ahoraA(noche, "03:00"), ahoraA(reg({ hora_entrada_programada: "14:00:00", hora_salida_programada: "23:00:00" }), "03:00")], a("03:00"));
+  assert.deepEqual([ejeNoche.desde, ejeNoche.hasta, ejeNoche.paso], [minutosAbsolutos(AYER, "21:00"), a("23:59") + 1, 3 * 60]);
+  assert.equal(ejeNoche.horas[0].texto, "9 p.m.");
+});
+
+test("línea del día: programado tenue, tramos reales (trabajo, comida, se pasó, hora extra, sin salida) y ahora", () => {
+  const eje = { desde: a("06:00"), hasta: a("22:00") }; // 16 h: 1 h = 6.25 %
+  const tramos = (r, h) => lineaDia(ahoraA(reg(r), h), eje).tramos.map((x) => [x.tipo, x.tono, x.titulo]);
+  // Trabajando desde 9:18: azul hasta ahora; el horario 9–18 detrás; ahora a las 10:42.
+  const l = lineaDia(ahoraA(reg(conTramos([], "09:18")), "10:42"), eje);
+  assert.deepEqual([l.programada.izq, l.programada.ancho, l.ahora], [18.75, 56.25, 29.38]);
+  assert.deepEqual(l.tramos.map((x) => [x.tipo, x.tono, x.izq, x.titulo]), [["trabajo", "azul", 20.63, "Trabajando 9:18 a.m.–ahora · 1 h 24 min"]]);
+  // Comida tomada (botón): ámbar entre los tramos; si duró más de lo que le toca, lo de más en rojo.
+  const comida = { ...conTramos([["09:00", "14:00"]], "14:50"), comida_checada: { salida: t("14:00"), regreso: t("14:50"), minutos: 50, minutos_programados: 30 } };
+  assert.deepEqual(tramos(comida, "16:00"), [
+    ["trabajo", "azul", "Trabajó 9:00 a.m.–2:00 p.m. · 5 h"], ["comida", "ambar", "Comida 2:00 p.m.–2:30 p.m. · 30 min"],
+    ["comida_excedida", "rojo", "Se pasó de comida 2:30 p.m.–2:50 p.m. · 20 min"], ["trabajo", "azul", "Trabajando 2:50 p.m.–ahora · 1 h 10 min"],
+  ]);
+  // Salida dentro de la comida del horario (sin botón) también es comida; en comida ahora: hasta ahora.
+  assert.deepEqual(tramos(conTramos([["09:00", "13:50"]]), "14:10").map(([tipo]) => tipo), ["trabajo", "comida"]);
+  assert.equal(tramos(conTramos([["09:00", "13:50"]]), "14:10")[1][2], "Comida 1:50 p.m.–ahora · 20 min");
+  // Un hueco que no es comida (sale y regresa) no se pinta.
+  assert.deepEqual(tramos(conTramos([["09:00", "10:00"], ["11:00", "12:00"]]), "12:30").map(([tipo]) => tipo), ["trabajo", "trabajo"]);
+  // Hora extra después de su salida (violeta); si ya pasó el aviso sin checar, lo de después es «sin salida».
+  assert.deepEqual(tramos(conTramos([], "08:55"), "18:10").map(([tipo, tono]) => [tipo, tono]), [["trabajo", "azul"], ["extra", "violeta"]]);
+  assert.deepEqual(tramos(conTramos([], "08:55"), "18:30").map(([tipo, tono]) => [tipo, tono]), [["trabajo", "azul"], ["sin_salida", "rojo"]]);
+  // Con extra autorizada hasta las 20:00: extra hasta ahí, tenue de 18 a 20 detrás, y «sin salida» después del aviso.
+  const autorizada = { ...conTramos([], "08:55"), horas_extra_autorizadas_dia: { hasta: "20:00" } };
+  assert.deepEqual(tramos(autorizada, "20:30").map(([tipo]) => tipo), ["trabajo", "extra", "sin_salida"]);
+  assert.deepEqual(lineaDia(ahoraA(reg(autorizada), "19:00"), eje).extraAutorizada, { desde: a("18:00"), hasta: a("20:00"), izq: 75, ancho: 12.5 });
+  // Ya salió: su trabajo en gris; salió tarde: lo de después de las 18:00 en violeta.
+  assert.deepEqual(tramos(conTramos([["08:58", "18:40"]]), "19:00").map(([tipo, tono]) => [tipo, tono]), [["trabajo", "gris"], ["extra", "violeta"]]);
+  // Vacaciones / sin checadas: sin barra programada ni tramos.
+  const vac = lineaDia(ahoraA(reg({ tipo_registro_nombre: "Vacaciones" }), "10:42"), eje);
+  assert.deepEqual([vac.programada, vac.tramos.length], [null, 0]);
+  assert.deepEqual(tramos({}, "10:42"), []);
+  // Fuera del eje se recorta a los bordes.
+  assert.deepEqual([posicionEnEje(a("05:00"), eje), posicionEnEje(a("23:00"), eje), posicionEnEje(null, eje)], [0, 100, null]);
+});
+
+test("línea del día: turno nocturno (de ayer a hoy, comida de madrugada)", () => {
+  const AYER = "2026-11-22";
+  const ta = (f, h) => `${f} ${h}:00`;
+  const noche = reg({
+    fecha: AYER, hora_entrada_programada: "22:00:00", hora_salida_programada: "06:00:00", hora_salida_comida_programada: "02:00:00",
+    hora_regreso_comida_programada: "02:30:00", tramos_checadas: [{ entrada: ta(AYER, "21:58"), salida: ta(HOY, "02:01") }], tramos_abiertos: 1,
+    entrada_tramo_abierto: ta(HOY, "02:29"), entrada: ta(AYER, "21:58"),
+  });
+  const r = ahoraA(noche, "05:00");
+  const eje = ejeLineaDia([r], a("05:00"));
+  assert.deepEqual([eje.desde, eje.hasta], [minutosAbsolutos(AYER, "21:00"), a("07:00")]);
+  const l = lineaDia(r, eje);
+  assert.deepEqual([l.programada.desde, l.programada.hasta], [minutosAbsolutos(AYER, "22:00"), a("06:00")]);
+  assert.deepEqual(l.tramos.map((x) => [x.tipo, x.titulo]), [
+    ["trabajo", "Trabajó 9:58 p.m.–2:01 a.m. · 4 h 3 min"], ["comida", "Comida 2:01 a.m.–2:29 a.m. · 28 min"], ["trabajo", "Trabajando 2:29 a.m.–ahora · 2 h 31 min"],
+  ]);
 });

@@ -100,7 +100,7 @@ export function columnasTablero(resultados, nombreDe = () => "") {
 }
 
 // Una hora del horario en minutos absolutos; en turno nocturno, la madrugada es del día siguiente.
-const enTurno = (r, hora) => {
+export const enTurno = (r, hora) => {
   const m = hora && r.dia?.fecha ? minutosAbsolutos(r.dia.fecha, hora) : null;
   if (m == null || r.entradaProg == null || r.salidaProg == null) return m;
   return m < r.entradaProg && m + MIN_DIA <= r.salidaProg ? m + MIN_DIA : m;

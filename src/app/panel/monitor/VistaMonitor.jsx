@@ -1,6 +1,8 @@
 "use client";
 
-// Monitor › Tablero (maqueta aprobada Monitor.dc.html, vista «Tablero»): a esta hora, una columna por momento del día.
+// Monitor (maqueta aprobada Monitor.dc.html): contadores-filtro, búsqueda y área comunes a las tres vistas (`vista`):
+// «Tablero» (aquí), «Línea del día» (LineaDia.jsx) y «Lista» (ListaHoy.jsx), que reciben las mismas personas filtradas.
+// Tablero: a esta hora, una columna por momento del día.
 // Contadores = filtros (tocar otra vez lo quita); búsqueda y área en pantalla; textos de cada tarjeta en
 // src/lib/asistencia/tablero.mjs sobre los estados de hoy.mjs. Tocar una persona abre el reloj del día (`onAbrirDia`);
 // su nombre abre la ficha. La hora se recalcula cada 30 s; los datos se refrescan con cada checada (página del Monitor).
@@ -11,23 +13,16 @@ import { ChevronRight, Search } from "lucide-react";
 import { herramientasHoras } from "@/lib/asistencia/horasEdicion.mjs";
 import { ahoraEn, diaDesdeRegistro, diasDeHoy, estadoHoy } from "@/lib/asistencia/hoy.mjs";
 import { columnasTablero, contadorTablero, CONTADORES_TABLERO, fichaTablero, resumenTablero } from "@/lib/asistencia/tablero.mjs";
-import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
+import { ordenUrgencia } from "@/lib/asistencia/vistasMonitor.mjs";
 import { ICONO_CONCEPTO, ICONO_ROL } from "@/components/asistencia/iconosAsistencia";
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { useCuentasHoras } from "@/app/panel/registro-asistencia/CuentaHorasContext";
 import { cn } from "@/lib/utils";
+import { areaDe, Avatar, Chips, chipsPersona, nombreDe } from "./comunes";
+import LineaDia from "./LineaDia";
+import ListaHoy from "./ListaHoy";
 
-const nombreDe = (r) => [r.nombre, r.apellido_paterno].filter(Boolean).join(" ");
-const iniciales = (r) => `${r.nombre?.[0] ?? ""}${r.apellido_paterno?.[0] ?? ""}`.toUpperCase() || "?";
-const areaDe = (r) => r.departamento || r.puesto || "";
 const sinAcentos = (v) => String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-
-// Tonos de tablero.mjs → clases de Tailwind.
-const CHIP = {
-  azul: "bg-blue-100 text-blue-800", violeta: "bg-violet-100 text-violet-800", amarillo: "bg-yellow-100 text-yellow-800",
-  rojo: "bg-red-100 text-red-800", naranja: "bg-orange-100 text-orange-800", celeste: "bg-sky-100 text-sky-800",
-  gris: "bg-slate-100 text-slate-700", ambar: "bg-amber-100 text-amber-800",
-};
 const BARRA = { azul: "bg-brand", violeta: "bg-violet-600", amarillo: "bg-yellow-500", rojo: "bg-red-600" };
 // Iconos y colores de los desplegables de Asistencias (iconosAsistencia.js), para que se vea igual.
 const ICONO = {
@@ -81,12 +76,12 @@ function Persona({ r, debe, onAbrirDia }) {
   const reg = r.dia.registro;
   const f = fichaTablero(r);
   const nombre = nombreDe(reg);
-  const chips = debe > 0 ? [...f.chips, { texto: `Debe ${formatearMinutos(debe)}`, tono: "ambar" }] : f.chips;
+  const chips = chipsPersona(f, debe);
   return (
     <li data-estado={r.estado} data-persona={nombre}
       className="relative flex min-h-11 flex-col gap-1.5 rounded-xl border border-slate-200 bg-white p-2.5 transition-[border-color,box-shadow] hover:border-blue-200 hover:shadow-[0_2px_8px_rgba(29,92,245,.08)]">
       <span className="flex min-w-0 items-center gap-2">
-        <span aria-hidden="true" className={cn("grid size-7 shrink-0 place-items-center rounded-full text-[11px] font-bold", CHIP[f.tono])}>{iniciales(reg)}</span>
+        <Avatar registro={reg} tono={f.tono} />
         <span className="flex min-w-0 grow flex-col">
           <b data-nombre className="truncate text-[13.5px] font-semibold leading-tight text-slate-900">
             <span className="relative z-10"><NombreEmpleado id={reg.id_empleado}>{nombre}</NombreEmpleado></span>
@@ -102,16 +97,7 @@ function Persona({ r, debe, onAbrirDia }) {
           <span className={cn("block h-1 rounded-full", BARRA[f.barra.tono])} style={{ width: `${Math.round(f.barra.avance * 100)}%` }} />
         </span>
       ) : null}
-      {chips.length ? (
-        <span className="flex flex-wrap gap-1">
-          {chips.map((c, i) => (
-            <span key={i} data-chip
-              className={cn("inline-flex max-w-full rounded-[10px] px-2 py-0.5 text-[11.5px] font-semibold leading-tight", CHIP[c.tono])}>
-              {c.texto}
-            </span>
-          ))}
-        </span>
-      ) : null}
+      <Chips chips={chips} />
       <button type="button" onClick={() => onAbrirDia?.(reg)} aria-label={`Ver día de ${nombre}`}
         className="absolute inset-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand" />
     </li>
@@ -139,6 +125,14 @@ function Columna({ col, cuentas, onAbrirDia }) {
   );
 }
 
+function SinNadie({ filtro }) {
+  return (
+    <p className="rounded-[14px] border border-slate-200 bg-white px-5 py-8 text-center text-sm text-slate-600">
+      Nadie en «{filtro?.titulo}» con estos filtros.
+    </p>
+  );
+}
+
 // Un estado por persona. Cada empresa en su zona: la checada (hora de CDMX en la base) se pasa a la zona de la empresa.
 // `ahora` (minutos absolutos de su zona) va en cada resultado para los textos del tablero («sale en…», hora extra).
 export function estadosDeHoy(registros, zona, ahoraMs) {
@@ -157,7 +151,7 @@ export function estadosDeHoy(registros, zona, ahoraMs) {
   return salida;
 }
 
-export default function VistaMonitor({ registros, zona, cargando, onAbrirDia }) {
+export default function VistaMonitor({ registros, zona, cargando, onAbrirDia, vista = "tablero" }) {
   const [reloj, setReloj] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setReloj(Date.now()), 30000);
@@ -183,10 +177,10 @@ export default function VistaMonitor({ registros, zona, cargando, onAbrirDia }) 
   }, [resultados, busqueda, area]);
   const resumen = useMemo(() => resumenTablero(base), [base]);
   const activo = contadorTablero(filtro);
-  const columnas = useMemo(
-    () => columnasTablero(activo ? base.filter(activo.es) : base, (r) => nombreDe(r.dia.registro)),
-    [base, activo],
-  );
+  const visibles = useMemo(() => (activo ? base.filter(activo.es) : base), [base, activo]);
+  const columnas = useMemo(() => columnasTablero(visibles, (r) => nombreDe(r.dia.registro)), [visibles]);
+  // Línea y Lista: las mismas personas, una fila cada una, en el orden de urgencia del Tablero.
+  const filas = useMemo(() => (vista === "tablero" ? [] : ordenUrgencia(visibles, (r) => nombreDe(r.dia.registro))), [visibles, vista]);
 
   if (cargando && !resultados.length) return <p role="status" className="p-6 text-sm text-slate-500">Cargando quién está hoy…</p>;
 
@@ -225,12 +219,17 @@ export default function VistaMonitor({ registros, zona, cargando, onAbrirDia }) 
         <p className="text-xs text-slate-500 sm:ml-auto">Toca una persona para abrir su reloj del día</p>
       </div>
 
-      {base.length ? (
+      {!base.length ? null : vista === "linea" ? (
+        filas.length ? <LineaDia personas={filas} todos={resultados} onAbrirDia={onAbrirDia} /> : <SinNadie filtro={activo} />
+      ) : vista === "lista" ? (
+        filas.length ? <ListaHoy personas={filas} cuentas={cuentas} onAbrirDia={onAbrirDia} /> : <SinNadie filtro={activo} />
+      ) : (
         <div role="region" aria-label="Tablero de hoy"
           className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:items-start lg:gap-2.5 min-[85rem]:grid-cols-6">
           {columnas.map((col) => <Columna key={col.clave} col={col} cuentas={cuentas} onAbrirDia={onAbrirDia} />)}
         </div>
-      ) : (
+      )}
+      {base.length ? null : (
         <p className="rounded-[14px] border border-slate-200 bg-white px-5 py-8 text-center text-sm text-slate-600">
           {busqueda || area ? "Nadie coincide con la búsqueda." : "No hay empleados con registro para hoy."}
         </p>
