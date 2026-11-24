@@ -6,7 +6,7 @@ import { ensureOfflineCache } from '@/lib/axios';
 import { clockStore, installOfflineWorker, initializeClock, warmOfflineAssets, synchronizeClockQueue, resolveClockDecision, retryClockEvent, discardClockEvent } from '@/lib/offline-clock';
 import { isTurnConflict } from '../../public/offline-clock/turn-state.mjs';
 
-// (23/11/2026) Opciones que manda el servidor al cerrar un tramo (incluye «Salir a comer»).
+// Opciones que manda el servidor al cerrar un tramo (incluye «Salir a comer»).
 const ETIQUETA_ACCION = { salida_comida: 'Salir a comer', salida: 'Registrar salida', salida_temporal: 'Salida temporal', cerrar_turno: 'Cerrar turno' };
 
 export default function OfflineExperience() {

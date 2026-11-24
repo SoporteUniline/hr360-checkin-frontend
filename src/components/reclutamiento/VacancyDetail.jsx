@@ -40,7 +40,7 @@ export default function VacancyDetail({
 }) {
   const [dialog, setDialog] = useState(null);
   const candidates = data.candidates.filter((item) => item.vacancyId === vacancy.id);
-  // Sin proceso (solo lectura) + los de WhatsApp que ya son postulaciones (04/12/2026: mismo proceso que la página).
+  // Sin proceso (solo lectura) + los de WhatsApp que ya son postulaciones (mismo proceso que la página).
   const waReadOnly = (data.whatsappCandidates || []).filter((item) => item.vacancyId === vacancy.id);
   const whatsapp = [...candidates.filter((item) => item.origin === "whatsapp"), ...waReadOnly];
   const live = vacancyStatus(vacancy) === "open";

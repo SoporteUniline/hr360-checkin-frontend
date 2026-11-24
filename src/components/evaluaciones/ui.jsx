@@ -435,8 +435,8 @@ export function downloadCsv(name, content) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-// Estados de carga, paginación y exportación compartidos por todas las vistas (antes en ApiViews:
-// las demás vistas lo importaban de ahí y no se podía reutilizar sin dependencias circulares).
+// Estados de carga, paginación y exportación compartidos por todas las vistas; viven aquí y no en ApiViews
+// para evitar dependencias circulares.
 export function QueryState({ query, children }) {
   if (query.loading && query.data == null)
     return (

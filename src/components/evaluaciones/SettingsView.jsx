@@ -28,8 +28,8 @@ const labels = {
   anonymousPeers: "Respuestas de pares anónimas",
   anonymousAscending: "Respuestas ascendentes anónimas",
 };
-// (23/11/2026) Configuración separada en tres vistas con su dirección: Valores iniciales (/configuracion),
-// Niveles (/configuracion/niveles) y Acceso al módulo (/configuracion/acceso). Cada sección es la misma de antes.
+// Configuración en tres vistas con su dirección: Valores iniciales (/configuracion),
+// Niveles (/configuracion/niveles) y Acceso al módulo (/configuracion/acceso).
 export function SettingsView({ seccion = SECCIONES_CONFIGURACION[0] }) {
   const { href } = useEvaluations();
   return (

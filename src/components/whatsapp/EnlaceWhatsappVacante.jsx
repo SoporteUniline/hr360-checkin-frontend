@@ -54,7 +54,7 @@ function useEnlaceVacante(idVacante) {
   return { estado, copiado, cargar, copiar };
 }
 
-// «Copiar enlace de la vacante» (27/11/2026): la página pública de la vacante con su formulario para postularse.
+// «Copiar enlace de la vacante»: la página pública de la vacante con su formulario para postularse.
 // No depende de WhatsApp ni de la bolsa de trabajo: sirve aunque la empresa no publique en la bolsa.
 export function BotonCopiarPaginaVacante({ slug, titulo, onCopiado }) {
   const [copiado, setCopiado] = useState(false);
@@ -86,8 +86,7 @@ export function BotonCopiarPaginaVacante({ slug, titulo, onCopiado }) {
 }
 
 // Fila en línea (lista de «Enlaces de vacantes»): «Copiar enlace de WhatsApp» lo pide y lo copia; luego aparece «Abrir».
-// R2: `subtitulo` (conteo de preguntas) va bajo el título y `acciones` (botón «Entrevista») antes de los enlaces.
-// 27/11/2026: `slug` agrega «Copiar enlace de la vacante» (página con formulario), que funciona con WhatsApp apagado.
+// `subtitulo` va bajo el título, `acciones` antes de los enlaces y `slug` agrega «Copiar enlace de la vacante».
 export function EnlaceVacanteEnLinea({ idVacante, titulo, slug = null, subtitulo = null, acciones = null }) {
   const { estado, copiado, cargar, copiar } = useEnlaceVacante(idVacante);
   const [ultimo, setUltimo] = useState("");

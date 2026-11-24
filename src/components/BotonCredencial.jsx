@@ -30,7 +30,7 @@ const BotonCredencial = ({ empleado, imagePreview }) => {
 
       // Cargar código QR en la posición de la foto
       try {
-        // (23/11/2026) QR generado aquí mismo (antes api.qrserver.com recibía el NIP de cada empleado).
+        // QR generado aquí mismo: un servicio externo (api.qrserver.com) recibiría el NIP de cada empleado.
         const qrImg = await cargarImagen(qrComoDataUrl(empleado.nip || "000000", { celda: 20, margen: 1 }));
 
         const qrSize = 300;

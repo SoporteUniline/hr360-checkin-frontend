@@ -6,7 +6,7 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import { DataState } from "./shared";
 import { useModulosActivos } from "@/components/modulos/useModulos";
 export default function VacationBalance({ compact = false }) {
-  // (03/12/2026) Con Vacaciones apagado para su empresa no se pide ni se muestra el saldo.
+  // Con Vacaciones apagado para su empresa no se pide ni se muestra el saldo.
   const { activos } = useModulosActivos();
   const visible = !activos || activos.has("vacaciones");
   const { data, error, isLoading, mutate } = useSWR(visible ? "/checador/vacaciones/mi-saldo" : null, fetcherWithToken, { shouldRetryOnError: false });

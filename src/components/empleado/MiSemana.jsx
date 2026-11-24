@@ -1,7 +1,6 @@
 "use client";
-// (23/11/2026) «Mi semana» en la app del empleado: resumen semanal de Luis
-// (GET /checador/jornadas-legales/resumen-semanal). Programadas o extras en null = «Por revisar», nunca 0.
-// Es orientativo: no es el cálculo de nómina.
+// «Mi semana»: resumen semanal (GET /checador/jornadas-legales/resumen-semanal). Programadas o extras en null =
+// «Por revisar», nunca 0. Es orientativo: no es el cálculo de nómina.
 import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";

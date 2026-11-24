@@ -1,6 +1,6 @@
 "use client";
 
-// Inicio del empleado (22/11/2026, pedido del dueño): cuánto tiempo debe por permisos por horas que se reponen y de dónde
+// Inicio del empleado: cuánto tiempo debe por permisos por horas que se reponen y de dónde
 // sale (cada permiso, cada reposición y cada ajuste de RH). Solo lectura. El backend solo le devuelve su propia cuenta
 // (GET /checador/cuenta-horas/:id_empleado). Si nunca ha tenido permisos que se reponen, no se muestra.
 import useSWR from "swr";

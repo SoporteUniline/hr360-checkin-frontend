@@ -1,11 +1,7 @@
 "use client";
 
-// Ficha del empleado en ventana flotante, desde cualquier pantalla del panel (pedido del 21/11/2026: «donde sea que vea
-// al empleado, darle clic y que abra su ficha ahí mismo, y que me deje editar»). Reutiliza la MISMA ficha de Empleados
-// (FormularioEmpleado): (23/11/2026) abre ya editable y «Guardar» guarda con las mismas reglas; con cambios sin guardar,
-// cerrarla (botón, Esc o clic fuera) pregunta antes (components/cambios/CambiosPendientes.jsx).
-// <NombreEmpleado> es un enlace real a /panel/empleados?id=…: clic normal = ventana aquí mismo; Ctrl/⌘+clic o clic con la
-// rueda = otra pestaña. Al guardar se refrescan las listas abiertas (empleados, asistencias, nómina…).
+// Ficha del empleado en ventana flotante desde cualquier pantalla: reutiliza FormularioEmpleado (mismas reglas) y, con
+// cambios sin guardar, cerrarla pregunta antes. <NombreEmpleado> es un enlace real (Ctrl/⌘+clic abre otra pestaña).
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSWRConfig } from "swr";

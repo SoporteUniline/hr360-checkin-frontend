@@ -163,7 +163,7 @@ export default function DetallePrestamo({ id, onCerrar, onCambio = () => {}, pag
     </>
   );
 
-  // (22/11/2026) En el módulo Nómina el detalle es una página (clic en el renglón); la ventana queda para otros usos.
+  // En el módulo Nómina el detalle es una página (clic en el renglón); la ventana queda para otros usos.
   if (pagina) {
     return (
       <div className="space-y-5 p-1">

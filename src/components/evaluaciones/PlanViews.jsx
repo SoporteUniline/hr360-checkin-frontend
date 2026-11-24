@@ -17,8 +17,8 @@ import {
   ExportButton,
 } from "./ui";
 import { dateText } from "@/lib/evaluaciones/model.mjs";
-// Planes de una persona en una campaña. (20/11/2026) Ya no hay vista «Seguimiento» aparte:
-// se ven dentro del resultado de la persona (desde la campaña o desde «Mis resultados»).
+// Planes de una persona en una campaña; se ven dentro del resultado de la persona (desde la campaña o
+// desde «Mis resultados»).
 export function PlanList({ campaignId, subjectId }) {
   const { api, perform, busy, actor } = useEvaluations();
   const [page, setPage] = useState(1),

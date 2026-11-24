@@ -39,7 +39,7 @@ import { hora12 } from "@/lib/hora12.mjs";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// (23/11/2026, INC-RELOJ-COMIDA-001) Si una checada guardada no trae las opciones del servidor, se ofrecen las que el
+// (INC-RELOJ-COMIDA-001) Si una checada guardada no trae las opciones del servidor, se ofrecen las que el
 // servidor acepta para cualquier tipo de cierre (con cierre automático, temporal/cerrar turno cuentan como salida).
 const OPCIONES_SIN_DATOS = ["salida_comida", "salida_temporal", "cerrar_turno"];
 
@@ -52,8 +52,8 @@ export default function RelojChecador({
 }) {
   const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [metodo, setMetodo] = useState("facial");
-  // Celular (maqueta aprobada 19/11/2026): la cámara ocupa el alto que queda entre la franja de
-  // arriba y la barra de abajo. Se mide porque arriba puede haber navegación (reloj del empleado).
+  // Celular: la cámara ocupa el alto que queda entre la franja de arriba y la barra de abajo. Se mide porque
+  // arriba puede haber navegación (reloj del empleado).
   const areaRef = useRef(null);
   const [altoArea, setAltoArea] = useState(null);
   const [ajustesCamara, setAjustesCamara] = useState(false);
@@ -95,7 +95,7 @@ export default function RelojChecador({
   const [mostrarCamara, setMostrarCamara] = useState(true);
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
-  // Candado de 5 min (19/11/2026): «Acabas de registrar tu salida a las 4:49 p.m. ¿Registrar otra vez?».
+  // Candado de 5 min: «Acabas de registrar tu salida a las 4:49 p.m. ¿Registrar otra vez?».
   const [pregunta, setPregunta] = useState(null);
   const [repitiendo, setRepitiendo] = useState(false);
   const [registrando, setRegistrando] = useState(false);
@@ -223,14 +223,14 @@ export default function RelojChecador({
     setCodigoEmpleado("");
   }, [metodo]);
 
-  // Tarjeta del resultado. Un solo temporizador: con el reloj fijo, el aviso de la persona siguiente ya no
-  // se cierra antes de tiempo por el temporizador de la anterior. Con motivo de «pendiente», más tiempo.
+  // Un solo temporizador para la tarjeta del resultado: con varios, el de la persona anterior cerraba el aviso
+  // de la siguiente antes de tiempo. Con motivo de «pendiente», más tiempo.
   const temporizadorPopup = useRef(null);
   const router = useRouter();
   useEffect(() => () => clearTimeout(temporizadorPopup.current), []);
   const mostrarResultado = (data) => {
     clearTimeout(temporizadorPopup.current);
-    // (21/11/2026) App del empleado: al checar regresa a su Inicio (ahí ve su jornada actualizada). Con error del
+    // App del empleado: al checar regresa a su Inicio (ahí ve su jornada actualizada). Con error del
     // servidor se queda para que lo vea y avise a RH; los errores al registrar no pasan por aquí (se quedan en el reloj).
     const volverAInicio = modoEmpleado && !data.errorServidor;
     setPopupInfo({
@@ -421,7 +421,7 @@ export default function RelojChecador({
   useEffect(() => {
     const validarSuscripcion = async () => {
       if (!idEmpresa) return;
-      // (21/11/2026) Una vez al día: si hoy ya se validó en este dispositivo, entra directo sin preguntar al servidor.
+      // Una vez al día: si hoy ya se validó en este dispositivo, entra directo sin preguntar al servidor.
       if (validadaHoy(`empresa:${idEmpresa}`)) {
         setSubscriptionActive(true);
         setSubscriptionLoading(false);
@@ -472,7 +472,7 @@ export default function RelojChecador({
     return () => window.removeEventListener("resize", medir);
   }, [subscriptionLoading, subscriptionActive, menuMovil]);
 
-  // 12 horas con a.m./p.m. (19/11/2026): «4:49 p.m.».
+  // 12 horas con a.m./p.m.: «4:49 p.m.».
   const horaCorta = horaActual ? horaActual.replace(/:\d{2} /, " ") : "";
 
   if (subscriptionLoading) {
@@ -557,7 +557,7 @@ export default function RelojChecador({
             </div>
 
             <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
-              {/* Franja con la marca ADAMIA (19/11/2026): logo y colores de marca, sin nombre de la empresa.
+              {/* Franja con la marca ADAMIA: logo y colores de marca, sin nombre de la empresa.
                   (21/11/2026) En la app del iPhone la hora y la batería del sistema quedaban encima: deja el espacio de la
                   muesca (safe area) y se queda fija arriba al desplazar. */}
               <div className="md:hidden sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)]">
@@ -842,7 +842,7 @@ export default function RelojChecador({
           <div className="fixed inset-0 z-110 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
             <div className="bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl p-8 w-full max-w-sm animate-in slide-in-from-bottom-10 duration-300">
               <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden" />
-              {/* (23/11/2026) Opciones que manda el servidor: «Salir a comer» / «Registrar salida» o las de cierre manual. */}
+              {/* Opciones que manda el servidor: «Salir a comer» / «Registrar salida» o las de cierre manual. */}
               <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">
                 {pendiente?.opciones?.includes("salida_comida") ? "¿Sales a comer?" : "Turno abierto"}
               </h2>

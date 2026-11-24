@@ -1,5 +1,5 @@
 "use client";
-// Aviso «Este módulo no está activo para tu empresa» (03/12/2026). Lo usan la puerta de rutas (GuardaModulo) y Tareas.
+// Aviso «Este módulo no está activo para tu empresa». Lo usan la puerta de rutas (GuardaModulo) y Tareas.
 // RH / dueño: botón a Ajustes → Módulos (y, si se pasa alActivar, «Activar» ahí mismo). Sin derecho: Contratar.
 // Empleado: solo el aviso.
 import Link from "next/link";

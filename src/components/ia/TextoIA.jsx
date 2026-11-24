@@ -1,5 +1,5 @@
 // Muestra la respuesta de la IA con formato simple (negritas, viñetas, párrafos) sin insertar HTML: todo es texto,
-// así nada de lo que escriba la IA puede ejecutarse en la página. (23/11/2026, Adamia AI)
+// así nada de lo que escriba la IA puede ejecutarse en la página.
 function enLinea(texto) {
   return String(texto).split(/(\*\*[^*]+\*\*)/g).map((parte, i) =>
     parte.startsWith("**") && parte.endsWith("**") ? <strong key={i}>{parte.slice(2, -2)}</strong> : parte,

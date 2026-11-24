@@ -1,11 +1,7 @@
 "use client";
 
-// «Entrevistas» (R3; agenda tipo Google Calendar 23/11/2026). Escritorio: semana (o día) con filas de 30 min, hoy y la
-// línea de «ahora», minicalendario del mes y leyenda a la izquierda, citas como bloques de color (clic → tarjeta con sus
-// acciones) y, con una vacante elegida, sus horarios libres («disponible · N lugares»): clic → «Agendar aquí» eligiendo la
-// conversación del candidato; arrastrar una cita a un horario libre → confirmar → POST /citas/:id/reagendar (si el API
-// responde 409, la cita regresa a su lugar). También vista de lista. Teléfono: tira de días y lista del día con los
-// horarios libres para tocar. GET /citas?empresa&desde&hasta&id_vacante&estado cada 30 s con la pestaña visible.
+// «Entrevistas»: agenda de citas por semana o día (lista en teléfono) con los horarios libres de la vacante. Arrastrar
+// una cita → POST /citas/:id/reagendar; con 409 regresa a su lugar. Se refresca cada 30 s con la pestaña visible.
 import { useMemo, useState } from "react";
 import useSWR, { useSWRConfig } from "swr";
 import { CalendarDays, ChevronLeft, ChevronRight, List, Loader2, RefreshCw, Rows3 } from "lucide-react";

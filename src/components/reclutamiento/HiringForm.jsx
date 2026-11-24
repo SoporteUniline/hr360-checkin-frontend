@@ -1,8 +1,7 @@
 "use client";
 
-// «Contratar» (03/12/2026; 04/12/2026 compartido con el chat de WhatsApp). Mismo formulario y reglas en Reclutamiento y
-// en el chat: fecha de ingreso, sucursal, datos prellenados y lista de verificación. La contratación la hace el servidor
-// en una transacción (crea o enlaza la ficha del empleado, ocupa un lugar y cierra la vacante al llenarse).
+// «Contratar», compartido por Reclutamiento y el chat de WhatsApp. La contratación la hace el servidor en una
+// transacción (crea o enlaza la ficha, ocupa un lugar y cierra la vacante al llenarse).
 import { useState } from "react";
 import { UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";

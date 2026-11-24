@@ -1,5 +1,5 @@
 "use client";
-// Módulos activos de la sesión (03/12/2026, «Módulos por empresa»). Arranca con lo que mandó /users/verify/token (llega
+// Módulos activos de la sesión. Arranca con lo que mandó /users/verify/token (llega
 // junto con el usuario: el menú no parpadea) y se refresca con /checador/modulos/activos cuando RH cambia algo.
 // Mientras no hay datos (servidor viejo o Admin) no se filtra nada. La verdad está en el servidor (403 MODULO_INACTIVO).
 import useSWR, { mutate } from "swr";
