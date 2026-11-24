@@ -205,3 +205,10 @@ test("ejemplo real del backend (GET /:id/reloj con permiso_dia): mismo cálculo 
   assert.equal(resumen(regs, r.horario, { permiso: { alcance: r.permiso_dia.alcance } }).estado.texto, r.resumen.estado.texto);
   assert.deepEqual(listaMotivos(r.motivos_permiso).map((m) => m.nombre), ["Visita al médico", "Permiso personal", "Trámite"]);
 });
+
+test("clave de un tipo nuevo: se genera con el nombre (misma regla que el servidor)", async () => {
+  const { claveDesdeNombre } = await import("../src/lib/asistencia/tiposGoce.mjs");
+  assert.equal(claveDesdeNombre("Visita al médico"), "VISITA_AL_MEDICO");
+  assert.equal(claveDesdeNombre("⌚ Entrada después de tiempo"), "ENTRADA_DESPUES_DE_TIEMPO");
+  assert.equal(claveDesdeNombre("   "), "");
+});

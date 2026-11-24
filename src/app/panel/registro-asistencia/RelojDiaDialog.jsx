@@ -247,7 +247,20 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                   </div>
                 </section>
 
-                {tiposParciales.length || permiso ? (
+                {sinVivos && !permiso ? (
+                  // Sin checadas: el mismo desplegable que la fila de Asistencias («No vino» y «Sí vino»). Un tipo de «No vino»
+                  // se guarda como estado del día (pide motivo/folio y goce si aplica) y cierra el reloj; uno de «Sí vino»
+                  // con permiso abre «Permiso del día» con ese tipo para poner sus horas aquí abajo.
+                  <section data-reloj-que-paso className="flex flex-col gap-2 rounded-xl border border-slate-200 px-4 py-3">
+                    <h3 className={TITULO}>Qué pasó</h3>
+                    <CeldaEstadoDia registro={registro} tiposPermiso={tiposPermiso} comoCampo
+                      onAbrirReloj={(r) => {
+                        if (r?._tipoParcial) setPermiso(permisoInicial(null, tiposParciales, r._tipoParcial));
+                      }}
+                      onGuardado={async (a) => { await onGuardado?.(a); onCerrar?.(true); }} />
+                    <p className="text-[12.5px] text-slate-500">Si no vino, elige el tipo (falta, vacaciones, incapacidad…). Si sí vino, elige «Sí vino» o el permiso y pon sus horas abajo.</p>
+                  </section>
+                ) : tiposParciales.length || permiso ? (
                   <PermisoDelDia permiso={permiso ?? null} onCambio={(p) => { setPermiso(p); setServidor({ general: "", renglones: {} }); }}
                     tipos={tiposParciales} motivos={data?.motivos_permiso} regs={lista} horario={horario} error={permiso ? errorDelPermiso : ""}
                     origen={data?.permiso_dia?.origen === "permiso" ? data.permiso_dia.id_solicitud ?? true : null} />
@@ -262,13 +275,6 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                         <button type="button" disabled={!h} onClick={() => cambiar((p) => [...p, ...horarioNormal(horario, motivoCarga)])}
                           className={cn(BOTON, "border-blue-600 bg-blue-600 text-white hover:bg-blue-700")}>Cargar su horario normal</button>
                         <button type="button" onClick={() => cambiar((p) => agregarRegistro(p, horario))} className={BOTON}>Escribir las horas</button>
-                      </div>
-                      {/* Si no vino: el estado del día aquí mismo (igual que en la fila de Asistencias). */}
-                      <div data-reloj-no-vino className="flex flex-col gap-2 border-t border-amber-200 pt-3">
-                        <b className="text-[14px] text-amber-900">¿No vino?</b>
-                        <span className="text-[12.5px] text-amber-900/80">Marca el día: falta justificada o injustificada, vacaciones, incapacidad… Pide motivo o folio cuando el tipo lo necesita.</span>
-                        <CeldaEstadoDia registro={registro} tiposPermiso={tiposPermiso} soloNoVino
-                          onGuardado={async (a) => { await onGuardado?.(a); onCerrar?.(true); }} />
                       </div>
                     </div>
                   ) : null}
