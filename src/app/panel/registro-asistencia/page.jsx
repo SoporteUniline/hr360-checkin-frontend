@@ -11,7 +11,6 @@ import { CuentaHorasProvider } from "./CuentaHorasContext";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import FormularioAsistenciasMasivas from "@/components/FormularioAsistenciasMasivas";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import ClockNavigation from '@/components/Clock/ClockNavigation';
 import {
@@ -42,7 +41,7 @@ import ColumnasSelector, {
   cargarColumnasGuardadas,
   LS_COLUMNAS,
 } from "@/components/tabla/ColumnasSelector";
-import { COLUMNAS_ASISTENCIA } from "./AsistenciaTable";
+import { COLUMNAS_ASISTENCIA, COLUMNAS_RELOJ_NUEVAS } from "./AsistenciaTable";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
 import { esVistaEnVivo, RUTA_MONITOR } from "@/lib/asistencia/vistasAsistencia.mjs";
@@ -92,6 +91,21 @@ function PestanasAsistencia({ vista, onElegir, movil = false }) {
   );
 }
 
+// Aviso corto al llegar desde una pantalla que ya vive dentro de Asistencias (ver /panel/horas-extra).
+const AVISOS = {
+  "horas-extra": "«Control de horas extra» ahora vive aquí: las horas extra se autorizan en el reloj de cada fila (botón morado «por autorizar»).",
+};
+function AvisoMovido({ clave }) {
+  const [visible, setVisible] = useState(true);
+  if (!visible || !AVISOS[clave]) return null;
+  return (
+    <div role="status" data-aviso-movido className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-[13.5px] text-blue-900">
+      <span className="flex-1">{AVISOS[clave]}</span>
+      <button type="button" onClick={() => setVisible(false)} className="min-h-9 shrink-0 font-semibold underline">Entendido</button>
+    </div>
+  );
+}
+
 export default function ControlAsistencia() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -121,8 +135,12 @@ export default function ControlAsistencia() {
     filtroRequiereAutorizacion: false,
   });
   // Asistencias abre en Registros › Tabla con el día de hoy (o la fecha del enlace).
-  const [fechaInicio, setFechaInicio] = useState(initialDate);
-  const [fechaFin, setFechaFin] = useState(initialDate);
+  // ?desde=&hasta= (p. ej. la semana desde «Horas de ley») abre ese periodo.
+  const FECHA = /^\d{4}-\d{2}-\d{2}$/;
+  const desdeParam = FECHA.test(searchParams.get("desde") ?? "") ? searchParams.get("desde") : null;
+  const hastaParam = FECHA.test(searchParams.get("hasta") ?? "") ? searchParams.get("hasta") : null;
+  const [fechaInicio, setFechaInicio] = useState(desdeParam && hastaParam ? desdeParam : initialDate);
+  const [fechaFin, setFechaFin] = useState(desdeParam && hastaParam ? hastaParam : initialDate);
   const [page, setPage] = useState(1);
   // Escritorio arranca en "Todos los registros": se ve el periodo completo y los
   // filtros por columna se aplican sobre todo. Celular conserva páginas de 500.
@@ -149,7 +167,8 @@ export default function ControlAsistencia() {
   // Pestañas: «Registros» = lista (Tabla) o matriz · «Horas de ley» = horas.
   const [vista, setVista] = useState("lista");
   const [formatoRegistros, setFormatoRegistros] = useState("lista");
-  const [rangoEtiqueta, setRangoEtiqueta] = useState("Hoy");
+  const [rangoEtiqueta, setRangoEtiqueta] = useState(desdeParam && hastaParam
+    ? `${desdeParam.split("-").reverse().join("/")} – ${hastaParam.split("-").reverse().join("/")}` : "Hoy");
   const [agrupar, setAgrupar] = useState(null);
   const [visibleColumns, setVisibleColumns] = useState(null);
 
@@ -164,6 +183,11 @@ export default function ControlAsistencia() {
           const i = columnas.indexOf("jornada");
           columnas.splice(i >= 0 ? i + 1 : columnas.length, 0, "comida");
         }
+      }
+      // Columnas del reloj (Día, Estado · motivo, Reloj): se muestran una vez; si luego las ocultan, se respeta.
+      if (!window.localStorage.getItem("adamia-asistencia-col-reloj")) {
+        window.localStorage.setItem("adamia-asistencia-col-reloj", "1");
+        for (const k of COLUMNAS_RELOJ_NUEVAS) if (!columnas.includes(k)) columnas.push(k);
       }
     } catch {
       // sin almacenamiento local: se usan las columnas cargadas
@@ -195,13 +219,9 @@ export default function ControlAsistencia() {
     setLimit(isMobile ? 500 : LIMITE_TODOS);
   }, [isMobile]);
 
-  const [modoFormulario, setModoFormulario] = useState(false);
-  const [values, setValues] = useState(null);
-
-  const abrirFormulario = () => {
-    setValues(null);
-    setModoFormulario(true);
-  };
+  // «Registrar asistencia masiva» ya no está en Asistencias: lo reemplazan «Marcar como…» y «Cargar horario
+  // normal…» al elegir filas (el formulario sigue existiendo para otras pantallas).
+  const abrirFormulario = null;
 
   const handleLimitChange = (newLimit) => {
     setLimit(newLimit);
@@ -325,6 +345,7 @@ export default function ControlAsistencia() {
     agrupar,
     visibleColumns,
     vista,
+    ocultarRegistroMasivo: true,
   });
 
   const elegirPestana = (clave) => {
@@ -355,14 +376,6 @@ export default function ControlAsistencia() {
   if (isMobile && vista !== "lista") {
     return (
       <>
-        {modoFormulario && (
-          <FormularioAsistenciasMasivas
-            values={values}
-            setModoFormulario={setModoFormulario}
-            mutate={mutate}
-            idEmpresa={idEmpresa}
-          />
-        )}
         <div className="-m-5 h-[calc(100dvh-3.5rem)] overflow-y-auto overflow-x-hidden bg-[#f6f7fb] px-4 pb-8 pt-[max(1rem,env(safe-area-inset-top))]">
           <div className="space-y-3.5">
             <ClockNavigation companyId={empresaActiva} />
@@ -394,17 +407,10 @@ export default function ControlAsistencia() {
     const registros = data?.registros || [];
     return (
       <>
-        {modoFormulario && (
-          <FormularioAsistenciasMasivas
-            values={values}
-            setModoFormulario={setModoFormulario}
-            mutate={mutate}
-            idEmpresa={idEmpresa}
-          />
-        )}
         <div className="-m-5 flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden">
           <div className="shrink-0 bg-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
             <PestanasAsistencia vista={vista} onElegir={elegirPestana} movil />
+            <div className="mt-2"><AvisoMovido clave={searchParams.get("aviso")} /></div>
             <div className="mt-2"><FormatoRegistros vista={vista} onElegir={elegirFormato} movil /></div>
           </div>
           <div className="min-h-0 flex-1">
@@ -463,14 +469,8 @@ export default function ControlAsistencia() {
         />
       </div>
 
-      {modoFormulario && (
-        <FormularioAsistenciasMasivas
-          values={values}
-          setModoFormulario={setModoFormulario}
-          mutate={mutate}
-          idEmpresa={idEmpresa}
-        />
-      )}
+
+      <AvisoMovido clave={searchParams.get("aviso")} />
 
       {(vista === "lista" || vista === "matriz") && (
       <ResumenAsistencia

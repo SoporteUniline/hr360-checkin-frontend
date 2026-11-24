@@ -203,7 +203,7 @@ function TablaHoras({ visibles, semana, hoy, orden, ordenarPor, abierto, setAbie
                 <td className="whitespace-nowrap px-2 py-1.5">
                   {s.autorizadas || s.porAutorizar ? (
                     <Link href={`/panel/horas-extra?semana=${semana.inicio}&empleado=${encodeURIComponent(nombre ?? "")}`} onClick={(e) => e.stopPropagation()}
-                      className="group/hx rounded-md hover:underline" title="Ver sus horas extra en Control de horas extra">
+                      className="group/hx rounded-md hover:underline" title="Ver su semana en Asistencias (las extra se autorizan en el reloj de cada día)">
                       {s.autorizadas ? <b>{fmt(s.autorizadas)}</b> : <span className="text-slate-400">0 min</span>}
                       <span className="block text-[11px] text-slate-500 group-hover/hx:text-blue-600">{s.triples ? `${fmt(s.triples)} triples` : `${fmt(s.dobles)} dobles`} ›</span>
                     </Link>

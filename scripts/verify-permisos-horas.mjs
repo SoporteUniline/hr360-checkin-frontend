@@ -98,24 +98,16 @@ try {
     return json({});
   });
 
-  // 1) Asistencias: etiqueta del permiso y «Repone» solo para quien debe horas.
+  // 1) Asistencias: etiqueta del permiso.
   await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
   await page.getByRole("tab", { name: "Registros" }).click(); // (22/11/2026) Asistencias abre en «Hoy»
   await page.getByText("Juan", { exact: false }).first().waitFor({ timeout: 30000 });
   const filaPermiso = page.locator("tr", { hasText: "Permiso · por reponer 3 h" });
   await filaPermiso.waitFor({ timeout: 15000 });
   assert.equal(await filaPermiso.getByText("Permiso · por reponer 3 h").getAttribute("title"), "Llega tarde · hasta 11:00 a.m. · va a su cuenta de horas");
-  const filaJuan = page.locator("tr", { hasText: "Juan" }).filter({ hasText: "3 h" }).filter({ hasNotText: "Permiso" }).first();
-  await filaJuan.getByRole("button", { name: "Repone", exact: true }).waitFor({ timeout: 15000 });
-  assert.match(await filaJuan.innerText(), /Debe 3 h/);
-  assert.ok(pedidosCuenta.some((x) => x === "300,301"), JSON.stringify(pedidosCuenta));
-  const filaPedro = page.locator("tr", { hasText: "Pedro" }).first();
-  assert.equal(await filaPedro.getByRole("button", { name: "Repone" }).count(), 0, "quien no debe horas solo ve Sí / No");
-  await filaJuan.getByRole("button", { name: "Repone", exact: true }).click();
-  for (let i = 0; i < 60 && !puts.length; i++) await dormir(100);
-  assert.deepEqual(puts[0], { id: 2, cuerpo: { hrs_extra: 1, forma_pago_extras: "Reposición de tiempo por tiempo", extras_autorizadas_por: 7 } });
-  // Tras reponer baja lo que debe (se vuelve a pedir la cuenta) y el botón queda marcado.
-  await page.waitForFunction(() => [...document.querySelectorAll("button[aria-pressed=true]")].some((b) => b.textContent.trim() === "Repone"), null, { timeout: 15000 });
+  // (24/11/2026) «Repone» ya no está en la tabla: las horas extra se deciden en el reloj de cada fila con «¿Quién
+  // autoriza?» y dobles/triples/tiempo por tiempo lo decide la ley por semana (ver verify-reloj-dia.mjs).
+  assert.equal(await page.getByRole("button", { name: "Repone", exact: true }).count(), 0, "sin «Repone» en la tabla");
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/permiso-horas-asistencias.png" });
 
   // 2) Permisos › Nuevo permiso › Por horas.
@@ -171,7 +163,7 @@ try {
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK permisos por horas · etiqueta en Asistencias · «Repone» solo si debe horas y baja la cuenta · alta por horas (sale y regresa, se repone) · cuenta en la ficha (condonar con nota)");
+  console.log("OK permisos por horas · etiqueta en Asistencias (sin «Repone»: la extra se decide en el reloj) · alta por horas (sale y regresa, se repone) · cuenta en la ficha (condonar con nota)");
 } finally {
   await browser.close();
   next.kill();
