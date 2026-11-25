@@ -1,7 +1,10 @@
 "use client";
 
 // Lista de conversaciones de la bandeja de WhatsApp (R1). R2: filtros por calificación/atención y chip de calificación.
-import { Loader2, Search, X } from "lucide-react";
+// Estilo WhatsApp Web (25/11/2026): buscador gris redondeado, filtros en pastillas, etapa como filtro compacto y filas con
+// avatar de color, nombre y hora, vacante, etiqueta de control (IA / persona), último mensaje (o el motivo de atención)
+// y no leídos. Mismos datos, parámetros y paginación que antes.
+import { ChevronDown, Loader2, Search, X } from "lucide-react";
 import { tiempoRelativo } from "@/lib/whatsapp/tiempo.mjs";
 import { iniciales, nombreContacto } from "@/lib/whatsapp/telefono.mjs";
 import { etiquetaControl, vistaPrevia } from "@/lib/whatsapp/reglas.mjs";
@@ -11,41 +14,71 @@ import { FILTROS_ETAPA, textoEtapa } from "@/lib/reclutamiento/procesoWhatsapp.m
 import { ChipEtapa } from "./ProcesoChat";
 
 const TONO_CHIP = {
-  azul: "bg-blue-50 text-blue-700",
-  violeta: "bg-violet-50 text-violet-700",
+  azul: "bg-blue-50 text-blue-800",
+  violeta: "bg-violet-100 text-violet-800",
   gris: "bg-gray-100 text-gray-700",
 };
 
-export function ChipControl({ conversacion, usuario }) {
+export function ChipControl({ conversacion, usuario, className = "" }) {
   const { texto, tono } = etiquetaControl(conversacion, usuario);
-  return <span className={`inline-flex max-w-full shrink-0 items-center truncate rounded-full px-2 py-0.5 text-[11px] font-semibold ${TONO_CHIP[tono]}`}>{texto}</span>;
+  return <span className={`inline-flex max-w-full shrink-0 items-center truncate rounded-md px-1.5 py-px text-[11.5px] font-bold ${TONO_CHIP[tono]} ${className}`}>{texto}</span>;
 }
 
-export function Avatar({ contacto, className = "" }) {
+// Avatar con iniciales; el color sale del teléfono (o id) para que cada candidato conserve el suyo, como en WhatsApp.
+const COLORES_AVATAR = [
+  "bg-emerald-100 text-emerald-800",
+  "bg-amber-100 text-amber-900",
+  "bg-blue-100 text-blue-800",
+  "bg-violet-100 text-violet-800",
+  "bg-rose-100 text-rose-800",
+  "bg-teal-100 text-teal-800",
+];
+export function colorAvatar(contacto) {
+  const clave = String(contacto?.telefono ?? contacto?.id ?? contacto?.nombre ?? "");
+  let h = 0;
+  for (let i = 0; i < clave.length; i++) h = (h * 31 + clave.charCodeAt(i)) >>> 0;
+  return COLORES_AVATAR[h % COLORES_AVATAR.length];
+}
+
+export function Avatar({ contacto, className = "size-10 text-sm" }) {
   return (
-    <span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-800 ${className}`}>
+    <span aria-hidden="true" className={`grid shrink-0 place-items-center rounded-full font-bold ${colorAvatar(contacto)} ${className}`}>
       {iniciales(contacto)}
     </span>
   );
 }
 
-// Chips de filtro: en teléfono una fila que se desliza de lado dentro de la lista (la página no se desborda);
-// desde tableta se acomodan en dos renglones para que todos se vean.
-function FiltrosCalificacion({ filtro, onFiltro }) {
+// Texto corto de cada pastilla (el filtro y sus parámetros siguen en entrevista.mjs).
+const TEXTO_CORTO = { atencion: "Atención" };
+
+// Pastillas de filtro: en teléfono una fila que se desliza de lado (la página no se desborda); en escritorio se acomodan
+// en dos renglones para que todas se vean. La etapa del proceso es una pastilla con lista desplegable al final.
+function Filtros({ filtro, onFiltro, etapa, onEtapa }) {
+  const conEtapa = Boolean(etapa);
   return (
-    <div role="group" aria-label="Filtrar conversaciones" className="-mx-3 mt-2 flex gap-1.5 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none] md:flex-wrap md:overflow-visible">
+    <div role="group" aria-label="Filtrar conversaciones" className="flex gap-1.5 overflow-x-auto px-3 pb-2 [scrollbar-width:none] lg:flex-wrap lg:overflow-visible">
       {FILTROS.map((f) => {
         const activo = f.valor === filtro;
         return (
           <button key={f.valor} type="button" aria-pressed={activo} onClick={(e) => { e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" }); onFiltro(f.valor); }}
-            className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-[12.5px] font-semibold transition-colors md:min-h-8 ${
-              activo ? "border-gray-900 bg-gray-900 text-white" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+            className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] transition-colors lg:min-h-8 ${
+              activo ? "bg-[#D9FDD3] font-bold text-[#0B5C2E]" : "bg-[#F0F2F5] font-semibold text-[#3B4A54] hover:bg-[#E4E7EA]"
             }`}>
-            {f.valor === "atencion" ? <span aria-hidden="true" className={`size-2 rounded-full ${activo ? "bg-red-400" : "bg-red-500"}`} /> : null}
-            {f.texto}
+            {f.valor === "atencion" ? <span aria-hidden="true" className="size-2 rounded-full bg-red-600" /> : null}
+            {TEXTO_CORTO[f.valor] ?? f.texto}
           </button>
         );
       })}
+      {onEtapa ? (
+        <label className={`relative inline-flex min-h-11 shrink-0 items-center rounded-full text-[13px] lg:min-h-8 ${conEtapa ? "bg-[#D9FDD3] font-bold text-[#0B5C2E]" : "bg-[#F0F2F5] font-semibold text-[#3B4A54]"}`}>
+          <span className="sr-only">Etapa</span>
+          <select value={etapa} onChange={(e) => onEtapa(e.target.value)} data-filtro-etapa=""
+            className="h-full min-h-11 cursor-pointer appearance-none rounded-full bg-transparent py-0 pl-3 pr-8 text-base outline-none focus-visible:ring-2 focus-visible:ring-blue-400 lg:min-h-8 lg:text-[13px]">
+            {FILTROS_ETAPA.map((f) => <option key={f.valor || "todas"} value={f.valor}>{f.valor ? `Etapa: ${f.texto}` : "Etapa: todas"}</option>)}
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2.5 size-4" aria-hidden="true" />
+        </label>
+      ) : null}
     </div>
   );
 }
@@ -59,56 +92,47 @@ export default function ListaConversaciones({
   const conFiltro = filtro !== "todos" || Boolean(etapa);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="border-b border-gray-200 p-3">
+      <div className="px-3 pb-2">
         <label className="relative block">
           <span className="sr-only">Buscar conversación</span>
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#54656F]" aria-hidden="true" />
           <input
             type="search"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Nombre, teléfono o vacante"
-            className="h-11 w-full rounded-lg border border-gray-300 bg-white pl-9 pr-10 text-base outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 md:h-10 md:text-sm"
+            placeholder="Buscar nombre, teléfono o vacante"
+            className="h-11 w-full rounded-lg bg-[#F0F2F5] pl-10 pr-10 text-base text-[#111B21] outline-none placeholder:text-[#54656F] focus:bg-white focus:ring-2 focus:ring-emerald-600 lg:h-10 lg:text-sm [&::-webkit-search-cancel-button]:hidden"
           />
           {busqueda ? (
-            <button type="button" onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda" className="absolute right-0 top-0 grid h-full w-10 place-items-center text-gray-400 hover:text-gray-700">
-              <X className="size-4" />
+            <button type="button" onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda" className="absolute right-0 top-0 grid h-full w-11 place-items-center rounded-r-lg text-[#54656F] hover:text-[#111B21]">
+              <X className="size-4" aria-hidden="true" />
             </button>
           ) : null}
         </label>
-        {onFiltro ? <FiltrosCalificacion filtro={filtro} onFiltro={onFiltro} /> : null}
-        {onEtapa ? (
-          <label className="mt-2 flex items-center gap-2 text-[12.5px] text-gray-600">
-            <span className="shrink-0 font-semibold">Etapa</span>
-            <select value={etapa} onChange={(e) => onEtapa(e.target.value)} data-filtro-etapa=""
-              className="h-11 min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-2 text-base text-gray-800 md:h-8 md:text-[13px]">
-              {FILTROS_ETAPA.map((f) => <option key={f.valor || "todas"} value={f.valor}>{f.texto}</option>)}
-            </select>
-          </label>
-        ) : null}
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto" aria-busy={cargando}>
+      {onFiltro ? <Filtros filtro={filtro} onFiltro={onFiltro} etapa={etapa} onEtapa={onEtapa} /> : null}
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" aria-busy={cargando}>
         {error ? (
           <p role="alert" className="m-3 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
         ) : cargando && !conversaciones.length ? (
-          <p className="flex items-center gap-2 p-4 text-sm text-gray-500"><Loader2 className="size-4 animate-spin" /> Cargando conversaciones…</p>
+          <p className="flex items-center gap-2 p-4 text-sm text-[#54656F]"><Loader2 className="size-4 animate-spin" aria-hidden="true" /> Cargando conversaciones…</p>
         ) : !conversaciones.length ? (
-          <div className="p-6 text-center text-sm text-gray-500">
+          <div className="p-6 text-center text-sm text-[#54656F]">
             {q ? (
               <p>No hay conversaciones que coincidan con «{q}»{conFiltro ? ` en «${textoFiltro}»` : ""}.</p>
             ) : conFiltro ? (
               <>
                 <p>No hay conversaciones en «{textoFiltro}».</p>
-                <button type="button" onClick={() => { onFiltro?.("todos"); onEtapa?.(""); }} className="mt-2 inline-flex min-h-11 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 md:min-h-9">
+                <button type="button" onClick={() => { onFiltro?.("todos"); onEtapa?.(""); }} className="mt-2 inline-flex min-h-11 items-center rounded-full border border-gray-300 px-4 text-sm font-semibold text-gray-800 hover:bg-gray-50 lg:min-h-9">
                   Ver todas
                 </button>
               </>
             ) : (
               <>
-                <p className="font-medium text-gray-700">Aún no hay conversaciones.</p>
+                <p className="font-semibold text-[#111B21]">Aún no hay conversaciones.</p>
                 <p className="mt-1">Comparte el enlace de una vacante para recibir mensajes.</p>
                 {onVacantes ? (
-                  <button type="button" onClick={onVacantes} className="mt-3 inline-flex min-h-11 items-center rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700 md:min-h-9">
+                  <button type="button" onClick={onVacantes} className="mt-3 inline-flex min-h-11 items-center rounded-full bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800 lg:min-h-9">
                     Ver enlaces de vacantes
                   </button>
                 ) : null}
@@ -131,37 +155,40 @@ export default function ListaConversaciones({
                     onClick={() => onAbrir(c.id)}
                     aria-current={activa ? "true" : undefined}
                     aria-label={`${nombre}${noLeidos ? `, ${noLeidos} sin leer` : ""}${c.proceso?.etapa ? `, etapa ${textoEtapa(c.proceso.etapa)}` : ""}${calif ? `, ${calif.texto}` : ""}${atencion ? `, requiere atención: ${motivo}` : ""}`}
-                    className={`flex w-full min-w-0 items-start gap-3 border-b border-gray-100 px-3 py-3 text-left transition-colors ${
-                      activa ? "bg-blue-50" : "hover:bg-gray-50"
+                    className={`flex w-full min-w-0 items-start gap-3 px-3.5 pt-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 ${
+                      activa ? "bg-[#F0F2F5]" : "hover:bg-[#F5F6F6]"
                     }`}
                   >
                     <span className="relative shrink-0">
-                      <Avatar contacto={c.contacto} />
+                      <Avatar contacto={c.contacto} className="size-12 text-[15px]" />
                       {atencion ? (
-                        <span title={motivo} data-atencion={c.id} className="absolute -right-0.5 -top-0.5 size-3.5 rounded-full bg-red-500 ring-2 ring-white" />
+                        <span title={motivo} data-atencion={c.id} className="absolute -right-0.5 -top-0.5 size-3.5 rounded-full bg-red-600 ring-2 ring-white" />
                       ) : null}
                     </span>
-                    <span className="min-w-0 flex-1">
+                    <span className="min-w-0 flex-1 border-b border-[#E9EDEF] pb-2.5">
                       <span className="flex items-baseline gap-2">
-                        <span className={`min-w-0 flex-1 truncate text-[14px] ${noLeidos ? "font-bold text-gray-900" : "font-semibold text-gray-800"}`}>{nombre}</span>
-                        <span className={`shrink-0 text-[11.5px] ${noLeidos ? "font-semibold text-emerald-700" : "text-gray-500"}`}>
+                        <span className={`min-w-0 flex-1 truncate text-[16px] text-[#111B21] ${noLeidos ? "font-bold" : "font-semibold"}`}>{nombre}</span>
+                        <span className={`shrink-0 text-[12.5px] ${noLeidos ? "font-semibold text-[#15803D]" : "text-[#54656F]"}`}>
                           {tiempoRelativo(c.ultimo_mensaje?.creado_en ?? c.ultimo_entrante_en, ahora)}
                         </span>
                       </span>
-                      <span className="mt-0.5 block truncate text-[12px] text-gray-500">{c.vacante?.titulo || "Sin vacante"}</span>
-                      <span className="mt-1 flex items-center gap-2">
-                        <span className={`min-w-0 flex-1 truncate text-[13px] ${noLeidos ? "text-gray-900" : "text-gray-600"}`}>{vistaPrevia(c.ultimo_mensaje)}</span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="min-w-0 truncate text-[13px] text-[#54656F]">{c.vacante?.titulo || "Sin vacante"}</span>
+                        <ChipEtapa etapa={c.proceso?.etapa} className="!py-0" />
+                      </span>
+                      <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                        <ChipControl conversacion={c} usuario={usuario} className="max-w-[45%]" />
+                        <ChipCalificacion calificacion={c.entrevista?.calificacion} className="!rounded-md !px-1.5 !py-px !text-[11.5px]" />
+                        {atencion ? (
+                          <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-red-700" title={motivo}>{motivo}</span>
+                        ) : (
+                          <span className={`min-w-0 flex-1 truncate text-[14px] ${noLeidos ? "text-[#111B21]" : "text-[#54656F]"}`}>{vistaPrevia(c.ultimo_mensaje)}</span>
+                        )}
                         {noLeidos ? (
-                          <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-bold text-white" aria-hidden="true">
+                          <span className="grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-emerald-700 px-1.5 text-[12px] font-bold text-white" aria-hidden="true">
                             {noLeidos > 99 ? "99+" : noLeidos}
                           </span>
                         ) : null}
-                      </span>
-                      <span className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
-                        <ChipControl conversacion={c} usuario={usuario} />
-                        <ChipEtapa etapa={c.proceso?.etapa} />
-                        <ChipCalificacion calificacion={c.entrevista?.calificacion} />
-                        {atencion ? <span className="min-w-0 truncate text-[11.5px] font-semibold text-red-700" title={motivo}>{motivo}</span> : null}
                       </span>
                     </span>
                   </button>
@@ -173,7 +200,7 @@ export default function ListaConversaciones({
         {conversaciones.length > 0 && hayMas ? (
           <div className="grid gap-2 p-3">
             {errorMas ? <p role="alert" className="text-[13px] text-red-700">{errorMas}</p> : null}
-            <button type="button" onClick={onMas} disabled={cargandoMas} className="h-11 w-full rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
+            <button type="button" onClick={onMas} disabled={cargandoMas} className="h-11 w-full rounded-full border border-gray-300 text-sm font-semibold text-gray-800 hover:bg-gray-50 disabled:opacity-60">
               {cargandoMas ? "Cargando…" : "Ver más conversaciones"}
             </button>
           </div>

@@ -10,6 +10,7 @@ import { useModulosActivos } from "@/components/modulos/useModulos";
 import { rutaPermitida } from "@/lib/modulos/menu.mjs";
 import { urlLogin } from "@/lib/destinoLogin.mjs";
 import { ContadorEncuestas, useMisEncuestas } from "@/components/clima/AvisoEncuestas";
+import CampanaAvisos from "@/components/avisos/CampanaAvisos";
 
 const root = "/empleado/panel";
 const items = [
@@ -47,7 +48,11 @@ function BarraEmpleado({ pathname, visibles, dataUser, children }) {
       <header className="bg-white pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex h-20 max-w-3xl items-center justify-between px-5">
           <Link href={`${root}/inicio`} aria-label="ADAMIA, inicio"><img src="/assets/logo.png" alt="ADAMIA" className="h-8 w-auto" /></Link>
-          <Link href={`${root}/mi-espacio`} aria-label="Mi perfil" className="grid size-11 place-items-center rounded-full bg-blue-50 font-semibold text-blue-700">{(dataUser?.nombre || "Mi").slice(0, 2).toUpperCase()}</Link>
+          {/* Campana de avisos: solo si es jefe (cumpleaños y aniversarios de su equipo). */}
+          <div className="flex items-center gap-2">
+            <CampanaAvisos variante="empleado" />
+            <Link href={`${root}/mi-espacio`} aria-label="Mi perfil" className="grid size-11 place-items-center rounded-full bg-blue-50 font-semibold text-blue-700">{(dataUser?.nombre || "Mi").slice(0, 2).toUpperCase()}</Link>
+          </div>
         </div>
       </header>
       <main className="mx-auto w-full min-w-0 max-w-3xl px-5 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6"><GuardaModulo>{children}</GuardaModulo></main>
