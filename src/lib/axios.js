@@ -2,6 +2,7 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import { fetchSeguro } from "./fetchSeguro.mjs";
 import { esSesionCerrada, RUTA_LOGIN_SESION_CERRADA } from "./passkeys/modelo.mjs";
+import { alResponderAxios } from "./asistencia/refrescoAsistencias";
 
 let offlineReady;
 export function ensureOfflineCache() {
@@ -40,8 +41,15 @@ function alCerrarseLaSesion(error) {
   return Promise.reject(error);
 }
 
+// (25/11/2026) Un guardado que cambia asistencias (de cualquier pantalla: Asistencias, Monitor, Incidencias, Permisos,
+// Turnos extra, registro masivo…) recarga TODO lo que depende de ellas, no solo la tabla (lib/asistencia/refrescoAsistencias.js).
+function alResponder(r) {
+  try { alResponderAxios(r?.config); } catch { /* el aviso nunca rompe la respuesta */ }
+  return r;
+}
+
 if (typeof window !== 'undefined') {
-  axios.interceptors.response.use((r) => r, alCerrarseLaSesion);
+  axios.interceptors.response.use(alResponder, alCerrarseLaSesion);
   axios.defaults.adapter = 'fetch';
   // fetch que no deja pasar DOMException a axios (ver./fetchSeguro.mjs).
   axios.defaults.env = { ...(axios.defaults.env || {}), fetch: fetchSeguro };
@@ -73,6 +81,6 @@ instance.interceptors.request.use((config) => {
 
   return config;
 });
-instance.interceptors.response.use((r) => r, alCerrarseLaSesion);
+instance.interceptors.response.use(typeof window !== "undefined" ? alResponder : (r) => r, alCerrarseLaSesion);
 
 export default instance;

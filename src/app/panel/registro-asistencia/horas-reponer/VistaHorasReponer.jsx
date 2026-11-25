@@ -8,13 +8,14 @@
 //   Cancelar un permiso   → PATCH /checador/solicitudes-permiso/:id/estado { estado: "Cancelado" }
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import useSWR, { useSWRConfig } from "swr";
+import useSWR from "swr";
 import Cookies from "js-cookie";
 import { useSnackbar } from "notistack";
 import { ChevronDown, MoreHorizontal, Search } from "lucide-react";
 import axios from "@/lib/axios";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { permisosApi } from "@/lib/permisosApi";
+import { refrescarAsistencias } from "@/lib/asistencia/refrescoAsistencias";
 import { exportToExcel } from "@/utils/exportExcelJS";
 import { useAuth } from "@/context/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -22,7 +23,7 @@ import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 import {
   areasDe, COLUMNAS_EXCEL, cuerpoCierre, cuerpoReposicion, filasExcel, filtrarFilas, tarjetasResumen, textoDesde, textoPorQue, textoUltimo,
 } from "@/lib/asistencia/horasPorReponer.mjs";
-import DetalleCuentaReponer, { urlCuenta } from "./DetalleCuentaReponer";
+import DetalleCuentaReponer from "./DetalleCuentaReponer";
 import { ConfirmarCancelarPermiso, DialogoCierre, DialogoReposicion } from "./DialogosReponer";
 
 const auth = () => ({ headers: { Authorization: `Bearer ${Cookies.get("token")}` } });
@@ -177,9 +178,8 @@ function Tarjetas({ filas, abierto, onAbrir, acciones, detalle }) {
 
 export default function VistaHorasReponer({ idEmpresa, movil = false }) {
   const { enqueueSnackbar } = useSnackbar();
-  const { mutate: mutar } = useSWRConfig();
   const { dataUser } = useAuth();
-  const { data, error, isLoading, mutate } = usePorReponer(idEmpresa);
+  const { data, error, isLoading } = usePorReponer(idEmpresa);
   const datos = data?.data;
   const [busca, setBusca] = useState("");
   const [area, setArea] = useState("");
@@ -192,7 +192,8 @@ export default function VistaHorasReponer({ idEmpresa, movil = false }) {
   const areas = useMemo(() => areasDe(todas), [todas]);
   const filas = useMemo(() => filtrarFilas(todas, { busca, area, soloViejos }), [todas, busca, area, soloViejos]);
 
-  const refrescar = async (idEmpleado) => { await Promise.all([mutate(), mutar(urlCuenta(idEmpleado))]); };
+  // El guardado ya recargó todo lo de asistencias (cuenta, por reponer, tabla): aquí solo se espera esa recarga.
+  const refrescar = () => refrescarAsistencias();
   const enviar = async (fn, ok, idEmpleado) => {
     setGuardando(true);
     try {

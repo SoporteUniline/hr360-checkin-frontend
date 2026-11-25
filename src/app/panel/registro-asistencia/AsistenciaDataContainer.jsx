@@ -19,7 +19,8 @@ import { useSearchParams } from "next/navigation";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
 import useRefrescoChecadas from "@/hooks/useRefrescoChecadas";
-import { cargarPeriodoCompleto, LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
+import { cargarPeriodoCompleto, LIMITE_TODOS, parametrosPeriodo } from "@/lib/asistencia/consultaPeriodo.mjs";
+import { conRefrescoAsistencias } from "@/lib/asistencia/refrescoAsistencias";
 import { indiceFestivos as crearIndiceFestivos } from "@/lib/asistencia/calendario.mjs";
 import useSWR from "swr";
 import { useEmpresaTimezone } from "@/context/AuthContext";
@@ -67,7 +68,6 @@ export default function AsistenciaDataContainer({
   ocultarRegistroMasivo = false,
 }) {
   const { departamentos } = useDepartamentosData(idEmpresa);
-  const [filterOptionsRows, setFilterOptionsRows] = useState([]);
   const [headerFilterMeta, setHeaderFilterMeta] = useState({
     active: false,
     total: 0,
@@ -81,7 +81,7 @@ export default function AsistenciaDataContainer({
     onResetFilters?.();
   };
 
-  const { data, error, isLoading, mutate } = useAsistenciaData(
+  const { data, error, isLoading, mutate: mutateTabla } = useAsistenciaData(
     idEmpresa,
     fechaInicio,
     fechaFin,
@@ -103,8 +103,11 @@ export default function AsistenciaDataContainer({
     sortConfig.sortOrder,
   );
 
-  // Cada checada (SSE) o la cola sin conexión recargan el periodo.
-  useRefrescoChecadas(idEmpresa, mutate);
+  // Tras guardar se recarga TODO lo que depende de las asistencias (tabla, periodo, cuenta de horas, horas extra,
+  // historial…), no solo la tabla: lib/asistencia/refrescoAsistencias.js. Con datos (cambio optimista) va a la tabla.
+  const mutate = useMemo(() => conRefrescoAsistencias(mutateTabla), [mutateTabla]);
+  // Checadas y cambios de otros (SSE), la cola sin conexión, el foco y el sondeo de respaldo: mismo refrescador.
+  useRefrescoChecadas(idEmpresa);
 
   // Filtros activos del periodo: los usan las opciones por columna y Exportar.
   const filtrosPeriodo = {
@@ -126,41 +129,20 @@ export default function AsistenciaDataContainer({
   // Con "Todos los registros" la tabla ya trae el periodo completo: no se descarga dos veces.
   const mostrarTodos = Number(limit) >= LIMITE_TODOS;
 
-  useEffect(() => {
-    let isCancelled = false;
-    if (mostrarTodos) return undefined;
-
-    const loadFilterOptionsRows = async () => {
-      try {
-        const { registros } = await cargarPeriodoCompleto(fetcherWithToken, filtrosPeriodo);
-        if (!isCancelled) setFilterOptionsRows(registros);
-      } catch (fetchError) {
-        if (!isCancelled) {
-          setFilterOptionsRows([]);
-        }
-      }
-    };
-
-    loadFilterOptionsRows();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [
-    idEmpresa,
-    fechaInicio,
-    fechaFin,
-    debouncedFiltroEmpleado,
-    filtroDepartamento,
-    filtroTipoRegistro,
-    filtroEstadoAsistencia,
-    soloPresentes,
-    soloAusentes,
-    sinGoceDeSueldo,
-    diasFestivos,
-    requiereAutorizacion,
-    mostrarTodos,
-  ]);
+  // Periodo completo (tarjetas, filtros por columna, matriz): clave SWR propia que empieza con /checador/asistencias,
+  // así el refrescador la recarga con lo demás. Con "Todos los registros" no se pide (la tabla ya lo trae).
+  const clavePeriodo = idEmpresa && !mostrarTodos
+    ? ["/checador/asistencias#periodo", parametrosPeriodo(filtrosPeriodo).toString()]
+    : null;
+  const { data: periodo, error: errorPeriodo } = useSWR(clavePeriodo, () => cargarPeriodoCompleto(fetcherWithToken, filtrosPeriodo), {
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+    keepPreviousData: true,
+  });
+  const filterOptionsRows = useMemo(
+    () => (errorPeriodo || !Array.isArray(periodo?.registros) ? [] : periodo.registros),
+    [periodo, errorPeriodo],
+  );
 
   const { data: empleados } = useEmpleadosData(idEmpresa);
   // Catálogo de Festivos: marca y valida "Festivo" en cada registro.

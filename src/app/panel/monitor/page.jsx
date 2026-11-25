@@ -12,6 +12,7 @@ import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAsistenciaData from "@/hooks/useAsistenciaData";
 import useRefrescoChecadas from "@/hooks/useRefrescoChecadas";
+import { refrescarAsistencias } from "@/lib/asistencia/refrescoAsistencias";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import ErrorPage from "@/components/ErrorPage";
 import { LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
@@ -54,7 +55,7 @@ export default function MonitorPage() {
   const hoy = dayjs().tz(ZONA_BASE).format("YYYY-MM-DD");
   const ayer = dayjs().tz(ZONA_BASE).subtract(1, "day").format("YYYY-MM-DD");
 
-  const { data, error, isLoading, mutate } = useAsistenciaData(
+  const { data, error, isLoading } = useAsistenciaData(
     idEmpresa,
     ayer,
     hoy,
@@ -73,7 +74,8 @@ export default function MonitorPage() {
     "fecha",
     "desc"
   );
-  useRefrescoChecadas(idEmpresa, mutate);
+  // SSE (checadas y cambios de asistencias), foco y sondeo de respaldo: lib/asistencia/refrescoAsistencias.js.
+  useRefrescoChecadas(idEmpresa);
   const registros = Array.isArray(data?.registros) ? data.registros : [];
 
   // Fecha y hora del encabezado: cambia con el minuto y con cada recarga. Se pone al montar: el servidor no conoce la
@@ -101,7 +103,7 @@ export default function MonitorPage() {
       <VistaMonitor registros={registros} zona={zona} cargando={isLoading || !idEmpresa} onAbrirDia={setRelojDe} vista={vista} />
     );
 
-  const ventanaDia = relojDe ? <RelojDiaDialog registro={relojDe} onCerrar={() => setRelojDe(null)} onGuardado={() => mutate()} /> : null;
+  const ventanaDia = relojDe ? <RelojDiaDialog registro={relojDe} onCerrar={() => setRelojDe(null)} onGuardado={() => refrescarAsistencias()} /> : null;
 
   // Un solo árbol para celular y escritorio: cruzar el punto de quiebre (girar una tableta) no reinicia filtros ni grupos.
   return (
