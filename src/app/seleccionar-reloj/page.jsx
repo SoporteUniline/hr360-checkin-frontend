@@ -14,7 +14,10 @@ export default function SeleccionarRelojPage() {
   const [loadingSelection, setLoadingSelection] = useState(false);
   const redirecting = useRef(false);
 
-  const handleSelectEmpresa = async (idEmpresa) => {
+  // (INC-007) Con una sola empresa esta página abre el reloj sola: si quedara en el historial, «atrás» (navegador o el
+  // botón de Android) volvería aquí y aquí volvería a abrir el reloj, sin poder regresar al panel. Por eso la entrada
+  // automática REEMPLAZA esta página; al elegir de la lista se conserva para volver a la lista.
+  const handleSelectEmpresa = async (idEmpresa, { automatica = false } = {}) => {
     setLoadingSelection(true);
     try {
       const response = await fetch(
@@ -32,7 +35,9 @@ export default function SeleccionarRelojPage() {
       }
 
       if (data.slug) {
-        router.push(`/${encodeURIComponent(data.slug)}`);
+        const destino = `/${encodeURIComponent(data.slug)}`;
+        if (automatica) router.replace(destino);
+        else router.push(destino);
       } else {
         enqueueSnackbar("No se encontró la ruta (slug) para esta empresa", {
           variant: "warning",
@@ -58,7 +63,7 @@ export default function SeleccionarRelojPage() {
       empresas[0].id_empresa
     ) {
       redirecting.current = true;
-      handleSelectEmpresa(empresas[0].id_empresa);
+      handleSelectEmpresa(empresas[0].id_empresa, { automatica: true });
     }
   }, [dataUser]);
 
