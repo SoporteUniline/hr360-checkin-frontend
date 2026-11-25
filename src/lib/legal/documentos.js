@@ -102,6 +102,42 @@ export const AVISO_PRIVACIDAD = {
   ],
 };
 
+// PROPUESTA del aviso de privacidad (Lumo fase B1, 25/11/2026) — NO publicada: ninguna página la usa. La publica el dueño
+// (después de revisarla con su abogado) cambiando `AVISO_PRIVACIDAD` por esta. Motivo: Mapbox es un encargado nuevo que
+// recibe el texto de la colonia del candidato para proponerle la sucursal más cercana. Al revisarlo se encontró que el
+// aviso vigente no menciona a los candidatos de las vacantes ni al proveedor de IA que los entrevista por WhatsApp; la
+// propuesta lo agrega. Cambia la versión porque cambian las finalidades y los encargados.
+const conSeccion = (secciones, id, cambio) => secciones.map((s) => (s.id === id ? cambio(s) : s));
+export const AVISO_PRIVACIDAD_PROPUESTA = {
+  ...AVISO_PRIVACIDAD,
+  version: "2026-12-18",
+  fecha: "18 de diciembre de 2026 (propuesta, sin publicar)",
+  borrador: true,
+  secciones: [AVISO_PRIVACIDAD.secciones]
+    .map((l) => conSeccion(l, "a-quien-aplica", (s) => ({
+      ...s,
+      parrafos: [
+        ...s.parrafos,
+        "También aplica a las personas que se postulan a una vacante publicada en ADAMIA (por la página de la vacante o por WhatsApp). En ese caso la empresa que publica la vacante decide sobre la contratación y ADAMIA trata los datos de la postulación para operar el proceso de reclutamiento.",
+      ],
+    })))
+    .map((l) => conSeccion(l, "datos", (s) => ({
+      ...s,
+      lista: [
+        ...s.lista,
+        "Si te postulas: lo que contestas en la entrevista por WhatsApp o en el formulario de la vacante (experiencia, escolaridad, disponibilidad, expectativa de sueldo y documentos que decidas subir) y, si nos la das, la colonia o el municipio donde vives, para proponerte la sucursal más cercana. No guardamos las coordenadas de tu ubicación.",
+      ],
+    })))
+    .map((l) => conSeccion(l, "transferencias", (s) => ({
+      ...s,
+      lista: [
+        ...s.lista,
+        "Inteligencia artificial que conduce la entrevista por WhatsApp (Google Gemini).",
+        "Cálculo de la sucursal más cercana (Mapbox): recibe solo el texto de la colonia o municipio que escribes, sin tu nombre ni tu teléfono.",
+      ],
+    })))[0],
+};
+
 export const TERMINOS = {
   id: "terminos",
   ruta: "/terminos-condiciones",

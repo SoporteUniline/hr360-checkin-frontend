@@ -6,8 +6,9 @@
 // tarjeta «Entrevista» de la ficha (CitaChat), con las mismas acciones y líneas de sistema que antes estaban sobre el chat.
 // Lumo fase A (25/11/2026): «Requisitos de la vacante» (cumple / no cumple / falta dato, evaluados sin IA) como ALERTA
 // —nunca rechazo— y preguntas sin respuesta con su estado y enlace a la base de conocimiento.
+// Lumo fase B1 (25/11/2026): sucursal que eligió el candidato y la colonia/ciudad que dio (nunca coordenadas).
 import Link from "next/link";
-import { AlertTriangle, CalendarCheck2, CheckCircle2, ClipboardCheck, HelpCircle, UserRoundCheck } from "lucide-react";
+import { AlertTriangle, CalendarCheck2, CheckCircle2, ClipboardCheck, HelpCircle, MapPin, UserRoundCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { tiempoRelativo } from "@/lib/whatsapp/tiempo.mjs";
 import {
@@ -95,6 +96,15 @@ export default function PanelCandidato({
           <UserRoundCheck className={`size-4 ${consentimientoAceptado(entrevista.consentimiento) ? "text-emerald-600" : "text-gray-400"}`} aria-hidden="true" />
           {textoConsentimiento(entrevista.consentimiento)}
         </p>
+        {entrevista.sucursal || entrevista.ubicacion_candidato ? (
+          <div className="flex items-start gap-1.5 text-[13px] text-gray-700" data-sucursal-elegida={entrevista.sucursal?.id_unidad ?? ""}>
+            <MapPin className="mt-0.5 size-4 shrink-0 text-rose-600" aria-hidden="true" />
+            <span className="min-w-0 [overflow-wrap:anywhere]">
+              {entrevista.sucursal ? <><span className="font-semibold text-gray-900">Sucursal elegida: {entrevista.sucursal.nombre}</span>{entrevista.sucursal.direccion ? <span className="block text-gray-600">{entrevista.sucursal.direccion}</span> : null}</> : <span>Aún no elige sucursal.</span>}
+              {entrevista.ubicacion_candidato ? <span className="block text-gray-600">Dijo que vive en: {entrevista.ubicacion_candidato}</span> : null}
+            </span>
+          </div>
+        ) : null}
         {entrevista.etapa === "preguntas" && textoPreguntaActual(entrevista.pregunta_actual) ? (
           <p className="rounded-lg bg-violet-50 p-2.5 text-[13px] text-violet-900 [overflow-wrap:anywhere]" data-pregunta-actual>
             <span className="font-semibold">Pregunta en curso:</span> {textoPreguntaActual(entrevista.pregunta_actual)}

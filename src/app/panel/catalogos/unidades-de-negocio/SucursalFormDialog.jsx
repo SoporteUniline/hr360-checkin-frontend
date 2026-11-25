@@ -16,6 +16,8 @@ import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/Combobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Building2, Camera } from "lucide-react";
+// Lumo fase B1 (25/11/2026): ubicación en el mapa para la sucursal más cercana del agente de WhatsApp.
+import UbicacionSucursal from "@/components/whatsapp/UbicacionSucursal";
 
 export default function SucursalFormDialog({
   open,
@@ -293,6 +295,12 @@ export default function SucursalFormDialog({
                   className="h-9 text-sm"
                 />
               </div>
+
+              {editSuc ? (
+                <UbicacionSucursal idUnidad={editSuc.id_unidad} idEmpresa={editSuc.id_empresa} direccion={form.domicilioEmpleador} />
+              ) : (
+                <p className="md:col-span-2 text-[13px] text-gray-500">Guarda la unidad para ubicarla en el mapa (la usa el agente de WhatsApp para proponer la sucursal más cercana).</p>
+              )}
 
               {error && (
                 <div className="md:col-span-2 bg-red-50 border border-red-100 rounded-md p-2 text-[11px] text-red-600 font-medium">

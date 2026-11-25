@@ -122,3 +122,22 @@ Backend y reglas: `docs/whatsapp-reclutamiento.md` del backend, «Lumo fase A».
   - `scripts/test-whatsapp-lumo.mjs`: 6 pruebas, en CI.
   - `scripts/verify-whatsapp-lumo.mjs`: navegador con backend simulado, a 1440 y 390 px. Revisa que no haya scroll
     horizontal y que los objetivos táctiles (≥ 44 px en teléfono) y el texto (≥ 13 px) cumplan en las piezas nuevas.
+
+## Lumo fase B1: sucursal más cercana (25/11/2026)
+
+Servidor: `docs/whatsapp-reclutamiento.md` del backend, «Lumo fase B». Mapbox se llama **solo desde el servidor**: en el
+navegador no hay token (lo comprueba `scripts/test-whatsapp-lumo-b.mjs`).
+
+- **Catálogo → Unidades de negocio → Editar unidad**: sección «Ubicación en el mapa» (`components/whatsapp/UbicacionSucursal.jsx`).
+  «Ubicar en mapa» manda el domicilio completo al servidor (`POST /sucursales/geocodificar`), llena latitud y longitud y
+  muestra lo que encontró Mapbox; RH revisa en «Ver en el mapa» (Google Maps, sin token), corrige a mano si hace falta y
+  «Guardar ubicación» (`PUT /sucursales/:id/ubicacion`). Sin Mapbox: «Falta configurar Mapbox» y el botón queda apagado,
+  pero la captura a mano funciona. Al crear una unidad se avisa que se ubica después de guardarla. Si la empresa no tiene el
+  módulo de Reclutamiento (403) o falta la migración (503), la sección no aparece.
+- **Enlaces de vacantes → «Sucursales»** (`SucursalesVacante.jsx`): «Todas las sucursales» (por omisión) o elegir cuáles,
+  con «Ubicada / Sin ubicar» por sucursal y aviso de las que el agente no puede proponer.
+- **Ficha del candidato → Entrevista**: «Sucursal elegida» y «Dijo que vive en: …» (texto; nunca coordenadas).
+- **Aviso de privacidad**: `src/lib/legal/documentos.js` trae `AVISO_PRIVACIDAD_PROPUESTA` (versión `2026-12-18`) con Mapbox
+  como encargado, los candidatos de reclutamiento y la IA de la entrevista. **No está publicada**: la página
+  `/aviso-privacidad` sigue con `AVISO_PRIVACIDAD` (2026-11-25). Para publicarla, el dueño (con su abogado) cambia
+  `AVISO_PRIVACIDAD` por la propuesta en `app/(public)/aviso-privacidad/page.jsx`.
