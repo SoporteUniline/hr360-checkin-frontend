@@ -12,7 +12,7 @@
 // cara»… La foto de cada pose se toma sola cuando la persona está en la pose, quieta y con buena luz, con el MISMO detector
 // rápido que usa el reloj al checar (opcionesRapidas), para que la huella registrada y la de la checada coincidan.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { loadBrowserFaceApi, opcionesRapidas } from "@/lib/faceapi-browser";
+import { loadBrowserFaceApi, opcionesRapidas, retenerFaceApi } from "@/lib/faceapi-browser";
 import { promediarLecturas } from "@/lib/rostro/lecturas.mjs";
 import { brilloPromedio, carasDeFaceApi, GUIA_INICIAL, guiaRostro, OVALO_CELULAR } from "@/lib/rostro/guia.mjs";
 import { avance, descriptoresDe, estadoInicial, pasoActual, procesarCuadro, puedeSaltar, saltar, terminado } from "@/lib/rostro/poses.mjs";
@@ -65,6 +65,8 @@ export function useCapturaRostro({ ovalo = OVALO_CELULAR, lecturas: LECTURAS = 3
     vivoRef.current = true;
     return () => { vivoRef.current = false; apagar(); };
   }, [apagar]);
+  // (INC-007) Mientras la captura está abierta, la preparación del reconocimiento puede seguir.
+  useEffect(() => retenerFaceApi(), []);
 
   // Lo que se ve en un cuadro: cajas y puntos de la cara → guía.
   const evaluar = useCallback((resultados, exigirFrente = true) => {

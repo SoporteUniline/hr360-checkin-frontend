@@ -40,7 +40,7 @@ function setup({ scriptFails = false, modelFails = false, warmupFails = false } 
   });
   vm.runInContext(source, context);
   return { context, pending, api, cargados, load: () => context.loadBrowserFaceApi(),
-    counts: () => ({ scripts, warmups }) };
+    retener: () => context.retenerFaceApi(), counts: () => ({ scripts, warmups }) };
 }
 
 test("concurrent consumers share script, parallel model loading, and warmup", async () => {
@@ -91,6 +91,47 @@ test("optional warmup failure does not prevent recognition readiness", async () 
   await new Promise(setImmediate);
   env.pending.forEach((finish) => finish());
   assert.equal(await ready, env.api);
+});
+
+// INC-007: «entro al reloj, vuelvo a admin y se traba». Al salir del reloj (nadie retiene el reconocimiento) la
+// preparación pesada se detiene antes del siguiente paso; al volver a abrirlo sigue donde iba, sin cargar dos veces.
+test("sin retención (reloj cerrado) la preparación se detiene entre pasos y sigue al volver a retenerla", async () => {
+  const env = setup();
+  const soltar = env.retener();
+  const ready = env.load();
+  await new Promise(setImmediate);
+  assert.equal(env.counts().scripts, 1);
+  assert.equal(env.pending.length, 3, "con el reloj abierto se piden los modelos");
+  soltar();
+  soltar(); // soltar dos veces no descuenta otra retención
+  env.pending.forEach((finish) => finish());
+  for (let i = 0; i < 5; i++) await new Promise(setImmediate);
+  assert.equal(env.counts().warmups, 0, "fuera del reloj no se calienta la GPU");
+  let listo = false;
+  ready.then(() => { listo = true; });
+  await new Promise(setImmediate);
+  assert.equal(listo, false);
+  const soltar2 = env.retener(); // vuelve a abrir el reloj
+  assert.equal(await ready, env.api);
+  assert.deepEqual(env.counts(), { scripts: 1, warmups: 3 }, "un solo script y un solo calentamiento");
+  assert.equal(env.load(), ready, "no se vuelve a cargar");
+  soltar2();
+});
+
+test("salir del reloj antes de empezar: no se descarga nada hasta volver", async () => {
+  const env = setup();
+  env.retener()();
+  const ready = env.load();
+  for (let i = 0; i < 3; i++) await new Promise(setImmediate);
+  assert.equal(env.counts().scripts, 0);
+  assert.equal(env.pending.length, 0);
+  const soltar = env.retener();
+  await new Promise(setImmediate);
+  await new Promise(setImmediate);
+  assert.equal(env.counts().scripts, 1);
+  env.pending.forEach((finish) => finish());
+  assert.equal(await ready, env.api);
+  soltar();
 });
 
 test("local runtime matches installed face-api 0.22.2 and includes its license", async () => {
