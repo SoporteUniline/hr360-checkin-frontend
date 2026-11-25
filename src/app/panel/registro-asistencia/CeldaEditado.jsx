@@ -41,7 +41,8 @@ export function crearFormateadorCambios({ tiposPermiso, empleados, zona }) {
 }
 
 // Columna "Editado": etiqueta ámbar con el detalle de qué cambió (antes → después).
-export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
+// `grande`: texto de 13 px (el Monitor pide 13 px o más; Asistencias usa 12 px).
+export default function CeldaEditado({ registro, formatear, onVerChecadas, grande = false }) {
   const [abierto, setAbierto] = useState(false);
   // Editado: la asistencia se corrigió a mano o alguna checada del reloj se corrigió ese día.
   const corregidas = Number(registro?.checadas_corregidas) || 0;
@@ -54,7 +55,7 @@ export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
   );
   const movimientos = Array.isArray(historial?.cambios) ? historial.cambios : [];
   if (!editado) {
-    return <span className="text-xs text-slate-400" aria-label="Sin editar">No</span>;
+    return <span className={`${grande ? "text-[13px]" : "text-xs"} text-slate-400`} aria-label="Sin editar">No</span>;
   }
   const cambios = cambiosRegistro(registro, formatear);
 
@@ -66,7 +67,7 @@ export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
           data-no-row-click
           // La fila abre el historial con cualquier clic: este botón no debe dispararlo.
           onClick={(e) => e.stopPropagation()}
-          className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 hover:bg-amber-100"
+          className={`inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 ${grande ? "text-[13px]" : "text-xs"} font-semibold text-amber-700 hover:bg-amber-100`}
           aria-label="Editado: Sí, ver qué cambió"
         >
           Sí

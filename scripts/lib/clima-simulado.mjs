@@ -1,4 +1,6 @@
-// Backend simulado de /api/checador/clima para scripts/verify-clima.mjs (mismas formas que modules/clima del backend).
+// Backend simulado de /api/checador/clima para scripts/verify-clima.mjs y scripts/verify-clima-dashboard.mjs (mismas
+// formas que modules/clima del backend).
+import { COMENTARIOS_SIN_AREAS, climaGrande, climaSinAreas, comparacionGrande, lectura } from "./clima-resultados-simulado.mjs";
 const ESCALA = ["Totalmente en desacuerdo", "En desacuerdo", "Ni de acuerdo ni en desacuerdo", "De acuerdo", "Totalmente de acuerdo"].map((texto, i) => ({
   valor: i + 1,
   texto,
@@ -187,21 +189,42 @@ const TABLERO = {
     },
     comentarios: [
       {
+        clave: "abi1",
+        texto: "¿Qué es lo que más te gusta de trabajar aquí?",
+        respuestas: ["El ambiente con mis compañeros.", "Me pagan puntual.", "Que puedo aprender cosas nuevas cada semana."],
+      },
+      {
         clave: "abi2",
         texto: "Si pudieras cambiar una sola cosa de tu trabajo, ¿cuál sería?",
         respuestas: ["Los sábados salimos tarde y nadie avisa con tiempo.", "Más reconocimiento."],
       },
     ],
   },
-  anterior: { id: 29, nombre: "Clima mayo 2026", cierra_el: "2026-05-20", comparacion: { general: 0.4, enps: 6, participacion: 5 } },
+  anterior: { id: 29, nombre: "Clima mayo 2026", cierra_el: "2026-05-20", comparacion: comparacionGrande(DIMS) },
+  evolucion: [
+    { id: 28, nombre: "Clima noviembre 2025", cierra_el: "2025-11-20", favorable: 61, general: 7.0, respuestas: 120 },
+    { id: 29, nombre: "Clima mayo 2026", cierra_el: "2026-05-20", favorable: 64, general: 7.2, respuestas: 131 },
+    { id: 30, nombre: "Clima noviembre 2026", cierra_el: "2026-11-20", favorable: 70, general: 7.6, respuestas: 142 },
+  ],
   mediciones: [
     { id: 30, nombre: "Clima noviembre 2026", cierra_el: "2026-11-20" },
+    { id: 32, nombre: "Clima general · nov 2026", cierra_el: "2026-11-24" },
     { id: 31, nombre: "Pulso del taller", cierra_el: "2026-11-24" },
     { id: 29, nombre: "Clima mayo 2026", cierra_el: "2026-05-20" },
   ],
   abiertas: [],
   nom035: { campania: { id: 40 }, disponibles: true, nivel: "medio", dominiosAltos: 2 },
 };
+
+// Dashboard (25/11/2026): % favorable, confianza, participación por área, lectura y pregunta por pregunta.
+{
+  const extra = climaGrande(DIMS, TABLERO.actual.clima.grupos);
+  TABLERO.actual.clima = {
+    ...TABLERO.actual.clima,
+    ...extra,
+    enps: { ...TABLERO.actual.clima.enps, conteo: extra.enpsConteo },
+  };
+}
 
 // Empresa chica (25/11/2026): 1 de 3 personas contestó y el servidor ya manda resultados, grupo y comentario.
 const TABLERO_CHICO = {
@@ -230,6 +253,43 @@ const TABLERO_CHICO = {
     comentarios: [{ clave: "abi2", texto: "Si pudieras cambiar una sola cosa de tu trabajo, ¿cuál sería?", respuestas: ["Que haya más herramientas."] }],
   },
   anterior: null,
+  evolucion: [{ id: 31, nombre: "Pulso del taller", cierra_el: "2026-11-24", favorable: 50, general: 6.9, respuestas: 1 }],
+};
+{
+  const cl = TABLERO_CHICO.actual.clima;
+  const f = (favorable, neutral) => ({ favorable, neutral, desfavorable: 100 - favorable - neutral, n: 30 });
+  const porValor = (v) => (v >= 7.5 ? f(100, 0) : v >= 5 ? f(0, 100) : f(0, 0));
+  cl.dimensiones = cl.dimensiones.map((d) => ({ ...d, favorabilidad: porValor(d.valor) }));
+  cl.grupos = cl.grupos.map((g) => ({ ...g, favorabilidad: f(50, 50), dimensiones: cl.dimensiones }));
+  Object.assign(cl, {
+    favorabilidad: f(50, 50),
+    confianza: "senal",
+    confianzaMinima: 10,
+    preguntas: [],
+    participacionGrupos: { grupos: [{ clave: "Taller", nombre: "Taller", invitados: 3, contestadas: 1, participacion: 33 }], sinGrupos: false },
+  });
+  cl.lectura = lectura(cl.favorabilidad, cl.dimensiones);
+  cl.enps = { ...cl.enps, conteo: { promotores: 1, pasivos: 0, detractores: 0 } };
+}
+
+// Primera medición sin áreas (la maqueta): 4 de 7, «señal», todo en «Otras áreas», sin anterior.
+const TABLERO_SIN_AREAS = {
+  ...TABLERO,
+  actual: {
+    campania: { id: 32, nombre: "Clima general · nov 2026", tipo: "clima", estado: "cerrada", abre_el: "2026-11-17", cierra_el: "2026-11-24" },
+    invitados: 7,
+    contestadas: 4,
+    participacion: 57,
+    minimo: 1,
+    disponibles: true,
+    motivo: null,
+    agruparPor: "area",
+    clima: climaSinAreas(DIMS),
+    comentarios: COMENTARIOS_SIN_AREAS,
+  },
+  anterior: null,
+  evolucion: [{ id: 32, nombre: "Clima general · nov 2026", cierra_el: "2026-11-24", favorable: 92, general: 9.3, respuestas: 4 }],
+  nom035: null,
 };
 
 const dom = (nombre, valor, nivel) => ({ nombre, valor, nivel });
@@ -513,6 +573,21 @@ export function datosSimulados() {
     },
     plantillaIa: null,
     tareas: [],
+    // Plan de acción (clima_acciones): medición 30 con su plan; la 29 (anterior) con una acción y su seguimiento.
+    acciones: [
+      {
+        id: 501, idCampania: 30, dimension: "crecimiento", texto: "Plática 1 a 1 de plan de carrera con cada persona",
+        responsable: { id: 101, nombre: "Persona 1" }, fecha_limite: "2026-12-15", estado: "en_curso", revision: 1, seguimiento: null,
+      },
+      {
+        id: 401, idCampania: 29, dimension: "reconocimiento", texto: "Reconocimiento mensual en la junta del lunes",
+        responsable: { id: 102, nombre: "Persona 2" }, fecha_limite: "2026-06-30", estado: "lograda", revision: 2,
+        seguimiento: { medicion: { id: 30, nombre: "Clima noviembre 2026", cierra_el: "2026-11-20" }, antes: 43, despues: 52, delta: 9, subio: true },
+      },
+    ],
+    siguienteAccion: 600,
+    llamadasAcciones: [],
+    tableros: [],
     llamadasIa: [],
     campania: null,
     guardados: 0,
@@ -611,6 +686,12 @@ export function datosSimulados() {
       estado.tareas.push(cuerpo);
       return json({ ok: true, id: estado.tareas.length }, 201);
     }
+    // Selector de responsable (SelectorEmpleado): personas activas de la empresa.
+    if (p === "/checador/empleados" && m === "GET")
+      return json({
+        data: PERSONAS.map((x) => ({ id_empleado: x.id, nombre: x.nombre, apellido_paterno: "", apellido_materno: "", puesto: x.puesto, departamento: x.area })),
+        total: PERSONAS.length,
+      });
     if (!p.startsWith("/checador/clima")) return json({});
     const e = p.slice("/checador/clima".length);
     const c = estado.campania;
@@ -719,7 +800,48 @@ export function datosSimulados() {
           { id: 2, nombre: "Persona 2", estado: "pendiente" },
         ],
       });
-    if (e.startsWith("/tablero")) return json(url.searchParams.get("campania") === "31" ? TABLERO_CHICO : TABLERO);
+    if (e.startsWith("/tablero")) {
+      const pedida = url.searchParams.get("campania");
+      const t = pedida === "31" ? TABLERO_CHICO : pedida === "32" ? TABLERO_SIN_AREAS : TABLERO;
+      const id = t.actual.campania.id;
+      const de = (idC) => estado.acciones.filter((a) => a.idCampania === idC);
+      estado.tableros.push(id);
+      return json({
+        ...t,
+        plan: {
+          acciones: de(id),
+          anterior: t.anterior ? { id: t.anterior.id, nombre: t.anterior.nombre, acciones: de(t.anterior.id) } : null,
+          estados: ["pendiente", "en_curso", "lograda", "no_lograda"],
+        },
+      });
+    }
+    const crearAccion = /^\/campanias\/(\d+)\/acciones$/.exec(e);
+    if (crearAccion && m === "POST") {
+      estado.llamadasAcciones.push({ m, e, cuerpo });
+      const persona = PERSONAS.find((x) => x.id === cuerpo.id_responsable);
+      const a = {
+        id: estado.siguienteAccion++, idCampania: Number(crearAccion[1]), dimension: cuerpo.dimension, texto: cuerpo.texto,
+        responsable: persona ? { id: persona.id, nombre: persona.nombre } : null, fecha_limite: cuerpo.fecha_limite,
+        estado: cuerpo.estado ?? "pendiente", revision: 1, seguimiento: null,
+      };
+      estado.acciones.push(a);
+      return json({ ok: true, accion: a }, 201);
+    }
+    const unaAccion = /^\/acciones\/(\d+)$/.exec(e);
+    if (unaAccion) {
+      estado.llamadasAcciones.push({ m, e, cuerpo });
+      const a = estado.acciones.find((x) => x.id === Number(unaAccion[1]));
+      if (!a) return json({ ok: false, error: "La acción no existe." }, 404);
+      if (m === "DELETE") {
+        estado.acciones = estado.acciones.filter((x) => x !== a);
+        return json({ ok: true });
+      }
+      if (cuerpo.revision && cuerpo.revision !== a.revision) return json({ ok: false, codigo: "VERSION", error: "Alguien más cambió esta acción." }, 409);
+      const persona = cuerpo.id_responsable ? PERSONAS.find((x) => x.id === cuerpo.id_responsable) : null;
+      Object.assign(a, { ...cuerpo, revision: a.revision + 1 }, persona ? { responsable: { id: persona.id, nombre: persona.nombre } } : {});
+      delete a.id_responsable;
+      return json({ ok: true, accion: a });
+    }
     if (e === "/campanias/40/resultados") return json(NOM_RESULTADOS);
     if (e === "/campanias/40/guia1") {
       const canal = (id) => (estado.canalizados.filter((x) => x.id === id).at(-1)?.canalizado ? "2026-11-24T10:00:00Z" : null);
