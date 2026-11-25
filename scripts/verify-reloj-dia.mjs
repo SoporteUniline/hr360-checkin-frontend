@@ -525,7 +525,17 @@ try {
   assert.ok((await comidaReloj.boundingBox()).height <= 34, "franja de comida delgada");
   assert.equal(await dlgFrida.locator("[data-renglon] + [data-comida-reloj] + [data-renglon]").count(), 1, "entre los dos tramos");
   if (capturas) { await dormir(300); await page.screenshot({ path: `${capturas}/1440-comida.png` }); }
-  await page.keyboard.press("Escape");
+  // «No fue comida» (marcó «Salir a comer» por error): la franja se va y el PUT pide quitar la marca de ese tramo.
+  await comidaReloj.getByRole("button", { name: "No fue comida" }).click();
+  await comidaReloj.waitFor({ state: "detached", timeout: 5000 });
+  const antesNoComida = pet.reloj.length;
+  await dlgFrida.getByRole("button", { name: "Guardar" }).click();
+  for (let i = 0; i < 50 && pet.reloj.length === antesNoComida; i++) await dormir(100);
+  const putFrida = pet.reloj.at(-1);
+  assert.equal(putFrida.id, 510);
+  assert.deepEqual(putFrida.cuerpo.registros.find((x) => x.id === 7801).quitar_comida, true);
+  assert.equal("quitar_comida" in putFrida.cuerpo.registros.find((x) => x.id === 7802), false);
+  if (await dlgFrida.isVisible()) await page.keyboard.press("Escape");
   await dlgFrida.waitFor({ state: "detached", timeout: 10000 });
 
   // 8) Masivos: «Marcar como…» (solo sin checadas) y «Cargar horario normal…» (sin checadas o sin salida), motivo obligatorio.

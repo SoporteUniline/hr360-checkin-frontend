@@ -19,7 +19,7 @@ import { useEmpresaTimezone } from "@/context/AuthContext";
 import { useGuardiaSalida } from "@/components/cambios/CambiosPendientes";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import {
-  CONCEPTOS, TOLERANCIA_MIN, aHHMM, aMin, agregarComida, pausaComidaTras, agregarRegistro, autorizaValor, claseEstado, conAutoriza,
+  CONCEPTOS, TOLERANCIA_MIN, aHHMM, aMin, agregarComida, pausaComidaTras, quitarComida, agregarRegistro, autorizaValor, claseEstado, conAutoriza,
   cuerpoPut, desdeApi, diaFila, durTexto, editado, errores as validar, erroresPorRenglon, estadoFila, etiquetaQuitar,
   fechaTxt, hora12Txt, horarioMin, horarioNormal, minDeCampo, ordenar, origenTexto, puedeComida, quitarORestaurar,
   resumen, resumenServidor, separarExtra, vivos, esMotivoOtro, textoMotivoOtro, motivoOtro, MAX_TEXTO_OTRO,
@@ -419,6 +419,12 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                                 {pausa.minutos != null ? ` · ${durTexto(pausa.minutos) === "—" ? "0 min" : durTexto(pausa.minutos)}` : ""}
                               </span>
                               <span className="text-[12px] text-amber-800/80">marcada con «Salir a comer» en el reloj</span>
+                              {!soloLectura ? (
+                                <button type="button" onClick={() => cambiar((p) => quitarComida(p, r.k))}
+                                  className="ml-auto h-6 rounded-md px-2 text-[12.5px] font-semibold text-amber-900 underline underline-offset-2 hover:bg-amber-100 max-sm:h-11">
+                                  No fue comida
+                                </button>
+                              ) : null}
                             </div>
                           ) : null}
                         </Fragment>
