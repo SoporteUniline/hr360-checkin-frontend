@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOutIcon, MoreVerticalIcon, UserCircleIcon } from "lucide-react";
+import { LogOutIcon, MoreVerticalIcon, ShieldCheckIcon, UserCircleIcon } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -22,6 +22,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useRouter, usePathname } from "next/navigation";
 import { useConfirmarSalida } from "@/components/cambios/CambiosPendientes";
 import { obtenerIniciales } from "@/lib/utils";
+import { rutaSeguridad } from "@/lib/passkeys/modelo.mjs";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 
@@ -124,6 +125,17 @@ export function NavUser() {
               </>
             )}
 
+            {/* (25/11/2026) Para todos (también usuarios con acceso): passkeys y sesiones abiertas. */}
+            <DropdownMenuItem
+              onClick={() => {
+                if (isMobile) setOpenMobile(false);
+                confirmarSalida(({ reemplazar }) => (reemplazar ? router.replace(rutaSeguridad(dataUser)) : router.push(rutaSeguridad(dataUser))), { navega: true });
+              }}
+            >
+              <ShieldCheckIcon />
+              Seguridad y Face ID
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
                 if (isMobile) setOpenMobile(false);

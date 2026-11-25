@@ -1,5 +1,5 @@
 "use client";
-import { Package, ClipboardCheck, ClipboardList, LogOut, UsersRound, ReceiptText, HandCoins, KeyRound, ScanFace, Activity } from "lucide-react";
+import { Package, ClipboardCheck, ClipboardList, LogOut, UsersRound, ReceiptText, HandCoins, KeyRound, ScanFace, Activity, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { MenuLink, cardClass } from "@/components/empleado/shared";
 import { useModulosActivos } from "@/components/modulos/useModulos";
@@ -17,6 +17,7 @@ export default function EmployeeSpace() {
   return <div className="space-y-5"><h1 className="text-3xl font-bold tracking-tight">Mi espacio</h1><section className={cardClass}><p className="font-semibold">{dataUser?.nombre}</p><p className="mt-1 break-words text-sm text-slate-500">{dataUser?.correo || dataUser?.email}</p></section>
     <div className="space-y-3"><MenuLink href="/empleado/panel/mi-firma" icon={KeyRound} title="Mi firma y PIN" description="Guarda tu firma y tu PIN para firmar documentos" />
       <MenuLink href="/empleado/panel/mi-rostro" icon={ScanFace} title="Mi rostro" description="Regístralo o actualízalo para checar" />
+      <MenuLink href="/empleado/panel/seguridad" icon={ShieldCheck} title="Seguridad y Face ID" description="Entra sin contraseña y revisa tus dispositivos" />
       {ver("/empleado/panel/mis-recibos") ? <MenuLink href="/empleado/panel/mis-recibos" icon={ReceiptText} title="Mis recibos de pago" description="Consulta, descarga y firma tus recibos" /> : null}
       {ver("/empleado/panel/mis-prestamos") ? <MenuLink href="/empleado/panel/mis-prestamos" icon={HandCoins} title="Mis préstamos" description="Pide un préstamo, firma tu acuerdo y ve tu saldo" /> : null}
       {ver("/empleado/panel/mis-recursos") ? <MenuLink href="/empleado/panel/mis-recursos" icon={Package} title="Mis activos y uniformes" description="Consulta tus entregas y resguardos" /> : null}
