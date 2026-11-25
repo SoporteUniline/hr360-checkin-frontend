@@ -172,7 +172,7 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
             {r.acta ? <span data-aviso-acta className="text-[12px] leading-snug text-amber-800">Sin motivo es injustificada: se creará un acta en borrador.</span> : null}
           </span>
         ) : comoCampo && par.tipo === ASISTENCIA ? (
-          <span className="text-[12.5px] text-slate-500">Pon sus horas abajo en «Checadas del reloj».</span>
+          <span className="text-[12.5px] text-slate-500">Pon sus horas abajo, en las checadas.</span>
         ) : <Debajo registro={registro} conDetalle={!nuevo} />}
         {!conMotivo && !pendiente && !actaFila(registro) && !registro.motivos_resumen ? <span className="text-slate-300">—</span> : null}
       </span>
@@ -201,7 +201,7 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
           {r.acta ? <span data-aviso-acta className="text-[12px] leading-snug text-amber-800">Sin motivo es injustificada: se creará un acta en borrador.</span> : null}
         </span>
       ) : comoCampo && par.tipo === ASISTENCIA ? (
-        <span className="text-[12.5px] text-slate-500">Pon sus horas abajo en «Checadas del reloj».</span>
+        <span className="text-[12.5px] text-slate-500">Pon sus horas abajo, en las checadas.</span>
       ) : <Debajo registro={registro} conDetalle={!nuevo} goce={tipo && r.clase !== "parcial" && !r.acta && goce ? `${r.goceCambia ? "" : "🔒 "}${goceTxt(goce)}` : ""} />}
     </span>
   );
