@@ -33,6 +33,7 @@ import {
   rutaConversaciones, rutaEstado, tomarControl,
 } from "./api";
 import ListaConversaciones from "./ListaConversaciones";
+import FranjaAtencion from "./FranjaAtencion";
 import HiloConversacion from "./HiloConversacion";
 import EnlacesVacantes from "./EnlacesVacantes";
 import ConfigurarAgente from "./ConfigurarAgente";
@@ -608,6 +609,8 @@ export default function BandejaWhatsapp() {
             ) : null}
           </div>
         ) : null}
+        {/* wa2: franja «requiere atención» (viene con la lista; se refresca con ella). */}
+        <FranjaAtencion atencion={lista?.atencion} filtro={filtro} onAbrir={irA} onFiltrar={() => setFiltro("atencion")} />
         <ListaConversaciones
           conversaciones={conversaciones}
           hayMas={hayMas}
