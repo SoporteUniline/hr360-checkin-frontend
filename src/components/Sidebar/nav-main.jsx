@@ -75,6 +75,7 @@ import { useEffect, useRef, useState } from "react";
 import { useModulosActivos } from "@/components/modulos/useModulos";
 import { useConfirmarSalida } from "@/components/cambios/CambiosPendientes";
 import { filtrarGrupos, rutaPermitida } from "@/lib/modulos/menu.mjs";
+import { filtrarGruposPorPermisos, rutaPermitidaAcceso } from "@/lib/permisos/permisos.mjs";
 import {
   RECRUITMENT_NAV,
   isRecruitmentNavActive,
@@ -741,7 +742,7 @@ export function NavMainConConsulta() {
 export function NavMain({ consulta = "" } = {}) {
   const router = useRouter();
   const path = usePathname();
-  const { dataUser } = useAuth();
+  const { dataUser, permisosSesion } = useAuth();
   const { state: sidebarState, isMobile, setOpenMobile } = useSidebar();
   // Con cambios sin guardar (p. ej. la ficha del empleado) pregunta antes de navegar.
   const confirmarSalida = useConfirmarSalida();
@@ -754,14 +755,15 @@ export function NavMain({ consulta = "" } = {}) {
     dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
   // Módulos por empresa: fuera lo que la empresa no tiene activo. Llega junto con la sesión (sin parpadeo).
   const { activos, opciones: opcionesModulo } = useModulosActivos();
-  const grupos = filtrarGrupos(menuGroups, activos, opcionesModulo);
+  // (16/12/2026) Usuario con acceso: fuera lo que no tiene permiso de ver y lo que es solo del dueño.
+  const grupos = filtrarGruposPorPermisos(filtrarGrupos(menuGroups, activos, opcionesModulo), permisosSesion);
   // «Monitor de mi equipo» solo para jefes (lo decide el servidor con la sesión).
   const { esJefe } = useMonitorEquipo();
   // «Mis encuestas» de RH o dueño: solo con ficha de empleado (si no, el servidor responde SIN_FICHA y no se muestra).
   const misEncuestas = useMisEncuestas(effectiveRole === "Recruiter");
   const contadorDe = (item) => (item.url === RUTA_MIS_ENCUESTAS ? misEncuestas.pendientes : 0);
   const itemsInicio = dashboardItems.filter((item) =>
-    rutaPermitida(item.url, activos, opcionesModulo) && (!item.soloJefe || esJefe) && (!item.soloConFicha || misEncuestas.conFicha));
+    rutaPermitida(item.url, activos, opcionesModulo) && rutaPermitidaAcceso(item.url, permisosSesion) && (!item.soloJefe || esJefe) && (!item.soloConFicha || misEncuestas.conFicha));
   const vistasEvaluacion = useMenuEvaluaciones(dataUser, effectiveRole === "Recruiter" && rutaPermitida("/panel/evaluaciones", activos, opcionesModulo));
   // Rol, app nativa (sin «Mi suscripción») y, en Evaluaciones, los permisos del servidor. Mientras no se
   // saben se muestran por rol, salvo «Por responder», que solo aparece si hay evaluaciones asignadas.
