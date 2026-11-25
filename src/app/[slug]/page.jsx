@@ -3,7 +3,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import axiosInstance from "@/lib/axios";
 import RelojChecador from "@/components/RelojChecador";
-import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
+import { loadBrowserFaceApi, retenerFaceApi } from "@/lib/faceapi-browser";
 import { validadaHoy, validadaReciente, guardarValidada, olvidarValidada } from "@/lib/reloj/suscripcionDia.mjs";
 
 function RedirectingPage({ message }) {
@@ -45,6 +45,8 @@ export default function ChecadorPage() {
   const [nombreEmpresa, setNombreEmpresa] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // (INC-007) La página del reloj retiene la preparación del rostro mientras está abierta (ver faceapi-browser.js).
+  useEffect(() => retenerFaceApi(), []);
 
   useEffect(() => {
     let vigente = true;
