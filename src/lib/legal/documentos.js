@@ -10,8 +10,8 @@ export const AVISO_PRIVACIDAD = {
   id: "aviso_privacidad",
   ruta: "/aviso-privacidad",
   titulo: "Aviso de privacidad integral",
-  version: "2026-11-21",
-  fecha: "21 de noviembre de 2026",
+  version: "2026-11-25",
+  fecha: "25 de noviembre de 2026",
   intro: `${R.nombre}, ${R.calidad}, con domicilio en ${R.domicilio} («ADAMIA»), es responsable del tratamiento de los datos personales que se describen en este aviso, conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares.`,
   secciones: [
     {
@@ -30,6 +30,7 @@ export const AVISO_PRIVACIDAD = {
         "Datos de la cuenta: usuario, contraseña cifrada, empresa, número de empleados, RFC si lo proporcionas y datos para facturar.",
         "Datos de pago: los procesa directamente nuestro proveedor de pagos (Stripe). ADAMIA no guarda los números de tu tarjeta.",
         "Uso de la plataforma y del sitio: registros de acceso, dirección IP, dispositivo, navegador y páginas visitadas.",
+        "Si activas la entrada con Face ID, huella o passkey: ADAMIA guarda solo una llave pública y datos del dispositivo (nombre, fecha de alta y último uso). Tu cara o tu huella nunca salen de tu teléfono ni llegan a ADAMIA; no es un dato biométrico que ADAMIA reciba ni guarde.",
         "Lo que nos escribes: mensajes de soporte, de contacto y conversaciones con el asistente comercial del sitio.",
       ],
       parrafos: ["Para estas finalidades ADAMIA no solicita datos personales sensibles de las personas a las que aplica este aviso."],
@@ -201,8 +202,8 @@ export const AVISO_EMPLEADOS = {
   id: "aviso_empleados",
   ruta: "/aviso-empleados",
   titulo: "Aviso de privacidad para empleados (plantilla)",
-  version: "2026-11-21",
-  fecha: "21 de noviembre de 2026",
+  version: "2026-11-25",
+  fecha: "25 de noviembre de 2026",
   intro: "Plantilla para que cada empresa que usa ADAMIA informe a su personal. La empresa empleadora es la responsable de estos datos; ADAMIA los trata por su cuenta como encargado. La empresa debe completar sus datos (nombre, domicilio y medio de contacto) y entregarla a cada persona.",
   secciones: [
     {
@@ -221,6 +222,7 @@ export const AVISO_EMPLEADOS = {
         "Ubicación: solo en el momento de checar, para validar que estás en tu lugar de trabajo.",
         "Fotografía al checar, como evidencia del registro.",
         "Dato personal sensible: el patrón de tu rostro (dato biométrico), si checas con reconocimiento facial.",
+        "Si activas la entrada con Face ID, huella o passkey: ADAMIA guarda solo una llave pública y datos del dispositivo (nombre, fecha de alta y último uso). Tu cara o tu huella nunca salen de tu teléfono ni llegan a ADAMIA; no es un dato biométrico que ADAMIA reciba ni guarde.",
       ],
     },
     {

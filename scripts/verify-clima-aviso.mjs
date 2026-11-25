@@ -142,6 +142,9 @@ const browser = await chromium.launch();
 async function sesion(quien, viewport) {
   const ctx = await browser.newContext({ viewport, locale: "es-MX", timezoneId: "America/Mexico_City", hasTouch: viewport.width < 500 });
   if (quien) await ctx.addCookies([{ name: "token", value: token(quien), url: base }]);
+  // (25/11/2026) Tras entrar con contraseña se ofrece activar Face ID (hoja modal); esta prueba es de encuestas: el
+  // dispositivo ya pidió «No volver a preguntar». La hoja se prueba en verify-passkeys.mjs.
+  await ctx.addInitScript(() => { try { localStorage.setItem("adamia_passkey_no_preguntar", "1"); } catch { /* sin almacenamiento */ } });
   const pg = await ctx.newPage();
   pagina = pg;
   pg.on("pageerror", (err) => errores.push(err.message));

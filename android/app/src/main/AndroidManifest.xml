@@ -7,6 +7,8 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
+        <!-- (25/11/2026) Passkeys: la app comparte inicios de sesión con adamia.com.mx (Digital Asset Links). -->
+        <meta-data android:name="asset_statements" android:resource="@string/asset_statements" />
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation"
             android:name=".MainActivity"
