@@ -11,6 +11,7 @@ import timezone from "dayjs/plugin/timezone";
 import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import { fetcherWithToken } from "@/lib/fetcher";
+import { refrescarAsistencias } from "@/lib/asistencia/refrescoAsistencias";
 import { FORMA_PAGO_DEFAULT } from "@/lib/asistencia/horasExtra.mjs";
 import {
   cuerpoGuardar, diasDeLaSemana, filaDesdePropuesta, filaNueva, filasDesdeServidor, hayCambiosFilas, repetirEnDias, resumenSemana,
@@ -28,7 +29,7 @@ export default function useHorasExtraDia({ registro, activo, zona, aBaseDeDatos 
   const url = activo && registro?.id_empleado && dias.length
     ? `/checador/horas-extra/empleado/${registro.id_empleado}?desde=${dias[0]}&hasta=${dias[6]}`
     : null;
-  const { data, error, isLoading, mutate } = useSWR(url, fetcherWithToken, { revalidateOnFocus: false, shouldRetryOnError: false });
+  const { data, error, isLoading } = useSWR(url, fetcherWithToken, { revalidateOnFocus: false, shouldRetryOnError: false });
   const aLocal = (v) => (v ? dayjs.tz(v, DB_TZ).tz(zona || DB_TZ).format("HH:mm") : "");
 
   const originales = useMemo(() => filasDesdeServidor(Array.isArray(data?.registros) ? data.registros : [], aLocal),
@@ -95,7 +96,8 @@ export default function useHorasExtraDia({ registro, activo, zona, aBaseDeDatos 
         cuerpoGuardar(filas, originales, { autoriza, forma, aBase: aBaseDeDatos }));
       enqueueSnackbar("Horas extra guardadas con su horario.", { variant: "success" });
       for (const aviso of respuesta?.avisos ?? []) enqueueSnackbar(`Tope de ley: ${aviso.mensaje}`, { variant: "warning" });
-      await mutate();
+      // Recarga esta semana y todo lo que depende de las asistencias (se une a la recarga del guardado).
+      await refrescarAsistencias();
       return true;
     } catch (e) {
       enqueueSnackbar(e?.response?.data?.error || "No se pudieron guardar las horas extra.", { variant: "error" });

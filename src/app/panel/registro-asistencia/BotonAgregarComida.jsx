@@ -6,7 +6,7 @@
 // (PUT …/comida/:idMovimiento) y QuitarComida la quita (DELETE), que regresa el tramo como estaba.
 
 import { useState } from "react";
-import { mutate as recargar } from "swr";
+import { refrescarAsistencias } from "@/lib/asistencia/refrescoAsistencias";
 import { useSnackbar } from "notistack";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import axios from "@/lib/axios";
@@ -22,11 +22,9 @@ function comidaSugerida(registro) {
   return ["13:00", "13:30"];
 }
 
-// Refresca la lista y las «Checadas del reloj» de la ventana abierta.
-const refrescar = (onGuardado) => Promise.all([
-  onGuardado?.(),
-  recargar((clave) => typeof clave === "string" && clave.includes("/checador/reloj/asistencia-por-empleado")),
-]);
+// Refresca la lista y las «Checadas del reloj» de la ventana abierta (el refrescador único recarga todo lo de
+// asistencias, incluidas las checadas del panel; se une a la recarga que ya arrancó el guardado).
+const refrescar = (onGuardado) => Promise.all([onGuardado?.(), refrescarAsistencias()]);
 
 // variante "alerta" (tabla: chip amarillo), "boton" (ventana de la fila) o "editar" (comida manual: con `comida`
 // = { id_movimiento, salida, regreso } y `horaLocal` para mostrar sus horas en la zona de la empresa).
