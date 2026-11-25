@@ -428,7 +428,8 @@ try {
   // Renglones compactos (una o dos líneas) y nada fuera de su renglón.
   const altos = await tabla.locator("[data-persona]").evaluateAll((ps) => ps.map((p) => Math.round(p.getBoundingClientRect().height)));
   assert.ok(
-    altos.every((h) => h >= 44 && h <= 80),
+    // Hasta 3 líneas: la frase más larga (permiso + hora de salida) con su chip, ya con la columna «Editado».
+    altos.every((h) => h >= 44 && h <= 100),
     `renglones compactos: ${altos.join(",")}`
   );
   assert.deepEqual(await fueraDeFila(tabla), [], "renglones sin desborde a 1440");

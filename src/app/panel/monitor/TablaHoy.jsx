@@ -72,13 +72,13 @@ function Renglon({ r, debe, onAbrirDia, formatear }) {
           </span>
         </span>
       </th>
-      <td data-horario className={cn("order-3 mt-1.5 block p-0 text-[13px] tabular-nums text-slate-600 lg:mt-0 lg:text-[13.5px] lg:text-slate-700", celda)}>
+      <td data-horario className={cn("order-3 mt-1.5 block p-0 text-[13px] tabular-nums text-slate-600 lg:mt-0 lg:whitespace-nowrap lg:text-[13.5px] lg:text-slate-700", celda)}>
         {horarioVista(r)}
       </td>
       <td
         data-entrada
         className={cn(
-          "order-4 mt-1.5 p-0 text-[13px] tabular-nums text-slate-600 lg:mt-0 lg:text-[13.5px]",
+          "order-4 mt-1.5 p-0 text-[13px] tabular-nums text-slate-600 lg:mt-0 lg:whitespace-nowrap lg:text-[13.5px]",
           // Celular: «· Entró 9:18 a.m.» junto al horario; con salida, en su propio renglón («Checó 7:55 a.m. → 3:10 p.m.»).
           !e ? "hidden" : e.salida ? "block basis-full" : "block before:whitespace-pre before:content-['_·_'] lg:before:content-none",
           celda
@@ -140,7 +140,7 @@ function Renglon({ r, debe, onAbrirDia, formatear }) {
         className={cn(
           // Celular: solo se muestra si se editó (junto a la frase); escritorio: siempre, como en Asistencias.
           editadoDe(reg) ? "relative z-10 order-5 mt-1.5 block basis-full p-0 lg:mt-0" : "hidden",
-          "lg:table-cell lg:border-t lg:border-slate-100 lg:px-2 lg:py-2.5 lg:text-center lg:align-middle"
+          "lg:table-cell lg:border-t lg:border-slate-100 lg:px-1 lg:py-2.5 lg:text-center lg:align-middle"
         )}
       >
         <span className="text-[13px] text-slate-500 lg:hidden">Editado: </span>
@@ -175,22 +175,22 @@ export default function TablaHoy({ grupos, cuentas, onAbrirDia, zona }) {
     >
       <thead className="hidden lg:table-header-group">
         <tr className="text-left text-[13px] font-semibold uppercase tracking-[0.04em] text-slate-600">
-          <th scope="col" className="w-[19%] py-3 pl-5 pr-3 font-semibold">
+          <th scope="col" className="w-[18%] py-3 pl-5 pr-3 font-semibold">
             Persona
           </th>
-          <th scope="col" className="w-[13%] px-3 py-3 font-semibold">
+          <th scope="col" className="w-[15%] px-3 py-3 font-semibold">
             Horario
           </th>
-          <th scope="col" className="w-[15%] px-3 py-3 font-semibold">
+          <th scope="col" className="w-[17%] px-3 py-3 font-semibold">
             Entrada
           </th>
           <th scope="col" className="px-3 py-3 font-semibold">
             Qué pasa
           </th>
-          <th scope="col" className="hidden w-[12%] px-3 py-3 font-semibold xl:table-cell">
+          <th scope="col" className="hidden w-[10%] px-3 py-3 font-semibold xl:table-cell">
             Jornada
           </th>
-          <th scope="col" className="w-[84px] px-2 py-3 text-center font-semibold">
+          <th scope="col" className="w-[76px] px-1 py-3 text-center font-semibold">
             Editado
           </th>
           <th scope="col" className="w-11 py-3 pr-4">
