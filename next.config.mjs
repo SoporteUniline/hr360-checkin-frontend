@@ -77,8 +77,11 @@ const nextConfig = {
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       {
+        // Modelos de face-api (unos 7 MB): antes caducaban cada día y la primera apertura del reloj de cada día los
+        // volvía a bajar («Preparando reconocimiento facial…» tardaba mucho; el service worker que los guardaba se
+        // retiró con el modo sin conexión). No cambian: si algún día cambian, van en otra carpeta (/models-v2).
         source: "/models/:path*",
-        headers: [{ key: "Cache-Control", value: "public, max-age=86400" }],
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       {
         source: "/firmar/:path*",
