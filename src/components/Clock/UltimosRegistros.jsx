@@ -1,14 +1,11 @@
-import { CalendarClock } from "lucide-react";
-
-// «Hoy» en el reloj de la empresa (kiosco): un renglón por persona con su último movimiento (Entrada, Salida o Salió a
-// comer) y la hora con su color. La lista llega ordenada del más reciente al más antiguo; se desplaza por dentro.
+// «Últimos» en el reloj de la empresa (kiosco, maqueta aprobada 26/11/2026): tarjeta compacta con las 3 personas que
+// checaron más reciente (nombre · movimiento y la hora con su color) y cuántas checadas van hoy. La lista llega ordenada
+// del más reciente al más antiguo.
 const TONO = {
-  entrada: { texto: "Entrada", hora: "text-emerald-700", avatar: "bg-emerald-50 text-emerald-700" },
-  salida: { texto: "Salida", hora: "text-rose-700", avatar: "bg-slate-100 text-slate-600" },
-  comida: { texto: "Salió a comer", hora: "text-amber-700", avatar: "bg-amber-50 text-amber-700" },
+  entrada: { texto: "Entrada", color: "text-emerald-700" },
+  salida: { texto: "Salida", color: "text-rose-700" },
+  comida: { texto: "Comida", color: "text-amber-700" },
 };
-
-const iniciales = (nombre) => String(nombre || "").trim().split(/\s+/).slice(0, 2).map((p) => p[0] || "").join("").toUpperCase() || "?";
 
 export function ultimoPorPersona(movimientos = []) {
   const vistos = new Set();
@@ -24,43 +21,29 @@ export function ultimoPorPersona(movimientos = []) {
   return filas;
 }
 
-export default function UltimosRegistros({ movimientos, isLoading, formatearHora, empleadosActivos, totalRegistros }) {
-  const filas = ultimoPorPersona(movimientos || []).slice(0, 30);
+// Nombre y primer apellido: el renglón es angosto.
+const nombreCorto = (nombre) => nombre.split(/\s+/).slice(0, 2).join(" ");
+
+export default function UltimosRegistros({ movimientos, isLoading, formatearHora, totalRegistros, cuantos = 3 }) {
+  const filas = ultimoPorPersona(movimientos || []).slice(0, cuantos);
   return (
     <>
-      <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
-        <div className="min-w-0">
-          <h2 className="text-base font-semibold text-slate-900">Hoy</h2>
-          <p className="text-xs text-slate-500"><span className="font-semibold text-slate-700">{empleadosActivos ?? 0}</span> en turno ahora</p>
-        </div>
-        <p className="shrink-0 rounded-full bg-brand/10 px-2.5 py-1 text-xs font-semibold text-brand tabular-nums">
-          {totalRegistros ?? 0} {Number(totalRegistros) === 1 ? "checada" : "checadas"}
-        </p>
+      <div className="mb-1.5 flex items-center justify-between text-[13px] text-slate-600">
+        <h2 className="font-bold text-slate-900">Últimos</h2>
+        <span className="tabular-nums">{totalRegistros ?? 0} hoy</span>
       </div>
-      <ul className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-1">
-        {isLoading ? [...Array(5)].map((_, i) => (
-          <li key={i} className="flex items-center gap-3 px-2 py-2.5">
-            <span className="size-9 animate-pulse rounded-full bg-slate-100" />
-            <span className="h-4 w-32 animate-pulse rounded bg-slate-100" />
-          </li>
+      <ul className="divide-y divide-slate-100">
+        {isLoading ? [...Array(cuantos)].map((_, i) => (
+          <li key={i} className="py-1.5"><span className="block h-4 w-40 animate-pulse rounded bg-slate-100" /></li>
         )) : filas.length ? filas.map((f) => {
           const tono = TONO[f.tipo];
           return (
-            <li key={f.clave} className="flex items-center gap-3 rounded-lg px-2 py-2">
-              <span aria-hidden="true" className={`grid size-9 shrink-0 place-items-center rounded-full text-xs font-bold ${tono.avatar}`}>{iniciales(f.nombre)}</span>
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium text-slate-900">{f.nombre}</span>
-                <span className="block text-xs text-slate-500">{tono.texto}</span>
-              </span>
-              <span className={`shrink-0 text-sm font-semibold tabular-nums ${tono.hora}`}>{formatearHora(f.hora).replace(/:\d{2} /, " ")}</span>
+            <li key={f.clave} className="flex items-center justify-between gap-3 py-1.5 text-[14.5px]">
+              <span className="min-w-0 truncate text-slate-900">{nombreCorto(f.nombre)} · <span className={f.tipo === "comida" ? tono.color : "text-slate-600"}>{tono.texto}</span></span>
+              <span className={`shrink-0 font-bold tabular-nums ${tono.color}`}>{formatearHora(f.hora).replace(/:\d{2} /, " ")}</span>
             </li>
           );
-        }) : (
-          <li className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-            <CalendarClock className="size-8 text-slate-300" aria-hidden="true" />
-            <span className="text-sm text-slate-500">Aún no hay checadas hoy</span>
-          </li>
-        )}
+        }) : <li className="py-2 text-sm text-slate-500">Aún no hay checadas hoy</li>}
       </ul>
     </>
   );

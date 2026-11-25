@@ -16,6 +16,8 @@ import {
   LogOut,
   Utensils,
   DoorOpen,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -48,9 +50,10 @@ import ClockNavigation from './Clock/ClockNavigation';
 import { hora12 } from "@/lib/hora12.mjs";
 import { conVoyAComer, segundosRestantes, DURACION_VOY_A_COMER_S } from "@/lib/reloj/voyAComer.mjs";
 import { BotonVoyAComer, AvisoVoyAComer } from "./Clock/VoyAComer";
-import ResultadoChecada from "./Clock/ResultadoChecada";
+import ResultadoChecada, { ResultadoEnZona } from "./Clock/ResultadoChecada";
 import AvisoKiosco from "./Clock/AvisoKiosco";
 import { crearSonidoReloj, leerSonidoActivo, guardarSonidoActivo } from "@/lib/reloj/sonidoReloj.mjs";
+import { crearPantallaEncendida } from "@/lib/reloj/pantallaEncendida.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -84,6 +87,15 @@ export default function RelojChecador({
       if (guardado !== null) setCamaraFija(guardado === "1");
     } catch { /* sin almacenamiento: queda el valor por defecto */ }
   }, [claveCamara]);
+  // Kiosco: con «Mantener encendido» también se pide al navegador que no apague la pantalla (Screen Wake Lock).
+  const pantallaRef = useRef(null);
+  useEffect(() => {
+    if (modoEmpleado) return undefined;
+    const pantalla = pantallaRef.current ?? (pantallaRef.current = crearPantallaEncendida());
+    void pantalla.fijar(camaraFija);
+    return undefined;
+  }, [modoEmpleado, camaraFija]);
+  useEffect(() => () => { void pantallaRef.current?.fijar(false); }, []);
   const cambiarCamaraFija = () => setCamaraFija((actual) => {
     try { localStorage.setItem(claveCamara, actual ? "0" : "1"); } catch { /* solo esta sesión */ }
     return !actual;
@@ -609,21 +621,34 @@ export default function RelojChecador({
     return <ErrorPage message="No se pudieron cargar los registros." />;
 
   const conexion = estadoConexion({ offline });
-  const estiloAccionCamara = "inline-flex min-h-12 max-w-full items-center gap-2 rounded-full bg-white px-5 text-base font-semibold text-slate-900 shadow-lg ring-1 ring-slate-900/10 hover:bg-slate-50 active:scale-[0.98]";
-  // En «Código» o «QR» el teclado ya está a la vista: el botón solo acompaña al método «Rostro» (y al «Código y cara» en curso).
-  const accionCodigoCara = !kiosco || (metodoKiosco !== "rostro" && !codigoCara) ? null : codigoCara ? (
-    <button type="button" onClick={() => finCodigoCara(null)} className={estiloAccionCamara}>
+  // Kiosco: en la cámara solo se ofrece cancelar un «Código y cara» en curso; «¿No te reconoce?» está en el panel derecho.
+  const accionCodigoCara = kiosco && codigoCara ? (
+    <button type="button" onClick={() => finCodigoCara(null)}
+      className="inline-flex min-h-12 max-w-full items-center gap-2 rounded-full bg-white px-5 text-base font-semibold text-slate-900 shadow-lg ring-1 ring-slate-900/10 hover:bg-slate-50 active:scale-[0.98]">
       <XCircle className="size-5 shrink-0 text-slate-500" aria-hidden="true" /><span className="truncate">Cancelar · usar solo la cara</span>
     </button>
-  ) : (
-    <button type="button" onClick={() => setTecladoCara({ motivo: "boton" })} data-boton-codigo-cara className={estiloAccionCamara}>
-      <Keyboard className="size-5 shrink-0 text-brand" aria-hidden="true" /><span className="truncate">¿No te reconoce? Usa tu código</span>
-    </button>
-  );
+  ) : null;
   const cambiarMetodoKiosco = (id) => {
     setMetodoKiosco(id);
     if (id === "rostro" && !mostrarCamara) abrirCamara();
   };
+  const botonKiosco = "grid size-11 [@container(min-width:40rem)]:size-12 shrink-0 place-items-center rounded-xl bg-white/90 text-slate-900 shadow-sm backdrop-blur-sm hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand";
+  // Arriba a la derecha de la cámara: bocina y «Mantener encendido» (cámara lista para la siguiente persona y pantalla sin
+  // apagarse). Con la cámara angosta, «Mantener encendido» queda solo con su icono.
+  const accionesKiosco = kiosco ? (
+    <>
+      <button type="button" onClick={cambiarSonido} aria-pressed={!sonidoActivo} data-bocina={sonidoActivo ? "si" : "no"}
+        aria-label={sonidoActivo ? "Silenciar sonido" : "Activar sonido"} title={sonidoActivo ? "Sonido activado" : "Sonido silenciado"} className={botonKiosco}>
+        {sonidoActivo ? <Volume2 className="size-5" aria-hidden="true" /> : <VolumeX className="size-5 text-slate-500" aria-hidden="true" />}
+      </button>
+      <button type="button" onClick={cambiarCamaraFija} aria-pressed={camaraFija} aria-label="Mantener encendido" data-mantener-encendido={camaraFija ? "si" : "no"}
+        title={camaraFija ? "Pantalla siempre encendida: la cámara queda lista para la siguiente persona" : "La cámara se apaga al checar y la pantalla puede apagarse"}
+        className={`inline-flex h-11 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-bold [@container(min-width:40rem)]:h-12 [@container(min-width:40rem)]:px-3.5 shadow-sm backdrop-blur-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${camaraFija ? "bg-brand text-white hover:bg-brand/90" : "bg-white/90 text-slate-900 hover:bg-white"}`}>
+        {camaraFija ? <Pin className="size-5 shrink-0" aria-hidden="true" /> : <PinOff className="size-5 shrink-0" aria-hidden="true" />}
+        <span aria-hidden="true" className="hidden whitespace-nowrap [@container(min-width:40rem)]:inline">{camaraFija ? "Pantalla siempre encendida" : "Mantener encendido"}</span>
+      </button>
+    </>
+  ) : null;
   const panelRostro = (
     <FacialRecognitionPanel
       isOpen={mostrarCamara}
@@ -641,6 +666,9 @@ export default function RelojChecador({
       onPedirCodigo={pedirCodigo}
       accionInferior={accionCodigoCara}
       onErrorVisible={kiosco ? () => sonidoRef.current?.error() : undefined}
+      kiosco={kiosco}
+      accionesSuperiores={accionesKiosco}
+      marcoAmbar={kiosco && Boolean(voyAComer)}
     />
   );
 
@@ -663,37 +691,29 @@ export default function RelojChecador({
             onAbrirQR={handleOpenQR}
             registrando={registrando || loadingGPS}
             avisar={avisar}
-            sonido={{ activo: sonidoActivo, onCambiar: cambiarSonido }}
+            onNoReconoce={() => setTecladoCara({ motivo: "boton" })}
             avisoUbicacion={ubicacionGPS ? `Última lectura: precisión ±${Math.ceil(ubicacionGPS.accuracy)} m. Usa ubicación precisa para checar.` : null}
-            camara={!offline ? (
-              <>
-                {panelRostro}
-                {/* Avisos sobre el video: «Código y cara» y «Salida a comer» (entre los botones de la cámara, sin taparlos). */}
-                <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex flex-wrap justify-center gap-2 pl-16 pr-28">
-                  {codigoCara && (
-                    <p className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-white shadow-lg" data-chip-codigo-cara>
-                      <ScanFace className="size-4 shrink-0" aria-hidden="true" />Código y cara
-                    </p>
-                  )}
-                  <AvisoVoyAComer activo={Boolean(voyAComer)} segundos={segundosComer} enLinea corto />
-                </div>
-                {/* Ajuste del aparato: discreto sobre el video (antes era una franja «Cámara siempre encendida»). */}
-                {mostrarCamara && (
-                  <button type="button" onClick={cambiarCamaraFija} aria-pressed={camaraFija}
-                    aria-label="Cámara siempre encendida" title={camaraFija ? "Cámara siempre encendida: queda lista para la siguiente persona" : "La cámara se apaga al checar"}
-                    className={`absolute left-3 top-3 z-10 grid size-10 place-items-center rounded-full bg-slate-900/55 text-white backdrop-blur-sm ${camaraFija ? "" : "opacity-70"}`}>
-                    {camaraFija ? <Pin className="size-5" aria-hidden="true" /> : <PinOff className="size-5" aria-hidden="true" />}
-                  </button>
-                )}
-              </>
-            ) : (
+            camara={!offline ? panelRostro : (
               <div className="flex h-full flex-col items-center justify-center gap-3 bg-slate-100 p-6 text-center">
                 <span className="grid size-16 place-items-center rounded-2xl bg-white text-slate-400 shadow-sm"><Camera className="size-8" aria-hidden="true" /></span>
                 <p className="text-lg font-semibold text-slate-800">Rostro no disponible sin conexión</p>
                 <p className="text-sm text-slate-600">Restablece la conexión para registrar una checada.</p>
               </div>
             )}
-            recientes={<UltimosRegistros movimientos={movimientos} isLoading={isLoading} formatearHora={formatearHora} empleadosActivos={empleadosActivos} totalRegistros={totalRegistros} />}
+            sobreCamara={<>
+              {/* Chips debajo de los botones de arriba a la derecha: «Código y cara · solo contigo» y «Salida a comer». */}
+              <div className="pointer-events-none absolute right-3 top-[7.75rem] z-10 flex [@container(min-width:40rem)]:top-[5.25rem] max-w-[calc(100%-1.5rem)] flex-wrap justify-end gap-2 [@container(min-width:40rem)]:right-5">
+                {codigoCara && (
+                  <p className="flex h-11 items-center gap-2 whitespace-nowrap rounded-xl bg-white px-4 text-[15px] font-bold text-brand shadow-lg" data-chip-codigo-cara>
+                    <ScanFace className="size-5 shrink-0" aria-hidden="true" />Código y cara<span className="hidden [@container(min-width:40rem)]:inline"> · solo contigo</span>
+                  </p>
+                )}
+                <AvisoVoyAComer activo={Boolean(voyAComer)} segundos={segundosComer} enLinea corto />
+              </div>
+              <AvisoKiosco aviso={avisoKiosco} enCamara onCerrar={() => { clearTimeout(temporizadorAviso.current); setAvisoKiosco(null); }} />
+              {popupInfo && <ResultadoEnZona info={popupInfo} duracion={popupInfo.duracion} />}
+            </>}
+            ultimos={<UltimosRegistros movimientos={movimientos} isLoading={isLoading} formatearHora={formatearHora} totalRegistros={totalRegistros} />}
             voyAComer={{ activo: Boolean(voyAComer), segundos: segundosComer, total: DURACION_VOY_A_COMER_S, onCambiar: cambiarVoyAComer, disabled: offline }}
           />
         ) : (
@@ -956,8 +976,7 @@ export default function RelojChecador({
           );
         })()}
 
-        {popupInfo && <ResultadoChecada info={popupInfo} duracion={popupInfo.duracion} className={kiosco ? "flex" : "hidden md:flex"} />}
-        <AvisoKiosco aviso={kiosco ? avisoKiosco : null} onCerrar={() => { clearTimeout(temporizadorAviso.current); setAvisoKiosco(null); }} />
+        {popupInfo && !kiosco && <ResultadoChecada info={popupInfo} duracion={popupInfo.duracion} className="hidden md:flex" />}
 
         {mostrarModalTurno && (
           <div className="fixed inset-0 z-110 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">

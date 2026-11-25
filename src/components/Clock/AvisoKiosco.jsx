@@ -9,11 +9,12 @@ const TONOS = {
   info: { Icono: Info, caja: "border-blue-200", icono: "bg-blue-50 text-brand", titulo: "Un paso más" },
 };
 
-export default function AvisoKiosco({ aviso, onCerrar }) {
+// enCamara: dentro de la zona de la cámara, arriba del aviso grande (maqueta aprobada 26/11/2026).
+export default function AvisoKiosco({ aviso, onCerrar, enCamara = false }) {
   if (!aviso) return null;
   const tono = TONOS[aviso.tono] || TONOS.error;
   return (
-    <div className="pointer-events-none fixed inset-x-0 top-4 z-120 flex justify-center px-4">
+    <div className={`pointer-events-none inset-x-0 flex justify-center px-4 ${enCamara ? "absolute bottom-[5.5rem] z-40 [@container(min-width:40rem)]:bottom-28" : "fixed top-4 z-120"}`}>
       <div role={aviso.tono === "info" ? "status" : "alert"} data-aviso-kiosco={aviso.tono}
         className={`pointer-events-auto flex w-full max-w-xl items-start gap-3 rounded-2xl border bg-white p-4 shadow-2xl animate-in fade-in slide-in-from-top-2 duration-200 ${tono.caja}`}>
         <span className={`grid size-11 shrink-0 place-items-center rounded-xl ${tono.icono}`}><tono.Icono className="size-6" aria-hidden="true" /></span>

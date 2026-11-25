@@ -1,7 +1,7 @@
 "use client";
 // Confirmación grande después de checar (reloj de la empresa y app del empleado en escritorio): «¡Listo, Ana!», qué se
 // registró y a qué hora. Dura unos segundos (la barra de abajo se vacía) y el reloj vuelve solo. Solo presentación.
-import { AlertTriangle, CheckCircle2, Clock4, LogIn, LogOut, Utensils, XCircle } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Clock4, LogIn, LogOut, Utensils, XCircle } from "lucide-react";
 
 const iniciales = (nombre) => String(nombre || "").trim().split(/\s+/).slice(0, 2).map((p) => p[0] || "").join("").toUpperCase() || "?";
 
@@ -19,6 +19,48 @@ const TONOS = {
   comida: { Icono: Utensils, hora: "text-amber-700", insignia: "bg-amber-500", barra: "bg-amber-500" },
   otro: { Icono: CheckCircle2, hora: "text-slate-900", insignia: "bg-emerald-500", barra: "bg-brand" },
 };
+
+// Kiosco (maqueta aprobada 26/11/2026): la confirmación ocupa la zona de la cámara: fondo de color suave, la palomita
+// grande, qué se registró, «¡Listo, Diego!» y la hora. Los textos crecen con el tamaño de la zona (container queries).
+const ZONAS = {
+  entrada: { fondo: "bg-emerald-50", circulo: "bg-emerald-600 ring-emerald-200", texto: "text-emerald-700", barra: "bg-emerald-600" },
+  salida: { fondo: "bg-rose-50", circulo: "bg-rose-600 ring-rose-200", texto: "text-rose-700", barra: "bg-rose-600" },
+  comida: { fondo: "bg-amber-50", circulo: "bg-amber-500 ring-amber-200", texto: "text-amber-700", barra: "bg-amber-500" },
+  otro: { fondo: "bg-emerald-50", circulo: "bg-emerald-600 ring-emerald-200", texto: "text-emerald-700", barra: "bg-emerald-600" },
+  pendiente: { fondo: "bg-blue-50", circulo: "bg-blue-600 ring-blue-200", texto: "text-blue-800", barra: "bg-blue-600" },
+  servidor: { fondo: "bg-amber-50", circulo: "bg-amber-500 ring-amber-200", texto: "text-amber-800", barra: "bg-amber-500" },
+  fallo: { fondo: "bg-red-50", circulo: "bg-red-600 ring-red-200", texto: "text-red-700", barra: "bg-red-600" },
+};
+
+export function ResultadoEnZona({ info, duracion }) {
+  const primerNombre = String(info.nombre || "").trim().split(/\s+/)[0];
+  const clave = info.pending ? (info.errorServidor ? "servidor" : "pendiente") : info.success ? tipoMovimiento(info.movimiento) : "fallo";
+  const z = ZONAS[clave];
+  const Icono = info.pending ? (info.errorServidor ? AlertTriangle : Clock4) : info.success ? Check : XCircle;
+  const estado = info.pending ? (info.errorServidor ? "Error del servidor · avisa a RH" : "Pendiente de subir") : info.success ? null : "No se registró · avisa a RH";
+  return (
+    <div role="status" aria-live="polite" data-resultado-zona className={`absolute inset-0 z-30 flex items-center justify-center overflow-hidden ${z.fondo}`}>
+      <div className="animate-bounce-in flex max-w-full flex-col items-center gap-2 px-6 text-center [@container(min-width:40rem)]:gap-3.5">
+        <span className={`grid size-24 place-items-center rounded-full text-white ring-[12px] [@container(min-width:40rem)]:size-36 [@container(min-width:40rem)]:ring-[18px] ${z.circulo}`}>
+          <Icono className="size-12 [@container(min-width:40rem)]:size-20" strokeWidth={2.6} aria-hidden="true" />
+        </span>
+        <p className={`mt-3 text-lg font-bold [@container(min-width:40rem)]:mt-4 [@container(min-width:40rem)]:text-xl ${z.texto}`}>{info.movimiento}</p>
+        <p className="text-4xl font-extrabold leading-tight tracking-tight text-slate-900 [@container(min-width:40rem)]:text-7xl">
+          {estado ? primerNombre || "Checada" : `¡Listo, ${primerNombre || "registrado"}!`}
+        </p>
+        {info.hora && !estado && <p className={`text-3xl font-extrabold tabular-nums [@container(min-width:40rem)]:text-5xl ${z.texto}`}>{info.hora}</p>}
+        <div className="mt-1 flex flex-wrap justify-center gap-2.5">
+          <span className="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-700 [@container(min-width:40rem)]:text-base">{info.nombre}</span>
+          {estado && <span className={`rounded-full bg-white px-4 py-2 text-sm font-semibold [@container(min-width:40rem)]:text-base ${z.texto}`}>{estado}</span>}
+        </div>
+        {info.pending && info.motivo && <p className="text-sm font-medium text-amber-800">{info.motivo}</p>}
+      </div>
+      <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-2">
+        <span className={`block h-full origin-left animate-[vaciar_linear_forwards] ${z.barra}`} style={{ animationDuration: `${duracion}ms` }} />
+      </span>
+    </div>
+  );
+}
 
 export default function ResultadoChecada({ info, duracion, className = "" }) {
   const primerNombre = String(info.nombre || "").trim().split(/\s+/)[0];

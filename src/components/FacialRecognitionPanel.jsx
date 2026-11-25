@@ -5,6 +5,7 @@ import axiosInstance from "@/lib/axios";
 import { Button } from "./ui/button";
 import { loadBrowserFaceApi, opcionesRapidas } from "@/lib/faceapi-browser";
 import { yaRegistrado, recordarChecada } from "@/lib/reloj/recientes.mjs";
+import { encuadreRostro } from "@/lib/reloj/encuadreRostro.mjs";
 
 // Modo diagnóstico opcional: si está apagado, estas llamadas no hacen nada.
 const diagApi = () => globalThis.__adamiaDiag;
@@ -34,6 +35,11 @@ const FacialRecognitionPanel = ({
   accionInferior = null,
   // Reloj de la empresa: el aviso de error apareció en pantalla (para su sonido; los reintentos silenciosos no cuentan).
   onErrorVisible,
+  // Reloj de la empresa (kiosco, maqueta aprobada 26/11/2026): botones propios arriba a la derecha (bocina, «Mantener
+  // encendido»), sin «Apagar», y el óvalo en ámbar cuando «Voy a comer» está prendido.
+  kiosco = false,
+  accionesSuperiores = null,
+  marcoAmbar = false,
 }) => {
   // El análisis corre en un intervalo creado al encender la cámara: leer `continuo`
   // directo dejaba el valor de ese momento y el interruptor no surtía efecto hasta reiniciarla.
@@ -84,10 +90,10 @@ const FacialRecognitionPanel = ({
   const sinCoincidenciaDesdeRef = useRef(null);
   const PAUSA_TRAS_CHECAR = 2000; // modo reloj: el nombre se ve 2 s y sigue con el siguiente
   const RESPALDO_SENSIBLE_MS = 2000; // si no ve cara en 2 s, alterna con un umbral más sensible (poca luz)
-  // Hay que acercarse al reloj: si la cara ocupa menos de esta fracción del alto del
-  // cuadro, se pide «Acércate» y no se intenta reconocer (cara chica = huella pobre).
-  const CARA_MINIMA = 0.22;
+  // Encuadre (src/lib/reloj/encuadreRostro.mjs): cara menor al 22 % del alto que se VE → «Acércate»; cortada por un
+  // borde → «Aléjate un poco». En ambos casos no se intenta reconocer (huella pobre).
   const [acercate, setAcercate] = useState(false);
+  const [alejate, setAlejate] = useState(false);
   const retryIntervalRef = useRef(MIN_INTERVAL);
   const recientesRef = useRef([]); // checadas de los últimos 60 s (evita doble checada)
   const CAMERA_START_TIMEOUT = 15000;
@@ -351,12 +357,16 @@ const FacialRecognitionPanel = ({
         }
         if (session !== sessionRef.current) return;
         setFaceDetected(!!detection);
-        // Cara muy chica (lejos del reloj): pedir que se acerque, sin reconocer.
-        const altoCara = detection?.detection?.box?.height;
-        const lejos = Boolean(detection && altoCara && canvas.height && altoCara / canvas.height < CARA_MINIMA);
+        // Cara muy chica (lejos) o cortada (demasiado cerca): pedir que se acomode, sin reconocer.
+        const encuadre = detection ? encuadreRostro({
+          box: detection?.detection?.box, videoW: canvas.width, videoH: canvas.height,
+          vistaW: video.clientWidth, vistaH: video.clientHeight,
+        }) : "ok";
+        const lejos = encuadre === "lejos";
         setAcercate(lejos);
-        if (lejos) {
-          d?.cuenta("cara_lejos", 0);
+        setAlejate(encuadre === "cerca");
+        if (encuadre !== "ok") {
+          d?.cuenta(lejos ? "cara_lejos" : "cara_cerca", 0);
           sinRostroDesde = Date.now();
           sinCoincidenciaDesdeRef.current = null;
           lastCheckTimeRef.current = Date.now();
@@ -572,6 +582,8 @@ const FacialRecognitionPanel = ({
       return { text: "Preparando captura...", color: "bg-gray-700" };
     if (acercate)
       return { text: "Acércate al reloj", color: "bg-amber-600" };
+    if (alejate)
+      return { text: "Aléjate un poco", color: "bg-amber-600" };
     if (faceDetected)
       return { text: "Rostro detectado", color: "bg-green-600" };
 
@@ -583,7 +595,8 @@ const FacialRecognitionPanel = ({
       className={pantallaCompleta ? "h-full bg-slate-950" : "p-0 bg-transparent rounded-none shadow-none md:p-4 md:bg-white md:rounded-2xl md:shadow-xl space-y-4"}
     >
       {!isOpen ? (
-        <div className={`flex flex-col items-center justify-center px-4 ${pantallaCompleta ? "h-full bg-slate-50" : "py-16 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50"}`}>
+        <div className={`relative flex flex-col items-center justify-center px-4 ${pantallaCompleta ? "h-full bg-slate-50" : "py-16 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50"}`}>
+          {kiosco && accionesSuperiores && <div className="absolute right-3 top-3 flex gap-2 [@container(min-width:40rem)]:right-5 [@container(min-width:40rem)]:top-5">{accionesSuperiores}</div>}
           <div className="bg-blue-100 rounded-full p-6 mb-4">
             <Camera className="h-12 w-12 text-blue-600" />
           </div>
@@ -656,10 +669,16 @@ const FacialRecognitionPanel = ({
                   />
                   {pantallaCompleta && (
                     // Marco del rostro: óvalo grueso con el resto del video atenuado; verde al detectar, ámbar si hay que acercarse.
-                    <div aria-hidden="true" data-marco-rostro className={`pointer-events-none absolute left-1/2 top-[42%] h-[58%] max-h-[30rem] aspect-[3/4] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-4 shadow-[0_0_0_9999px_rgba(15,23,42,0.42)] transition-colors duration-300 ${acercate ? "border-amber-400" : resultadoChecada === "registrada" || faceDetected ? "border-emerald-400" : resultadoChecada ? "border-amber-400" : "border-white"}`} />
+                    // Óvalo GRANDE (≈ 65 % del alto de la cámara): se checa a un brazo de distancia. El tamaño mínimo de la cara
+                    // se mide contra lo que se ve (encuadreRostro.mjs), así que llenar el óvalo nunca pide «Acércate».
+                    <div aria-hidden="true" data-marco-rostro className={`pointer-events-none absolute left-1/2 top-1/2 h-[65%] max-w-[88%] aspect-[22/29] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-[5px] shadow-[0_0_0_9999px_rgba(15,23,42,0.35)] transition-colors duration-300 ${acercate || alejate || marcoAmbar ? "border-amber-400" : resultadoChecada === "registrada" || faceDetected ? "border-emerald-500" : resultadoChecada ? "border-amber-400" : "border-white"}`} />
                   )}
-                  <div className={`absolute right-3 flex gap-2 ${pantallaCompleta ? (ubicacionGPS ? "top-14" : "top-3") : "md:hidden top-4"}`}>
-                    {pantallaCompleta ? (<>
+                  <div className={`absolute flex gap-2 ${kiosco ? "right-3 top-3 z-20 [@container(min-width:40rem)]:right-5 [@container(min-width:40rem)]:top-5" : `right-3 ${pantallaCompleta ? (ubicacionGPS ? "top-14" : "top-3") : "md:hidden top-4"}`}`}>
+                    {kiosco ? (<>
+                      {accionesSuperiores}
+                      <button type="button" aria-label="Cambiar de cámara" title="Cambiar de cámara" onClick={() => setCameraFacing((prev) => (prev === "user" ? "environment" : "user"))}
+                        className="grid size-11 place-items-center rounded-xl bg-white/90 text-slate-900 shadow-sm backdrop-blur-sm hover:bg-white [@container(min-width:40rem)]:size-12"><RotateCcw className="size-5" /></button>
+                    </>) : pantallaCompleta ? (<>
                       <button type="button" aria-label="Cambiar de cámara" onClick={() => setCameraFacing((prev) => (prev === "user" ? "environment" : "user"))}
                         className="grid size-10 place-items-center rounded-full bg-slate-900/55 text-white backdrop-blur-sm"><RotateCcw className="size-5" /></button>
                       <button type="button" aria-label="Apagar cámara" onClick={handleOpenFacialModal}
@@ -696,12 +715,12 @@ const FacialRecognitionPanel = ({
                       "bg-amber-600": "bg-amber-400 text-amber-950", "bg-red-600": "bg-red-600 text-white",
                     }[color] || `${color} text-white`;
                     return (
-                      <div className={`absolute inset-x-0 flex flex-col items-center px-4 ${pantallaCompleta ? "bottom-4 gap-3 sm:bottom-6 [@container(max-height:26rem)_and_(min-width:40rem)]:flex-row [@container(max-height:26rem)_and_(min-width:40rem)]:justify-center" : "bottom-3 gap-2"}`}>
+                      <div className={`absolute inset-x-0 flex flex-col items-center px-4 ${pantallaCompleta ? "bottom-4 gap-3 [@container(min-width:40rem)]:bottom-6" : "bottom-3 gap-2"}`}>
                         <div
                           role="status"
                           data-estado-camara
                           className={pantallaCompleta
-                            ? `flex max-w-full items-center gap-2.5 rounded-2xl px-4 py-2.5 text-center text-base font-semibold shadow-lg [@container(min-width:28rem)]:px-5 [@container(min-width:28rem)]:py-3 [@container(min-width:28rem)]:text-lg [@container(min-width:40rem)]:text-xl ${grande}`
+                            ? `flex max-w-full items-center gap-2.5 rounded-full px-5 py-2.5 text-center text-base font-bold shadow-lg [@container(min-width:28rem)]:text-lg [@container(min-width:40rem)]:px-7 [@container(min-width:40rem)]:py-3.5 [@container(min-width:40rem)]:text-2xl ${grande}`
                             : `px-4 py-2 text-white text-sm font-medium shadow-lg ${color} bg-opacity-90 text-center rounded-lg`}
                         >
                           {pantallaCompleta && color === "bg-gray-600" && <ScanFace className="size-6 shrink-0 text-brand" aria-hidden="true" />}

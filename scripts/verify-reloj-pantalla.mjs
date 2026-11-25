@@ -1,5 +1,6 @@
 // Verificación en navegador del reloj checador de la empresa (/<slug>) como kiosco: en 1440×900, 1280×720, 1024×768,
-// tabletas 1180×820, 820×1180 y 768×1024, 1920×1080, 1366×768 y celular 390×844 todo cabe en una pantalla (sin desplazar el documento), sin la barra del
+// (maqueta aprobada 26/11/2026: cámara protagonista con óvalo ≥ 60 % de su alto y ≥ 65 % del ancho a 1440; «Mantener
+// encendido» visible y recordado) tabletas 1180×820, 820×1180 y 768×1024, 1920×1080, 1366×768 y celular 390×844 todo cabe en una pantalla (sin desplazar el documento), sin la barra del
 // sitio público ni el encabezado «Reloj checador / Registro de entradas… / Reconocimiento offline preparado…», con la
 // hora, el código, el teclado (teclas ≥ 56 px; ≥ 48 px en celular) y «Registrar» dentro de la pantalla, y los avisos
 // «¿Registrar otra vez?» y el resultado centrados. Sin errores de JavaScript. Backend simulado: nada sale a internet.
@@ -70,20 +71,62 @@ try {
       }
       return json({ data: [], results: [], employees: [], total: 0 });
     });
+    await ctx.addInitScript(() => {
+      window.__candados = [];
+      Object.defineProperty(navigator, "wakeLock", { configurable: true, value: { request: async (tipo) => {
+        const c = { tipo, liberado: false, addEventListener() {}, release: async () => { c.liberado = true; } };
+        window.__candados.push(c);
+        return c;
+      } } });
+    });
     const pg = await ctx.newPage();
     const errores = [];
     pg.on("pageerror", (e) => errores.push(e.message));
 
     await pg.goto(base + "/demo", { waitUntil: "domcontentloaded" });
     await pg.locator("[data-estado-camara]").waitFor({ timeout: 30000 });
-    await pg.getByText(/^\d{1,2}:\d{2}:\d{2}$/).waitFor({ timeout: 10000 });
+    await pg.getByText(/^\d{1,2}:\d{2}$/).waitFor({ timeout: 10000 });
     await dormir(2500); // cámara falsa, perfil sin conexión y registros terminan de pintarse
-    // Rediseño 26/11/2026: abre en «Rostro», con el aviso grande y «¿No te reconoce? Usa tu código» completo dentro de la cámara.
-    const seccionCamara = await pg.getByRole("region", { name: "Cámara" }).boundingBox();
-    for (const [loc, que] of [[pg.locator("[data-estado-camara]"), "aviso de la cámara"], [pg.getByRole("button", { name: "¿No te reconoce? Usa tu código" }), "«¿No te reconoce?»"]]) {
+    const dentro = async (loc, que) => {
       const b = await loc.boundingBox();
-      assert.ok(b && b.y >= seccionCamara.y && b.y + b.height <= seccionCamara.y + seccionCamara.height + 0.5 && b.x >= seccionCamara.x - 0.5 && b.x + b.width <= seccionCamara.x + seccionCamara.width + 0.5, `${t.nombre}: ${que} completo dentro de la cámara`);
-      assert.ok(b.height >= 44, `${t.nombre}: ${que} de ${Math.round(b.height)} px`);
+      assert.ok(b, `${t.nombre}: ${que} visible`);
+      assert.ok(b.x >= 0 && b.y >= 0 && b.x + b.width <= t.width + 0.5 && b.y + b.height <= t.height + 0.5, `${t.nombre}: ${que} dentro de la pantalla ${JSON.stringify(b)}`);
+      return b;
+    };
+    // Maqueta aprobada (26/11/2026): abre en «Rostro»; el aviso grande completo dentro de la cámara y «¿No te reconoce?
+    // Usa tu código» completo en el panel.
+    const seccionCamara = await pg.getByRole("region", { name: "Cámara" }).boundingBox();
+    const enCamara = (b) => b && b.y >= seccionCamara.y && b.y + b.height <= seccionCamara.y + seccionCamara.height + 0.5 && b.x >= seccionCamara.x - 0.5 && b.x + b.width <= seccionCamara.x + seccionCamara.width + 0.5;
+    const aviso = await pg.locator("[data-estado-camara]").boundingBox();
+    assert.ok(enCamara(aviso) && aviso.height >= 40, `${t.nombre}: aviso de la cámara completo y grande ${JSON.stringify(aviso)}`);
+    const noReconoce = await dentro(pg.getByRole("button", { name: "¿No te reconoce? Usa tu código" }), "«¿No te reconoce?»");
+    assert.ok(noReconoce.height >= 44, `${t.nombre}: «¿No te reconoce?» de ${Math.round(noReconoce.height)} px`);
+    // La cámara es la protagonista: el óvalo es grande (≈ 65 % del alto) y, en pantalla, la cámara ocupa casi todo el ancho.
+    const ovalo = await pg.locator("[data-marco-rostro]").boundingBox();
+    assert.ok(ovalo.height >= seccionCamara.height * 0.6 - 0.5, `${t.nombre}: óvalo de ${Math.round(ovalo.height)} px (${Math.round(ovalo.height / seccionCamara.height * 100)} % del alto de la cámara)`);
+    if (t.nombre === "1440x900") {
+      assert.ok(seccionCamara.width >= t.width * 0.65, `1440: la cámara mide ${Math.round(seccionCamara.width)} px (${Math.round(seccionCamara.width / t.width * 100)} % del ancho)`);
+    }
+    if (t.height > t.width) assert.ok(seccionCamara.height >= t.height * 0.55 - 0.5, `${t.nombre}: vertical, la cámara arriba con ${Math.round(seccionCamara.height / t.height * 100)} % del alto`);
+    // «Mantener encendido»: visible, prendido por defecto (pide no apagar la pantalla) y se recuerda en el equipo.
+    const mantener = pg.getByRole("button", { name: "Mantener encendido" });
+    const bMantener = await dentro(mantener, "«Mantener encendido»");
+    assert.ok(enCamara(bMantener) && bMantener.height >= 44, `${t.nombre}: «Mantener encendido» arriba en la cámara`);
+    assert.equal(await mantener.getAttribute("aria-pressed"), "true", `${t.nombre}: prendido por defecto`);
+    assert.ok((await pg.evaluate(() => window.__candados?.length ?? 0)) >= 1, `${t.nombre}: pide que no se apague la pantalla`);
+    if (t.width >= 1280) assert.equal((await mantener.innerText()).trim(), "Pantalla siempre encendida", `${t.nombre}: con texto`);
+    if (t.nombre === "1440x900") {
+      await mantener.click();
+      assert.equal(await mantener.getAttribute("aria-pressed"), "false");
+      assert.equal(await pg.evaluate(() => localStorage.getItem("adamia-reloj-camara-fija:empresa")), "0");
+      assert.ok(await pg.evaluate(() => window.__candados.every((c) => c.liberado)), "apagado: suelta la pantalla");
+      await pg.reload({ waitUntil: "domcontentloaded" });
+      await pg.locator("[data-estado-camara]").waitFor({ timeout: 30000 });
+      assert.equal(await mantener.getAttribute("aria-pressed"), "false", "se recuerda en el equipo");
+      assert.equal((await mantener.innerText()).trim(), "Mantener encendido");
+      await mantener.click();
+      assert.equal(await pg.evaluate(() => localStorage.getItem("adamia-reloj-camara-fija:empresa")), "1");
+      await dormir(1500);
     }
     const sinScrollRostro = await pg.evaluate(() => document.scrollingElement.scrollHeight <= innerHeight && document.scrollingElement.scrollWidth <= innerWidth);
     assert.ok(sinScrollRostro, `${t.nombre}: en «Rostro» sin desplazamiento`);
@@ -109,13 +152,7 @@ try {
     assert.ok(punto >= 1, `${t.nombre}: indicador discreto de conexión con su texto en title`);
 
     // 3) Hora, código, teclado y «Registrar» dentro de la pantalla.
-    const dentro = async (loc, que) => {
-      const b = await loc.boundingBox();
-      assert.ok(b, `${t.nombre}: ${que} visible`);
-      assert.ok(b.x >= 0 && b.y >= 0 && b.x + b.width <= t.width + 0.5 && b.y + b.height <= t.height + 0.5, `${t.nombre}: ${que} dentro de la pantalla ${JSON.stringify(b)}`);
-      return b;
-    };
-    await dentro(pg.getByText(/^\d{1,2}:\d{2}:\d{2}$/), "hora");
+    await dentro(pg.getByText(/^\d{1,2}:\d{2}$/), "hora");
     await dentro(codigo, "campo de código");
     await dentro(pg.getByRole("button", { name: /^QR$/ }), "botón QR");
     const minimo = t.width < 768 || t.height < 512 ? 48 : 56; // celular (también acostado): 48 px
@@ -125,8 +162,8 @@ try {
     }
     await dentro(pg.getByRole("button", { name: "Limpiar" }), "Limpiar");
     await dentro(pg.getByRole("button", { name: "Borrar último dígito" }), "borrar");
-    const registrar = pg.getByRole("button", { name: "Registrar Entrada / Salida" });
-    await dentro(registrar, "Registrar");
+    const registrar = pg.getByRole("button", { name: "Checar", exact: true });
+    await dentro(registrar, "Checar");
     const camara = await dentro(pg.locator("video").first(), "cámara");
     assert.ok(camara.height >= 150, `${t.nombre}: la cámara conserva un alto útil (${Math.round(camara.height)} px)`);
     await captura(pg, `reloj-${t.nombre}`);
@@ -150,7 +187,12 @@ try {
     const resultado = pg.locator(".animate-bounce-in").filter({ hasText: "Ana Torres" });
     await resultado.waitFor({ state: "visible", timeout: 20000 });
     await dormir(500);
-    await centrado(resultado, "resultado de la checada");
+    // La confirmación ocupa la zona de la cámara: centrada en ella.
+    const zona = await pg.getByRole("region", { name: "Cámara" }).boundingBox();
+    const bRes = await dentro(resultado, "resultado de la checada");
+    assert.ok(Math.abs(bRes.x + bRes.width / 2 - (zona.x + zona.width / 2)) <= 2 && Math.abs(bRes.y + bRes.height / 2 - (zona.y + zona.height / 2)) <= zona.height * 0.1,
+      `${t.nombre}: resultado centrado en la zona de la cámara`);
+    assert.ok(await pg.locator("[data-resultado-zona]").evaluate((el, z) => { const r = el.getBoundingClientRect(); return Math.abs(r.width - z.width) < 1 && Math.abs(r.height - z.height) < 1; }, zona), `${t.nombre}: la confirmación cubre la zona de la cámara`);
     await captura(pg, `reloj-${t.nombre}-resultado`);
     assert.ok(envios >= 2, `${t.nombre}: se envió la checada y su confirmación`);
     await resultado.waitFor({ state: "hidden", timeout: 10000 });

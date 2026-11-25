@@ -400,7 +400,7 @@ try {
     for (const d of codigo) await t.getByRole("button", { name: d, exact: true }).click();
     await t.getByRole("button", { name: "Continuar" }).click();
     await t.waitFor({ state: "hidden" });
-    await k.getByText("Mira a la cámara para confirmar que eres tú").waitFor({ timeout: 5000 });
+    await k.getByText("Mira a la cámara para confirmar que eres tú", { exact: true }).waitFor({ timeout: 5000 });
     await escena(k, quien);
   };
   const errorAntes = (await tonosError()).length;

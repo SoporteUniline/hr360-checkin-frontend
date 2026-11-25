@@ -113,7 +113,7 @@ try {
     const sonidos = () => pg.evaluate(() => window.__sonidos.map((x) => x.f));
     await dormir(2500);
     const boton = pg.getByRole("switch", { name: "Voy a comer" });
-    const registrar = pg.getByRole("button", { name: "Registrar Entrada / Salida" });
+    const registrar = pg.getByRole("button", { name: "Checar", exact: true }); // maqueta aprobada 26/11/2026
     const teclear = async (c) => { await codigo.fill(c); await registrar.click(); };
     const resultado = pg.locator(".animate-bounce-in");
     const esperarResultado = async (texto) => {
@@ -151,7 +151,7 @@ try {
     await aviso.waitFor({ timeout: 5000 });
     assert.match(await aviso.innerText(), /^Salida a comer\s*· (30|29) s$/);
     const alto = await aviso.evaluate((e) => e.getBoundingClientRect().height);
-    assert.ok(alto < 40, `${t.nombre}: el aviso cabe en una línea (${alto} px)`);
+    assert.ok(alto <= 48, `${t.nombre}: el aviso cabe en una línea (${alto} px; chip de 44 px de la maqueta)`);
     // No tapa los botones de la cámara (fijar, girar, apagar).
     const choca = await aviso.evaluate((el) => {
       const a = el.getBoundingClientRect();
