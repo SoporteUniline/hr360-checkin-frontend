@@ -97,7 +97,8 @@ export function desdeApi(registros, { fecha, zona } = {}) {
       cIni: ini, cFin: fin,
       concepto: ["jornada", "comida", "extra"].includes(r.concepto) ? r.concepto : "jornada",
       motivo: r.motivo ?? "", origen: manual ? "manual" : "reloj", anulado: Boolean(r.anulado), anuladoAntes: Boolean(r.anulado),
-      motivoAntes: r.motivo ?? "",
+      motivoAntes: r.motivo ?? "", conceptoAntes: ["jornada", "comida", "extra"].includes(r.concepto) ? r.concepto : "jornada",
+      autorizaAntes: r.autoriza_no ? "no" : r.id_autoriza != null ? String(r.id_autoriza) : "",
       id_autoriza: r.id_autoriza ?? null, autoriza_no: Boolean(r.autoriza_no),
       // Tramo cerrado con el botón «Salir a comer» del reloj: la pausa que sigue es la comida.
       salioAComer: r.tipo_cierre === "comida",
@@ -191,7 +192,37 @@ export const conAutoriza = (valor) => (valor === "no" ? { autoriza_no: true, id_
   : valor ? { autoriza_no: false, id_autoriza: Number(valor) } : { autoriza_no: false, id_autoriza: null });
 const sinAutoriza = (r) => r.id_autoriza == null && !r.autoriza_no;
 
-export function errorDe(r, todos) {
+// ¿El renglón quedó igual que como vino de la base? (espejo de cambioDe/sinCambio del servidor: horas, concepto, motivo,
+// anulado, quién autoriza y la marca de comida). A esos no se les vuelve a aplicar la regla de la hora extra.
+export function sinCambio(r) {
+  return r.id != null && !r.nuevo && r.ini === r.cIni && r.fin === r.cFin && r.concepto === r.conceptoAntes
+    && (r.motivo || "") === (r.motivoAntes || "") && r.anulado === r.anuladoAntes && autorizaValor(r) === (r.autorizaAntes ?? "")
+    && !r.quitarComida;
+}
+
+// (25/11/2026, aprobado por el dueño) La hora extra es tiempo FUERA de la jornada (LFT art. 66): un renglón «extra» vivo no
+// puede encimarse con [entrada programada, salida programada). Sin horario ese día no hay jornada que proteger. Turno
+// nocturno: horarioMin pone la salida al día siguiente. Sin salida cuenta como abierto hacia adelante. Mismo texto que el
+// servidor (services/relojDia.js → errorExtraEnJornada).
+export function errorExtraEnJornada(r, horario) {
+  const h = horarioMin(horario);
+  if (!h || r?.concepto !== "extra" || r.anulado || r.ini == null) return "";
+  const fin = r.fin ?? Infinity;
+  if (!(r.ini < h.ps && fin > h.pe)) return "";
+  const pe = hora12Txt(aHHMM(h.pe)), ps = hora12Txt(aHHMM(h.ps));
+  let error = `La hora extra va antes de su entrada (${pe}) o después de su salida (${ps}). Dentro de la jornada usa «Jornada»`;
+  if (r.fin != null && r.fin > h.ps) error += `. Lo de después de las ${ps}: ponlo como «Jornada» y usa «Separar … como hora extra»`;
+  if (r.ini < h.pe) error += `. Lo de antes de las ${pe}: déjalo en otro registro de hora extra`;
+  return error;
+}
+// Todo el renglón cae dentro de la jornada: «Hora extra» se deshabilita en el concepto (con la explicación).
+export function extraTodoEnJornada(r, horario) {
+  const h = horarioMin(horario);
+  return Boolean(h && r && r.ini != null && r.fin != null && r.ini >= h.pe && r.fin <= h.ps);
+}
+
+// `horario` (opcional): para la regla de la hora extra fuera de la jornada.
+export function errorDe(r, todos, horario = null) {
   if (errorMotivoOtro(r.motivo)) return errorMotivoOtro(r.motivo);
   if (r.anulado) return !r.anuladoAntes && !r.motivo ? "Para anular una checada del reloj elige el motivo." : "";
   if (r.ini == null) return "Falta la entrada.";
@@ -200,13 +231,15 @@ export function errorDe(r, todos) {
   const encima = todos.some((o) => o.k !== r.k && !o.anulado && o.ini != null && o.fin != null && r.fin != null
     && r.ini < o.fin && o.ini < r.fin);
   if (encima) return "Se encima con otro registro.";
+  const enJornada = sinCambio(r) ? "" : errorExtraEnJornada(r, horario);
+  if (enJornada) return enJornada;
   if (editado(r) && !r.motivo) return r.origen === "manual" ? "Registro agregado: elige el motivo." : "Cambiaste la hora: elige el motivo.";
   if (r.concepto === "extra" && sinAutoriza(r)) return "Hora extra: falta quién autoriza.";
   return "";
 }
-export function errores(regs) {
+export function errores(regs, horario = null) {
   const out = {};
-  for (const r of regs) { const e = errorDe(r, regs); if (e) out[r.k] = e; }
+  for (const r of regs) { const e = errorDe(r, regs, horario); if (e) out[r.k] = e; }
   return out;
 }
 
