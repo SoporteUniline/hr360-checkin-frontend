@@ -431,6 +431,25 @@ async function instalarMocks(ctx, usuario) {
 const sinScrollHorizontal = (page) => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1);
 const tamano = async (loc) => { const b = await loc.boundingBox(); return b ? Math.min(b.width, b.height) : 0; };
 const cuenta = (filtro) => pedidos.filter(filtro).length;
+// Bandeja estilo WhatsApp Web: «Enlaces de vacantes», «Configurar agente» y «Salud del agente» van en el menú ⋮ de la
+// columna de chats; las acciones del chat, en el menú «Acciones»; el agente es el chip «Agente encendido/apagado».
+const masOpciones = async (p, opcion) => {
+  await p.getByRole("region", { name: "Chats" }).getByRole("button", { name: "Más opciones" }).click();
+  await p.getByRole("menuitem", { name: opcion }).click();
+  await p.getByRole("menu").waitFor({ state: "detached" });
+};
+const accionChat = async (p, hilo, opcion) => {
+  await hilo.getByRole("button", { name: "Acciones", exact: true }).click();
+  await p.getByRole("menuitem", { name: opcion }).click();
+  await p.getByRole("menu").waitFor({ state: "detached" }); // el menú termina de cerrarse (su animación atrapa Escape)
+};
+const chipAgente = (p) => p.locator("[data-chip-agente]");
+const verFicha = async (p, hilo) => {
+  await hilo.locator("[data-ver-ficha]").click();
+  const f = p.getByRole("complementary", { name: "Ficha del candidato" });
+  await f.waitFor();
+  return f;
+};
 
 let exito = false;
 const browser = await chromium.launch();
@@ -439,6 +458,7 @@ try {
   const errores = [];
   // SOLO_CHAT=1: corre solo el bloque del chat todo-en-uno (para iterar rápido).
   if (process.env.SOLO_AGENDA) { await agendaCalendario(browser, errores); assert.deepEqual(errores, []); exito = true; console.log("OK agenda"); throw new Error("__solo__"); }
+  if (process.env.SOLO_BANDEJA) { await bandejaWhatsappWeb(browser, errores); assert.deepEqual(errores, []); exito = true; throw new Error("__solo__"); }
   if (process.env.SOLO_CHAT) { await chatTodoEnUno(browser, errores); assert.deepEqual(errores, []); exito = true; console.log("OK chat todo-en-uno"); throw new Error("__solo__"); }
 
   // ——— 1. Bandeja en escritorio ———
@@ -450,14 +470,14 @@ try {
   await page.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
   const lista = page.getByRole("list", { name: "Conversaciones" });
   await lista.waitFor({ timeout: 30000 });
-  assert.equal(await page.getByRole("heading", { name: "Conversaciones de WhatsApp" }).count(), 1);
+  assert.equal(await page.getByRole("heading", { level: 1, name: "Chats" }).count(), 1);
   assert.match(await page.locator('[data-estado-wa="compartido"]').innerText(), /Activo · número compartido de ADAMIA[\s\S]*\+52 55 9876 5432[\s\S]*12 conversaciones este mes[\s\S]*32 de 200 entrevistas este mes/);
   assert.equal(await page.locator("[data-aviso-extras]").count(), 0, "sin extras no hay aviso");
   assert.equal(await page.getByLabel("Empresa").filter({ visible: true }).count(), 1, "selector de empresa con 2 empresas");
   const items = lista.getByRole("listitem");
   assert.equal(await items.count(), 30, "primera página de 30");
   const anaItem = page.getByRole("button", { name: "Ana Ruiz, 2 sin leer" });
-  assert.match(await anaItem.innerText(), /Ana Ruiz[\s\S]*hace 3 min[\s\S]*Operador de montacargas[\s\S]*¿Sigue disponible la vacante\?[\s\S]*2[\s\S]*IA/);
+  assert.match(await anaItem.innerText(), /Ana Ruiz[\s\S]*hace 3 min[\s\S]*Operador de montacargas[\s\S]*IA[\s\S]*¿Sigue disponible la vacante\?[\s\S]*2/);
   assert.match(await items.nth(1).innerText(), /\+52 442 123 4567[\s\S]*Sin vacante[\s\S]*Tú tienes el control/);
   assert.match(await items.nth(2).innerText(), /Atiende Pedro/);
   const listaInicial = pedidos.find((x) => x.ruta === "/conversaciones");
@@ -475,9 +495,8 @@ try {
   assert.equal(cuenta((x) => x.ruta === "/conversaciones" && /pagina=2&/.test(x.params)), 1, "el sondeo no vuelve a pedir la página 2");
   assert.equal(await items.count(), 35, "las páginas agregadas se conservan tras el sondeo");
   assert.equal(new Set(await items.evaluateAll((li) => li.map((x) => x.textContent))).size, 35, "sin duplicados");
-  // Menú lateral: entrada real fuera del demo.
-  const entradaMenu = page.getByRole("button", { name: "Conversaciones (WhatsApp)" });
-  assert.equal(await entradaMenu.count(), 1, "entrada en el menú de reclutamiento");
+  // Menú lateral (riel de iconos en la bandeja; la entrada real fuera del demo se revisa en el bloque 24 con el menú abierto).
+  assert.equal(await page.locator('[data-slot="sidebar"][data-state="collapsed"]').count(), 1, "menú de ADAMIA plegado en la bandeja");
   assert.equal(await page.getByText("Usa datos ficticios.").count(), 0, "no usa el layout demo");
   if (OUT) await page.screenshot({ path: OUT + "/01-bandeja-escritorio.png" });
 
@@ -491,7 +510,7 @@ try {
   assert.match(await hilo.locator('[data-mensaje="102"]').innerText(), /Asistente IA[\s\S]*Leído/);
   assert.match(await hilo.locator('[data-mensaje="103"]').innerText(), /Laura Gómez[\s\S]*No enviado: Número no disponible[\s\S]*Reintentar/);
   const composer = hilo.getByRole("textbox", { name: "Mensaje" });
-  assert.equal(await composer.isDisabled(), true, "con IA no se escribe");
+  assert.equal(await composer.count(), 0, "con IA no se escribe (en lugar del cuadro, el aviso y «Tomar control»)");
   assert.match(await hilo.innerText(), /La IA está atendiendo esta conversación/);
   // Sondeo del hilo cada 3 s.
   const getsAntes = cuenta((x) => x.ruta === "/conversaciones/1");
@@ -499,8 +518,8 @@ try {
   assert.ok(cuenta((x) => x.ruta === "/conversaciones/1") > getsAntes, "el hilo se refresca solo");
 
   // ——— 3. Tomar control → escribir y enviar ———
-  await hilo.getByRole("button", { name: "Tomar control" }).click();
-  await hilo.getByRole("button", { name: "Devolver a IA" }).waitFor();
+  await hilo.getByRole("button", { name: "Tomar control", exact: true }).click();
+  await hilo.getByRole("button", { name: "Devolver a la IA" }).waitFor();
   assert.equal(cuenta((x) => x.metodo === "POST" && x.ruta === "/conversaciones/1/tomar"), 1);
   assert.equal(await composer.isDisabled(), false, "con el control sí se escribe");
   assert.match(await hilo.innerText(), /Tú tienes el control/);
@@ -546,8 +565,8 @@ try {
   assert.match(await hilo.locator('[data-mensaje="103"]').innerText(), /Enviado/);
   if (OUT) await page.screenshot({ path: OUT + "/02-hilo-escritorio.png" });
 
-  // ——— 6. Enlace de la vacante: copiar ———
-  await hilo.getByRole("button", { name: "Enlace de WhatsApp" }).click();
+  // ——— 6. Enlace de la vacante: copiar (menú «Acciones») ———
+  await accionChat(page, hilo, "Copiar enlace de WhatsApp de la vacante");
   const dialogo = page.getByRole("dialog", { name: "Enlace de WhatsApp" });
   await dialogo.getByRole("textbox", { name: "Enlace de WhatsApp de la vacante" }).waitFor();
   assert.equal(await dialogo.getByRole("textbox").inputValue(), ENLACE);
@@ -561,25 +580,26 @@ try {
   await page.keyboard.press("Escape");
 
   // ——— 7. Devolver a IA ———
-  await hilo.getByRole("button", { name: "Devolver a IA" }).click();
-  await hilo.getByRole("button", { name: "Tomar control" }).waitFor();
+  await hilo.getByRole("button", { name: "Devolver a la IA" }).click();
+  await hilo.getByRole("button", { name: "Tomar control", exact: true }).waitFor();
   assert.equal(cuenta((x) => x.metodo === "POST" && x.ruta === "/conversaciones/1/devolver"), 1);
-  assert.equal(await composer.isDisabled(), true);
+  assert.equal(await composer.count(), 0);
 
   // ——— 8. Ventana de 24 h cerrada y control de otra persona ———
   await page.getByRole("button", { name: "+52 442 123 4567" }).click();
   await hilo.getByText("Gracias").first().waitFor();
   assert.match(await hilo.locator('[data-mensaje="200"]').innerText(), /\[Archivo: imagen\] \(no disponible\)/);
   assert.match(await hilo.innerText(), /Pasaron más de 24 h desde el último mensaje del candidato: WhatsApp no permite escribirle libremente\. Usa «Enviar seguimiento» para mandarle una plantilla aprobada; cuando conteste, el chat se reabre\./);
-  assert.equal(await hilo.getByRole("textbox", { name: "Mensaje" }).isDisabled(), true);
+  assert.equal(await hilo.getByRole("textbox", { name: "Mensaje" }).count(), 0);
   await page.getByRole("button", { name: /^Carlos Méndez/ }).click();
   await hilo.getByText("Te esperamos el lunes").first().waitFor();
   assert.match(await hilo.innerText(), /Pedro tiene el control de esta conversación\./);
   assert.match(await hilo.locator('[data-mensaje="302"]').innerText(), /Sistema/);
-  assert.equal(await hilo.getByRole("textbox", { name: "Mensaje" }).isDisabled(), true);
-  assert.equal(await hilo.getByRole("button", { name: "Devolver a IA" }).count(), 0, "invitado con el mismo id pero otro correo: no controla ni devuelve");
+  assert.equal(await hilo.getByRole("textbox", { name: "Mensaje" }).count(), 0);
+  assert.equal(await hilo.getByRole("button", { name: "Devolver a la IA" }).count(), 0, "invitado con el mismo id pero otro correo: no controla ni devuelve");
   // Vacante con WhatsApp apagado → 409 WA_APAGADO.
-  await hilo.getByRole("button", { name: "Enlace de WhatsApp" }).click();
+  // Vacante con WhatsApp apagado → 409 WA_APAGADO.
+  await accionChat(page, hilo, "Copiar enlace de WhatsApp de la vacante");
   await page.getByRole("dialog").getByText("WhatsApp no está activado para tu empresa. Pídele a ADAMIA que lo active.").waitFor();
   await page.keyboard.press("Escape");
   // Búsqueda: manda q al API.
@@ -587,8 +607,8 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('[aria-label="Conversaciones"] li').length === 1);
   assert.ok(pedidos.some((x) => x.ruta === "/conversaciones" && /q=montacargas/.test(x.params)));
   await page.getByRole("button", { name: "Limpiar búsqueda" }).click();
-  // «Enlaces de vacantes» desde el encabezado: lista, búsqueda, copiar y errores por vacante.
-  await page.getByRole("button", { name: "Enlaces de vacantes" }).click();
+  // «Enlaces de vacantes» desde el menú ⋮ de la columna de chats: lista, búsqueda, copiar y errores por vacante.
+  await masOpciones(page, "Enlaces de vacantes");
   const dlgVac = page.getByRole("dialog", { name: "Enlaces de vacantes" });
   const listaVac = dlgVac.getByRole("list", { name: "Vacantes abiertas" });
   await listaVac.waitFor();
@@ -660,7 +680,7 @@ try {
   assert.ok(await tamano(tel.getByRole("button", { name: "Ana Ruiz" })) >= 44);
   if (OUT) await tel.screenshot({ path: OUT + "/04-movil-lista.png" });
   // En teléfono «Enlaces de vacantes» se abre como hoja pegada abajo.
-  await tel.getByRole("button", { name: "Enlaces de vacantes" }).tap();
+  await masOpciones(tel, "Enlaces de vacantes");
   const hoja = tel.getByRole("dialog", { name: "Enlaces de vacantes" });
   await hoja.getByRole("list", { name: "Vacantes abiertas" }).waitFor();
   await dormir(300);
@@ -680,13 +700,14 @@ try {
   assert.equal(await tel.getByRole("list", { name: "Conversaciones" }).isVisible(), false, "el chat ocupa la pantalla");
   const caja = await hiloTel.boundingBox();
   assert.ok(caja.x === 0 && caja.width === 390 && caja.height >= 840, `chat a pantalla completa: ${JSON.stringify(caja)}`);
+  assert.ok(await tamano(hiloTel.getByRole("button", { name: "Volver a la lista" })) >= 44 && await tamano(hiloTel.getByRole("button", { name: "Tomar control" })) >= 44);
+  assert.ok(await sinScrollHorizontal(tel), "chat sin scroll horizontal");
+  await hiloTel.getByRole("button", { name: "Tomar control" }).tap();
+  await hiloTel.getByRole("textbox", { name: "Mensaje" }).waitFor();
   const enviarBtn = hiloTel.getByRole("button", { name: "Enviar mensaje" });
   const cajaEnviar = await enviarBtn.boundingBox();
   assert.ok(cajaEnviar.y + cajaEnviar.height <= 844 && cajaEnviar.y > 700, "el cuadro para escribir queda abajo");
-  assert.ok(await tamano(enviarBtn) >= 44 && await tamano(hiloTel.getByRole("button", { name: "Volver a la lista" })) >= 44 && await tamano(hiloTel.getByRole("button", { name: "Tomar control" })) >= 40);
-  assert.ok(await sinScrollHorizontal(tel), "chat sin scroll horizontal");
-  await hiloTel.getByRole("button", { name: "Tomar control" }).tap();
-  await hiloTel.getByRole("button", { name: "Devolver a IA" }).waitFor();
+  assert.ok(await tamano(enviarBtn) >= 44);
   await hiloTel.getByRole("textbox", { name: "Mensaje" }).fill("Desde el teléfono");
   if (OUT) await tel.screenshot({ path: OUT + "/05-movil-chat.png" });
   await hiloTel.getByRole("button", { name: "Volver a la lista" }).tap();
@@ -792,10 +813,11 @@ try {
   await hiloR2.locator('[data-mensaje="102"]').waitFor();
   assert.match(await hiloR2.locator('[data-mensaje="102"]').innerText(), /^Asistente IA/, "sin nombre configurado: «Asistente IA»");
   assert.ok(pedidos.some((x) => x.ruta === "/agente" && x.metodo === "GET" && /empresa=10/.test(x.params)), "GET /agente?empresa=10");
-  assert.match(await r2.getByRole("complementary", { name: "Candidato" }).innerText(), /aún no entrevista a este candidato/);
+  assert.match(await (await verFicha(r2, hiloR2)).innerText(), /aún no entrevista a este candidato/);
 
   // ——— 12. Configurar agente: validación, 400 del API y PUT ———
-  await r2.getByRole("button", { name: "Agente", exact: true }).click();
+  assert.equal(await chipAgente(r2).innerText(), "Agente apagado");
+  await chipAgente(r2).click();
   const dlgAg = r2.getByRole("dialog", { name: "Configurar agente" });
   await dlgAg.getByRole("switch", { name: "Agente encendido" }).waitFor();
   assert.match(await dlgAg.innerText(), /El agente usa tu aviso de privacidad de ADAMIA y nunca pide CURP, datos bancarios ni dinero\./);
@@ -855,7 +877,7 @@ try {
   });
   await hiloR2.locator('[data-mensaje="102"]').getByText("Sofía", { exact: true }).waitFor();
   // Cambios sin guardar: cerrar pide confirmación y no se pierden por un toque accidental.
-  await r2.getByRole("button", { name: "Agente", exact: true }).click();
+  await chipAgente(r2).click();
   assert.equal(await dlgAg.getByLabel("Nombre del asistente").inputValue(), "Sofía", "se recarga lo guardado");
   await dlgAg.getByLabel("Nombre del asistente").fill("Sofía de Uniline");
   await r2.keyboard.press("Escape");
@@ -866,7 +888,7 @@ try {
   if (OUT) await r2.screenshot({ path: OUT + "/r2-01-chat-agente-sofia.png" });
 
   // ——— 13. Preguntas de la entrevista por vacante ———
-  await r2.getByRole("button", { name: "Enlaces de vacantes" }).click();
+  await masOpciones(r2, "Enlaces de vacantes");
   const dlgV = r2.getByRole("dialog", { name: "Enlaces de vacantes" });
   await dlgV.locator('[data-conteo-preguntas="55"]').getByText("1 pregunta").waitFor();
   await dlgV.locator('[data-conteo-preguntas="56"]').getByText("Sin entrevista").waitFor();
@@ -951,10 +973,10 @@ try {
   assert.equal(await carlos.locator('[data-atencion="3"]').getAttribute("title"), "Pidió hablar con una persona");
   assert.equal(await carlos.locator('[data-calificacion="no_califica"]').innerText(), "No califica");
   const filtros = r2.getByRole("group", { name: "Filtrar conversaciones" });
-  assert.deepEqual(await filtros.getByRole("button").allInnerTexts(), ["Todos", "Requiere atención", "Califica", "Con alerta", "No califica", "Incompleto"]);
-  await filtros.getByRole("button", { name: "Requiere atención" }).click();
+  assert.deepEqual(await filtros.getByRole("button").allInnerTexts(), ["Todos", "Atención", "Califica", "Con alerta", "No califica", "Incompleto"]);
+  await filtros.getByRole("button", { name: "Atención" }).click();
   await r2.waitForFunction(() => document.querySelectorAll('[aria-label="Conversaciones"] li').length === 1);
-  assert.equal(await filtros.getByRole("button", { name: "Requiere atención" }).getAttribute("aria-pressed"), "true");
+  assert.equal(await filtros.getByRole("button", { name: "Atención" }).getAttribute("aria-pressed"), "true");
   assert.ok(pedidos.some((x) => x.ruta === "/conversaciones" && /pagina=1&limite=30&atencion=1/.test(x.params)), "atencion=1 desde la página 1");
   await filtros.getByRole("button", { name: "Califica", exact: true }).click();
   await r2.waitForFunction(() => document.querySelectorAll('[aria-label="Conversaciones"] li').length === 10);
@@ -972,11 +994,15 @@ try {
   // ——— 15. Evaluación del candidato y «Marcar como atendido» ———
   await carlos.click();
   await hiloR2.getByText("Te esperamos el lunes").first().waitFor();
-  const panelC = r2.getByRole("complementary", { name: "Candidato" });
+  // Ficha cerrada: la atención pendiente se ve como aviso sobre el chat; el nombre abre la ficha.
+  const panelC = r2.getByRole("complementary", { name: "Ficha del candidato" });
+  assert.equal(await panelC.count(), 0, "la ficha empieza cerrada al cambiar de chat");
+  assert.match(await hiloR2.locator("[data-banner-atencion]").innerText(), /Pidió hablar con una persona/);
+  await verFicha(r2, hiloR2);
   await panelC.getByRole("list", { name: "Respuestas del candidato" }).waitFor();
-  assert.equal(await hiloR2.getByRole("button", { name: "Ver evaluación" }).isVisible(), false, "≥1280: columna fija, sin botón");
+  assert.equal(await hiloR2.locator("[data-banner-atencion]").count(), 0, "con la ficha abierta, el aviso está en la ficha");
   const textoPanel = await panelC.innerText();
-  assert.match(textoPanel, /No califica[\s\S]*Pasó a una persona[\s\S]*Carlos Méndez Ortega[\s\S]*Aceptó el aviso de privacidad/);
+  assert.match(textoPanel, /No califica[\s\S]*pasó a una persona[\s\S]*Carlos Méndez Ortega[\s\S]*Aceptó el aviso de privacidad/i);
   assert.match(textoPanel, /Requiere atención[\s\S]*Pidió hablar con una persona[\s\S]*no cuenta con licencia tipo C/);
   assert.deepEqual(await panelC.getByRole("list", { name: "Puntajes" }).getByRole("img").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label"))),
     ["Comunicación: 4 de 5", "Actitud: 5 de 5", "Experiencia: 3 de 5", "Confiabilidad: 2 de 5", "Disponibilidad: 1 de 5"]);
@@ -993,18 +1019,23 @@ try {
   await r2.locator('[data-atencion="3"]').waitFor({ state: "detached", timeout: 7000 });
   assert.ok(!pedidos.some((x) => x.ruta === "/conversaciones" && /calificacion=(?!califica|no_califica|con_alerta|incompleto)/.test(x.params)), "solo calificaciones válidas");
   await r2.getByRole("button", { name: /^\+52 442 123 4567/ }).click();
+  await r2.locator("[data-ver-ficha]").filter({ hasText: "+52 442 123 4567" }).waitFor();
+  await verFicha(r2, hiloR2);
   await panelC.locator("[data-pregunta-actual]").getByText("¿Tienes licencia tipo C?").waitFor();
-  assert.match(await panelC.innerText(), /Incompleto[\s\S]*Respondiendo preguntas[\s\S]*Pregunta en curso: ¿Tienes licencia tipo C\?/);
+  assert.match(await panelC.innerText(), /Incompleto[\s\S]*respondiendo preguntas[\s\S]*Pregunta en curso: ¿Tienes licencia tipo C\?/i);
   await carlos.click();
   await hiloR2.getByText("Te esperamos el lunes").first().waitFor();
-  // Bajo 1280 px: «Ver evaluación» abre la hoja.
+  // Bajo 1280 px la ficha se sobrepone al chat (sin encogerlo) y Escape la cierra.
   await r2.setViewportSize({ width: 1100, height: 900 });
-  assert.equal(await panelC.isVisible(), false);
-  await hiloR2.getByRole("button", { name: "Ver evaluación" }).click();
-  const hojaEv = r2.getByRole("dialog", { name: "Evaluación del candidato" });
-  await hojaEv.getByRole("list", { name: "Respuestas del candidato" }).waitFor();
+  assert.equal(await panelC.count(), 0);
+  const anchoChat = (await hiloR2.boundingBox()).width;
+  await verFicha(r2, hiloR2);
+  await panelC.getByRole("list", { name: "Respuestas del candidato" }).waitFor();
+  const cajaSobre = await panelC.boundingBox();
+  assert.ok(Math.round(cajaSobre.width) === 380 && (await hiloR2.boundingBox()).width === anchoChat, `ficha sobrepuesta: ${JSON.stringify(cajaSobre)}`);
+  await r2.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Cerrar ficha");
   await r2.keyboard.press("Escape");
-  await hojaEv.waitFor({ state: "detached" });
+  await panelC.waitFor({ state: "hidden" });
   await ctxR2.close();
 
   // ——— 16. R2 en teléfono 390 px ———
@@ -1018,12 +1049,12 @@ try {
   await t2.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
   await t2.getByRole("list", { name: "Conversaciones" }).waitFor({ timeout: 30000 });
   const filtrosT = t2.getByRole("group", { name: "Filtrar conversaciones" });
-  for (const nombre of ["Todos", "Requiere atención", "Incompleto"]) assert.ok(await tamano(filtrosT.getByRole("button", { name: nombre, exact: true })) >= 44, `chip ${nombre} ≥44 px`);
-  assert.ok(await tamano(t2.getByRole("button", { name: "Agente", exact: true })) >= 44);
+  for (const nombre of ["Todos", "Atención", "Incompleto"]) assert.ok(await tamano(filtrosT.getByRole("button", { name: nombre, exact: true })) >= 44, `chip ${nombre} ≥44 px`);
+  assert.ok(await tamano(chipAgente(t2)) >= 44);
   assert.ok(await sinScrollHorizontal(t2), "lista con filtros sin scroll horizontal");
   if (OUT) await t2.screenshot({ path: OUT + "/r2-04-movil-lista-filtros.png" });
   // Agente a pantalla completa.
-  await t2.getByRole("button", { name: "Agente", exact: true }).tap();
+  await chipAgente(t2).tap();
   const agT = t2.getByRole("dialog", { name: "Configurar agente" });
   await agT.getByRole("switch", { name: "Agente encendido" }).waitFor();
   await dormir(300);
@@ -1037,7 +1068,7 @@ try {
   await agT.getByRole("button", { name: "Cancelar" }).tap();
   await agT.waitFor({ state: "detached" });
   // Editor de entrevista a pantalla completa.
-  await t2.getByRole("button", { name: "Enlaces de vacantes" }).tap();
+  await masOpciones(t2, "Enlaces de vacantes");
   await t2.getByRole("button", { name: "Entrevista de Operador de montacargas" }).tap();
   const edT = t2.getByRole("dialog", { name: "Entrevista por WhatsApp" });
   await edT.getByRole("region", { name: "Pregunta 3" }).waitFor();
@@ -1056,9 +1087,9 @@ try {
   await t2.getByRole("button", { name: /^Carlos Méndez/ }).tap();
   const hiloT = t2.getByRole("region", { name: "Conversación" });
   await hiloT.getByText("Te esperamos el lunes").first().waitFor();
-  assert.ok(await tamano(hiloT.getByRole("button", { name: /Ver evaluación/ })) >= 40);
-  await hiloT.getByRole("button", { name: /Ver evaluación/ }).tap();
-  const evT = t2.getByRole("dialog", { name: "Evaluación del candidato" });
+  assert.ok(await tamano(hiloT.locator("[data-ver-ficha]")) >= 44);
+  await hiloT.locator("[data-ver-ficha]").tap();
+  const evT = t2.getByRole("complementary", { name: "Ficha del candidato" });
   await evT.getByRole("list", { name: "Respuestas del candidato" }).waitFor();
   await dormir(300); // termina la animación de entrada (zoom 95 %)
   const cajaEv = await evT.boundingBox();
@@ -1066,8 +1097,8 @@ try {
   assert.ok(await tamano(evT.getByRole("button", { name: "Marcar como atendido" })) >= 44);
   assert.ok(await evT.evaluate((el) => [...el.querySelectorAll("*")].every((n) => n.getBoundingClientRect().right <= 391)), "evaluación sin desborde horizontal");
   if (OUT) await t2.screenshot({ path: OUT + "/r2-07-movil-evaluacion.png" });
-  await evT.getByRole("button", { name: "Close" }).tap();
-  await evT.waitFor({ state: "detached" });
+  await evT.getByRole("button", { name: "Cerrar ficha" }).tap();
+  await evT.waitFor({ state: "hidden" });
   assert.ok(await sinScrollHorizontal(t2));
   await movR2.close();
 
@@ -1116,10 +1147,11 @@ try {
   await r3.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
   await r3.getByRole("list", { name: "Conversaciones" }).waitFor({ timeout: 30000 });
   assert.equal(await r3.locator("[data-plantillas-mes]").innerText(), "4 plantillas enviadas este mes");
-  assert.equal(await r3.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Conversaciones" }).getAttribute("aria-current"), "page");
+  const linkEntrevistas = (p) => p.getByRole("region", { name: "Chats" }).getByRole("link", { name: "Entrevistas" });
+  assert.equal(await linkEntrevistas(r3).getAttribute("aria-current"), null, "en la bandeja, «Entrevistas» no está activa");
 
   // ——— 17. Agenda de la empresa (pestaña del agente) ———
-  await r3.getByRole("button", { name: "Agente", exact: true }).click();
+  await chipAgente(r3).click();
   const dlgR3 = r3.getByRole("dialog", { name: "Configurar agente" });
   await dlgR3.getByRole("tab", { name: "Agenda y recordatorios" }).click();
   const pan = dlgR3.getByRole("tabpanel", { name: "Agenda y recordatorios" });
@@ -1185,16 +1217,17 @@ try {
     plantilla_idioma: "es_MX", textos: { confirmacion_cita: "Hola {nombre}, tu cita es el {fecha}." },
   });
   // Cambios en ambas pestañas: guardar una deja el diálogo abierto y avisa; cerrar con cambios pide confirmación.
-  await r3.getByRole("button", { name: "Agente", exact: true }).click();
+  await chipAgente(r3).click();
   await dlgR3.getByRole("tab", { name: "Agenda y recordatorios" }).click();
   await pan.getByLabel("Días hacia adelante").fill("12");
+  await dormir(200); // «cambios sin guardar» se avisa al diálogo en un efecto: Escape inmediato podía ganarle (prueba intermitente)
   await r3.keyboard.press("Escape");
   await pan.getByRole("alertdialog", { name: "Cambios sin guardar" }).waitFor();
   await pan.getByRole("button", { name: "Descartar cambios" }).click();
   await dlgR3.waitFor({ state: "detached" });
 
   // ——— 18. Agenda de la vacante ———
-  await r3.getByRole("button", { name: "Enlaces de vacantes" }).click();
+  await masOpciones(r3, "Enlaces de vacantes");
   await r3.getByRole("button", { name: "Agenda de Operador de montacargas" }).click();
   const dlgAv = r3.getByRole("dialog", { name: "Agenda de entrevistas" });
   await dlgAv.locator("[data-vista-horarios] [data-horario]").first().waitFor();
@@ -1252,7 +1285,7 @@ try {
   await r3.getByRole("dialog", { name: "Enlaces de vacantes" }).getByRole("button", { name: "Close" }).click();
 
   // ——— 19. Entrevistas: calendario, filtros, lista y acciones ———
-  await r3.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Entrevistas" }).click();
+  await linkEntrevistas(r3).click();
   await r3.waitForURL(/\/panel\/whatsapp\?vista=entrevistas$/);
   const cal = r3.locator("[data-calendario-semana]");
   await cal.locator("[data-bloque-cita]").first().waitFor({ timeout: 10000 });
@@ -1327,20 +1360,27 @@ try {
   await r3.waitForURL(/\/panel\/whatsapp\?c=1$/);
   const hiloR3 = r3.getByRole("region", { name: "Conversación" });
   await hiloR3.locator('[data-mensaje="101"]').waitFor();
-  const asideR3 = r3.getByRole("complementary", { name: "Candidato" });
-  await asideR3.getByRole("button", { name: "Agendar entrevista" }).click();
+  // «Agendar» del encabezado del chat abre el selector de horarios (la ficha sigue cerrada).
+  const asideR3 = r3.getByRole("complementary", { name: "Ficha del candidato" });
+  await hiloR3.getByRole("button", { name: "Agendar entrevista", exact: true }).click();
   const dlgAgendar = r3.getByRole("dialog", { name: "Agendar entrevista" });
   await dlgAgendar.locator(`[data-dia-horarios="${sumarDias(hoyR3, 1)}"]`).getByText("9:00 a.m.").click();
   await dlgAgendar.getByRole("button", { name: "Agendar", exact: true }).click();
   await dlgAgendar.waitFor({ state: "detached" });
   assert.deepEqual(pedidos.find((x) => x.ruta === "/citas" && x.metodo === "POST").cuerpo, { id_conversacion: 1, id_vacante: 55, inicio: `${sumarDias(hoyR3, 1)} 09:00` });
-  await asideR3.locator("[data-cita]").locator('[data-estado-cita="agendada"]').waitFor();
-  assert.equal(await asideR3.getByRole("button", { name: "Agendar entrevista" }).count(), 0, "con cita activa no se ofrece agendar otra");
+  // Con la cita, el chat la muestra fija arriba y «Agendar» pasa a «Ver entrevista agendada» (abre la ficha en la cita).
+  await hiloR3.locator('[data-cita-fijada="agendada"]').waitFor();
+  await hiloR3.getByRole("button", { name: "Ver entrevista agendada" }).click();
+  const citaR3 = asideR3.getByRole("region", { name: "Cita de entrevista" });
+  await citaR3.locator('[data-estado-cita="agendada"]').waitFor();
+  assert.equal(await citaR3.getByRole("button", { name: "Agendar", exact: true }).count(), 0, "con cita activa no se ofrece agendar otra");
+  assert.equal(await hiloR3.locator("[data-cita-fijada]").count(), 0, "con la ficha abierta la cita no se repite sobre el chat");
   if (OUT) await r3.screenshot({ path: OUT + "/r3-05-chat-cita.png" });
   // Aprobar para agendar: motivo de agenda (modo «aprobación» guardado arriba).
   Object.assign(S.entrevistas[3], { calificacion: "con_alerta", requiere_atencion: true, motivo_atencion: "Espera tu aprobación para agendar" });
-  await r3.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Conversaciones" }).click();
   await r3.getByRole("button", { name: /^Carlos Méndez/ }).click();
+  await hiloR3.locator("[data-banner-atencion]").filter({ hasText: "Espera tu aprobación para agendar" }).waitFor();
+  await verFicha(r3, hiloR3);
   const aprobarBox = asideR3.locator("[data-aprobar-agenda]");
   await aprobarBox.waitFor();
   await aprobarBox.getByRole("button", { name: "Aprobar para agendar" }).click();
@@ -1380,7 +1420,7 @@ try {
   await listaT.waitFor({ timeout: 30000 });
   assert.equal(await t3.locator("[data-calendario-semana]").isVisible(), false, "en teléfono no se ve el calendario");
   assert.ok(await listaT.locator("[data-cita]").count() >= 3);
-  for (const b of [t3.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Entrevistas" }), t3.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Conversaciones" }), t3.getByRole("button", { name: "Semana anterior" }),
+  for (const b of [t3.getByRole("link", { name: "Volver a chats" }), t3.getByRole("button", { name: "Semana anterior" }),
     t3.getByRole("button", { name: "Semana siguiente" }), t3.getByLabel("Vacante", { exact: true }), t3.getByLabel("Estado"),
     listaT.getByRole("button", { name: "Reagendar" }).first(), listaT.getByRole("button", { name: "Cancelar" }).first(), listaT.getByRole("link", { name: "Abrir chat" }).first()]) {
     assert.ok(await tamano(b) >= 44, "objetivo táctil ≥44 px en Entrevistas");
@@ -1400,9 +1440,9 @@ try {
   await reT.getByRole("button", { name: "Cancelar" }).tap();
   await reT.waitFor({ state: "detached" });
   // Agenda de la empresa en teléfono.
-  await t3.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Conversaciones" }).tap();
+  await t3.getByRole("link", { name: "Volver a chats" }).tap();
   await t3.getByRole("list", { name: "Conversaciones" }).waitFor();
-  await t3.getByRole("button", { name: "Agente", exact: true }).tap();
+  await chipAgente(t3).tap();
   const agT3 = t3.getByRole("dialog", { name: "Configurar agente" });
   await agT3.getByRole("tab", { name: "Agenda y recordatorios" }).tap();
   const panT = agT3.getByRole("tabpanel", { name: "Agenda y recordatorios" });
@@ -1416,7 +1456,7 @@ try {
   await panT.getByRole("button", { name: "Cancelar" }).tap();
   await agT3.waitFor({ state: "detached" });
   // Agenda de la vacante en teléfono.
-  await t3.getByRole("button", { name: "Enlaces de vacantes" }).tap();
+  await masOpciones(t3, "Enlaces de vacantes");
   await t3.getByRole("button", { name: "Agenda de Operador de montacargas" }).tap();
   const avT = t3.getByRole("dialog", { name: "Agenda de entrevistas" });
   await avT.locator("[data-vista-horarios] [data-horario]").first().waitFor();
@@ -1443,11 +1483,226 @@ try {
 
   await chatTodoEnUno(browser, errores);
   await agendaCalendario(browser, errores);
+  await bandejaWhatsappWeb(browser, errores);
 
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
   console.log("OK whatsapp · agenda tipo Google Calendar: menú «Entrevistas» a la vista real (sin maqueta, redirección del enlace viejo), semana/día, minicalendario, línea de ahora, horarios libres de la vacante, agendar aquí (POST /citas), arrastrar a un horario (confirmar, POST reagendar), 409 regresa la cita, selector del chat con la misma rejilla, teléfono con tira de días · chat todo-en-uno: imagen con visor (zoom, teclado, Bearer sin token en URL), nota de voz (transcripción, reproducir, velocidad), documento (descargar ?descargar=1, abrir), ubicación (Google Maps), estados descargando/fallido, subida PNG con comentario y PDF arrastrado (multipart archivo/texto, avance), pegar imagen, rechazo 16 MB+ y .exe, 413, cancelar envío, grabadora (webm/opus, cancelar, nota_voz=1, micrófono negado), cita fija (confirmar, no asistió, agendar, mover, cancelar con líneas de sistema), ofrecer horarios (tarjeta y «+», 409 WA_SIN_HORARIOS), selector sin horarios (migración, días vacíos, agenda sin configurar → Configurar agenda), teléfono ≥44 px sin desborde · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · paginación real (pagina=2, sondeo solo página 1, sin duplicados) · enlaces de vacantes (lista, búsqueda, copiar, 409/503, vacío, hoja en teléfono) · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT · R2: agente (validación, horario, copiar lunes, palabras, 400, PUT, nombre en burbujas, cambios sin guardar) · entrevista por vacante (conteo perezoso, validación, rango número, opciones descarta/alerta excluyentes, reordenar con foco, máx. 8, 400, PUT) · filtros atencion=1 / calificacion · evaluación (puntajes, respuestas con severidad, sin respuesta) · marcar atendido · hoja <1280 · teléfono ≥44 px sin desborde · 27/11: interruptor de la bolsa (GET, PUT {publicar_bolsa}, falla y regresa, también con WhatsApp apagado) · copiar enlace de la vacante (/vacante/<slug>) · WhatsApp apagado avisa · chip de entrevistas con y sin paquete y aviso de extras · admin: paquete, extras, importe y PUT con entrevistas_incluidas · bolsa pública: /vacantes/filter y tira con ?bolsa=1 (vacía se oculta) · R3: agenda de la empresa (quién agenda, anticipación, días, horarios, recordatorios en minutos, plantillas, mensajes con marcadores en el cursor, vista previa, marcador desconocido, restaurar, 400, PUT) · agenda de la vacante (cupo, varios rangos con empalme, copiar a todos, bloqueo, override null vs valor, vista previa /horarios antes y después de guardar) · Entrevistas (calendario semanal con empalmes, filtros estado/vacante, lista, asistió, reagendar con 409 WA_SIN_CUPO, cancelar con motivo, confirmar, abrir chat) · agendar a mano y cita en el panel · aprobar para agendar · seguimiento con confirmación y 409 WA_SIN_PLANTILLA / WA_VENTANA_ABIERTA · plantillas del mes · teléfono: lista, hojas a pantalla completa, ≥44 px, sin desborde");
 } catch (e) { if (e?.message !== "__solo__") throw e; } finally { await browser.close(); next.kill(); if (!exito) process.exitCode = 1; }
+
+// ——— 24. Bandeja estilo WhatsApp Web (maqueta aprobada 25/11/2026): pantalla completa, menú «Acciones», ficha y teléfono ———
+async function bandejaWhatsappWeb(browser, errores) {
+  S = estadoInicial();
+  S.agente.activo = true; // como en la maqueta: «Agente encendido»
+  const OUTB = process.env.CAPTURAS_BANDEJA || OUT;
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, locale: "es-MX", timezoneId: "America/Mexico_City", permissions: ["clipboard-read", "clipboard-write"] });
+  await ctx.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(ctx, reclutadora);
+  const page = await ctx.newPage();
+  page.on("pageerror", (e) => errores.push(e.message));
+  await page.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
+  const lista = page.getByRole("list", { name: "Conversaciones" });
+  await lista.waitFor({ timeout: 30000 });
+  // Sin encabezado grande ni pestañas: «Chats» es el título; el menú de ADAMIA queda como riel de iconos.
+  assert.equal(await page.getByRole("heading", { name: "Conversaciones de WhatsApp" }).count(), 0, "sin encabezado grande");
+  assert.equal(await page.getByRole("navigation", { name: "Secciones de WhatsApp" }).count(), 0, "sin franja de pestañas");
+  assert.equal(await page.getByRole("heading", { level: 1, name: "Chats" }).count(), 1);
+  await page.locator('[data-slot="sidebar"][data-state="collapsed"]').waitFor({ timeout: 5000 });
+  // Alto completo a 1440×900: la página no se desplaza; cada columna tiene su propio scroll.
+  const altoCompleto = async () => page.evaluate(() => {
+    const raiz = document.querySelector("[data-bandeja-completa]").getBoundingClientRect();
+    return { pagina: document.scrollingElement.scrollHeight - window.innerHeight, abajo: Math.round(raiz.bottom), alto: Math.round(raiz.height) };
+  });
+  let medida = await altoCompleto();
+  assert.ok(medida.pagina <= 1 && medida.abajo >= 880 && medida.abajo <= 900 && medida.alto >= 800, `bandeja a todo el alto sin scroll de página: ${JSON.stringify(medida)}`);
+  const columna = page.getByRole("region", { name: "Chats" });
+  const anchoColumna = (await columna.boundingBox()).width;
+  assert.ok(anchoColumna >= 395 && anchoColumna <= 405, `columna de chats de ~400 px: ${anchoColumna}`);
+  assert.ok(await lista.evaluate((ul) => ul.parentElement.scrollHeight > ul.parentElement.clientHeight), "la lista se desplaza por dentro");
+  // Columna: agente, Entrevistas, ⋮ con salud, enlaces y configurar agente; pastillas; pie con número y conteos.
+  await page.locator('[data-chip-agente="encendido"]').filter({ hasText: "Agente encendido" }).waitFor();
+  assert.equal(await columna.getByRole("link", { name: "Entrevistas" }).getAttribute("href"), "/panel/whatsapp?vista=entrevistas");
+  await columna.getByRole("button", { name: "Más opciones" }).click();
+  assert.deepEqual(await page.getByRole("menu", { name: "Más opciones" }).getByRole("menuitem").allInnerTexts(), ["Salud del agente", "Enlaces de vacantes", "Configurar agente"]);
+  await page.keyboard.press("Escape");
+  assert.deepEqual(await columna.getByRole("group", { name: "Filtrar conversaciones" }).getByRole("button").allInnerTexts(), ["Todos", "Atención", "Califica", "Con alerta", "No califica", "Incompleto"]);
+  assert.equal(await columna.getByRole("combobox", { name: "Etapa" }).count(), 1, "etapa como filtro compacto");
+  assert.match(await columna.locator("footer").innerText(), /número compartido de ADAMIA · \+52 55 9876 5432 · 12 conversaciones este mes/);
+  if (OUTB) await page.screenshot({ path: OUTB + "/bandeja-01-lista.png" });
+
+  // Conversación: encabezado compacto, la IA atiende, ficha cerrada por defecto.
+  await page.getByRole("button", { name: /^Ana Ruiz/ }).click();
+  const hilo = page.getByRole("region", { name: "Conversación con Ana Ruiz" });
+  await hilo.locator('[data-mensaje="102"]').waitFor();
+  assert.equal(await hilo.locator("[data-quien-atiende]").innerText(), "La IA atiende");
+  assert.match(await hilo.locator("[data-subtitulo-chat]").innerText(), /^Operador de montacargas · \+52 55 1234 5678/);
+  for (const nombre of ["Tomar control", "Agendar entrevista", "Acciones"]) assert.equal(await hilo.getByRole("button", { name: nombre, exact: true }).isVisible(), true, `botón ${nombre} en el encabezado`);
+  assert.equal(await hilo.getByRole("button", { name: "Tomar control para escribir" }).isVisible(), true, "con la IA atendiendo, aviso + Tomar control abajo");
+  assert.equal(await hilo.getByRole("textbox", { name: "Mensaje" }).count(), 0);
+  assert.equal(await page.getByRole("complementary", { name: "Ficha del candidato" }).count(), 0, "ficha cerrada por defecto");
+  const colores = await hilo.evaluate((el) => {
+    const fondo = getComputedStyle(el.querySelector("[data-hilo-scroll]")).backgroundColor || getComputedStyle(el).backgroundColor;
+    const globo = (id) => getComputedStyle(el.querySelector(`[data-mensaje="${id}"] > div`)).backgroundColor;
+    return { fondo: getComputedStyle(el).backgroundColor, entrante: globo(101), saliente: globo(102), firma: el.querySelector('[data-mensaje="102"] p').textContent, fondoScroll: fondo };
+  });
+  assert.deepEqual([colores.fondo, colores.entrante, colores.saliente, colores.firma], ["rgb(239, 234, 226)", "rgb(255, 255, 255)", "rgb(217, 253, 211)", "Asistente IA"], `globos estilo WhatsApp: ${JSON.stringify(colores)}`);
+  medida = await altoCompleto();
+  assert.ok(medida.pagina <= 1 && medida.abajo >= 880, `con el chat abierto tampoco hay scroll de página: ${JSON.stringify(medida)}`);
+  // Menú «Acciones» con sus opciones (no hay acción de «no califica» en el API: no se inventa).
+  await hilo.getByRole("button", { name: "Acciones", exact: true }).click();
+  const menu = page.getByRole("menu", { name: "Acciones de la conversación" });
+  await menu.waitFor();
+  assert.deepEqual((await menu.getByRole("menuitem").allInnerTexts()).map((t) => t.trim()),
+    ["Ver ficha del candidato", "Agendar entrevista", "Ofrecer horarios", "Mover etapa del proceso", "Copiar enlace de WhatsApp de la vacante"]);
+  await dormir(300); // termina la animación de entrada
+  if (OUTB) await page.screenshot({ path: OUTB + "/bandeja-02-escritorio-menu.png" });
+  await menu.getByRole("menuitem", { name: "Copiar enlace de WhatsApp de la vacante" }).click();
+  const dlgEnlace = page.getByRole("dialog", { name: "Enlace de WhatsApp" });
+  await dlgEnlace.getByRole("textbox", { name: "Enlace de WhatsApp de la vacante" }).waitFor();
+  assert.equal(await dlgEnlace.getByRole("textbox").inputValue(), ENLACE);
+  await dlgEnlace.getByRole("button", { name: "Copiar enlace" }).click();
+  await dlgEnlace.getByRole("button", { name: "Copiado" }).waitFor();
+  await page.keyboard.press("Escape");
+  await dlgEnlace.waitFor({ state: "detached" });
+  // «Agendar» del encabezado: abre el selector de horarios aunque la ficha esté cerrada.
+  await hilo.getByRole("button", { name: "Agendar entrevista", exact: true }).click();
+  const dlgAg = page.getByRole("dialog", { name: "Agendar entrevista" });
+  await dlgAg.waitFor();
+  await dlgAg.getByRole("button", { name: "Cancelar" }).click();
+  await dlgAg.waitFor({ state: "detached" });
+  // La ficha se abre al tocar el nombre, a la derecha (380 px), y se cierra con «Cerrar ficha» o Escape.
+  await hilo.getByRole("button", { name: "Ver ficha de Ana Ruiz" }).click();
+  const ficha = page.getByRole("complementary", { name: "Ficha del candidato" });
+  await ficha.waitFor();
+  const cajaFicha = await ficha.boundingBox();
+  assert.ok(Math.round(cajaFicha.width) === 380 && Math.round(cajaFicha.x + cajaFicha.width) === 1440 - 8, `ficha a la derecha de 380 px: ${JSON.stringify(cajaFicha)}`);
+  assert.match(await ficha.innerText(), /Ana Ruiz[\s\S]*\+52 55 1234 5678[\s\S]*Vacante[\s\S]*Operador de montacargas[\s\S]*Proceso de selección[\s\S]*Entrevista[\s\S]*Sin entrevista agendada/i);
+  assert.equal(await hilo.getByRole("button", { name: "Ver ficha de Ana Ruiz" }).getAttribute("aria-expanded"), "true");
+  medida = await altoCompleto();
+  assert.ok(medida.pagina <= 1, `con la ficha abierta tampoco hay scroll de página: ${JSON.stringify(medida)}`);
+  if (OUTB) await page.screenshot({ path: OUTB + "/bandeja-03-ficha.png" });
+  await ficha.getByRole("button", { name: "Cerrar ficha" }).click();
+  await ficha.waitFor({ state: "hidden" });
+  // «Mover etapa del proceso» abre la ficha en el proceso.
+  await hilo.getByRole("button", { name: "Acciones", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Mover etapa del proceso" }).click();
+  await ficha.getByRole("region", { name: "Proceso de selección" }).waitFor();
+  // El foco pasa a la ficha (botón «Cerrar ficha»); Escape la cierra.
+  await page.waitForFunction(() => document.activeElement?.getAttribute("aria-label") === "Cerrar ficha");
+  await page.getByRole("menu").waitFor({ state: "detached" });
+  await page.keyboard.press("Escape");
+  await ficha.waitFor({ state: "hidden" });
+  // Tomar control: el cuadro aparece; «Devolver a la IA» en el encabezado.
+  await hilo.getByRole("button", { name: "Tomar control", exact: true }).click();
+  await hilo.getByRole("button", { name: "Devolver a la IA" }).waitFor();
+  assert.equal(await hilo.locator("[data-quien-atiende]").innerText(), "Tú tienes el control");
+  await hilo.getByRole("textbox", { name: "Mensaje" }).waitFor();
+  if (OUTB) await page.screenshot({ path: OUTB + "/bandeja-04-control.png" });
+  await hilo.getByRole("button", { name: "Devolver a la IA" }).click();
+  await hilo.getByRole("button", { name: "Tomar control", exact: true }).waitFor();
+  // Entrevistas y Salud del agente ocupan el lugar de la conversación; «Cerrar» vuelve a la bandeja.
+  await columna.getByRole("link", { name: "Entrevistas" }).click();
+  await page.waitForURL(/\?vista=entrevistas$/);
+  await page.locator("[data-vista-entrevistas]").waitFor();
+  assert.equal(await columna.isVisible(), true, "la lista sigue a la vista");
+  assert.equal(await columna.getByRole("link", { name: "Entrevistas" }).getAttribute("aria-current"), "page");
+  medida = await altoCompleto();
+  assert.ok(medida.pagina <= 1, `Entrevistas sin scroll de página: ${JSON.stringify(medida)}`);
+  if (OUTB) await page.screenshot({ path: OUTB + "/bandeja-05-entrevistas.png" });
+  await columna.getByRole("button", { name: "Más opciones" }).click();
+  await page.getByRole("menuitem", { name: "Salud del agente" }).click();
+  await page.waitForURL(/\?vista=salud$/);
+  await page.locator("[data-vista-salud]").waitFor();
+  if (OUTB) await page.screenshot({ path: OUTB + "/bandeja-06-salud.png" });
+  await page.getByRole("link", { name: "Cerrar salud del agente" }).click();
+  await page.waitForURL(/\/panel\/whatsapp$/);
+  await page.getByText("Elige una conversación").waitFor();
+  // El riel del menú se puede abrir: la preferencia sigue siendo del usuario.
+  await page.getByRole("button", { name: "Toggle Sidebar" }).first().click();
+  await page.locator('[data-slot="sidebar"][data-state="expanded"]').waitFor();
+  assert.equal(await page.getByRole("button", { name: "Conversaciones (WhatsApp)" }).count(), 1, "entrada en el menú de reclutamiento");
+  await page.getByRole("button", { name: "Toggle Sidebar" }).first().click();
+  await page.locator('[data-slot="sidebar"][data-state="collapsed"]').waitFor();
+  await ctx.close();
+
+  // Teléfono 390 px: lista → chat a pantalla completa → ficha a pantalla completa → volver.
+  const movil = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await movil.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(movil, reclutadora);
+  const tel = await movil.newPage();
+  tel.on("pageerror", (e) => errores.push(e.message));
+  await tel.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
+  await tel.getByRole("list", { name: "Conversaciones" }).waitFor({ timeout: 30000 });
+  assert.ok(await sinScrollHorizontal(tel), "lista sin scroll horizontal a 390");
+  for (const b of [tel.getByRole("button", { name: "Más opciones" }), tel.getByRole("link", { name: "Entrevistas" }), tel.locator("[data-chip-agente]"), tel.getByRole("button", { name: /^Ana Ruiz/ })]) {
+    assert.ok(await tamano(b) >= 44, "objetivo táctil ≥44 px en la lista");
+  }
+  if (OUTB) await tel.screenshot({ path: OUTB + "/bandeja-07-movil-lista.png" });
+  await tel.getByRole("button", { name: /^Ana Ruiz/ }).tap();
+  await tel.waitForURL(/\?c=1$/);
+  const hiloT = tel.getByRole("region", { name: "Conversación con Ana Ruiz" });
+  await hiloT.locator('[data-mensaje="102"]').waitFor();
+  const cajaHilo = await hiloT.boundingBox();
+  assert.ok(cajaHilo.x === 0 && cajaHilo.width === 390 && cajaHilo.height >= 840, `chat a pantalla completa: ${JSON.stringify(cajaHilo)}`);
+  assert.equal(await tel.getByRole("list", { name: "Conversaciones" }).isVisible(), false);
+  assert.match(await hiloT.locator("[data-quien-atiende-movil]").innerText(), /^La IA atiende · Operador de montacargas$/);
+  for (const b of [hiloT.getByRole("button", { name: "Volver a la lista" }), hiloT.getByRole("button", { name: "Acciones", exact: true }), hiloT.getByRole("button", { name: "Tomar control para escribir" }), hiloT.getByRole("button", { name: "Ver ficha de Ana Ruiz" })]) {
+    assert.ok(await tamano(b) >= 44, `objetivo táctil ≥44 px en el chat: ${await b.getAttribute("aria-label")}`);
+  }
+  assert.ok(await sinScrollHorizontal(tel), "chat sin scroll horizontal a 390");
+  if (OUTB) await tel.screenshot({ path: OUTB + "/bandeja-08-movil-chat.png" });
+  await hiloT.getByRole("button", { name: "Acciones", exact: true }).tap();
+  const menuT = tel.getByRole("menu", { name: "Acciones de la conversación" });
+  await menuT.waitFor();
+  await dormir(300); // termina la animación de entrada (zoom 95 %)
+  const cajaMenu = await menuT.boundingBox();
+  assert.ok(cajaMenu.x >= 0 && cajaMenu.x + cajaMenu.width <= 390, `menú dentro de la pantalla: ${JSON.stringify(cajaMenu)}`);
+  for (const item of await menuT.getByRole("menuitem").all()) assert.ok(await tamano(item) >= 44, "opción del menú ≥44 px");
+  if (OUTB) await tel.screenshot({ path: OUTB + "/bandeja-09-movil-acciones.png" });
+  await menuT.getByRole("menuitem", { name: "Ver ficha del candidato" }).tap();
+  const fichaT = tel.getByRole("complementary", { name: "Ficha del candidato" });
+  await fichaT.waitFor();
+  await tel.getByRole("menu").waitFor({ state: "detached" });
+  const cajaF = await fichaT.boundingBox();
+  assert.ok(cajaF.x === 0 && cajaF.width === 390 && cajaF.height >= 840, `ficha a pantalla completa: ${JSON.stringify(cajaF)}`);
+  assert.ok(await tamano(fichaT.getByRole("button", { name: "Cerrar ficha" })) >= 44);
+  assert.ok(await fichaT.evaluate((el) => [...el.querySelectorAll("*")].every((n) => n.getBoundingClientRect().right <= 391)), "ficha sin desborde horizontal");
+  if (OUTB) await tel.screenshot({ path: OUTB + "/bandeja-10-movil-ficha.png" });
+  await fichaT.getByRole("button", { name: "Cerrar ficha" }).tap();
+  await fichaT.waitFor({ state: "hidden" });
+  // Con el control, el cuadro para escribir queda abajo; al encogerse la ventana (teclado) sigue a la vista.
+  await hiloT.getByRole("button", { name: "Tomar control para escribir" }).tap();
+  const cuadro = hiloT.getByRole("textbox", { name: "Mensaje" });
+  await cuadro.waitFor();
+  const enviarT = hiloT.getByRole("button", { name: "Enviar mensaje" });
+  let cajaEnviar = await enviarT.boundingBox();
+  assert.ok(cajaEnviar.y + cajaEnviar.height <= 844 && cajaEnviar.y > 760, `cuadro abajo: ${JSON.stringify(cajaEnviar)}`);
+  await tel.setViewportSize({ width: 390, height: 480 });
+  await cuadro.tap();
+  await dormir(200);
+  cajaEnviar = await enviarT.boundingBox();
+  const cajaCuadro = await cuadro.boundingBox();
+  assert.ok(cajaEnviar.y + cajaEnviar.height <= 480 && cajaCuadro.y + cajaCuadro.height <= 480, `con el teclado el cuadro sigue a la vista: ${JSON.stringify(cajaCuadro)}`);
+  if (OUTB) await tel.screenshot({ path: OUTB + "/bandeja-11-movil-teclado.png" });
+  await tel.setViewportSize({ width: 390, height: 844 });
+  if (OUTB) await tel.screenshot({ path: OUTB + "/bandeja-12-movil-control.png" });
+  await hiloT.getByRole("button", { name: "Acciones", exact: true }).tap();
+  await tel.getByRole("menuitem", { name: "Devolver a la IA" }).tap();
+  await hiloT.getByRole("button", { name: "Tomar control para escribir" }).waitFor();
+  await hiloT.getByRole("button", { name: "Volver a la lista" }).tap();
+  await tel.waitForURL(/\/panel\/whatsapp$/);
+  await tel.getByRole("list", { name: "Conversaciones" }).waitFor({ state: "visible" });
+  assert.equal(await tel.getByRole("region", { name: /^Conversación/ }).count(), 0);
+  // Entrevistas a pantalla completa con «‹».
+  await tel.getByRole("link", { name: "Entrevistas" }).tap();
+  await tel.locator("[data-lista-citas], [data-sin-citas]").first().waitFor();
+  assert.ok(await tamano(tel.getByRole("link", { name: "Volver a chats" })) >= 44);
+  assert.ok(await sinScrollHorizontal(tel), "Entrevistas sin scroll horizontal a 390");
+  await tel.getByRole("link", { name: "Volver a chats" }).tap();
+  await tel.getByRole("list", { name: "Conversaciones" }).waitFor({ state: "visible" });
+  await movil.close();
+  console.log("OK bandeja estilo WhatsApp Web");
+}
 
 // ——— 22. Chat todo-en-uno: archivos, envío multipart, grabadora, cita fija, «Ofrecer horarios» y selector sin horarios ———
 // MediaRecorder simulado (solo «graba» webm/opus, para probar la segunda opción) y micrófono que se puede negar.
@@ -1695,8 +1950,12 @@ async function chatTodoEnUno(browser, errores) {
   await hilo.locator("[data-error-adjunto]").filter({ hasText: MENSAJE_MICRO_DENEGADO }).waitFor();
   await hilo.getByRole("button", { name: "Cerrar aviso" }).click();
 
-  // Cita fija: confirmar, no asistió, agendar, mover y cancelar, cada una con su línea de sistema.
-  const tarjeta = hilo.getByRole("region", { name: "Cita de entrevista" });
+  // Cita (tarjeta «Entrevista» de la ficha; fija arriba del chat con la ficha cerrada): confirmar, no asistió, agendar,
+  // mover y cancelar, cada una con su línea de sistema en el chat.
+  assert.match(await hilo.locator('[data-cita-fijada="agendada"]').innerText(), /Entrevista: [\s\S]*12:00 p\.m\.[\s\S]*Agendada[\s\S]*Ver/);
+  await hilo.locator("[data-cita-fijada]").click();
+  const fichaChat = page.getByRole("complementary", { name: "Ficha del candidato" });
+  const tarjeta = fichaChat.getByRole("region", { name: "Cita de entrevista" });
   await tarjeta.locator('[data-estado-cita="agendada"]').waitFor();
   assert.match(await tarjeta.innerText(), /12:00 p\.m\.[\s\S]*Agendada[\s\S]*Av\. Industrial 120, Apodaca/);
   const linea = (texto) => hilo.locator("[data-linea-sistema]").filter({ hasText: texto }).waitFor();
@@ -1768,7 +2027,9 @@ async function chatTodoEnUno(browser, errores) {
     return d;
   };
   await page.getByRole("button", { name: "Candidato 1", exact: true }).click();
-  await hilo.getByText("Sin entrevista agendada").waitFor();
+  await page.locator("[data-ver-ficha]").filter({ hasText: "Candidato 1" }).waitFor();
+  await verFicha(page, hilo);
+  await tarjeta.getByText("Sin entrevista agendada").waitFor();
   S.horariosModo = "sin_migracion";
   let dlg = await abrirAgendar();
   await dlg.locator('[data-sin-horarios="sin_migracion"]').filter({ hasText: "Falta correr la migración de la agenda (R3)" }).waitFor();
@@ -1787,6 +2048,8 @@ async function chatTodoEnUno(browser, errores) {
   await dlg.getByRole("button", { name: "Cancelar" }).click();
   await dlg.waitFor({ state: "detached" });
   await page.getByRole("button", { name: /^Rosa Torres/ }).click();
+  await page.locator("[data-ver-ficha]").filter({ hasText: "Rosa Torres" }).waitFor();
+  await verFicha(page, hilo);
   await tarjeta.getByText("Sin entrevista agendada").waitFor();
   S.horariosModo = "normal";
   S.agendasVacante[55] = { ...S.agendasVacante[55], activa: false };
@@ -1824,13 +2087,21 @@ async function chatTodoEnUno(browser, errores) {
   await hiloT.locator('[data-mensaje="401"]').waitFor({ timeout: 30000 });
   await hiloT.locator('[data-mensaje="401"]').scrollIntoViewIfNeeded();
   await hiloT.locator('[data-mensaje="401"] img[data-miniatura]').waitFor();
-  const tarjetaT = hiloT.getByRole("region", { name: "Cita de entrevista" });
-  assert.equal(await tarjetaT.getByRole("button", { name: "Mover" }).isVisible(), false, "en teléfono las acciones empiezan plegadas");
-  await tarjetaT.getByRole("button", { name: "Acciones" }).tap();
+  // En teléfono la cita se ve fija arriba del chat; «Ver» abre la ficha a pantalla completa con sus acciones a la vista.
+  assert.ok(await tamano(hiloT.locator("[data-cita-fijada]")) >= 44, "cita fija ≥44 px");
+  await hiloT.locator("[data-cita-fijada]").tap();
+  const fichaT = tel.getByRole("complementary", { name: "Ficha del candidato" });
+  const tarjetaT = fichaT.getByRole("region", { name: "Cita de entrevista" });
   await tarjetaT.getByRole("button", { name: "Mover" }).waitFor();
+  for (const b of [tarjetaT.getByRole("button", { name: "Mover" }), tarjetaT.getByRole("button", { name: "Cancelar" }),
+    tarjetaT.getByRole("button", { name: "Asistió", exact: true }), tarjetaT.getByRole("button", { name: "Confirmar" }), fichaT.getByRole("button", { name: "Cerrar ficha" })]) {
+    assert.ok(await tamano(b) >= 44, `objetivo táctil ≥44 px en la ficha: ${await b.getAttribute("aria-label") || await b.innerText()}`);
+  }
+  assert.ok(await fichaT.evaluate((el) => [...el.querySelectorAll("*")].every((n) => n.getBoundingClientRect().right <= 391)), "ficha sin desborde horizontal");
+  if (OUT) await tel.screenshot({ path: OUT + "/chat-11b-movil-ficha-cita.png" });
+  await fichaT.getByRole("button", { name: "Cerrar ficha" }).tap();
+  await fichaT.waitFor({ state: "hidden" });
   for (const b of [hiloT.getByRole("button", { name: "Más acciones" }), hiloT.getByRole("button", { name: "Grabar nota de voz" }), hiloT.getByRole("button", { name: "Enviar mensaje" }),
-    tarjetaT.getByRole("button", { name: "Acciones" }), tarjetaT.getByRole("button", { name: "Mover" }), tarjetaT.getByRole("button", { name: "Cancelar" }),
-    tarjetaT.getByRole("button", { name: "Asistió", exact: true }), tarjetaT.getByRole("button", { name: "Confirmar" }),
     hiloT.locator('[data-mensaje="402"]').getByRole("button", { name: "Reproducir nota de voz" }), hiloT.locator('[data-mensaje="402"]').getByRole("button", { name: "Velocidad 1x" }),
     hiloT.locator('[data-mensaje="402"]').getByRole("button", { name: "Transcripción" }),
     hiloT.getByRole("button", { name: "Abrir cv.pdf" }), hiloT.getByRole("button", { name: "Descargar cv.pdf" }), hiloT.getByRole("link", { name: "Abrir en Google Maps" }),
@@ -1885,6 +2156,10 @@ async function agendaCalendario(browser, errores) {
   // Menú «Reclutamiento → Entrevistas» abre la agenda real (no la maqueta) y se resalta solo esa entrada.
   await page.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
   await page.getByRole("list", { name: "Conversaciones" }).waitFor({ timeout: 30000 });
+  // La bandeja pliega el menú a iconos; se abre para usar sus entradas (y se vuelve a plegar abajo).
+  await page.locator('[data-slot="sidebar"][data-state="collapsed"]').waitFor();
+  await page.getByRole("button", { name: "Toggle Sidebar" }).first().click();
+  await page.locator('[data-slot="sidebar"][data-state="expanded"]').waitFor();
   const entradaEntrevistas = page.getByRole("button", { name: "Entrevistas", exact: true });
   await entradaEntrevistas.click();
   await page.waitForURL(/\/panel\/whatsapp\?vista=entrevistas$/);
@@ -1896,6 +2171,8 @@ async function agendaCalendario(browser, errores) {
   const claseEnt = await entradaEntrevistas.getAttribute("class");
   const claseConv = await page.getByRole("button", { name: "Conversaciones (WhatsApp)" }).getAttribute("class");
   assert.notEqual(claseEnt, claseConv, "en Entrevistas se resalta «Entrevistas» y no «Conversaciones»");
+  await page.getByRole("button", { name: "Toggle Sidebar" }).first().click();
+  await page.locator('[data-slot="sidebar"][data-state="collapsed"]').waitFor();
   // Enlace viejo a la maqueta → agenda real.
   const vieja = await ctx.newPage();
   await vieja.goto(base + "/panel/reclutamiento/entrevistas", { waitUntil: "domcontentloaded" });

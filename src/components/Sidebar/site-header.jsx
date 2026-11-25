@@ -4,6 +4,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Search } from "lucide-react";
 import AdamiaAI from "@/components/ia/AdamiaAI";
 import BotonRelojChecador from "@/components/Clock/BotonRelojChecador";
+import CampanaAvisos from "@/components/avisos/CampanaAvisos";
 
 export function SiteHeader() {
   const openPalette = () =>
@@ -27,8 +28,10 @@ export function SiteHeader() {
             ⌘K
           </kbd>
         </button>
-        {/* Reloj checador y Adamia AI: solo RH y dueño (los componentes no se muestran a empleados). */}
+        {/* Avisos (campana), Reloj checador y Adamia AI: solo RH y dueño (los componentes no se muestran a empleados;
+            el jefe ve su campana en la app del empleado). */}
         <div className="ml-auto flex shrink-0 items-center gap-2">
+          <CampanaAvisos />
           <BotonRelojChecador />
           <AdamiaAI />
         </div>

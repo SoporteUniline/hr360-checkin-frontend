@@ -135,7 +135,9 @@ try {
   const vistaSalud = page.locator("[data-vista-salud]");
   await vistaSalud.locator("[data-grafica-salud]").waitFor();
   assert.equal(await page.locator("[data-aviso-salud]").count(), 0, "en la pestaña de salud no se repite el aviso");
-  assert.equal(await page.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Salud del agente" }).getAttribute("aria-current"), "page");
+  // Bandeja estilo WhatsApp Web: «Salud del agente» ocupa el lugar de la conversación, con su barra y «Cerrar».
+  assert.equal(await page.locator('[data-vista-lateral="Salud del agente"]').getByRole("heading", { name: "Salud del agente" }).count(), 1);
+  assert.equal(await page.getByRole("link", { name: "Cerrar salud del agente" }).getAttribute("href"), "/panel/whatsapp");
   const primeraSalud = pedidos.find((x) => x.ruta === "/salud");
   assert.match(primeraSalud.params, /empresa=10&desde=\d{4}-\d{2}-\d{2}&hasta=\d{4}-\d{2}-\d{2}/);
   // Tarjetas
@@ -211,8 +213,7 @@ try {
   if (OUT) await tel.screenshot({ path: OUT + "/salud-03-movil-aviso.png" });
   await tel.goto(base + "/panel/whatsapp?vista=salud", { waitUntil: "domcontentloaded" });
   await tel.locator("[data-grafica-salud]").waitFor({ timeout: 30000 });
-  const nav = tel.getByRole("navigation", { name: "Secciones de WhatsApp" });
-  for (const nombre of ["Conversaciones", "Entrevistas", "Salud"]) assert.ok(await tamano(nav.getByRole("link", { name: nombre })) >= 44, `pestaña ${nombre} ≥ 44 px`);
+  assert.ok(await tamano(tel.getByRole("link", { name: "Volver a chats" })) >= 44, "«Volver a chats» ≥ 44 px");
   for (const b of await tel.getByRole("group", { name: "Periodo" }).getByRole("button").all()) assert.ok(await tamano(b) >= 44, "periodo ≥ 44 px");
   for (const l of await tel.locator("[data-afectadas]").getByRole("link").all()) assert.ok(await tamano(l) >= 44, "«Abrir chat» ≥ 44 px");
   assert.ok(await tamano(tel.getByText("Ver como tabla")) >= 44, "«Ver como tabla» ≥ 44 px");

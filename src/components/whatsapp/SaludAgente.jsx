@@ -72,7 +72,8 @@ function Afectadas({ conversaciones, pathname, ahora }) {
   );
 }
 
-export default function SaludAgente({ idEmpresa, ahora, pathname }) {
+// conTitulo=false: la bandeja ya muestra «Salud del agente» como título en la barra de la vista.
+export default function SaludAgente({ idEmpresa, ahora, pathname, conTitulo = true }) {
   const [dias, setDias] = useState(7);
   const rango = useMemo(() => rangoUltimosDias(dias, hoyMx(ahora)), [dias, ahora]);
   const { data, error, isLoading, mutate } = useSWR(rutaSalud(idEmpresa, rango), obtener, { refreshInterval: 60000, refreshWhenHidden: false, keepPreviousData: true });
@@ -82,7 +83,7 @@ export default function SaludAgente({ idEmpresa, ahora, pathname }) {
     <div className="grid min-w-0 gap-4" data-vista-salud>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-[17px] font-bold text-gray-900">Salud del agente</h2>
+          {conTitulo ? <h2 className="text-[17px] font-bold text-gray-900">Salud del agente</h2> : null}
           <p className="text-[13px] text-gray-600">Si el agente deja de contestar, aquí lo ves de inmediato.</p>
         </div>
         <div role="group" aria-label="Periodo" className="flex rounded-lg bg-gray-100 p-0.5">
