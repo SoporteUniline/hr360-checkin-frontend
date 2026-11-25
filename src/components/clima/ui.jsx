@@ -11,7 +11,7 @@ export const errorDe = (e, porDefecto = "No se pudo completar. Intenta de nuevo.
 export const codigoDe = (e) => e?.response?.data?.codigo || null;
 
 const BOTON = [
-  "inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors",
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition-colors",
   "disabled:cursor-not-allowed disabled:opacity-50",
 ].join(" ");
 const VARIANTES = {
@@ -34,9 +34,10 @@ export function Boton({ variante = "secundario", className = "", children, ...pr
   );
 }
 
-export function Tarjeta({ titulo, accion, children, className = "", etiqueta }) {
+export function Tarjeta({ titulo, accion, children, className = "", etiqueta, id }) {
   return (
     <section
+      id={id}
       aria-label={etiqueta ?? (typeof titulo === "string" ? titulo : undefined)}
       className={`min-w-0 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 ${className}`}
     >

@@ -34,26 +34,9 @@ export const ESCALA = Object.freeze([
   { valor: 5, texto: "Totalmente de acuerdo" },
 ]);
 
-// Color del mapa de calor (0 a 10): rojo < 6, ámbar < 7.5, verde a partir de 7.5.
-export function colorCalor(v) {
-  if (v === null || v === undefined) return "bg-slate-100 text-slate-400";
-  if (v < 6) return "bg-red-100 text-red-800";
-  if (v < 7.5) return "bg-amber-100 text-amber-900";
-  return "bg-green-100 text-green-800";
-}
-
 export const fmtEnps = (v) => (v === null || v === undefined ? "—" : v > 0 ? `+${v}` : String(v));
 export const fmtUno = (v) =>
   v === null || v === undefined ? "—" : Number(v).toLocaleString("es-MX", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
-// Cambio contra la medición anterior: décimas en calificaciones, puntos enteros en porcentajes.
-export function fmtDelta(d, { puntos = false } = {}) {
-  if (d === null || d === undefined) return null;
-  const v = (x) => (puntos ? `${Math.round(x)} pts` : fmtUno(x));
-  if (d > 0) return { texto: `▲ ${v(d)}`, tono: "text-green-700" };
-  if (d < 0) return { texto: `▼ ${v(Math.abs(d))}`, tono: "text-red-700" };
-  return { texto: "= sin cambio", tono: "text-slate-500" };
-}
-
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 export function fechaCorta(f) {
   if (!f) return "";
@@ -68,33 +51,240 @@ export const ESTADOS = Object.freeze({
   cerrada: { texto: "Cerrada", clase: "bg-green-100 text-green-800" },
 });
 
-// ───────── mapa de calor ─────────
-// Filas: toda la empresa y los grupos que el servidor dejó ver (clima: desde 1 respuesta). Columnas: dimensiones.
-export function mapaCalor(clima) {
-  if (!clima?.suficiente) return { columnas: [], filas: [] };
+// ───────── dashboard de resultados (diseño aprobado 25/11/2026) ─────────
+// El servidor calcula % favorable, confianza, participación por grupo, lectura por reglas, comparación, evolución y el
+// seguimiento del plan. Aquí solo se traduce a lo que dibuja la pantalla (anchos, textos, colores), sin recalcular datos.
+
+// Colores de la maqueta (Main.dc.html). Texto sobre blanco con contraste de 4.5:1 o más.
+export const COLOR = Object.freeze({
+  favorable: "#16A34A",
+  neutral: "#CBD5E1",
+  desfavorable: "#DC2626",
+  ambar: "#F59E0B",
+  pista: "#E2E8F0",
+  textoVerde: "#15803D",
+  textoAmbar: "#92400E",
+  textoRojo: "#B91C1C",
+});
+export const CONFIANZA_MINIMA = 10;
+export const META_PARTICIPACION = 70;
+
+const plural = (n, uno, varios) => `${n} ${n === 1 ? uno : varios}`;
+
+// Mismo texto que el aviso del PDF (servidor: resultados.textoConfianza).
+export function textoConfianza(n, confianza = n >= CONFIANZA_MINIMA ? "confiable" : "senal") {
+  const resp = plural(n, "respuesta", "respuestas");
+  if (confianza === "confiable")
+    return {
+      titulo: `Con ${resp}, la lectura es confiable.`,
+      detalle: "Aun así, diferencias de pocos puntos entre dimensiones pueden ser ruido: fíjate en las que se separan 10 puntos o más.",
+    };
+  return {
+    titulo: `Con ${resp}, lee esto como una señal, no como una medición firme.`,
+    detalle: `Diferencias de menos de 15 puntos entre dimensiones pueden ser una sola persona. Con ${CONFIANZA_MINIMA} o más respuestas el aviso cambia a «confiable».`,
+  };
+}
+
+// Segmentos de una barra apilada favorable / neutral / desfavorable (solo los que tienen ancho) y su texto accesible.
+export function segmentosFavorabilidad(f) {
+  if (!f) return [];
+  return [
+    { clave: "favorable", pct: f.favorable, color: COLOR.favorable },
+    { clave: "neutral", pct: f.neutral, color: COLOR.neutral },
+    { clave: "desfavorable", pct: f.desfavorable, color: COLOR.desfavorable },
+  ].filter((x) => x.pct > 0);
+}
+export const etiquetaFavorabilidad = (f) =>
+  f ? `${f.favorable} % favorable, ${f.neutral} % neutral, ${f.desfavorable} % desfavorable` : "Sin respuestas";
+
+// eNPS: detractores · pasivos · promotores.
+export function segmentosEnps(e) {
+  if (!e) return [];
+  return [
+    { clave: "detractores", pct: e.detractores, color: COLOR.desfavorable },
+    { clave: "pasivos", pct: e.pasivos, color: COLOR.neutral },
+    { clave: "promotores", pct: e.promotores, color: COLOR.favorable },
+  ].filter((x) => x.pct > 0);
+}
+export function detalleEnps(e) {
+  if (!e) return "Sin pregunta de recomendación";
+  const k = e.conteo;
+  if (!k) return `${e.promotores} % promotores · ${e.pasivos} % pasivos · ${e.detractores} % detractores`;
+  return `${plural(k.promotores, "promotor", "promotores")} · ${plural(k.pasivos, "pasivo", "pasivos")} · ${plural(k.detractores, "detractor", "detractores")}`;
+}
+export const tonoEnps = (v) => (v === null || v === undefined ? "#0F172A" : v > 0 ? COLOR.textoVerde : v < 0 ? COLOR.textoRojo : "#0F172A");
+
+// Barra divergente contra el promedio de la empresa: 20 puntos llenan media columna (40 % del ancho), así la etiqueta
+// siempre cabe dentro de la columna.
+export function divergente(favorable, promedio, { escala = 20, maximo = 40 } = {}) {
+  if (favorable === null || favorable === undefined || promedio === null || promedio === undefined) return null;
+  const dif = favorable - promedio;
+  return {
+    dif,
+    positivo: dif >= 0,
+    ancho: Math.min((Math.abs(dif) / escala) * maximo, maximo),
+    texto: dif > 0 ? `+${dif}` : dif < 0 ? `−${Math.abs(dif)}` : "±0",
+    aria: dif === 0 ? "igual que la empresa" : `${Math.abs(dif)} ${Math.abs(dif) === 1 ? "punto" : "puntos"} ${dif > 0 ? "sobre" : "bajo"} la empresa`,
+  };
+}
+
+// «vs. anterior»: ▲ / ▼ con puntos, o «—» si es la primera medición o la dimensión no existía.
+export function vsAnterior(delta) {
+  if (delta === null || delta === undefined) return { texto: "—", tono: "#475569", aria: "sin medición anterior" };
+  if (delta === 0) return { texto: "= 0", tono: "#475569", aria: "igual que la anterior" };
+  const pts = plural(Math.abs(delta), "punto", "puntos");
+  return delta > 0
+    ? { texto: `▲ ${Math.abs(delta)}`, tono: COLOR.textoVerde, aria: `subió ${pts}` }
+    : { texto: `▼ ${Math.abs(delta)}`, tono: COLOR.textoRojo, aria: `bajó ${pts}` };
+}
+
+// Filas de la tabla de dimensiones: barra, % favorable, contra la empresa y contra la anterior.
+export function filasDimensiones(clima, comparacion = null) {
+  const prom = clima?.favorabilidad?.favorable ?? null;
+  const previas = new Map((comparacion?.dimensiones ?? []).map((d) => [d.clave, d]));
+  return (clima?.dimensiones ?? []).map((d) => ({
+    clave: d.clave,
+    nombre: d.nombre,
+    favorabilidad: d.favorabilidad,
+    favorable: d.favorabilidad?.favorable ?? null,
+    contraEmpresa: divergente(d.favorabilidad?.favorable, prom),
+    anterior: vsAnterior(comparacion ? previas.get(d.clave)?.favorable ?? null : null),
+  }));
+}
+
+// Anillo SVG de participación (r en unidades del viewBox).
+export function anillo(pct, r = 34) {
+  const c = 2 * Math.PI * r;
+  const p = Math.max(0, Math.min(100, Number(pct) || 0));
+  return { circunferencia: Number(c.toFixed(1)), lleno: Number(((c * p) / 100).toFixed(1)), pct: p };
+}
+
+export function textoParticipacion(contestadas, invitados) {
+  const pct = invitados ? Math.round((contestadas / invitados) * 100) : 0;
+  const faltan = Math.max(0, (invitados ?? 0) - (contestadas ?? 0));
+  if (pct >= META_PARTICIPACION) return { texto: `Arriba de la meta de ${META_PARTICIPACION} %`, tono: COLOR.textoVerde, color: COLOR.favorable };
+  return {
+    texto: `Bajo la meta de ${META_PARTICIPACION} %${faltan ? ` · ${faltan === 1 ? "faltó 1" : `faltaron ${faltan}`}` : ""}`,
+    tono: COLOR.textoAmbar,
+    color: COLOR.ambar,
+  };
+}
+
+// Pregunta por pregunta: de la más favorable a la menos (empate: orden de la encuesta), solo con respuestas.
+export function preguntasOrdenadas(preguntas) {
+  return (preguntas ?? [])
+    .map((q, i) => ({ q, i }))
+    .filter((x) => x.q.favorabilidad)
+    .sort((a, b) => b.q.favorabilidad.favorable - a.q.favorabilidad.favorable || a.i - b.i)
+    .map((x) => x.q);
+}
+
+// Mapa de % favorable por área (o jefe) y dimensión: solo con 2 grupos o más.
+export function mapaFavorable(clima) {
+  if (!clima?.suficiente || (clima.grupos ?? []).length < 2) return null;
   const columnas = clima.dimensiones.map((d) => ({ clave: d.clave, nombre: d.nombre }));
-  const fila = (nombre, n, dims, general) => ({
+  const fila = (nombre, n, total, dims) => ({
     nombre,
     n,
-    general,
-    celdas: columnas.map((c) => dims.find((d) => d.clave === c.clave)?.valor ?? null),
+    total: total?.favorable ?? null,
+    celdas: columnas.map((c) => dims.find((d) => d.clave === c.clave)?.favorabilidad?.favorable ?? null),
   });
   return {
     columnas,
     filas: [
-      ...clima.grupos.map((g) => fila(g.nombre, g.n, g.dimensiones, g.general)),
-      fila("Toda la empresa", clima.respuestas, clima.dimensiones, clima.general),
+      ...clima.grupos.map((g) => fila(g.nombre, g.n, g.favorabilidad, g.dimensiones)),
+      fila("Toda la empresa", clima.respuestas, clima.favorabilidad, clima.dimensiones),
     ],
   };
 }
+// Color de una celda del mapa (% favorable): verde 75+, ámbar 60–74, rojo < 60.
+export function colorFavorable(v) {
+  if (v === null || v === undefined) return "bg-slate-100 text-slate-500";
+  if (v >= 75) return "bg-green-100 text-green-900";
+  if (v >= 60) return "bg-amber-100 text-amber-900";
+  return "bg-red-100 text-red-900";
+}
 
-// Las 3 combinaciones grupo · dimensión más bajas («Dónde poner atención» del celular).
-export function atencion(clima, n = 3) {
-  const { columnas, filas } = mapaCalor(clima);
-  const lista = filas
-    .flatMap((f) => f.celdas.map((v, i) => ({ grupo: f.nombre, dimension: columnas[i].nombre, valor: v })))
-    .filter((x) => x.valor !== null);
-  return lista.sort((a, b) => a.valor - b.valor).slice(0, n);
+// Comentarios: total y vista corta (las primeras `porPregunta` de cada pregunta).
+export function resumenComentarios(comentarios, porPregunta = 2) {
+  const con = (comentarios ?? []).filter((q) => q.respuestas?.length);
+  const total = con.reduce((s, q) => s + q.respuestas.length, 0);
+  return { total, grupos: con.map((q) => ({ ...q, visibles: q.respuestas.slice(0, porPregunta), resto: Math.max(0, q.respuestas.length - porPregunta) })) };
+}
+
+// Evolución: línea SVG con 2 mediciones o más con % favorable. Eje Y de 0 a 100.
+// Margen derecho de 24: la etiqueta del último mes (centrada en su punto) no se corta.
+export function lineaEvolucion(puntos, { ancho = 320, alto = 140, margen = { izq: 34, der: 24, arr: 14, aba: 28 } } = {}) {
+  const ps = (puntos ?? []).filter((p) => p.favorable !== null && p.favorable !== undefined);
+  if (ps.length < 2) return null;
+  const w = ancho - margen.izq - margen.der;
+  const h = alto - margen.arr - margen.aba;
+  const xy = ps.map((p, i) => ({
+    ...p,
+    x: Number((margen.izq + (ps.length === 1 ? w / 2 : (w * i) / (ps.length - 1))).toFixed(1)),
+    y: Number((margen.arr + h - (h * p.favorable) / 100).toFixed(1)),
+    etiqueta: fechaMes(p.cierra_el),
+  }));
+  return {
+    ancho,
+    alto,
+    margen,
+    puntos: xy,
+    d: xy.map((p, i) => `${i ? "L" : "M"}${p.x} ${p.y}`).join(" "),
+    guias: [0, 50, 100].map((v) => ({ v, y: Number((margen.arr + h - (h * v) / 100).toFixed(1)) })),
+    aria: `Evolución del % favorable: ${xy.map((p) => `${p.etiqueta} ${p.favorable} %`).join(", ")}`,
+  };
+}
+
+const MESES_LARGOS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
+export function fechaMes(f) {
+  if (!f) return "";
+  const [a, m] = String(f).slice(0, 10).split("-").map(Number);
+  return `${MESES[m - 1]} ${String(a).slice(2)}`;
+}
+// Sugerencia para repetir la medición: 6 meses después del cierre («mayo 2027»).
+export function sugerenciaSiguiente(cierra) {
+  if (!cierra) return null;
+  const [a, m] = String(cierra).slice(0, 10).split("-").map(Number);
+  const t = a * 12 + (m - 1) + 6;
+  return `${MESES_LARGOS[t % 12]} ${Math.floor(t / 12)}`;
+}
+
+// ───────── plan de acción ─────────
+export const ESTADOS_ACCION = Object.freeze({
+  pendiente: { texto: "Pendiente", clase: "bg-slate-100 text-slate-700" },
+  en_curso: { texto: "En curso", clase: "bg-blue-100 text-blue-800" },
+  lograda: { texto: "Lograda", clase: "bg-green-100 text-green-800" },
+  no_lograda: { texto: "No lograda", clase: "bg-red-100 text-red-800" },
+});
+export const resumenPlan = (acciones) => {
+  const n = acciones?.length ?? 0;
+  return n ? `${(acciones ?? []).filter((a) => a.estado === "lograda").length} de ${n} logradas` : "";
+};
+export function fechaLarga(f) {
+  if (!f) return "Sin fecha";
+  const [a, m, d] = String(f).slice(0, 10).split("-").map(Number);
+  return `${d} ${MESES[m - 1]} ${a}`;
+}
+// Texto del seguimiento de una acción (lo calcula el servidor al leer; no se guarda).
+export function textoSeguimiento(accion, nombreDimension) {
+  const s = accion?.seguimiento;
+  const dim = nombreDimension || "su dimensión";
+  if (!accion?.dimension) return { texto: "Acción general: no se liga a una dimensión.", tono: "#475569" };
+  if (!s) return { texto: `Se revisa sola en la próxima encuesta: si ${dim} sube, lo verás aquí.`, tono: "#475569" };
+  if (s.subio) return { texto: `▲ ${dim} subió de ${s.antes} % a ${s.despues} % en «${s.medicion.nombre}».`, tono: COLOR.textoVerde };
+  if (s.delta < 0) return { texto: `▼ ${dim} bajó de ${s.antes} % a ${s.despues} % en «${s.medicion.nombre}».`, tono: COLOR.textoRojo };
+  return { texto: `${dim} se quedó en ${s.despues} % en «${s.medicion.nombre}».`, tono: "#475569" };
+}
+// Validación en el navegador (el servidor valida de nuevo): texto, responsable y fecha obligatorios.
+export function erroresAccion(a) {
+  const e = {};
+  const t = String(a?.texto ?? "").trim();
+  if (t.length < 3) e.texto = "Escribe qué se va a hacer.";
+  else if (t.length > 300) e.texto = "Máximo 300 caracteres.";
+  if (!a?.id_responsable) e.id_responsable = "Elige a la persona responsable.";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(a?.fecha_limite ?? ""))) e.fecha_limite = "Elige la fecha límite.";
+  return e;
 }
 
 // ───────── contestar: una pregunta por pantalla ─────────

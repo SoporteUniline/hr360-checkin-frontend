@@ -215,14 +215,16 @@ try {
   await rh.getByText("Quién ya contestó (nunca qué contestó).").waitFor();
   console.log("PASS: lanzar con destinatarios, fechas, canales y seguimiento de participación");
 
-  // 4) Tablero (1440): clima general, eNPS, participación, NOM-035 y mapa de calor con todos los grupos (Reparto con 4).
+  // 4) Tablero (1440): % favorable, eNPS, participación, NOM-035 y mapa por área con todos los grupos (Reparto con 4).
+  // (25/11/2026) Dashboard nuevo: el detalle se prueba en scripts/verify-clima-dashboard.mjs.
   await ir(rh, "/panel/clima");
-  await rh.getByText("Clima general", { exact: true }).waitFor({ timeout: 30000 });
-  await rh.getByText("+28").waitFor();
-  await rh.getByText("142 de 165 personas").waitFor();
-  const mapa = rh.getByRole("region", { name: "Por área y dimensión" });
-  assert.equal(await mapa.getByRole("row").count(), 7, "5 áreas + toda la empresa + encabezado");
-  assert.equal(await mapa.getByText("Reparto").count(), 1, "Reparto (4 respuestas) ya aparece");
+  await rh.getByText("Respuestas favorables", { exact: true }).waitFor({ timeout: 30000 });
+  const indicadores = rh.getByRole("region", { name: "Indicadores" });
+  await indicadores.getByText("+28").waitFor();
+  await indicadores.getByText("142 de 165", { exact: true }).waitFor();
+  const mapa = rh.getByRole("region", { name: "Participación por área" });
+  assert.equal(await mapa.getByRole("table").getByRole("row").count(), 7, "5 áreas + toda la empresa + encabezado");
+  assert.equal(await mapa.getByRole("table").getByText("Reparto").count(), 1, "Reparto (4 respuestas) ya aparece");
   assert.equal(await mapa.getByText(/no se muestran por separado/).count(), 0, "ningún grupo oculto en clima");
   const descarga = rh.waitForEvent("download");
   await rh.getByRole("button", { name: "Descargar informe PDF" }).click();
@@ -232,23 +234,22 @@ try {
   console.log("PASS: tablero con todos los grupos (sin mínimo de 5 en clima) e informe PDF");
 
   // 4a) Empresa chica: 1 de 3 contestó y se ven resultados, el grupo y el comentario (antes «Sin resultados que mostrar»).
-  await rh.getByLabel("Medición").selectOption("31");
-  await rh.getByText("1 de 3 personas").waitFor({ timeout: 30000 });
+  await rh.getByLabel("Medición", { exact: true }).selectOption("31");
+  await rh.getByRole("region", { name: "Indicadores" }).getByText("1 de 3", { exact: true }).waitFor({ timeout: 30000 });
   assert.equal(await rh.getByText("Sin resultados que mostrar").count(), 0);
   assert.equal(await rh.getByText(/al menos 5/).count(), 0);
-  const mapaChico = rh.getByRole("region", { name: "Por área y dimensión" });
+  const mapaChico = rh.getByRole("region", { name: "Participación por área" });
   await mapaChico.getByText("Taller").first().waitFor();
-  await rh.getByText("Comentarios abiertos (1)", { exact: false }).click();
-  await rh.getByText("Que haya más herramientas.", { exact: false }).first().waitFor();
+  await rh.getByRole("region", { name: "Lo que dicen" }).getByText("Que haya más herramientas.", { exact: false }).waitFor();
   assert.equal(await rh.getByRole("button", { name: "Descargar informe PDF" }).isEnabled(), true);
   await sinDesborde(rh, "tablero 1 respuesta 1440");
   await captura(rh, "1440-tablero-1-respuesta");
-  await rh.getByLabel("Medición").selectOption("30");
-  await rh.getByText("142 de 165 personas").waitFor({ timeout: 30000 });
+  await rh.getByLabel("Medición", { exact: true }).selectOption("30");
+  await rh.getByRole("region", { name: "Indicadores" }).getByText("142 de 165", { exact: true }).waitFor({ timeout: 30000 });
   console.log("PASS: tablero con 1 respuesta: resultados, grupo, comentario y PDF disponibles");
 
   // 4b) Adamia AI en el tablero: temas con cita anonimizada, plan de acción y convertirlo en tareas.
-  const temas = rh.getByRole("region", { name: "Lo que dicen" });
+  const temas = rh.getByRole("region", { name: "Temas de los comentarios" });
   await temas.getByRole("button", { name: "Agrupar comentarios" }).click();
   await temas.getByText("Horarios y descansos").waitFor({ timeout: 15000 });
   await temas.getByText("«Los sábados salimos tarde y nadie avisa con tiempo.»", { exact: false }).waitFor();
@@ -301,7 +302,7 @@ try {
   // 6) Vistas del panel a 390.
   const cel = await sesion(RH, { width: 390, height: 844 });
   for (const [ruta, texto, nombre] of [
-    ["/panel/clima", "Dónde poner atención", "390-tablero"],
+    ["/panel/clima", "Lo que pide atención", "390-tablero"],
     ["/panel/clima/encuestas", "Plantillas profesionales", "390-plantillas"],
     ["/panel/clima/encuestas/editor/11", "Siguiente: lanzar →", "390-editor"],
     ["/panel/clima/nom035", "Por categoría y dominio", "390-nom035"],
