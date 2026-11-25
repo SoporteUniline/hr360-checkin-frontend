@@ -113,12 +113,14 @@ export default function CuentaHorasEmpleado({ idEmpleado, dadoDeBaja = false }) 
             <span className="min-w-0 flex-1">
               <span className={m.deshecho ? "line-through" : ""}>{m.texto}</span>
               {m.nota && <span className="block truncate text-xs text-slate-500">{m.nota}</span>}
+              {m.nomina && <span className="block text-xs font-medium text-slate-700" data-nomina-cierre={m.cierre?.id}>{m.nomina}</span>}
               {m.deshecho && <span className="block text-xs text-slate-500">Deshecho{m.cierre?.borrado_por_nombre ? ` por ${m.cierre.borrado_por_nombre}` : ""}</span>}
             </span>
             <span className={`shrink-0 font-semibold tabular-nums ${m.minutos > 0 ? "text-sky-700" : "text-emerald-700"}`}>
               {m.minutos > 0 ? "+" : "−"}{formatearMinutos(Math.abs(m.minutos))}
             </span>
-            {m.cierre && !m.deshecho && (
+            {/* Un «Rebajar» que ya va en una nómina por autorizar o autorizada no se deshace. */}
+            {m.cierre && !m.deshecho && !m.bloqueado && (
               <button type="button" disabled={guardando} title="Deshacer" aria-label="Deshacer cierre"
                 onClick={() => enviar(() => axios.post(`/checador/cuenta-horas/cierres/${m.cierre.id}/deshacer`, {}, auth()), "Cierre deshecho.")}
                 className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700">

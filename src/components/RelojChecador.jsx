@@ -42,6 +42,8 @@ import { registrarEnLinea } from '@/lib/reloj/registrarEnLinea.mjs';
 import TecladoCodigoCara from './Clock/TecladoCodigoCara';
 import ClockNavigation from './Clock/ClockNavigation';
 import { hora12 } from "@/lib/hora12.mjs";
+import { conVoyAComer, segundosRestantes, DURACION_VOY_A_COMER_S } from "@/lib/reloj/voyAComer.mjs";
+import { BotonVoyAComer, AvisoVoyAComer } from "./Clock/VoyAComer";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -110,7 +112,31 @@ export default function RelojChecador({
   // Todo se registra en línea: el servidor identifica a la persona. En el kiosco la cara se busca en la empresa
   // (o 1 a 1 si viene con código). En la app, `modo: "app"` hace que el servidor tome a la persona de la sesión y la
   // compare solo con sus fotos. Los códigos (y el QR) siguen identificando a cualquiera de la empresa.
-  const submitMovement = payload => registrarEnLinea(axiosInstance, modoEmpleado && payload.descriptor_facial ? { ...payload, modo: "app" } : payload);
+  // (26/11/2026) «Voy a comer»: prendido antes de checar, la siguiente checada va con accion = salida_comida y se apaga
+  // al usarse (el servidor contestó) o a los 30 s. La referencia la lee el panel de rostro, que guarda esta función.
+  const [voyAComer, setVoyAComer] = useState(null); // null | { hasta } (ms)
+  const voyAComerRef = useRef(false);
+  const [segundosComer, setSegundosComer] = useState(0);
+  useEffect(() => {
+    voyAComerRef.current = Boolean(voyAComer);
+    if (!voyAComer) return undefined;
+    const tic = () => {
+      const s = segundosRestantes(voyAComer.hasta);
+      setSegundosComer(s);
+      if (!s) setVoyAComer(null);
+    };
+    tic();
+    const t = setInterval(tic, 250);
+    return () => clearInterval(t);
+  }, [voyAComer]);
+  const cambiarVoyAComer = () => setVoyAComer((v) => (v ? null : { hasta: Date.now() + DURACION_VOY_A_COMER_S * 1000 }));
+  const submitMovement = async (payload) => {
+    const enviar = conVoyAComer(payload, voyAComerRef.current);
+    const base = modoEmpleado && enviar.descriptor_facial ? { ...enviar, modo: "app" } : enviar;
+    const respuesta = await registrarEnLinea(axiosInstance, base);
+    if (enviar !== payload) { voyAComerRef.current = false; setVoyAComer(null); }
+    return respuesta;
+  };
   // Reloj de la empresa (/<slug>): kiosco a pantalla completa, sin desplazar. El del empleado conserva su diseño.
   const kiosco = !modoEmpleado;
 
@@ -291,7 +317,7 @@ export default function RelojChecador({
       }
 
       if (data.requiereDecision) {
-        setPendiente({ tipo: "codigo", codigo, opciones: data.opciones, mensaje: data.message });
+        setPendiente({ tipo: "codigo", codigo, opciones: data.opciones, mensaje: data.message, aviso: data.aviso ?? null });
         setMostrarModalTurno(true);
         setRegistrando(false);
         return;
@@ -390,6 +416,7 @@ export default function RelojChecador({
         descriptor_facial: data.descriptor_facial,
         opciones: data.opciones,
         mensaje: data.message,
+        aviso: data.aviso ?? null,
       });
       setMostrarModalTurno(true);
     } else {
@@ -407,7 +434,7 @@ export default function RelojChecador({
         // Cierre manual: después de «Sí, registrar» pregunta «salida temporal / cerrar turno»; la decisión
         // conserva repetir y el tipo (código o rostro) para no volver a chocar con el candado.
         const { codigo, descriptor_facial } = pregunta.reintentar;
-        setPendiente({ tipo: descriptor_facial ? "facial" : "codigo", codigo, descriptor_facial, repetir: true, opciones: data.opciones, mensaje: data.message });
+        setPendiente({ tipo: descriptor_facial ? "facial" : "codigo", codigo, descriptor_facial, repetir: true, opciones: data.opciones, mensaje: data.message, aviso: data.aviso ?? null });
         setMostrarModalTurno(true);
       } else {
         mostrarResultado(data);
@@ -570,6 +597,7 @@ export default function RelojChecador({
             camara={!offline ? (
               <>
                 {panelRostro}
+                <AvisoVoyAComer activo={Boolean(voyAComer)} segundos={segundosComer} posicion="top-16 sm:top-3" />
                 {/* Ajuste del aparato: discreto sobre el video (antes era una franja «Cámara siempre encendida»). */}
                 {mostrarCamara && (
                   <button type="button" onClick={cambiarCamaraFija} aria-pressed={camaraFija}
@@ -587,6 +615,7 @@ export default function RelojChecador({
               </div>
             )}
             recientes={<UltimosRegistros movimientos={movimientos} isLoading={isLoading} formatearHora={formatearHora} empleadosActivos={empleadosActivos} totalRegistros={totalRegistros} />}
+            extra={<BotonVoyAComer variante="kiosco" activo={Boolean(voyAComer)} segundos={segundosComer} onCambiar={cambiarVoyAComer} disabled={offline} />}
           />
         ) : (
         <div className="mx-auto max-w-7xl md:space-y-6">
@@ -607,6 +636,7 @@ export default function RelojChecador({
                   handleOpenQR={handleOpenQR}
                   registrando={registrando || loadingGPS}
                   enqueueSnackbar={enqueueSnackbar}
+                  extra={<BotonVoyAComer activo={Boolean(voyAComer)} segundos={segundosComer} onCambiar={cambiarVoyAComer} disabled={offline} />}
                 />
               </div>
               <StatsCards
@@ -690,6 +720,7 @@ export default function RelojChecador({
                   </button>
                 ))}
               </div>
+              <BotonVoyAComer variante="barra" activo={Boolean(voyAComer)} segundos={segundosComer} onCambiar={cambiarVoyAComer} disabled={offline} />
               {metodo === "facial" && (
                 <button type="button" onClick={() => setAjustesCamara((v) => !v)} aria-expanded={ajustesCamara}
                   aria-label="Ajustes de la cámara" title="Cámara siempre encendida"
@@ -715,6 +746,8 @@ export default function RelojChecador({
 
               <div ref={areaRef} style={altoArea ? { height: altoArea } : undefined}
                 className="relative overflow-y-auto md:min-h-75 md:overflow-visible">
+                {/* En escritorio, dentro del video (debajo del encabezado del panel de rostro). */}
+                <AvisoVoyAComer activo={Boolean(voyAComer)} segundos={segundosComer} posicion="top-3 md:top-24" />
                 {!offline && (metodo === "facial" || !isMobile) && (
                   <div
                     className={
@@ -896,6 +929,10 @@ export default function RelojChecador({
               <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">
                 {pendiente?.opciones?.includes("salida_comida") ? "¿Sales a comer?" : "Turno abierto"}
               </h2>
+              {/* (26/11/2026) «Voy a comer» de quien ya comió (cierre manual): el aviso del servidor y sus opciones. */}
+              {pendiente?.aviso === "comida_ya_registrada" && (
+                <p className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" data-aviso-comida>Ya registraste tu comida hoy.</p>
+              )}
               <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed">
                 {pendiente?.opciones?.includes("salida_comida")
                   ? "Elige si sales a comer (tu jornada sigue abierta) o si terminas tu jornada."

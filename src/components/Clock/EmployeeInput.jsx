@@ -12,6 +12,8 @@ export default function EmployeeInput({
   enqueueSnackbar,
   // "kiosco": reloj de la empresa a pantalla completa. Teclado y QR también en celular, compacto y sin desplazar.
   variante = "normal",
+  // (26/11/2026) Botón junto al código y el QR (p. ej. «Voy a comer»).
+  extra = null,
 }) {
   const kiosco = variante === "kiosco";
   const tecla = kiosco
@@ -72,6 +74,8 @@ export default function EmployeeInput({
             className="w-full pl-12 pr-4 h-full text-center text-lg font-bold border-2 border-slate-200 rounded-2xl focus-visible:ring-0 focus-visible:border-blue-500 bg-slate-50/50 transition-all"
           />
         </div>
+
+        {extra}
 
         <Button
           onClick={handleOpenQR}

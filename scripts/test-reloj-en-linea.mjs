@@ -59,3 +59,20 @@ test("kiosco «Código y cara»: la cara y el código van juntos en un solo POST
   assert.equal(calls[0][1].codigo, "1234");
   assert.equal(calls[0][1].descriptor_facial.length, 128);
 });
+
+// (26/11/2026) «Voy a comer»: la siguiente checada lleva accion = salida_comida; la regla la decide el servidor.
+test("«Voy a comer»: agrega salida_comida solo si está prendido y la checada no trae acción; cuenta 30 s", async () => {
+  const { conVoyAComer, segundosRestantes, DURACION_VOY_A_COMER_S } = await import("../src/lib/reloj/voyAComer.mjs");
+  const codigo = { id_empresa: 7, codigo: "1234" };
+  assert.deepEqual(conVoyAComer(codigo, true), { id_empresa: 7, codigo: "1234", accion: "salida_comida" });
+  assert.equal(conVoyAComer(codigo, false), codigo, "apagado: la checada va igual");
+  const elegida = { ...codigo, accion: "cerrar_turno" };
+  assert.equal(conVoyAComer(elegida, true), elegida, "lo que eligió en la pregunta del servidor manda");
+  const rostro = { id_empresa: 7, descriptor_facial: [0.1], modo: "app" };
+  assert.deepEqual(conVoyAComer(rostro, true), { ...rostro, accion: "salida_comida" });
+  assert.equal(DURACION_VOY_A_COMER_S, 30);
+  assert.equal(segundosRestantes(31000, 1000), 30);
+  assert.equal(segundosRestantes(31000, 30500), 1);
+  assert.equal(segundosRestantes(31000, 31000), 0);
+  assert.equal(segundosRestantes(31000, 40000), 0);
+});

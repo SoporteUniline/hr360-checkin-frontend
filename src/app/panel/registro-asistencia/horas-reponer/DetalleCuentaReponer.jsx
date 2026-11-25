@@ -23,6 +23,7 @@ function Movimientos({ cuenta, ocupado, onCancelar, onDeshacer }) {
             <span className="min-w-0 break-words">
               <span className={m.deshecho ? "line-through" : ""}>{m.texto}</span>
               {m.nota && <span className="block text-xs text-slate-500">{m.nota}</span>}
+              {m.nomina && <span className="block text-xs font-medium text-slate-700" data-nomina-cierre={m.cierre?.id}>{m.nomina}</span>}
               {m.deshecho && <span className="block text-xs text-slate-500">Deshecho{m.cierre?.borrado_por_nombre ? ` por ${m.cierre.borrado_por_nombre}` : ""}</span>}
             </span>
             <span className={`text-right font-bold tabular-nums ${m.minutos > 0 ? "text-rose-700" : "text-emerald-700"}`}>
@@ -61,13 +62,13 @@ export function QueHacer({ onReponer, onRebajar, onCondonar }) {
         Registrar reposición <span className="font-normal text-slate-600">· se quedó tal día, tantas horas</span>
       </button>
       <button type="button" onClick={onRebajar} className={`${opcion} border-slate-300 bg-white text-slate-900 hover:bg-slate-50`}>
-        Rebajar en nómina <span className="text-slate-500">· siguiente periodo</span>
+        Rebajar en nómina <span className="text-slate-500">· en la próxima nómina</span>
       </button>
       <button type="button" onClick={onCondonar} className={`${opcion} border-slate-300 bg-white text-slate-900 hover:bg-slate-50`}>
         Condonar <span className="text-slate-500">· se le perdona, con motivo</span>
       </button>
       <p className="mt-1 text-[12.5px] leading-snug text-slate-500">
-        Todo queda en el historial con quién y por qué. Lo que ya está en una nómina autorizada no se toca.
+        Todo queda en el historial con quién y por qué. Lo que ya va en una nómina por autorizar o autorizada no se deshace.
       </p>
     </section>
   );

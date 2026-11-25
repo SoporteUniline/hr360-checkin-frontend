@@ -38,6 +38,7 @@ export default function MiTiempoPorReponer({ idEmpleado }) {
                 <span className="min-w-0 flex-1">
                   {m.texto}
                   {m.nota ? <span className="block truncate text-xs text-slate-500">{m.nota}</span> : null}
+                  {m.nomina ? <span className="block text-xs text-slate-600">{m.nomina}</span> : null}
                 </span>
                 <span className={`shrink-0 font-semibold tabular-nums ${m.minutos > 0 ? "text-amber-700" : "text-green-700"}`}>
                   {m.minutos > 0 ? "+" : "−"}{formatearMinutos(Math.abs(m.minutos))}
