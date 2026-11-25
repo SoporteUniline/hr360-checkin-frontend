@@ -7,6 +7,7 @@ import { cookies, headers } from "next/headers";
 import SubscriptionRequiredView from "@/components/SubscriptionRequiredView";
 import { FichaEmpleadoProvider } from "@/components/empleado/FichaEmpleado";
 import GuardaModulo from "@/components/modulos/GuardaModulo";
+import GuardaPermiso from "@/components/permisos/GuardaPermiso";
 import SesionPanel from "@/components/auth/SesionPanel";
 import CuerpoDesbloqueado from "@/components/auth/CuerpoDesbloqueado";
 
@@ -59,7 +60,7 @@ export default async function LayoutPanel({ children }) {
         <SiteHeader />
 
         <div className="panel-modules-content flex flex-1 flex-col p-5 text-sm text-gray-900">
-          {!hasActivePlan ? <SubscriptionRequiredView /> : <FichaEmpleadoProvider><GuardaModulo>{children}</GuardaModulo></FichaEmpleadoProvider>}
+          {!hasActivePlan ? <SubscriptionRequiredView /> : <FichaEmpleadoProvider><GuardaPermiso><GuardaModulo>{children}</GuardaModulo></GuardaPermiso></FichaEmpleadoProvider>}
         </div>
       </SidebarInset>
     </SidebarProvider>
