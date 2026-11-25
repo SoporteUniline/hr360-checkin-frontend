@@ -535,7 +535,7 @@ try {
   assert.equal(putFrida.id, 510);
   assert.deepEqual(putFrida.cuerpo.registros.find((x) => x.id === 7801).quitar_comida, true);
   assert.equal("quitar_comida" in putFrida.cuerpo.registros.find((x) => x.id === 7802), false);
-  if (await dlgFrida.isVisible()) await page.keyboard.press("Escape");
+  // Guardar cierra el reloj solo (no se pulsa Escape: con cambios a medio guardar abriría «¿Salir sin guardar?»).
   await dlgFrida.waitFor({ state: "detached", timeout: 10000 });
 
   // 8) Masivos: «Marcar como…» (solo sin checadas) y «Cargar horario normal…» (sin checadas o sin salida), motivo obligatorio.
