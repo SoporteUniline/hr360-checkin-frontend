@@ -10,7 +10,8 @@ import GuardaModulo from "@/components/modulos/GuardaModulo";
 import SesionPanel from "@/components/auth/SesionPanel";
 
 // Rutas del panel que siempre se muestran aunque no haya suscripción activa
-const RUTAS_SIN_RESTRICCION = ["/panel/mi-suscripcion"];
+// (25/11/2026) Seguridad: cerrar sesiones o quitar un dispositivo debe poderse siempre, con o sin plan.
+const RUTAS_SIN_RESTRICCION = ["/panel/mi-suscripcion", "/panel/seguridad"];
 
 // Cachea por request/argumento
 const getSubscriptionStatus = cache(async (userId, idEmpresa) => {

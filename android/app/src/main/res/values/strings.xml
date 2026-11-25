@@ -4,4 +4,6 @@
     <string name="title_activity_main">ADAMIA</string>
     <string name="package_name">mx.com.adamia.app</string>
     <string name="custom_url_scheme">mx.com.adamia.app</string>
+    <!-- Passkeys: el sitio publica /.well-known/assetlinks.json con el SHA-256 de la firma de la app. -->
+    <string name="asset_statements" translatable="false">[{\"include\": \"https://adamia.com.mx/.well-known/assetlinks.json\"}]</string>
 </resources>

@@ -5,6 +5,7 @@ import Cookies from "js-cookie";
 import axios, { setAuthToken, ensureOfflineCache } from "@/lib/axios"; // ← USAR TU INSTANCE
 import { SnackbarProvider } from "notistack";
 import { useRouter } from "next/navigation";
+import { avisarCierreDeSesion } from "@/lib/passkeys/api";
 
 const AuthContext = createContext({
   dataUser: null,
@@ -68,8 +69,11 @@ export function AuthProvider({ children }) {
     await verifyToken();
   };
 
-  const logout = () => {
+  // destino (opcional): a dónde ir después (p. ej. el login con aviso). Si llega un evento (onClick={logout}), /login.
+  const logout = (destino) => {
     const previousToken = Cookies.get('token');
+    // (25/11/2026) El servidor cierra ESTA sesión (el token deja de servir aunque alguien lo hubiera copiado).
+    void avisarCierreDeSesion(previousToken);
     void ensureOfflineCache().then(cache => cache?.clearSession(previousToken)).catch(() => {});
     import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=4')
       .then(store => store.clearConfig()).catch(() => {});
@@ -78,7 +82,10 @@ export function AuthProvider({ children }) {
     setIsLoggedIn(false);
     setDataUser(null);
     setModulosSesion(null);
-    router.push("/login");
+    // Con destino (sesión cerrada por el servidor): navegación completa, para que el aviso gane a la guardia del panel
+    // (SesionPanel manda a /login?next=… al ver que ya no hay sesión).
+    if (typeof destino === "string" && destino.startsWith("/login")) window.location.assign(destino);
+    else router.push("/login");
   };
 
   return (

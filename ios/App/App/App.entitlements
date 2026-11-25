@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Passkeys (Face ID) dentro de la app: la app puede usar las credenciales del dominio adamia.com.mx.
+	     El dominio publica /.well-known/apple-app-site-association con <TEAMID>.mx.com.adamia.app (APPLE_TEAM_ID).
+	     Requiere la capacidad «Associated Domains» en el App ID (developer.apple.com) y el equipo en Signing & Capabilities. -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>webcredentials:adamia.com.mx</string>
+		<string>webcredentials:dev.adamia.com.mx</string>
+	</array>
+</dict>
+</plist>
