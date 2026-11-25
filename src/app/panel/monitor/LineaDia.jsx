@@ -2,12 +2,11 @@
 
 // Monitor › Línea del día (maqueta aprobada Monitor.dc.html, vista «Línea del día»): una fila por persona con su barra
 // sobre el eje de horas: lo programado tenue y lo real encima (trabajo, comida, se pasó, hora extra) y la línea de
-// «ahora». Eje, tramos y posiciones en src/lib/asistencia/vistasMonitor.mjs; las filas llegan en el orden de urgencia del
-// Tablero. Celular: el eje se desplaza a lo ancho dentro de su caja con avatar y nombre fijos; la página no desborda.
+// «ahora». Eje, tramos y posiciones en src/lib/asistencia/vistasMonitor.mjs; las filas llegan en el orden de urgencia
+// (ordenUrgencia). Celular: el eje se desplaza a lo ancho dentro de su caja con avatar y nombre fijos; la página no desborda.
 import { useEffect, useMemo, useRef } from "react";
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { horaDe } from "@/lib/asistencia/hoy.mjs";
-import { fichaTablero } from "@/lib/asistencia/tablero.mjs";
 import { ejeLineaDia, estadoVista, lineaDia, posicionEnEje } from "@/lib/asistencia/vistasMonitor.mjs";
 import { cn } from "@/lib/utils";
 import { areaDe, Avatar, ChipEstado, nombreDe } from "./comunes";
@@ -49,14 +48,13 @@ const cercaDeAhora = (abs, ahora) => {
 function Fila({ r, eje, onAbrirDia }) {
   const reg = r.dia.registro;
   const nombre = nombreDe(reg);
-  const f = fichaTablero(r);
   const estado = estadoVista(r);
   const l = lineaDia(r, eje);
   return (
     <li data-persona={nombre} data-estado={r.estado} className={cn(FILA, "group relative min-h-12 items-center border-t border-slate-100")}>
       {/* Fijo a la izquierda; deja pasar el toque al botón de la fila salvo en el nombre (abre la ficha). */}
       <div className="pointer-events-none sticky left-0 z-10 flex min-w-0 items-center gap-2 self-stretch bg-white px-3 py-1.5 group-hover:bg-slate-50">
-        <Avatar registro={reg} tono={f.tono} className="size-6 text-[10px] lg:size-7 lg:text-[11px]" />
+        <Avatar registro={reg} tono={estado.tono} className="size-6 text-[10px] lg:size-7 lg:text-[11px]" />
         <span className="flex min-w-0 flex-col">
           <b data-nombre className="truncate text-[13px] font-semibold leading-tight text-slate-900">
             <span className="pointer-events-auto relative">
