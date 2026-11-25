@@ -36,7 +36,7 @@ export default function SitioEncabezado() {
         <div className="top-actions">
           <Link className="login" href="/login">Iniciar sesión</Link>
           <Link className="btn btn-line contratar" href="/contratar-plan">Contratar</Link>
-          <Link className="btn btn-primary" href="/contacto">Solicitar demo</Link>
+          <Link className="btn btn-primary" href="/demo">Probar demo</Link>
           <button type="button" className="menu-btn" aria-expanded={abierto} aria-controls="menu-movil" aria-label={abierto ? "Cerrar menú" : "Abrir menú"} onClick={() => setAbierto((v) => !v)}>
             <span aria-hidden="true">{abierto ? "✕" : "☰"}</span>
           </button>
