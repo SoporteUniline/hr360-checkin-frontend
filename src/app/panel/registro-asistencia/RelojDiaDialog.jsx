@@ -22,7 +22,7 @@ import {
   CONCEPTOS, TOLERANCIA_MIN, aHHMM, aMin, agregarComida, pausaComidaTras, quitarComida, agregarRegistro, autorizaValor, claseEstado, conAutoriza,
   cuerpoPut, desdeApi, diaFila, durTexto, editado, errores as validar, erroresPorRenglon, estadoFila, etiquetaQuitar,
   fechaTxt, hora12Txt, horarioMin, horarioNormal, minDeCampo, ordenar, origenTexto, puedeComida, quitarORestaurar,
-  resumen, resumenServidor, separarExtra, vivos, esMotivoOtro, textoMotivoOtro, motivoOtro, MAX_TEXTO_OTRO,
+  resumen, resumenServidor, separarExtra, vivos, esMotivoOtro, textoMotivoOtro, motivoOtro, MAX_TEXTO_OTRO, extraTodoEnJornada,
 } from "@/lib/asistencia/relojDia.mjs";
 import { minutosNoTrabajados, normalizarTipo } from "@/lib/asistencia/tiposGoce.mjs";
 import { cuerpoPermisoDia, faltaPar, nombreTipo, parDesdePermiso, parVacio } from "@/lib/asistencia/quePasoMotivo.mjs";
@@ -85,7 +85,7 @@ function opcionesCorreccion(motivos, actual) {
 
 // Una checada = una fila de la tabla (en celular, una tarjeta: hora → hora y ✕ arriba, concepto · duración, motivo abajo).
 // La autorización de la extra y el error del renglón van justo debajo de la fila.
-function Renglon({ r, n, error, motivos, autorizadores, nocturno, onCambio, onQuitar }) {
+function Renglon({ r, n, error, motivos, autorizadores, nocturno, horario, h, onCambio, onQuitar }) {
   const ed = editado(r);
   const pideMotivo = ed || (r.anulado && !r.anuladoAntes);
   const otro = esMotivoOtro(r.motivo);
@@ -96,6 +96,11 @@ function Renglon({ r, n, error, motivos, autorizadores, nocturno, onCambio, onQu
   const tachado = r.anulado ? "line-through" : "";
   const duracion = r.ini != null && r.fin != null && r.fin > r.ini ? durTexto(r.fin - r.ini) : r.fin == null && r.ini != null ? "Sin salida" : "";
   const quitar = etiquetaQuitar(r);
+  // La hora extra va fuera de la jornada (LFT art. 66): si todo el renglón cae dentro, «Hora extra» no se puede elegir.
+  const extraBloqueada = extraTodoEnJornada(r, horario);
+  const opcionesConcepto = CONCEPTOS.map(([v, t]) => ({ valor: v, texto: t, ...ICONO_CONCEPTO[v],
+    ...(v === "extra" && extraBloqueada ? { deshabilitada: true,
+      ayuda: `Dentro de la jornada (${hora12Txt(aHHMM(h.pe))}–${hora12Txt(aHHMM(h.ps))}) usa «Jornada»` } : {}) }));
   return (
     <div data-renglon={n} data-clave={r.k} className={cn("border-t border-slate-200 px-2 py-2 max-sm:rounded-xl max-sm:border max-sm:p-2.5", fondo)}>
       <div className={cn("grid items-start gap-x-2.5 gap-y-2 max-sm:grid-cols-[minmax(0,1fr)_12px_minmax(0,1fr)_44px] max-sm:gap-x-1.5", COLUMNAS)}>
@@ -115,7 +120,7 @@ function Renglon({ r, n, error, motivos, autorizadores, nocturno, onCambio, onQu
         <div className="contents max-sm:col-span-4 max-sm:row-start-2 max-sm:flex max-sm:items-center max-sm:gap-2.5">
         <div className="min-w-0 max-sm:flex-1">
           <SelectConIconos aria="Concepto" disabled={r.anulado} valor={r.concepto} onCambio={(v) => onCambio({ concepto: v })}
-            opciones={CONCEPTOS.map(([v, t]) => ({ valor: v, texto: t, ...ICONO_CONCEPTO[v] }))} />
+            opciones={opcionesConcepto} />
         </div>
         {r.anulado ? (
           // Anulada: «Restaurar» en el lugar de la duración (la ✕ ya no aplica).
@@ -201,7 +206,7 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   const h = useMemo(() => horarioMin(horario), [horario]);
   const lista = useMemo(() => regs ?? [], [regs]);
   const orden = useMemo(() => ordenar(lista), [lista]);
-  const errs = useMemo(() => validar(lista), [lista]);
+  const errs = useMemo(() => validar(lista, horario), [lista, horario]);
   const estadoSin = estadoFila(registro);
   const tipoDe = (p) => (p ? tiposParciales.find((t) => String(t.id) === String(p.tipo)) ?? null : null);
   const tipoPermiso = tipoDe(permiso);
@@ -406,7 +411,7 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                       return (
                         <Fragment key={r.k}>
                           <Renglon r={r} n={i + 1} error={errs[r.k] || servidor.renglones[r.k]} motivos={data?.motivos ?? {}}
-                            autorizadores={data?.autorizadores ?? []} nocturno={Boolean(h?.nocturno)}
+                            autorizadores={data?.autorizadores ?? []} nocturno={Boolean(h?.nocturno)} horario={horario} h={h}
                             onCambio={(c) => cambiar((p) => p.map((x) => (x.k === r.k ? { ...x, ...c } : x)))}
                             onQuitar={() => cambiar((p) => quitarORestaurar(p, r.k))} />
                           {pausa ? (

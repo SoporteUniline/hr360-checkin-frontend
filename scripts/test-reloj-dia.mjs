@@ -5,7 +5,7 @@ import {
   agregarComida, agregarRegistro, aMin, claseEstado, resumenServidor, conAutoriza, cuerpoPut, desdeApi, diaFila, durTexto, editado, errorDe, errores,
   erroresPorRenglon, estadoFila, extraFila, horarioNormal, minDeCampo, minutosProgramados, nuevoRenglon, ordenar,
   origenTexto, etiquetaQuitar, planMasivo, puedeComida, quitarORestaurar, requisitoEstado, resumen, separarExtra, textoConIcono, tiposEstadoDia, gruposEstadoDia,
-  esMotivoOtro, errorMotivoOtro, motivoOtro, textoMotivoOtro, MAX_TEXTO_OTRO,
+  esMotivoOtro, errorMotivoOtro, motivoOtro, textoMotivoOtro, MAX_TEXTO_OTRO, errorExtraEnJornada, extraTodoEnJornada, sinCambio,
 } from "../src/lib/asistencia/relojDia.mjs";
 import { CAMPOS_HORA, ajustarPorPermiso, errorHoraPermiso, horasDeChecadas, horasPermiso, horasValidas } from "../src/lib/asistencia/horaPermiso.mjs";
 import { minutosNoTrabajados } from "../src/lib/asistencia/tiposGoce.mjs";
@@ -273,4 +273,71 @@ test("quitarComida: el tramo deja de ser comida y el PUT pide quitar la marca", 
   assert.equal(pausaComidaTras(ordenar(sin), 0), null, "después: ya no");
   assert.deepEqual(cuerpoPut(sin, { fecha: F }).registros[0].quitar_comida, true);
   assert.equal("quitar_comida" in cuerpoPut(regs, { fecha: F }).registros[0], false, "sin tocar no se manda");
+});
+
+// (25/11/2026, aprobado por el dueño) La hora extra va fuera de la jornada programada (LFT art. 66). Espejo del servidor.
+const DENTRO = "La hora extra va antes de su entrada (9:00 a.m.) o después de su salida (4:00 p.m.). Dentro de la jornada usa «Jornada»";
+const extraN = (ini, fin, o = {}) => ({ ...nuevoRenglon(aMin(ini), fin == null ? null : aMin(fin), "extra", "olvido"), ...conAutoriza("16"), ...o });
+
+test("hora extra dentro de la jornada → error junto a la fila; antes de la entrada o después de la salida → ok", () => {
+  const j = { ...nuevoRenglon(aMin("09:00"), aMin("11:30")), motivo: "olvido" };
+  const x = extraN("11:30", "16:00");
+  assert.equal(errorDe(x, [j, x], horario), DENTRO, "11:30–4:00 en jornada de 9 a 4");
+  assert.deepEqual(errores([j, x], horario), { [x.k]: DENTRO });
+  assert.equal(extraTodoEnJornada(x, horario), true, "todo dentro: se deshabilita «Hora extra»");
+  for (const [a, b] of [["16:00", "18:00"], ["07:00", "09:00"], ["17:00", "17:30"]]) {
+    const y = extraN(a, b);
+    assert.equal(errorDe(y, [y], horario), "", `${a}–${b}`);
+    assert.equal(extraTodoEnJornada(y, horario), false);
+  }
+  // Una parte fuera: no se deshabilita, el error sugiere «Separar» (después) u otro registro (antes).
+  const tarde = extraN("15:00", "18:00");
+  assert.equal(extraTodoEnJornada(tarde, horario), false);
+  assert.ok(errorDe(tarde, [tarde], horario).startsWith(DENTRO) && /Separar/.test(errorDe(tarde, [tarde], horario)));
+  const temprano = extraN("07:00", "10:00");
+  assert.match(errorDe(temprano, [temprano], horario), /antes de las 9:00 a\.m\./);
+  // Lo anulado y los demás conceptos no se tocan; sin horario no se valida.
+  assert.equal(errorExtraEnJornada({ ...x, anulado: true }, horario), "");
+  assert.equal(errorExtraEnJornada({ ...x, concepto: "jornada" }, horario), "");
+  assert.equal(errorDe(x, [j, x]), "", "sin horario pasado, como antes");
+});
+
+test("hora extra fuera de jornada: turno nocturno", () => {
+  const noche = { entrada: "22:00", salida: "06:00" };
+  const dentro = { ...nuevoRenglon(1380, 1500, "extra", "olvido"), ...conAutoriza("16") }; // 11 p.m.–1 a.m.
+  assert.equal(errorDe(dentro, [dentro], noche),
+    "La hora extra va antes de su entrada (10:00 p.m.) o después de su salida (6:00 a.m.). Dentro de la jornada usa «Jornada»");
+  assert.equal(extraTodoEnJornada(dentro, noche), true);
+  const despues = { ...nuevoRenglon(1440 + 360, 1440 + 480, "extra", "olvido"), ...conAutoriza("16") };
+  assert.equal(errorDe(despues, [despues], noche), "", "6–8 a.m. del día siguiente");
+  const antes = { ...nuevoRenglon(1200, 1320, "extra", "olvido"), ...conAutoriza("16") };
+  assert.equal(errorDe(antes, [antes], noche), "", "8–10 p.m.");
+});
+
+test("hora extra fuera de jornada: día sin horario (descanso) → todo puede ser extra", () => {
+  const x = extraN("10:00", "14:00");
+  assert.equal(errorDe(x, [x], null), "");
+  assert.equal(errorDe(x, [x], { entrada: null, salida: null }), "");
+  assert.equal(extraTodoEnJornada(x, null), false);
+});
+
+test("hora extra fuera de jornada: renglón viejo igual que en la base (sinCambio) no bloquea", () => {
+  const regs = cargar([api(1, "09:00", "11:30"), api(2, "11:30", "16:00", { origen: "manual", concepto: "extra", motivo: "olvido", id_autoriza: 16 })]);
+  assert.equal(sinCambio(regs[1]), true);
+  assert.deepEqual(errores(regs, horario), {}, "día viejo: se abre sin errores");
+  const corregido = regs.map((r) => (r.id === 1 ? { ...r, ini: aMin("08:55"), motivo: "olvido" } : r));
+  assert.deepEqual(errores(corregido, horario), {}, "se corrige otro renglón y la extra vieja no bloquea");
+  const movida = regs.map((r) => (r.id === 2 ? { ...r, ini: aMin("12:00") } : r));
+  assert.equal(sinCambio(movida[1]), false);
+  assert.equal(errores(movida, horario)[movida[1].k], DENTRO, "al cambiarle la hora ya se valida");
+  const aExtra = cargar([api(3, "09:00", "16:00")]).map((r) => ({ ...r, concepto: "extra", ...conAutoriza("16") }));
+  assert.equal(errores(aExtra, horario)[aExtra[0].k], DENTRO, "checada del reloj que se cambia a extra");
+});
+
+test("«Separar X después de la salida» siempre cumple la regla", () => {
+  const mario = cargar([api(1, "08:00", "20:02")]);
+  const sep = separarExtra(mario, { entrada: "08:00", salida: "17:00" }).map((r) => (r.concepto === "extra" ? { ...r, ...conAutoriza("16") } : r));
+  assert.deepEqual(errores(sep, { entrada: "08:00", salida: "17:00" }), {});
+  const tras = agregarRegistro(cargar([api(1, "09:00", "16:00")]), horario);
+  assert.equal(errorExtraEnJornada(tras[1], horario), "", "«Agregar registro» tras la salida");
 });
