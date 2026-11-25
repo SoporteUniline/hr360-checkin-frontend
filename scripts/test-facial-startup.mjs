@@ -5,6 +5,7 @@ import vm from "node:vm";
 import test from "node:test";
 import { createRecorder } from "../src/lib/diagnostico-reloj/core.mjs";
 import { yaRegistrado, recordarChecada } from "../src/lib/reloj/recientes.mjs";
+import { encuadreRostro } from "../src/lib/reloj/encuadreRostro.mjs";
 
 const require = createRequire(import.meta.url);
 const babel = require("next/dist/compiled/babel/core");
@@ -73,7 +74,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     Camera() {}, Power() {}, RotateCcw() {}, Button() {},
     loadBrowserFaceApi: () => models,
     opcionesRapidas: () => ({ rapido: true }),
-    yaRegistrado, recordarChecada,
+    yaRegistrado, recordarChecada, encuadreRostro,
     enqueueSnackbar(message) { notifications.push(message); }, console,
     axiosInstance: { post: async (url, body) => {
       posts++;

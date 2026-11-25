@@ -2,9 +2,11 @@
 // reloj de la app del empleado, a 1440 y 390. Backend simulado con la MISMA regla del servidor (services/comidaReloj.js):
 // la checada con «Voy a comer» lleva accion = salida_comida; la primera vez registra la comida y si ya comió responde
 // «Ya registraste tu comida hoy. Registramos tu salida.» (cierre automático) o pregunta sus opciones (cierre manual).
-// Revisa: el interruptor está junto al código y el QR (kiosco) o en la barra de métodos (app), apagado no cambia nada,
+// Revisa: el interruptor es una tarjeta visible en la columna del código (kiosco, rediseño 26/11/2026) o está en la barra
+// de métodos (app), apagado no cambia nada,
 // prendido muestra el aviso sobre la cámara y su cuenta, se apaga al usarse y solo a los 30 s; sin desplazamiento en el
-// kiosco ni teclas más chicas; sin errores de JavaScript. Nada sale a internet.
+// kiosco ni teclas más chicas; sin errores de JavaScript. Nada sale a internet. Sonido del kiosco (AudioContext simulado):
+// suena al checar (entrada, salida a comer más cálida) y en el error en pantalla (uno cada 3 s), y la bocina lo silencia.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build && node scripts/verify-voy-a-comer.mjs
 // Capturas: CAPTURAS=/ruta/carpeta node scripts/verify-voy-a-comer.mjs
 import assert from "node:assert/strict";
@@ -13,6 +15,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
 import { mkdir } from "node:fs/promises";
+import { AUDIO_FALSO, NOTA } from "./audio-falso.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -57,6 +60,7 @@ function backend() {
     if (p.endsWith("/reloj/registrar") || p.endsWith("/reloj/registrar-facial")) {
       const ev = req.postDataJSON();
       estado.envios.push(ev);
+      if (ev.codigo === "9999") return route.fulfill({ status: 404, contentType: "application/json", headers: { ...cors, "Access-Control-Allow-Origin": base }, body: JSON.stringify({ error: "Ese código no existe en esta empresa. Revísalo e intenta de nuevo." }) });
       const quien = persona[ev.codigo] ?? persona[1001];
       const empleado = { nombre: quien.nombre, apellido_paterno: quien.apellido_paterno };
       // Misma regla que el servidor: salida_comida vale si aún no come; si ya comió, salida normal o pregunta (manual).
@@ -97,15 +101,19 @@ try {
     const ctx = await browser.newContext({ viewport: { width: t.width, height: t.height }, isMobile: !!t.isMobile, hasTouch: !!t.hasTouch, deviceScaleFactor: t.deviceScaleFactor || 1, locale: "es-MX", timezoneId: "America/Mexico_City", permissions: ["camera"] });
     const { estado, manejar } = backend();
     await ctx.route("**/*", manejar);
+    await ctx.addInitScript({ content: AUDIO_FALSO });
     const pg = await ctx.newPage();
     const errores = [];
     pg.on("pageerror", (e) => errores.push(e.message));
     await pg.goto(base + "/demo", { waitUntil: "domcontentloaded" });
+    // Rediseño 26/11/2026: el kiosco abre en «Rostro»; el teclado está en «Código».
+    await pg.locator("[data-metodo=codigo]").click({ timeout: 30000 });
     const codigo = pg.getByPlaceholder("Ingresa tu código");
     await codigo.waitFor({ state: "visible", timeout: 30000 });
+    const sonidos = () => pg.evaluate(() => window.__sonidos.map((x) => x.f));
     await dormir(2500);
     const boton = pg.getByRole("switch", { name: "Voy a comer" });
-    const registrar = pg.getByRole("button", { name: "Registrar Entrada / Salida" });
+    const registrar = pg.getByRole("button", { name: "Checar", exact: true }); // maqueta aprobada 26/11/2026
     const teclear = async (c) => { await codigo.fill(c); await registrar.click(); };
     const resultado = pg.locator(".animate-bounce-in");
     const esperarResultado = async (texto) => {
@@ -115,10 +123,12 @@ try {
 
     // Junto al código y el QR, del mismo alto, sin desplazar la pantalla ni achicar las teclas.
     const bBoton = await dentro(boton, t, "«Voy a comer»");
-    const bQr = await dentro(pg.getByRole("button", { name: /^QR$/ }), t, "QR");
+    await dentro(pg.getByRole("button", { name: /^QR$/ }), t, "QR");
     const bCodigo = await dentro(codigo, t, "código");
-    assert.ok(Math.abs(bBoton.y - bQr.y) <= 1 && Math.abs(bBoton.height - bQr.height) <= 1, `${t.nombre}: en la fila del código y del QR`);
-    assert.ok(bBoton.x > bCodigo.x + bCodigo.width - 1 && bBoton.x < bQr.x, `${t.nombre}: entre el código y el QR`);
+    // Tarjeta-interruptor (rediseño 26/11/2026): visible, de alto táctil y en la misma columna que el código.
+    assert.ok(bBoton.height >= (t.width < 768 ? 48 : 56) - 0.5, `${t.nombre}: tarjeta «Voy a comer» de ${Math.round(bBoton.height)} px`);
+    assert.ok(bBoton.x < bCodigo.x + bCodigo.width && bBoton.x + bBoton.width > bCodigo.x, `${t.nombre}: en la columna del código`);
+    assert.ok(bBoton.y > bCodigo.y, `${t.nombre}: debajo del código`);
     assert.equal(await boton.getAttribute("aria-checked"), "false");
     assert.equal(await pg.locator("[data-aviso-voy-a-comer]").count(), 0, "apagado: sin aviso");
     const minimo = t.width < 768 ? 48 : 56;
@@ -132,15 +142,16 @@ try {
     await teclear("1001");
     await esperarResultado("Entrada registrada");
     assert.equal(estado.envios.at(-1).accion, undefined);
+    assert.ok((await sonidos()).includes(NOTA.entrada), `${t.nombre}: suena la entrada`);
 
     // Prendido: aviso sobre la cámara con su cuenta; la siguiente checada lleva salida_comida y se apaga solo.
     await boton.click();
     assert.equal(await boton.getAttribute("aria-checked"), "true");
     const aviso = pg.locator("[data-aviso-voy-a-comer]");
     await aviso.waitFor({ timeout: 5000 });
-    assert.match(await aviso.innerText(), t.width < 640 ? /^Salida a comer\s*· (30|29) s$/ : /^Siguiente checada: salida a comer\s*· (30|29) s$/);
+    assert.match(await aviso.innerText(), /^Salida a comer\s*· (30|29) s$/);
     const alto = await aviso.evaluate((e) => e.getBoundingClientRect().height);
-    assert.ok(alto < 40, `${t.nombre}: el aviso cabe en una línea (${alto} px)`);
+    assert.ok(alto <= 48, `${t.nombre}: el aviso cabe en una línea (${alto} px; chip de 44 px de la maqueta)`);
     // No tapa los botones de la cámara (fijar, girar, apagar).
     const choca = await aviso.evaluate((el) => {
       const a = el.getBoundingClientRect();
@@ -161,6 +172,7 @@ try {
     await resultado.waitFor({ state: "hidden", timeout: 10000 });
     assert.equal(estado.envios.at(-1).accion, "salida_comida");
     assert.equal(estado.envios.at(-1).codigo, "1001");
+    assert.ok((await sonidos()).includes(NOTA.comida), `${t.nombre}: la salida a comer suena más cálida`);
     assert.equal(await boton.getAttribute("aria-checked"), "false", "se apaga al usarse");
     assert.equal(await aviso.count(), 0);
 
@@ -186,6 +198,29 @@ try {
     assert.deepEqual(estado.envios.slice(-2).map((e) => [e.codigo, e.accion]), [["1002", "salida_comida"], ["1002", "cerrar_turno"]]);
     assert.equal(await boton.getAttribute("aria-checked"), "false");
 
+    // Error en pantalla: tono grave, uno solo aunque se repita enseguida (máximo uno cada 3 s).
+    const errorAntes = (await sonidos()).filter((f) => f === NOTA.error).length;
+    await teclear("9999");
+    await pg.locator("[data-aviso-kiosco=error]").filter({ hasText: "Ese código no existe" }).waitFor({ timeout: 15000 });
+    await captura(pg, `kiosco-${t.nombre}-error-codigo`);
+    await teclear("9999");
+    await dormir(800);
+    assert.equal((await sonidos()).filter((f) => f === NOTA.error).length, errorAntes + 1, `${t.nombre}: un solo tono de error en 3 s`);
+    await pg.getByRole("button", { name: "Cerrar aviso" }).click();
+    // Bocina: silencia (y se recuerda en el aparato) y vuelve a activar.
+    await pg.getByRole("button", { name: "Silenciar sonido" }).click();
+    assert.equal(await pg.evaluate(() => localStorage.getItem("adamia-reloj-sonido")), "0");
+    const antesMudo = (await sonidos()).length;
+    await teclear("1001");
+    await esperarResultado("Entrada registrada");
+    assert.equal((await sonidos()).length, antesMudo, `${t.nombre}: silenciado no suena`);
+    await pg.reload({ waitUntil: "domcontentloaded" });
+    await pg.getByRole("button", { name: "Activar sonido" }).waitFor({ timeout: 30000 });
+    await pg.getByRole("button", { name: "Activar sonido" }).click();
+    assert.equal(await pg.evaluate(() => localStorage.getItem("adamia-reloj-sonido")), "1");
+    await pg.locator("[data-metodo=codigo]").click();
+    await dormir(1500);
+
     // Prendido y sin usarse: se apaga solo a los 30 s.
     if (t.nombre === "1440") {
       await boton.click();
@@ -198,7 +233,7 @@ try {
       assert.equal(estado.envios.at(-1).accion, undefined, "después de apagarse, la checada va sin acción");
     }
     assert.deepEqual(errores, [], `${t.nombre}: sin errores de JavaScript`);
-    console.log(`ok kiosco ${t.nombre}: junto al código y el QR, aviso sobre la cámara, salida_comida una vez, «ya comiste» claro, manual pregunta`);
+    console.log(`ok kiosco ${t.nombre}: tarjeta en la columna del código, aviso sobre la cámara, salida_comida una vez, «ya comiste» claro, manual pregunta, sonido (éxito, error 1 cada 3 s) y bocina`);
     await ctx.close();
   }
 
