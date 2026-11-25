@@ -7,7 +7,7 @@
 // R3: cada vacante tiene «Agenda» (dónde, cuándo, cupo, horario, bloqueos y reglas propias) junto a «Entrevista».
 import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
-import { CalendarDays, Link2, ListChecks, Loader2, Search } from "lucide-react";
+import { CalendarDays, ClipboardCheck, Link2, ListChecks, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { mensajeErrorApi } from "@/lib/whatsapp/reglas.mjs";
@@ -16,6 +16,7 @@ import { guardarBolsa, obtener, rutaBolsa, rutaPreguntas, rutaVacantes } from ".
 import { EnlaceVacanteEnLinea } from "./EnlaceWhatsappVacante";
 import EditorEntrevista from "./EditorEntrevista";
 import AgendaVacante from "./AgendaVacante";
+import EditorRequisitos from "./EditorRequisitos";
 import { Interruptor } from "./controles";
 
 const normalizar = (s) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -83,6 +84,7 @@ export function InterruptorBolsa({ idEmpresa, abierto = true }) {
 export default function EnlacesVacantes({ abierto, onCambiar, idEmpresa, whatsappActivo = true }) {
   const [editando, setEditando] = useState(null);
   const [agendando, setAgendando] = useState(null);
+  const [requisitos, setRequisitos] = useState(null);
   const { data, error, isLoading } = useSWR(abierto ? rutaVacantes(idEmpresa) : null, obtener, { revalidateOnFocus: false });
   const [busqueda, setBusqueda] = useState("");
   const vacantes = useMemo(() => data?.vacantes ?? [], [data]);
@@ -135,6 +137,10 @@ export default function EnlacesVacantes({ abierto, onCambiar, idEmpresa, whatsap
                           className="min-h-11 md:min-h-9" startIcon={<ListChecks className="size-4 text-violet-600" />}>
                           Entrevista
                         </Button>
+                        <Button type="button" size="sm" variant="outline" onClick={() => setRequisitos(v)} aria-label={`Requisitos de ${v.titulo}`}
+                          className="min-h-11 md:min-h-9" startIcon={<ClipboardCheck className="size-4 text-emerald-700" />}>
+                          Requisitos
+                        </Button>
                         {whatsappActivo ? (
                           <Button type="button" size="sm" variant="outline" onClick={() => setAgendando(v)} aria-label={`Agenda de ${v.titulo}`}
                             className="min-h-11 md:min-h-9" startIcon={<CalendarDays className="size-4 text-blue-600" />}>
@@ -150,6 +156,7 @@ export default function EnlacesVacantes({ abierto, onCambiar, idEmpresa, whatsap
         </div>
       </DialogContent>
       <AgendaVacante abierto={!!agendando} onCambiar={(v) => { if (!v) setAgendando(null); }} idVacante={agendando?.id_vacante} titulo={agendando?.titulo} idEmpresa={idEmpresa} />
+      <EditorRequisitos abierto={!!requisitos} onCambiar={(v) => { if (!v) setRequisitos(null); }} idVacante={requisitos?.id_vacante} titulo={requisitos?.titulo} />
       <EditorEntrevista abierto={!!editando} onCambiar={(v) => { if (!v) setEditando(null); }} idVacante={editando?.id_vacante} titulo={editando?.titulo} />
     </Dialog>
   );
