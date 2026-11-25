@@ -5,6 +5,13 @@ import Cropper from "react-easy-crop";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Camera, Trash2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -54,6 +61,7 @@ export default function ImageUpload({
   setImagePreview,
   setSelectedFile,
   soloLectura = false,
+  iniciales = "",
 }) {
   const inputRef = useRef(null);
   const tieneImagenValida =
@@ -103,46 +111,57 @@ export default function ImageUpload({
     setSelectedFile(null);
   };
 
+  const elegirFoto = () => {
+    if (!soloLectura) inputRef.current?.click();
+  };
+  // Avatar de 48 px del encabezado de la ficha: tocarlo cambia la foto; con foto, un menú ofrece cambiarla o quitarla.
+  const avatar = (
+    <span className="relative block size-12">
+      <Avatar className="size-12 cursor-[inherit] bg-slate-300">
+        <AvatarImage src={tieneImagenValida ? imagePreview : undefined} alt="" className="object-cover" />
+        <AvatarFallback className="bg-slate-300 text-[15px] font-bold text-slate-700">{iniciales || "?"}</AvatarFallback>
+      </Avatar>
+      {!soloLectura && (
+        <span aria-hidden="true" className="absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full border-2 border-white bg-slate-700 text-white">
+          <Camera className="size-2.5" />
+        </span>
+      )}
+    </span>
+  );
+
   return (
-    <section>
-      <div className="flex gap-3 flex-col justify-center">
-        <div
-          onClick={() => {
-            if (!soloLectura) inputRef.current?.click();
-          }}
-          className={
-            soloLectura
-              ? "cursor-default flex justify-center"
-              : "cursor-pointer flex justify-center"
-          }
-        >
-          <Avatar className="h-24 w-24 sm:h-28 sm:w-28">
-            <AvatarImage src={tieneImagenValida ? imagePreview : undefined} />
-            <AvatarFallback>👤</AvatarFallback>
-          </Avatar>
-        </div>
+    <section className="shrink-0">
+      {soloLectura ? (
+        avatar
+      ) : tieneImagenValida ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" aria-label="Foto: cambiar o quitar" data-foto-empleado className="block cursor-pointer rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-blue-500/50">
+              {avatar}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="min-w-44">
+            <DropdownMenuItem className="min-h-11 text-sm" onSelect={elegirFoto}>
+              <Camera className="size-4" aria-hidden="true" /> Cambiar foto
+            </DropdownMenuItem>
+            <DropdownMenuItem className="min-h-11 text-sm text-rose-700 focus:text-rose-800" onSelect={removeImage}>
+              <Trash2 className="size-4" aria-hidden="true" /> Quitar foto
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <button type="button" aria-label="Agregar foto" data-foto-empleado onClick={elegirFoto} className="block cursor-pointer rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-blue-500/50">
+          {avatar}
+        </button>
+      )}
 
-        <Input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={handleImageChange}
-        />
-
-        {tieneImagenValida && !soloLectura && (
-          <div className="flex flex-col justify-center">
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={removeImage}
-            >
-              Quitar imagen
-            </Button>
-          </div>
-        )}
-      </div>
+      <Input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleImageChange}
+      />
 
       {/* Modal de recorte */}
       <Dialog open={!!cropSrc} onOpenChange={(open) => { if (!open) handleCancelarRecorte(); }}>
