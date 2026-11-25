@@ -101,3 +101,13 @@ test("local runtime matches installed face-api 0.22.2 and includes its license",
   const license = await readFile(new URL("public/vendor/face-api/LICENSE", root), "utf8");
   assert.match(license, /MIT License/);
 });
+
+// (25/11/2026) «Preparando reconocimiento facial…» tardaba en la primera apertura del día: los modelos caducaban a las
+// 24 h. Deben quedarse en caché (inmutables, un año), igual que el script de face-api.
+test("los modelos de face-api se quedan en caché del navegador (inmutables)", async () => {
+  const { readFileSync, readdirSync } = await import("node:fs");
+  const archivo = readdirSync(new URL("..", import.meta.url)).find((n) => /^next\.config\./.test(n));
+  const texto = readFileSync(new URL(`../${archivo}`, import.meta.url), "utf8");
+  const bloque = texto.slice(texto.indexOf('source: "/models/:path*"'), texto.indexOf('source: "/models/:path*"') + 200);
+  assert.match(bloque, /max-age=31536000, immutable/);
+});
