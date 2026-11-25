@@ -49,7 +49,7 @@ function Temas({ idEmpresa, idCampania }) {
   const { generar, generando, activa } = useGenerar(idEmpresa, idCampania, "temas", g);
   const d = g.data && !g.data.vacio ? g.data : null;
   return (
-    <Tarjeta titulo="Lo que dicen" accion={<ChipIA>{d ? `Adamia AI · ${d.comentarios} comentarios` : "Adamia AI"}</ChipIA>}>
+    <Tarjeta titulo="Temas de los comentarios" accion={<ChipIA>{d ? `Adamia AI · ${d.comentarios} comentarios` : "Adamia AI"}</ChipIA>}>
       {d ? (
         <>
           <ul className="space-y-1.5">
@@ -195,7 +195,12 @@ function Plan({ idEmpresa, idCampania, nom035 = false }) {
         plazoDias: a.plazoDias,
       }));
   return (
-    <Tarjeta titulo={nom035 ? "Programa de intervención" : "Plan de acción sugerido"} accion={<ChipIA />}>
+    <Tarjeta
+      id={nom035 ? undefined : "adamia-plan"}
+      className="scroll-mt-4"
+      titulo={nom035 ? "Programa de intervención" : "Plan de acción sugerido"}
+      accion={<ChipIA />}
+    >
       {lista.length ? (
         <ul className="space-y-2">
           {lista.map((a, i) => (

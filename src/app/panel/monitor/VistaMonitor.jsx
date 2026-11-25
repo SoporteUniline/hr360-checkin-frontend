@@ -234,7 +234,7 @@ export default function VistaMonitor({ registros, zona, cargando, onAbrirDia, vi
           <SinNadie filtro={activo} />
         )
       ) : grupos.length ? (
-        <TablaHoy grupos={grupos} cuentas={cuentas} onAbrirDia={onAbrirDia} />
+        <TablaHoy grupos={grupos} cuentas={cuentas} onAbrirDia={onAbrirDia} zona={zona} />
       ) : (
         <SinNadie filtro={activo} />
       )}

@@ -101,41 +101,12 @@ test("NOM-035: preguntas condicionales (clientes, jefe) solo si contestó «Sí�
   assert.deepEqual(cuerpo.guia, { filtros: { clientes: false, jefe: true }, items: { 1: "siempre", 2: "nunca", 44: "casi_nunca" } });
 });
 
-test("mapa de calor y «dónde poner atención» solo con lo que mandó el servidor", () => {
-  const r = {
-    suficiente: true,
-    respuestas: 12,
-    general: 7,
-    dimensiones: [
-      { clave: "a", nombre: "A", valor: 7 },
-      { clave: "b", nombre: "B", valor: 8 },
-    ],
-    grupos: [
-      {
-        nombre: "Caja",
-        n: 6,
-        general: 6,
-        dimensiones: [
-          { clave: "a", valor: 5.1 },
-          { clave: "b", valor: 9 },
-        ],
-      },
-    ],
-  };
-  const m = M.mapaCalor(r);
-  assert.deepEqual(
-    m.filas.map((f) => f.nombre),
-    ["Caja", "Toda la empresa"]
-  );
-  assert.deepEqual(m.filas[0].celdas, [5.1, 9]);
-  assert.deepEqual(M.atencion(r, 1), [{ grupo: "Caja", dimension: "A", valor: 5.1 }]);
-  assert.deepEqual(M.mapaCalor({ suficiente: false }), { columnas: [], filas: [] });
-  assert.equal(M.colorCalor(5.9), "bg-red-100 text-red-800");
-  assert.equal(M.colorCalor(null), "bg-slate-100 text-slate-400");
+// (25/11/2026) El mapa 0–10 y «dónde poner atención» se reemplazaron por el dashboard de % favorable
+// (ver scripts/test-clima-resultados.mjs).
+test("eNPS con signo", () => {
   assert.equal(M.fmtEnps(28), "+28");
-  assert.equal(M.fmtDelta(0.4).texto, "▲ 0.4");
-  assert.equal(M.fmtDelta(-1).tono, "text-red-700");
-  assert.equal(M.fmtDelta(5, { puntos: true }).texto, "▲ 5 pts");
+  assert.equal(M.fmtEnps(-5), "-5");
+  assert.equal(M.fmtEnps(null), "—");
 });
 
 test("editor: agregar, cambiar tipo, mover, quitar y aplicar la propuesta de Adamia AI", () => {

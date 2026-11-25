@@ -197,7 +197,7 @@ export default function AsistenciaRow({
           </TableCell>
         )}
         {isColVisible("estado_asistencia") && (
-          <TableCell className={`!whitespace-normal ${fijaEstado()} z-[1] bg-white ${editandoPar ? "align-top" : ""}`} style={derechaEstado(isColVisible("reloj"), isColVisible("motivo"))}>
+          <TableCell className={`!whitespace-normal ${fijaEstado()} ${editandoPar ? "align-top" : ""}`} style={derechaEstado(isColVisible("reloj"), isColVisible("motivo"))}>
             {/* Estado = qué pasó; Motivo = por qué y cómo se paga. Si la columna Motivo está oculta, va todo aquí. */}
             <CeldaEstadoDia registro={registro} tiposPermiso={tiposPermiso} readOnly={readOnly || !onAbrirReloj}
               onAbrirReloj={onAbrirReloj} onGuardado={mutateAsistencia} parte={isColVisible("motivo") ? "estado" : "ambas"} />
@@ -205,13 +205,13 @@ export default function AsistenciaRow({
           </TableCell>
         )}
         {isColVisible("motivo") && (
-          <TableCell className={`!whitespace-normal ${fijaMotivo()} z-[1] bg-white ${editandoPar ? "align-top" : ""}`} style={derechaMotivo(isColVisible("reloj"))}>
+          <TableCell className={`!whitespace-normal ${fijaMotivo()} ${editandoPar ? "align-top" : ""}`} style={derechaMotivo(isColVisible("reloj"))}>
             <CeldaEstadoDia registro={registro} tiposPermiso={tiposPermiso} readOnly={readOnly || !onAbrirReloj}
               onAbrirReloj={onAbrirReloj} onGuardado={mutateAsistencia} parte={isColVisible("estado_asistencia") ? "motivo" : "ambas"} />
           </TableCell>
         )}
         {isColVisible("reloj") && (
-          <TableCell className={`${FIJA_RELOJ} z-[1] bg-white text-center`}>
+          <TableCell className={`${FIJA_RELOJ} text-center`}>
             {readOnly || !onAbrirReloj ? null : (
               <button type="button" onClick={abrirReloj} aria-label={`Abrir el reloj de ${nombre}`} title="Registros del reloj"
                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100">
