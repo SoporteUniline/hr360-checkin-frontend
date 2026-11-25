@@ -122,3 +122,46 @@ Backend y reglas: `docs/whatsapp-reclutamiento.md` del backend, «Lumo fase A».
   - `scripts/test-whatsapp-lumo.mjs`: 6 pruebas, en CI.
   - `scripts/verify-whatsapp-lumo.mjs`: navegador con backend simulado, a 1440 y 390 px. Revisa que no haya scroll
     horizontal y que los objetivos táctiles (≥ 44 px en teléfono) y el texto (≥ 13 px) cumplan en las piezas nuevas.
+
+## Lumo fase B1: sucursal más cercana (25/11/2026)
+
+Servidor: `docs/whatsapp-reclutamiento.md` del backend, «Lumo fase B». Mapbox se llama **solo desde el servidor**: en el
+navegador no hay token (lo comprueba `scripts/test-whatsapp-lumo-b.mjs`).
+
+- **Catálogo → Unidades de negocio → Editar unidad**: sección «Ubicación en el mapa» (`components/whatsapp/UbicacionSucursal.jsx`).
+  «Ubicar en mapa» manda el domicilio completo al servidor (`POST /sucursales/geocodificar`), llena latitud y longitud y
+  muestra lo que encontró Mapbox; RH revisa en «Ver en el mapa» (Google Maps, sin token), corrige a mano si hace falta y
+  «Guardar ubicación» (`PUT /sucursales/:id/ubicacion`). Sin Mapbox: «Falta configurar Mapbox» y el botón queda apagado,
+  pero la captura a mano funciona. Al crear una unidad se avisa que se ubica después de guardarla. Si la empresa no tiene el
+  módulo de Reclutamiento (403) o falta la migración (503), la sección no aparece.
+- **Enlaces de vacantes → «Sucursales»** (`SucursalesVacante.jsx`): «Todas las sucursales» (por omisión) o elegir cuáles,
+  con «Ubicada / Sin ubicar» por sucursal y aviso de las que el agente no puede proponer.
+- **Ficha del candidato → Entrevista**: «Sucursal elegida» y «Dijo que vive en: …» (texto; nunca coordenadas).
+- **Aviso de privacidad**: `src/lib/legal/documentos.js` trae `AVISO_PRIVACIDAD_PROPUESTA` (versión `2026-12-18`) con Mapbox
+  como encargado, los candidatos de reclutamiento y la IA de la entrevista. **No está publicada**: la página
+  `/aviso-privacidad` sigue con `AVISO_PRIVACIDAD` (2026-11-25). Para publicarla, el dueño (con su abogado) cambia
+  `AVISO_PRIVACIDAD` por la propuesta en `app/(public)/aviso-privacidad/page.jsx`.
+
+## Lumo fase B2: entrevista estructurada y formulario por enlace (25/11/2026)
+
+Sin un modelo aparte: los campos de la entrevista son las mismas preguntas de la vacante (servidor: «Lumo fase B», B2).
+
+- **Editor de la entrevista** (`EditorEntrevista.jsx`): cada pregunta elige **«Filtra»** (califica: descarta/alerta, como
+  siempre) o **«Solo informa»** (dato para RH, con casilla **Obligatoria**). Tipos nuevos «Fecha» y «Archivo», que solo
+  informan (el radio «Filtra» queda apagado). Límites: 8 que filtran y 20 en total («1 de 8 filtran · 3 solo informan»).
+  Una pregunta de filtro manda el mismo cuerpo de siempre; un dato agrega `uso: "dato"` y `obligatoria`. Los textos de la
+  tarjeta pasaron de 12–12.5 px a 13 px.
+- **«Generar entrevista con IA»**: segundo recuadro de `SugerenciasIA.jsx` con `modo="entrevista"` (mismo flujo: Adamia AI
+  propone, RH marca y «Agregar» los pone en el editor sin guardar). Atributos para pruebas: `data-generar-entrevista`,
+  `data-boton-generar-entrevista`, `data-sugerencias-entrevista` (los de fase A no cambian).
+- **Ficha del candidato → «Entrevista · n de m»** (`CamposEntrevista.jsx`, dentro de `PanelCandidato`): cada campo con su
+  valor (fechas como dd/mm/aaaa), de dónde salió («Tocó un botón», «Lo escribió», «Lo registró el agente», «Lo llenó en el
+  formulario»), los opcionales marcados y el documento para descargar con la sesión (nunca un enlace público). «Enlace del
+  formulario» crea uno nuevo (el anterior deja de servir), lo copia y muestra su vigencia y cuántas veces lo llenó.
+  Sin campos (servidor sin la migración) se ve la lista de «Respuestas» de antes.
+- **Formulario público** `/postular/<token>` (`app/(public)/postular/[token]`): reutiliza `PreguntasVacante` de la página de la
+  vacante, prellenado con lo que contestó por WhatsApp; documentos (PDF, Word o foto, ≤ 10 MB) con un campo de archivo
+  accesible; revisa obligatorios antes de mandar; muestra los errores por campo del servidor; avisos de enlace inválido,
+  vencido, vacante cerrada o sin consentimiento. No manda la sesión (`credentials: "omit"`) y no se indexa.
+- **Pruebas**: `scripts/test-whatsapp-lumo-b.mjs` (en CI) y `scripts/verify-whatsapp-lumo-b.mjs` (navegador, 1440 y 390, backend
+  simulado; además de 44 px y 13 px revisa que nada de lo nuevo se salga por la derecha).

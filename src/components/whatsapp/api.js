@@ -91,7 +91,9 @@ export const rutaEventosSalud = (empresa, { pagina = 1, severidad, tipo } = {}) 
 export const RUTA_ADMIN_SALUD = `${RUTA_WA}/admin/salud`;
 
 // ——— Lumo fase A: «Sugerir con IA», base de conocimiento y requisitos de la vacante ———
-export const sugerirPreguntas = (idVacante) => axios.post(`${rutaPreguntas(idVacante)}/sugerir`, {}, { timeout: 70000 }).then((r) => r.data);
+// Lumo fase B2: modo «entrevista» = «Generar entrevista con IA» (campos que solo informan).
+export const sugerirPreguntas = (idVacante, modo) =>
+  axios.post(`${rutaPreguntas(idVacante)}/sugerir`, modo === "entrevista" ? { modo } : {}, { timeout: 70000 }).then((r) => r.data);
 export const rutaRequisitos = (idVacante) => (idVacante ? `${RUTA_WA}/vacantes/${encodeURIComponent(idVacante)}/requisitos` : null);
 export const guardarRequisitos = (idVacante, cuerpo) => axios.put(rutaRequisitos(idVacante), cuerpo).then((r) => r.data);
 export const rutaConocimiento = (empresa) => (empresa ? `${RUTA_WA}/conocimiento${consulta({ empresa })}` : null);
@@ -102,3 +104,15 @@ export const borrarEntrada = (id) => axios.delete(`${RUTA_WA}/conocimiento/${enc
 export const importarConocimiento = (empresa) => axios.post(`${RUTA_WA}/conocimiento/importar${consulta({ empresa })}`).then((r) => r.data);
 export const responderPregunta = (id, cuerpo) => axios.post(`${RUTA_WA}/sin-respuesta/${encodeURIComponent(id)}/responder`, cuerpo).then((r) => r.data);
 export const descartarPregunta = (id) => axios.post(`${RUTA_WA}/sin-respuesta/${encodeURIComponent(id)}/descartar`).then((r) => r.data);
+
+// ——— Lumo fase B1: ubicación de sucursales (Mapbox SOLO en el servidor) y sucursales de la vacante ———
+export const rutaSucursales = (empresa) => (empresa ? `${RUTA_WA}/sucursales${consulta({ empresa })}` : null);
+export const geocodificarDireccion = (empresa, direccion) =>
+  axios.post(`${RUTA_WA}/sucursales/geocodificar${consulta({ empresa })}`, { direccion }, { timeout: 20000 }).then((r) => r.data);
+export const guardarUbicacionSucursal = (idUnidad, cuerpo) =>
+  axios.put(`${RUTA_WA}/sucursales/${encodeURIComponent(idUnidad)}/ubicacion`, cuerpo).then((r) => r.data);
+export const rutaSucursalesVacante = (idVacante) => (idVacante ? `${RUTA_WA}/vacantes/${encodeURIComponent(idVacante)}/sucursales` : null);
+export const guardarSucursalesVacante = (idVacante, ids) => axios.put(rutaSucursalesVacante(idVacante), { ids }).then((r) => r.data);
+
+// ——— Lumo fase B2: enlace del formulario de la entrevista y documentos que subió el candidato ———
+export const crearFormularioEntrevista = (id) => axios.post(`${rutaConversacion(id)}/formulario`).then((r) => r.data);

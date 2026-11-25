@@ -6,8 +6,9 @@
 // tarjeta «Entrevista» de la ficha (CitaChat), con las mismas acciones y líneas de sistema que antes estaban sobre el chat.
 // Lumo fase A (25/11/2026): «Requisitos de la vacante» (cumple / no cumple / falta dato, evaluados sin IA) como ALERTA
 // —nunca rechazo— y preguntas sin respuesta con su estado y enlace a la base de conocimiento.
+// Lumo fase B1 (25/11/2026): sucursal que eligió el candidato y la colonia/ciudad que dio (nunca coordenadas).
 import Link from "next/link";
-import { AlertTriangle, CalendarCheck2, CheckCircle2, ClipboardCheck, HelpCircle, UserRoundCheck } from "lucide-react";
+import { AlertTriangle, CalendarCheck2, CheckCircle2, ClipboardCheck, HelpCircle, MapPin, UserRoundCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { tiempoRelativo } from "@/lib/whatsapp/tiempo.mjs";
 import {
@@ -15,6 +16,8 @@ import {
 } from "@/lib/whatsapp/entrevista.mjs";
 import { necesitaAprobacionAgenda } from "@/lib/whatsapp/agenda.mjs";
 import { etiquetaEstadoRequisito, resumenRequisitos } from "@/lib/whatsapp/requisitos.mjs";
+// Lumo fase B2: sección «Entrevista» con cada campo (filtro y datos), su valor, su origen y el enlace del formulario.
+import CamposEntrevista from "./CamposEntrevista";
 
 const COLOR_SEVERIDAD = { verde: "bg-emerald-100 text-emerald-800", ambar: "bg-amber-100 text-amber-900", rojo: "bg-red-100 text-red-700" };
 export const TARJETA_FICHA = "bg-white px-5 py-4";
@@ -46,7 +49,7 @@ function Seccion({ titulo, children }) {
 
 export default function PanelCandidato({
   entrevista, preguntasSinRespuesta = [], cargando, onAtendido, marcando, nombreAsistente, ahora,
-  cita = null, modoAgenda = null, onAprobar = null, aprobando = false, requisitos = null, enlaceConocimiento = null,
+  cita = null, modoAgenda = null, onAprobar = null, aprobando = false, requisitos = null, enlaceConocimiento = null, idConversacion = null,
 }) {
   const quien = nombreAsistente?.trim() || "El agente";
   if (!entrevista) {
@@ -95,12 +98,25 @@ export default function PanelCandidato({
           <UserRoundCheck className={`size-4 ${consentimientoAceptado(entrevista.consentimiento) ? "text-emerald-600" : "text-gray-400"}`} aria-hidden="true" />
           {textoConsentimiento(entrevista.consentimiento)}
         </p>
+        {entrevista.sucursal || entrevista.ubicacion_candidato ? (
+          <div className="flex items-start gap-1.5 text-[13px] text-gray-700" data-sucursal-elegida={entrevista.sucursal?.id_unidad ?? ""}>
+            <MapPin className="mt-0.5 size-4 shrink-0 text-rose-600" aria-hidden="true" />
+            <span className="min-w-0 [overflow-wrap:anywhere]">
+              {entrevista.sucursal ? <><span className="font-semibold text-gray-900">Sucursal elegida: {entrevista.sucursal.nombre}</span>{entrevista.sucursal.direccion ? <span className="block text-gray-600">{entrevista.sucursal.direccion}</span> : null}</> : <span>Aún no elige sucursal.</span>}
+              {entrevista.ubicacion_candidato ? <span className="block text-gray-600">Dijo que vive en: {entrevista.ubicacion_candidato}</span> : null}
+            </span>
+          </div>
+        ) : null}
         {entrevista.etapa === "preguntas" && textoPreguntaActual(entrevista.pregunta_actual) ? (
           <p className="rounded-lg bg-violet-50 p-2.5 text-[13px] text-violet-900 [overflow-wrap:anywhere]" data-pregunta-actual>
             <span className="font-semibold">Pregunta en curso:</span> {textoPreguntaActual(entrevista.pregunta_actual)}
           </p>
         ) : null}
       </Seccion>
+      {entrevista.campos?.length ? (
+        <CamposEntrevista campos={entrevista.campos} formulario={entrevista.formulario ?? null} idConversacion={idConversacion} ahora={ahora}
+          puedeFormulario={Boolean(idConversacion) && consentimientoAceptado(entrevista.consentimiento)} />
+      ) : (
       <Seccion titulo={respuestas.length ? `Respuestas · ${respuestas.length}` : "Respuestas"}>
         {respuestas.length ? (
           <ul className="grid gap-2" aria-label="Respuestas del candidato">
@@ -122,6 +138,7 @@ export default function PanelCandidato({
           <p className="text-[13px] text-gray-600">Todavía no hay respuestas.</p>
         )}
       </Seccion>
+      )}
       {entrevista.resumen || entrevista.puntajes ? (
         <Seccion titulo="Resumen de la IA">
           {entrevista.resumen ? (

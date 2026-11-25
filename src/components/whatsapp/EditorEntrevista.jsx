@@ -4,6 +4,8 @@
 // qué respuestas descartan o alertan. Reordenar con botones (sin arrastrar). PUT reemplaza todas las preguntas.
 // En escritorio es un diálogo; en teléfono ocupa toda la pantalla.
 // Lumo fase A (25/11/2026): «Sugerir con IA» propone preguntas; las elegidas entran como nuevas, sin guardar.
+// Lumo fase B2 (25/11/2026): cada pregunta dice si FILTRA (califica) o SOLO INFORMA (campo de la entrevista, con
+// obligatorio/opcional); tipos fecha y archivo solo informan. 8 que filtran y 20 en total. «Generar entrevista con IA».
 import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { ArrowDown, ArrowUp, ListChecks, Loader2, Plus, RefreshCw, Trash2, X } from "lucide-react";
@@ -11,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { mensajeErrorApi } from "@/lib/whatsapp/reglas.mjs";
 import {
-  LIMITE_OPCION, LIMITE_PREGUNTA, MAX_OPCIONES, MAX_PREGUNTAS, TIPOS, cambiarTipo, moverPregunta, preguntaDesdeApi, preguntaNueva,
+  LIMITE_OPCION, LIMITE_PREGUNTA, MAX_CAMPOS, MAX_OPCIONES, MAX_PREGUNTAS, TIPOS, USOS, cambiarTipo, cambiarUso, moverPregunta, preguntaDesdeApi, preguntaNueva,
   validarPreguntas, vistaPreviaPregunta,
 } from "@/lib/whatsapp/entrevista.mjs";
 import { guardarPreguntas, obtener, rutaPreguntas } from "./api";
@@ -37,9 +39,9 @@ function ChipsEfecto({ titulo, efecto, pregunta, onCambiar, error, tono }) {
           ))}
         </div>
       ) : (
-        <p className="text-[12.5px] text-gray-500">Escribe las opciones primero.</p>
+        <p className="text-[13px] text-gray-500">Escribe las opciones primero.</p>
       )}
-      {error ? <p className="text-[12.5px] font-medium text-red-700">{error}</p> : null}
+      {error ? <p className="text-[13px] font-medium text-red-700">{error}</p> : null}
     </fieldset>
   );
 }
@@ -58,8 +60,8 @@ function RangoEfecto({ titulo, ayuda, rango, onCambiar, error }) {
         <input aria-label="Máximo" inputMode="decimal" placeholder="Máx." value={rango.max} onChange={(e) => onCambiar({ ...rango, max: e.target.value })}
           aria-invalid={error ? true : undefined} className={entrada} />
       </div>
-      <p className="text-[12px] text-gray-500">{ayuda}</p>
-      {error ? <p className="text-[12.5px] font-medium text-red-700">{error}</p> : null}
+      <p className="text-[13px] text-gray-500">{ayuda}</p>
+      {error ? <p className="text-[13px] font-medium text-red-700">{error}</p> : null}
     </fieldset>
   );
 }
@@ -84,7 +86,7 @@ function TarjetaPregunta({ pregunta: p, indice, total, error = {}, onCambiar, on
           <label htmlFor={idTexto} className="sr-only">Texto de la pregunta {n}</label>
           <input id={idTexto} value={p.texto} maxLength={LIMITE_PREGUNTA} onChange={(e) => actualizar({ texto: e.target.value })} placeholder="Ej.: ¿Tienes licencia tipo C?"
             aria-invalid={error.texto ? true : undefined} aria-describedby={error.texto ? `${idTexto}-error` : undefined} className={`${CLASE_ENTRADA} h-11 md:h-9`} />
-          {error.texto ? <p id={`${idTexto}-error`} className="text-[12.5px] font-medium text-red-700">{error.texto}</p> : null}
+          {error.texto ? <p id={`${idTexto}-error`} className="text-[13px] font-medium text-red-700">{error.texto}</p> : null}
         </div>
         <label className="grid gap-1">
           <span className="sr-only">Tipo de respuesta de la pregunta {n}</span>
@@ -93,6 +95,28 @@ function TarjetaPregunta({ pregunta: p, indice, total, error = {}, onCambiar, on
             {TIPOS.map((t) => <option key={t.valor} value={t.valor}>{t.texto}</option>)}
           </select>
         </label>
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <fieldset className="flex flex-wrap items-center gap-1.5">
+          <legend className="sr-only">Para qué sirve la pregunta {n}</legend>
+          {USOS.map((u) => {
+            const bloqueada = u.valor === "filtro" && (p.tipo === "fecha" || p.tipo === "archivo");
+            return (
+              <label key={u.valor} title={u.ayuda}
+                className={`inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-3 text-[13px] font-medium md:min-h-8 ${p.uso === u.valor ? "border-violet-400 bg-violet-50 text-violet-900" : "border-gray-300 bg-white text-gray-700"} ${bloqueada ? "cursor-not-allowed opacity-50" : ""}`}>
+                <input type="radio" name={`uso-${p.clave}`} value={u.valor} checked={p.uso === u.valor} disabled={bloqueada} className="size-4 accent-violet-700"
+                  onChange={() => onCambiar(cambiarUso(p, u.valor))} />
+                {u.texto}
+              </label>
+            );
+          })}
+        </fieldset>
+        {p.uso === "dato" ? (
+          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 text-[13px] font-medium text-gray-700 md:min-h-8">
+            <input type="checkbox" checked={p.obligatoria !== false} onChange={(e) => actualizar({ obligatoria: e.target.checked })} className="size-4 accent-violet-700" />
+            Obligatoria
+          </label>
+        ) : null}
       </div>
       {p.tipo === "opciones" ? (
         <fieldset className="grid gap-1.5">
@@ -114,10 +138,12 @@ function TarjetaPregunta({ pregunta: p, indice, total, error = {}, onCambiar, on
               Agregar opción
             </Button>
           </div>
-          {error.opciones ? <p className="text-[12.5px] font-medium text-red-700">{error.opciones}</p> : null}
+          {error.opciones ? <p className="text-[13px] font-medium text-red-700">{error.opciones}</p> : null}
         </fieldset>
       ) : null}
-      {p.tipo === "si_no" || p.tipo === "opciones" ? (
+      {p.uso === "dato" ? (
+        <p className="text-[13px] text-gray-600">{p.tipo === "archivo" ? "El candidato lo sube en el formulario del enlace (PDF o foto). El agente no lo pide por WhatsApp." : "El agente lo pregunta y lo guarda para que lo leas; no descarta ni alerta."}</p>
+      ) : p.tipo === "si_no" || p.tipo === "opciones" ? (
         <div className="grid gap-3 sm:grid-cols-2">
           <ChipsEfecto titulo="Respuestas que descartan" efecto="descarta" tono="rojo" pregunta={p} onCambiar={(opciones) => actualizar({ opciones })} error={error.descartan} />
           <ChipsEfecto titulo="Respuestas que alertan" efecto="alerta" tono="ambar" pregunta={p} onCambiar={(opciones) => actualizar({ opciones })} error={error.alertan} />
@@ -128,9 +154,9 @@ function TarjetaPregunta({ pregunta: p, indice, total, error = {}, onCambiar, on
           <RangoEfecto titulo="Respuestas que alertan" ayuda="Fuera de este rango alerta. Deja vacío el lado que no tenga límite." rango={p.alerta} onCambiar={(alerta) => actualizar({ alerta })} error={error.alertan} />
         </div>
       ) : (
-        <p className="text-[12.5px] text-gray-500">La respuesta libre solo se guarda para que la leas; no descarta ni alerta.</p>
+        <p className="text-[13px] text-gray-500">La respuesta libre solo se guarda para que la leas; no descarta ni alerta.</p>
       )}
-      <p className="rounded-lg bg-gray-50 px-3 py-2 text-[12.5px] text-gray-700 [overflow-wrap:anywhere]" data-vista-previa>{vistaPreviaPregunta(p)}</p>
+      <p className="rounded-lg bg-gray-50 px-3 py-2 text-[13px] text-gray-700 [overflow-wrap:anywhere]" data-vista-previa>{vistaPreviaPregunta(p)}</p>
     </section>
   );
 }
@@ -178,7 +204,7 @@ export default function EditorEntrevista({ abierto, onCambiar, idVacante, titulo
   const cambiarLista = (lista) => { setPreguntas(lista); revalidar(lista); };
 
   const agregar = () => {
-    const nueva = preguntaNueva("si_no");
+    const nueva = preguntaNueva("si_no", preguntas.filter((p) => p.uso !== "dato").length >= MAX_PREGUNTAS ? "dato" : "filtro");
     cambiarLista([...preguntas, nueva]);
     enfocar(`[data-clave="${nueva.clave}"] input`);
   };
@@ -225,6 +251,12 @@ export default function EditorEntrevista({ abierto, onCambiar, idVacante, titulo
   };
 
   const total = preguntas?.length ?? 0;
+  const filtros = preguntas?.filter((p) => p.uso !== "dato").length ?? 0;
+  const agregarSugeridas = (nuevas) => {
+    cambiarLista([...preguntas, ...nuevas]);
+    setAnuncio(nuevas.length === 1 ? "Se agregó 1 pregunta sugerida. Revísala y guarda." : `Se agregaron ${nuevas.length} preguntas sugeridas. Revísalas y guarda.`);
+    enfocar(`[data-clave="${nuevas[0].clave}"] input`);
+  };
   return (
     <Dialog open={abierto} onOpenChange={cambiarAbierto}>
       <DialogContent className={`${DIALOGO_PANTALLA_COMPLETA} sm:max-w-3xl`}>
@@ -232,7 +264,7 @@ export default function EditorEntrevista({ abierto, onCambiar, idVacante, titulo
           <DialogTitle>Entrevista por WhatsApp</DialogTitle>
           <DialogDescription>
             {titulo ? <>Vacante «{titulo}». </> : null}
-            El agente hace estas preguntas en orden y califica al candidato según sus respuestas.
+            El agente hace estas preguntas en orden: las que filtran califican al candidato; las que solo informan son datos para ti.
           </DialogDescription>
         </DialogHeader>
         {error && !preguntas ? (
@@ -245,16 +277,13 @@ export default function EditorEntrevista({ abierto, onCambiar, idVacante, titulo
         ) : (
           <form onSubmit={guardar} noValidate data-editor-entrevista className="flex min-h-0 flex-1 flex-col">
             <div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto bg-gray-50 px-4 py-4 sm:px-5">
-              <SugerenciasIA idVacante={idVacante} actuales={total} onAgregar={(nuevas) => {
-                cambiarLista([...preguntas, ...nuevas]);
-                setAnuncio(nuevas.length === 1 ? "Se agregó 1 pregunta sugerida. Revísala y guarda." : `Se agregaron ${nuevas.length} preguntas sugeridas. Revísalas y guarda.`);
-                enfocar(`[data-clave="${nuevas[0].clave}"] input`);
-              }} />
+              <SugerenciasIA idVacante={idVacante} actuales={total} filtros={filtros} onAgregar={agregarSugeridas} />
+              <SugerenciasIA idVacante={idVacante} actuales={total} filtros={filtros} modo="entrevista" onAgregar={agregarSugeridas} />
               {!total ? (
                 <div className="grid place-items-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white px-4 py-8 text-center">
                   <ListChecks className="size-8 text-emerald-600" aria-hidden="true" />
                   <p className="font-semibold text-gray-800">Esta vacante aún no tiene entrevista</p>
-                  <p className="max-w-sm text-sm text-gray-600">Agrega hasta {MAX_PREGUNTAS} preguntas cortas. Marca qué respuestas descartan o alertan para que el agente califique.</p>
+                  <p className="max-w-sm text-sm text-gray-600">Agrega hasta {MAX_PREGUNTAS} preguntas que filtran (marca qué respuestas descartan o alertan) y datos que solo informan, hasta {MAX_CAMPOS} en total.</p>
                 </div>
               ) : (
                 preguntas.map((p, i) => (
@@ -264,11 +293,12 @@ export default function EditorEntrevista({ abierto, onCambiar, idVacante, titulo
                 ))
               )}
               <div>
-                <Button type="button" variant="outline" onClick={agregar} disabled={total >= MAX_PREGUNTAS} data-agregar-pregunta
+                <Button type="button" variant="outline" onClick={agregar} disabled={total >= MAX_CAMPOS} data-agregar-pregunta
                   startIcon={<Plus className="size-4" />} className="min-h-11 w-full sm:w-auto md:min-h-9">
-                  Agregar pregunta ({total}/{MAX_PREGUNTAS})
+                  Agregar pregunta ({total}/{MAX_CAMPOS})
                 </Button>
-                {total >= MAX_PREGUNTAS ? <p className="mt-1 text-[12.5px] text-gray-500">Llegaste al máximo de {MAX_PREGUNTAS} preguntas.</p> : null}
+                <p className="mt-1 text-[13px] text-gray-500" data-conteo-usos>{filtros} de {MAX_PREGUNTAS} filtran · {total - filtros} solo informan</p>
+                {total >= MAX_CAMPOS ? <p className="mt-1 text-[13px] text-gray-500">Llegaste al máximo de {MAX_CAMPOS} preguntas.</p> : null}
               </div>
             </div>
             <p aria-live="polite" className="sr-only">{anuncio}</p>
