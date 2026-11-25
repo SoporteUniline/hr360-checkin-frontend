@@ -23,7 +23,7 @@ import { isNativeClient } from "@/lib/native-app";
 import { destinoSeguro } from "@/lib/destinoLogin.mjs";
 import { entrarConPasskey } from "@/lib/passkeys/api";
 import { CLAVE_OFRECER, marcarActivada, mensajeFalla, payloadDeToken, textoBotonEntrar } from "@/lib/passkeys/modelo.mjs";
-import usePlataforma from "@/components/seguridad/usePlataforma";
+import usePlataforma, { passkeysEnApp } from "@/components/seguridad/usePlataforma";
 import { IconoMetodo } from "@/components/seguridad/OfertaPasskey";
 
 const RUTAS_POR_TIPO = {
@@ -217,6 +217,9 @@ export default function LoginClient({ initialIsNative = false, destino: destinoP
             </Button>
           </div>
 
+          {/* En la app de ADAMIA, Face ID necesita una versión nueva de la app (usePlataforma: passkeysEnApp). */}
+          {!isNative || passkeysEnApp() ? (
+          <>
           <div className="flex items-center gap-3 text-xs text-slate-400" aria-hidden="true">
             <span className="h-px flex-1 bg-slate-200" />o<span className="h-px flex-1 bg-slate-200" />
           </div>
@@ -238,6 +241,8 @@ export default function LoginClient({ initialIsNative = false, destino: destinoP
               </p>
             ) : null}
           </div>
+          </>
+          ) : null}
 
           <div className="flex flex-col gap-2 pt-2 text-center">
             <Button
