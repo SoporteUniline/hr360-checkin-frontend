@@ -89,3 +89,16 @@ export const rutaSalud = (empresa, { desde, hasta } = {}) => (empresa ? `${RUTA_
 export const rutaEventosSalud = (empresa, { pagina = 1, severidad, tipo } = {}) =>
   empresa ? `${RUTA_WA}/salud/eventos${consulta({ empresa, pagina, severidad, tipo })}` : null;
 export const RUTA_ADMIN_SALUD = `${RUTA_WA}/admin/salud`;
+
+// ——— Lumo fase A: «Sugerir con IA», base de conocimiento y requisitos de la vacante ———
+export const sugerirPreguntas = (idVacante) => axios.post(`${rutaPreguntas(idVacante)}/sugerir`, {}, { timeout: 70000 }).then((r) => r.data);
+export const rutaRequisitos = (idVacante) => (idVacante ? `${RUTA_WA}/vacantes/${encodeURIComponent(idVacante)}/requisitos` : null);
+export const guardarRequisitos = (idVacante, cuerpo) => axios.put(rutaRequisitos(idVacante), cuerpo).then((r) => r.data);
+export const rutaConocimiento = (empresa) => (empresa ? `${RUTA_WA}/conocimiento${consulta({ empresa })}` : null);
+export const rutaSinRespuesta = (empresa, { todas } = {}) => (empresa ? `${RUTA_WA}/sin-respuesta${consulta({ empresa, todas: todas ? 1 : undefined })}` : null);
+export const crearEntrada = (empresa, cuerpo) => axios.post(rutaConocimiento(empresa), cuerpo).then((r) => r.data);
+export const guardarEntrada = (id, cuerpo) => axios.put(`${RUTA_WA}/conocimiento/${encodeURIComponent(id)}`, cuerpo).then((r) => r.data);
+export const borrarEntrada = (id) => axios.delete(`${RUTA_WA}/conocimiento/${encodeURIComponent(id)}`).then((r) => r.data);
+export const importarConocimiento = (empresa) => axios.post(`${RUTA_WA}/conocimiento/importar${consulta({ empresa })}`).then((r) => r.data);
+export const responderPregunta = (id, cuerpo) => axios.post(`${RUTA_WA}/sin-respuesta/${encodeURIComponent(id)}/responder`, cuerpo).then((r) => r.data);
+export const descartarPregunta = (id) => axios.post(`${RUTA_WA}/sin-respuesta/${encodeURIComponent(id)}/descartar`).then((r) => r.data);

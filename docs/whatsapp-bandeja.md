@@ -81,3 +81,44 @@ destino.
   `NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RECRUITMENT_ENABLED=true NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx npx next build`
   y correr `CAPTURAS=<carpeta> node scripts/verify-whatsapp.mjs` y `node scripts/verify-whatsapp-salud.mjs`.
   `SOLO_BANDEJA=1` corre solo el bloque 24 (alto completo a 1440×900, menú *Acciones*, ficha, vistas, teléfono a 390).
+
+## Lumo fase A: sugerencias de IA, base de conocimiento y requisitos (25/11/2026)
+
+Backend y reglas: `docs/whatsapp-reclutamiento.md` del backend, «Lumo fase A».
+
+- **«Sugerir con IA»** (`SugerenciasIA.jsx`, dentro de `EditorEntrevista`).
+  - Pide `POST /vacantes/:id/preguntas/sugerir` y muestra hasta 8 propuestas con su tipo, opciones, qué descarta o
+    alerta y por qué.
+  - RH marca las que quiere (no más de las que caben en 8). «Agregar» las pone en el editor como preguntas nuevas
+    **sin guardar**: se guardan con «Guardar entrevista», como las escritas a mano.
+  - Si el servidor quitó preguntas que podían discriminar, se avisa cuántas.
+  - Errores de Adamia AI en palabras de RH (`mensajeErrorIa`): apagada, sin créditos, límite por hora, tope del mes,
+    respuesta inútil.
+- **Base de conocimiento** (`BaseConocimiento.jsx`, `?vista=conocimiento`, menú ⋮ → «Base de conocimiento»). Ocupa el
+  lugar de la conversación, como Entrevistas y Salud.
+  - Arriba, las preguntas que el agente no supo contestar (se refrescan cada 30 s). Cada una tiene tres acciones:
+    - **Responder**: diálogo con la pregunta editable, la respuesta y para quién aplica (la vacante o toda la empresa).
+      Crea una entrada **aprobada**.
+    - **Descartar**.
+    - **Abrir chat**.
+  - Abajo, las entradas, con búsqueda y filtro Todas / Aprobadas / Borradores:
+    - crear y editar (pregunta, respuesta, vacante o toda la empresa, aprobada o borrador);
+    - eliminar con confirmación;
+    - «Importar respuestas frecuentes» (solo si el texto libre trae preguntas): crea borradores y no borra el texto.
+- **Requisitos de la vacante** (`EditorRequisitos.jsx`). Botón «Requisitos» junto a «Entrevista» en *Enlaces de
+  vacantes* y en el detalle de la vacante de Reclutamiento. Uno por tipo:
+  - edad, experiencia, escolaridad, turno y zona;
+  - activo o pausado;
+  - «De dónde se toma el dato»: automático o una pregunta de filtro de esa vacante.
+
+  La edad con mínimo mayor a 18 o con máximo pide el **fundamento legal** y no se guarda sin él.
+- **Ficha del candidato** (`PanelCandidato`):
+  - tarjeta «Requisitos de la vacante» con el resumen como **alerta**: «No cumple 1 de 3 requisitos · el candidato no se
+    rechaza solo»;
+  - cada requisito con ✓ / ✕ / ? y su detalle.
+
+  Las preguntas sin respuesta muestran «Resuelta» y enlazan a la base de conocimiento.
+- Reglas puras: `src/lib/whatsapp/conocimiento.mjs` y `src/lib/whatsapp/requisitos.mjs`. Pruebas:
+  - `scripts/test-whatsapp-lumo.mjs`: 6 pruebas, en CI.
+  - `scripts/verify-whatsapp-lumo.mjs`: navegador con backend simulado, a 1440 y 390 px. Revisa que no haya scroll
+    horizontal y que los objetivos táctiles (≥ 44 px en teléfono) y el texto (≥ 13 px) cumplan en las piezas nuevas.

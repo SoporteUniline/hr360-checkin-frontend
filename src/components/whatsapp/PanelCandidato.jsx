@@ -4,13 +4,17 @@
 // la ficha del candidato («Info. del contacto»), que se abre al tocar el nombre o «Ver ficha» (cerrada por defecto).
 // R3: «Aprobar para agendar» (según el motivo o el modo de la empresa). La cita y «Agendar entrevista» viven en la
 // tarjeta «Entrevista» de la ficha (CitaChat), con las mismas acciones y líneas de sistema que antes estaban sobre el chat.
-import { AlertTriangle, CalendarCheck2, CheckCircle2, HelpCircle, UserRoundCheck } from "lucide-react";
+// Lumo fase A (25/11/2026): «Requisitos de la vacante» (cumple / no cumple / falta dato, evaluados sin IA) como ALERTA
+// —nunca rechazo— y preguntas sin respuesta con su estado y enlace a la base de conocimiento.
+import Link from "next/link";
+import { AlertTriangle, CalendarCheck2, CheckCircle2, ClipboardCheck, HelpCircle, UserRoundCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { tiempoRelativo } from "@/lib/whatsapp/tiempo.mjs";
 import {
   PUNTAJES, etiquetaSeveridad, normalizarPuntaje, textoConsentimiento, consentimientoAceptado, textoPreguntaActual,
 } from "@/lib/whatsapp/entrevista.mjs";
 import { necesitaAprobacionAgenda } from "@/lib/whatsapp/agenda.mjs";
+import { etiquetaEstadoRequisito, resumenRequisitos } from "@/lib/whatsapp/requisitos.mjs";
 
 const COLOR_SEVERIDAD = { verde: "bg-emerald-100 text-emerald-800", ambar: "bg-amber-100 text-amber-900", rojo: "bg-red-100 text-red-700" };
 export const TARJETA_FICHA = "bg-white px-5 py-4";
@@ -42,14 +46,15 @@ function Seccion({ titulo, children }) {
 
 export default function PanelCandidato({
   entrevista, preguntasSinRespuesta = [], cargando, onAtendido, marcando, nombreAsistente, ahora,
-  cita = null, modoAgenda = null, onAprobar = null, aprobando = false,
+  cita = null, modoAgenda = null, onAprobar = null, aprobando = false, requisitos = null, enlaceConocimiento = null,
 }) {
   const quien = nombreAsistente?.trim() || "El agente";
   if (!entrevista) {
     return (
       <div className="grid gap-2" data-panel-candidato="vacio">
         <p className={`${TARJETA_FICHA} text-sm text-gray-600`}>{cargando ? "Cargando evaluación…" : `${quien} aún no entrevista a este candidato.`}</p>
-        {preguntasSinRespuesta.length ? <SinRespuesta lista={preguntasSinRespuesta} ahora={ahora} /> : null}
+        <Requisitos requisitos={requisitos} />
+        {preguntasSinRespuesta.length ? <SinRespuesta lista={preguntasSinRespuesta} ahora={ahora} enlace={enlaceConocimiento} /> : null}
       </div>
     );
   }
@@ -83,6 +88,7 @@ export default function PanelCandidato({
           ) : null}
         </div>
       ) : null}
+      <Requisitos requisitos={requisitos} />
       <Seccion titulo={`Entrevista con ${quien === "El agente" ? "el agente" : quien}`}>
         {entrevista.nombre ? <p className="text-[15px] font-semibold text-gray-900 [overflow-wrap:anywhere]"><span className="sr-only">Nombre que dio: </span>{entrevista.nombre}</p> : null}
         <p className="flex items-center gap-1.5 text-[13px] text-gray-700">
@@ -133,12 +139,43 @@ export default function PanelCandidato({
       ) : (
         <p className={`${TARJETA_FICHA} text-[13px] text-gray-600`}>El resumen y los puntajes de la IA aparecen al terminar la entrevista.</p>
       )}
-      {preguntasSinRespuesta.length ? <SinRespuesta lista={preguntasSinRespuesta} ahora={ahora} /> : null}
+      {preguntasSinRespuesta.length ? <SinRespuesta lista={preguntasSinRespuesta} ahora={ahora} enlace={enlaceConocimiento} /> : null}
     </div>
   );
 }
 
-function SinRespuesta({ lista, ahora }) {
+const TONO_REQ = { verde: "border-emerald-200 bg-emerald-50 text-emerald-900", rojo: "border-red-200 bg-red-50 text-red-900", gris: "border-gray-200 bg-gray-50 text-gray-800" };
+const PUNTO_REQ = { verde: "bg-emerald-100 text-emerald-800", rojo: "bg-red-100 text-red-700", gris: "bg-gray-200 text-gray-700" };
+
+// Requisitos de la vacante evaluados por el servidor (sin IA). Solo informa: RH decide.
+function Requisitos({ requisitos }) {
+  const resumen = resumenRequisitos(requisitos);
+  if (!resumen) return null;
+  return (
+    <Seccion titulo="Requisitos de la vacante">
+      <div role={resumen.tono === "rojo" ? "alert" : "status"} data-requisitos={resumen.tono} className={`grid gap-1 rounded-xl border p-3 text-[13px] ${TONO_REQ[resumen.tono]}`}>
+        <p className="flex items-start gap-1.5 font-semibold"><ClipboardCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> {resumen.titulo}</p>
+        {resumen.ayuda ? <p>{resumen.ayuda}</p> : null}
+      </div>
+      <ul className="grid gap-2" aria-label="Requisitos">
+        {requisitos.resultados.map((r) => {
+          const e = etiquetaEstadoRequisito(r.estado);
+          return (
+            <li key={r.tipo} className="flex gap-2 text-[13px]" data-requisito={r.tipo} data-estado={r.estado}>
+              <span aria-hidden="true" className={`grid size-6 shrink-0 place-items-center rounded-full text-[12px] font-bold ${PUNTO_REQ[e.tono]}`}>{e.simbolo}</span>
+              <span className="min-w-0">
+                <span className="block font-semibold text-gray-900">{r.etiqueta} · <span className="font-medium">{e.texto}</span></span>
+                <span className="block text-gray-600 [overflow-wrap:anywhere]">{r.detalle}</span>
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </Seccion>
+  );
+}
+
+function SinRespuesta({ lista, ahora, enlace }) {
   return (
     <Seccion titulo="Preguntas que el agente no supo contestar">
       <ul className="grid gap-1.5" aria-label="Preguntas sin respuesta">
@@ -146,11 +183,18 @@ function SinRespuesta({ lista, ahora }) {
           <li key={i} className="flex gap-2 rounded-lg bg-amber-50 p-2 text-[13px] text-amber-950">
             <HelpCircle className="mt-0.5 size-4 shrink-0 text-amber-600" aria-hidden="true" />
             <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{p.pregunta}</span>
-            {p.creado_en ? <span className="shrink-0 text-[11.5px] text-amber-800">{tiempoRelativo(p.creado_en, ahora)}</span> : null}
+            {p.resuelta ? <span className="shrink-0 rounded-full bg-emerald-100 px-2 text-[13px] font-semibold text-emerald-800">Resuelta</span>
+              : p.creado_en ? <span className="shrink-0 text-[13px] text-amber-800">{tiempoRelativo(p.creado_en, ahora)}</span> : null}
           </li>
         ))}
       </ul>
-      <p className="text-[12px] text-gray-500">Agrega la respuesta en «Agente → Respuestas frecuentes» para que la próxima vez conteste solo.</p>
+      {enlace && lista.some((p) => !p.resuelta) ? (
+        <Link href={enlace} scroll={false} className="inline-flex min-h-11 items-center text-[13px] font-semibold text-emerald-800 underline underline-offset-2 lg:min-h-0">
+          Responder en la base de conocimiento
+        </Link>
+      ) : (
+        <p className="text-[13px] text-gray-500">Respóndelas en «⋮ → Base de conocimiento» para que la próxima vez conteste solo.</p>
+      )}
     </Seccion>
   );
 }
