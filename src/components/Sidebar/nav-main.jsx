@@ -202,6 +202,13 @@ const dashboardItems = [
     rol: "Admin",
     icon: MessageCircle,
   },
+  // (25/11/2026) Créditos de Adamia AI: costo, cobro y ganancia por empresa; tipo de cambio, margen, regalos y paquetes.
+  {
+    title: "Créditos de Adamia AI",
+    url: "/dashboard/creditos-ia",
+    rol: "Admin",
+    icon: Wallet,
+  },
   // Módulos por empresa: qué incluye cada plan (los extras de una empresa, en su detalle).
   {
     title: "Módulos por plan",
@@ -604,6 +611,13 @@ const menuGroups = [
         url: "/panel/mi-suscripcion",
         rol: "Recruiter",
         icon: CreditCard,
+      },
+      // (25/11/2026) Saldo en pesos de Adamia AI, recargas e historial.
+      {
+        title: "Créditos de Adamia AI",
+        url: "/panel/creditos-ia",
+        rol: "Recruiter",
+        icon: Wallet,
       },
     ],
   },

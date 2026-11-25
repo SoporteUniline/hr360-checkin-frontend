@@ -12,6 +12,9 @@ import { useAuth } from "@/context/AuthContext";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { SelectorEmpresa, useEmpresaNomina } from "@/components/nomina/comun";
 import TextoIA from "./TextoIA";
+import Link from "next/link";
+import IndicadorCreditos from "./IndicadorCreditos";
+import { RUTA_CREDITOS } from "@/lib/ia/creditos.mjs";
 
 const get = (url) => axios.get(url).then((r) => r.data);
 const errorDe = (e, d) => e?.response?.data?.error || d;
@@ -51,7 +54,7 @@ function Activar({ estado, idEmpresa, alCambiar }) {
     <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
       <p className="text-base font-bold text-[#080d36]">Adamia AI no está activa en esta empresa</p>
       <p className="mt-1">Pregúntale lo que necesites de la Ley Federal del Trabajo: vacaciones, aguinaldo, finiquitos, horas extra, despidos. Responde con el texto oficial y te dice el artículo.</p>
-      <p className="mt-2 text-[12.5px] text-slate-500">Tope de uso inicial: {estado.tope_mensual_usd} USD al mes (se puede cambiar). Solo la usan RH y el dueño.</p>
+      <p className="mt-2 text-[12.5px] text-slate-500">{estado.creditos?.cobro_activo ? "Se paga con créditos prepagados en pesos." : `Tope de uso inicial: ${estado.tope_mensual_usd} USD al mes (se puede cambiar).`} Solo la usan RH y el dueño.</p>
       {error ? <p role="alert" className="mt-2 text-red-700">{error}</p> : null}
       {estado.puede_activar ? (
         <button type="button" onClick={activar} disabled={guardando} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-brand px-4 font-semibold text-white disabled:opacity-60">
@@ -70,18 +73,23 @@ function Tope({ estado, idEmpresa, alCambiar }) {
     setError("");
     try { await axios.put("/checador/ia/ajustes", { empresa: idEmpresa, ...cambios }); setEditando(false); await alCambiar(); } catch (e) { setError(errorDe(e, "No se pudo guardar.")); }
   };
+  // (25/11/2026) Créditos: se muestra el saldo en pesos (nunca el costo). Con el cobro encendido el tope en USD ya no aplica.
+  const creditos = estado.creditos?.disponible ? estado.creditos : null;
+  const conTope = !creditos?.cobro_activo;
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-slate-500">
-      <span>Uso este mes: ${Number(estado.gasto_mes_usd).toFixed(2)} de ${Number(estado.tope_mensual_usd).toFixed(2)} USD</span>
+      {creditos ? <IndicadorCreditos creditos={creditos} className="w-full" /> : null}
+      {creditos ? (conTope ? <span>Tope del mes: ${Number(estado.tope_mensual_usd).toFixed(2)} USD</span> : null)
+        : <span>Uso este mes: ${Number(estado.gasto_mes_usd).toFixed(2)} de ${Number(estado.tope_mensual_usd).toFixed(2)} USD</span>}
       {estado.puede_activar ? (
-        editando ? (
+        editando && conTope ? (
           <span className="flex items-center gap-1">
             <input aria-label="Tope mensual en dólares" type="number" min="1" max="500" value={valor} onChange={(e) => setValor(e.target.value)} className="h-7 w-20 rounded border border-slate-300 px-1.5" />
             <button type="button" className="font-semibold text-brand" onClick={() => guardar({ tope_mensual_usd: Number(valor) })}>Guardar</button>
           </span>
         ) : (
           <>
-            <button type="button" className="font-semibold text-brand underline-offset-2 hover:underline" onClick={() => setEditando(true)}>Cambiar tope</button>
+            {conTope ? <button type="button" className="font-semibold text-brand underline-offset-2 hover:underline" onClick={() => setEditando(true)}>Cambiar tope</button> : null}
             <button type="button" className="font-semibold text-slate-500 underline-offset-2 hover:underline" onClick={() => guardar({ activo: false })}>Apagar</button>
           </>
         )
@@ -98,6 +106,7 @@ function Chat({ idEmpresa, estado, alCambiar }) {
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
   const [verHistorial, setVerHistorial] = useState(false);
+  const [sinCreditos, setSinCreditos] = useState(false);
   const fin = useRef(null);
   const historial = useSWR(verHistorial ? `/checador/ia/lft/conversaciones?empresa=${idEmpresa}` : null, get);
   useEffect(() => { fin.current?.scrollIntoView({ block: "end", behavior: "smooth" }); }, [mensajes, enviando]);
@@ -105,7 +114,7 @@ function Chat({ idEmpresa, estado, alCambiar }) {
   const preguntar = async (pregunta) => {
     const p = pregunta.trim();
     if (p.length < 3 || enviando) return;
-    setError(""); setTexto(""); setEnviando(true);
+    setError(""); setSinCreditos(false); setTexto(""); setEnviando(true);
     setMensajes((m) => [...m, { rol: "usuario", texto: p }]);
     try {
       const { data } = await axios.post("/checador/ia/lft/preguntar", { empresa: idEmpresa, pregunta: p, id_conversacion: idConversacion }, { timeout: 60000 });
@@ -114,6 +123,7 @@ function Chat({ idEmpresa, estado, alCambiar }) {
       alCambiar();
     } catch (e) {
       setError(errorDe(e, "No se pudo responder. Intenta de nuevo."));
+      setSinCreditos(e?.response?.data?.codigo === "IA_SIN_CREDITOS");
       setMensajes((m) => m.slice(0, -1));
       setTexto(p);
     } finally { setEnviando(false); }
@@ -154,7 +164,11 @@ function Chat({ idEmpresa, estado, alCambiar }) {
           ))
         )}
         {enviando ? <p role="status" className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="size-4 animate-spin" /> Consultando la ley…</p> : null}
-        {error ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-2.5 text-sm text-red-700">{error}</p> : null}
+        {error ? (
+          <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-2.5 text-sm text-red-700">
+            {error}{sinCreditos ? <> <Link href={RUTA_CREDITOS} className="font-semibold underline">Recargar créditos</Link></> : null}
+          </p>
+        ) : null}
         <div ref={fin} />
       </div>
       <form className="space-y-2 border-t border-slate-200 bg-white px-4 py-3" onSubmit={(e) => { e.preventDefault(); preguntar(texto); }}>
