@@ -1,4 +1,28 @@
 let loading;
+// (INC-007) «Entro al reloj, vuelvo a admin y se traba todo»: preparar el reconocimiento (script de 600 KB, modelos y
+// calentamiento de la GPU) bloquea el hilo principal por segundos y seguía corriendo en el panel al salir del reloj.
+// Las pantallas que usan la cámara lo RETIENEN mientras están abiertas (retenerFaceApi); si alguien lo retuvo y ya
+// nadie lo retiene, la preparación se detiene antes del siguiente paso pesado y sigue al volver a retenerlo.
+// Sin ninguna retención (pruebas, otros usos) se prepara de corrido, como siempre.
+let retenciones = 0;
+let alguienRetuvo = false;
+let alReanudar = [];
+export function retenerFaceApi() {
+  retenciones += 1;
+  alguienRetuvo = true;
+  const esperando = alReanudar;
+  alReanudar = [];
+  esperando.forEach((seguir) => seguir());
+  let suelto = false;
+  return () => {
+    if (suelto) return;
+    suelto = true;
+    retenciones -= 1;
+  };
+}
+// Promesa que espera a que alguien vuelva a retenerlo, o undefined si se puede seguir ya (sin cambiar el orden de siempre).
+const turno = () => (alguienRetuvo && retenciones === 0 ? new Promise((seguir) => alReanudar.push(seguir)) : undefined);
+const despuesDeTurno = (paso) => { const espera = turno(); return espera ? espera.then(paso) : paso(); };
 // El reloj pide acercarse: con la cara grande basta el detector rápido (190 KB) y no se descarga SSD (5.4 MB).
 // Marca opcional del modo diagnóstico (no hace nada si está apagado).
 const diag = (nombre, datos) => globalThis.__adamiaDiag?.marca(nombre, datos);
@@ -9,6 +33,8 @@ export function loadBrowserFaceApi() {
   if (loading) return loading;
   loading = (async () => {
     diag("faceapi_inicio");
+    const espera = turno();
+    if (espera) await espera;
     if (!window.faceapi) {
       diag("faceapi_script_inicio");
       await new Promise((resolve, reject) => {
@@ -32,19 +58,19 @@ export function loadBrowserFaceApi() {
       ["reconocimiento", api.nets.faceRecognitionNet],
     ].map(([modelo, net]) => net.params
       ? diag("faceapi_modelo_en_memoria", { modelo })
-      : net.loadFromUri("/models").then(() => diag("faceapi_modelo_fin", { modelo }))));
+      : despuesDeTurno(() => net.loadFromUri("/models")).then(() => diag("faceapi_modelo_fin", { modelo }))));
     diag("faceapi_modelos_fin");
     // Compile detector shaders before the first camera frame.
     diag("faceapi_warmup_inicio");
     try {
       const canvas = document.createElement("canvas");
       canvas.width = canvas.height = 160;
-      await api.detectSingleFace(canvas, opcionesRapidas(api));
+      await despuesDeTurno(() => api.detectSingleFace(canvas, opcionesRapidas(api)));
       // También los modelos de puntos y de huella: así el primer rostro no paga su preparación.
       const cara = document.createElement("canvas");
       cara.width = cara.height = 150;
-      await api.nets.faceLandmark68Net.detectLandmarks(cara);
-      await api.nets.faceRecognitionNet.computeFaceDescriptor(cara);
+      await despuesDeTurno(() => api.nets.faceLandmark68Net.detectLandmarks(cara));
+      await despuesDeTurno(() => api.nets.faceRecognitionNet.computeFaceDescriptor(cara));
     } catch {
       // Warmup is optional.
     }

@@ -28,7 +28,7 @@ import axiosInstance from "@/lib/axios";
 import ErrorPage from "@/components/ErrorPage";
 import { useSnackbar } from "notistack";
 import FacialRecognitionPanel from "./FacialRecognitionPanel";
-import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
+import { loadBrowserFaceApi, retenerFaceApi } from "@/lib/faceapi-browser";
 import { diagnosticoActivo, fijarDiagnostico } from "@/lib/diagnostico-reloj";
 import ClockDisplay from "./Clock/ClockDisplay";
 import EmployeeInput from "./Clock/EmployeeInput";
@@ -211,8 +211,11 @@ export default function RelojChecador({
 
   // Prepare recognition while subscription and clock data are being checked.
   // Camera and GPS permissions are requested only by the visible facial panel.
+  // (INC-007) Retenido solo mientras el reloj está abierto: al salir al panel, la preparación pesada se detiene.
   useEffect(() => {
+    const soltar = retenerFaceApi();
     loadBrowserFaceApi().catch(() => {});
+    return soltar;
   }, []);
 
   // Modo diagnóstico: mide desde que se abre el reloj hasta que se checa.
