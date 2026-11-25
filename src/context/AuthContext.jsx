@@ -10,6 +10,7 @@ import { avisarCierreDeSesion } from "@/lib/passkeys/api";
 const AuthContext = createContext({
   dataUser: null,
   modulosSesion: null,
+  permisosSesion: null,
   isLoggedIn: false,
   isAuthChecked: false,
   login: () => {},
@@ -23,6 +24,9 @@ export function AuthProvider({ children }) {
   // Módulos activos de las empresas de la sesión (los manda /users/verify/token). Llegan junto con el
   // usuario, así el menú se arma de una vez (sin mostrar y luego ocultar). null = servidor viejo: no se filtra nada.
   const [modulosSesion, setModulosSesion] = useState(null);
+  // (16/12/2026) Usuario con acceso: { plantilla, modulos: {área: nivel}, empresas } de /users/verify/token.
+  // null = dueño (o servidor viejo): no se filtra nada por permisos. Ver src/lib/permisos/permisos.mjs.
+  const [permisosSesion, setPermisosSesion] = useState(null);
   const router = useRouter();
 
   const verifyToken = async () => {
@@ -43,6 +47,7 @@ export function AuthProvider({ children }) {
 
       if (res.status === 200) {
         setModulosSesion(res.data.modulos ?? null);
+        setPermisosSesion(res.data.user?.esAcceso ? res.data.permisos ?? null : null);
         setDataUser(res.data.user);
         setIsLoggedIn(true);
       }
@@ -82,6 +87,7 @@ export function AuthProvider({ children }) {
     setIsLoggedIn(false);
     setDataUser(null);
     setModulosSesion(null);
+    setPermisosSesion(null);
     // Con destino (sesión cerrada por el servidor): navegación completa, para que el aviso gane a la guardia del panel
     // (SesionPanel manda a /login?next=… al ver que ya no hay sesión).
     if (typeof destino === "string" && destino.startsWith("/login")) window.location.assign(destino);
@@ -95,6 +101,7 @@ export function AuthProvider({ children }) {
         isAuthChecked,
         dataUser,
         modulosSesion,
+        permisosSesion,
         login,
         logout,
       }}
