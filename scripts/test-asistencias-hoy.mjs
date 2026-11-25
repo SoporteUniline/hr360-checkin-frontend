@@ -246,3 +246,16 @@ test("checadas del día: entrada, salida y comida reales; la salida a comer no e
   // No ha llegado.
   assert.deepEqual(checadasDelDia({ estado: "no_ha_llegado", dia: base }), { entrada: null, salida: null, comida: null, enComida: false });
 });
+
+test("trabajó fuera de su horario (todo antes de su entrada): cuenta lo que le faltó de su jornada, no hasta su salida", () => {
+  // Horario 16:10–20:10 sin comida (4 h). Checó 7:56–11:28 (3 h 32).
+  const fuera = { ...reg({ hora_entrada_programada: "16:10:00", hora_salida_programada: "20:10:00",
+    hora_salida_comida_programada: null, hora_regreso_comida_programada: null }), ...conTramos([["07:56", "11:28"]]) };
+  const e = estado(fuera, "21:56");
+  assert.equal(e.fueraDeHorario, true);
+  assert.deepEqual([e.estado, e.faltaron], ["salio_antes", 28], "faltaron 4 h − 3 h 32 = 28 min, no 8 h 42");
+  assert.equal(describir(e).detalle, "Checó fuera de su horario · trabajó 3 h 32 min de 4 h");
+  // Si completó sus horas fuera de horario, no requiere atención: ya salió.
+  const completo = estado({ ...fuera, ...conTramos([["07:00", "11:10"]]) }, "21:56");
+  assert.deepEqual([completo.estado, completo.grupo, completo.fueraDeHorario], ["ya_salio", "salieron", true]);
+});
