@@ -160,3 +160,36 @@ export function rutaSeguridad(usuario) {
   if (usuario?.tipo_usuario === "Admin") return "/dashboard/seguridad";
   return "/panel/seguridad";
 }
+
+// --- Llave recordada en este dispositivo (como las apps de banco) ---
+// Al activar o usar Face ID aquí se guarda el id de la llave (no es secreto: el servidor lo conoce y solo sirve con el
+// Face ID / huella de este teléfono). Al entrar se pide ESA llave con transporte «internal»: el navegador va directo
+// a la cara/huella, sin lista de cuentas ni código QR. Sin llave recordada, se pide cualquiera (lista).
+export const CLAVE_LLAVE = "adamia_passkey_llave";
+export function llaveRecordada(local) {
+  try {
+    const v = local?.getItem(CLAVE_LLAVE);
+    return v && /^[A-Za-z0-9_-]{16,512}$/.test(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+export function recordarLlave(local, id) {
+  try {
+    if (id && /^[A-Za-z0-9_-]{16,512}$/.test(id)) local?.setItem(CLAVE_LLAVE, id);
+  } catch {
+    /* sin almacenamiento */
+  }
+}
+export function olvidarLlave(local) {
+  try {
+    local?.removeItem(CLAVE_LLAVE);
+  } catch {
+    /* sin almacenamiento */
+  }
+}
+/** Opciones de login que piden directamente la llave recordada (Face ID/huella sin elegir). */
+export function conLlaveRecordada(opciones, id) {
+  if (!id) return opciones;
+  return { ...opciones, allowCredentials: [{ id, type: "public-key", transports: ["internal"] }] };
+}
