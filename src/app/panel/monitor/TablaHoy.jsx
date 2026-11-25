@@ -1,7 +1,7 @@
 "use client";
 
 // Monitor › Tabla (vista por defecto; maquetas aprobadas Main.dc.html y MovilMonitor.dc.html): una tabla con
-// encabezados Persona · Horario · Entrada · Qué pasa · Jornada y los renglones agrupados del más urgente al menos
+// encabezados Persona · Horario · Entrada · Qué pasa · Jornada · Editado y los renglones agrupados del más urgente al menos
 // («Requiere atención», «Con permiso / descanso», «Saldrán tarde / hora extra», «En jornada», «Por entrar», «Ya
 // salieron»), cada grupo con su encabezado y su número. «Qué pasa» es UNA frase y, a lo más, un chip que aporte.
 // Grupos, frases, entrada y jornada en src/lib/asistencia/vistasMonitor.mjs (sobre monitor.mjs y hoy.mjs).
@@ -9,7 +9,9 @@
 // botón con la flecha y un clic en el renglón); el nombre abre la ficha.
 // Celular (< lg): la misma tabla se pinta como tarjetas (nombre arriba; qué pasa; horario y entrada abajo) bajo los
 // mismos encabezados de grupo, sin desplazamiento lateral. Entre lg y xl se oculta «Jornada» para que quepa.
+import { useMemo } from "react";
 import { ChevronRight } from "lucide-react";
+import CeldaEditado, { crearFormateadorCambios } from "@/app/panel/registro-asistencia/CeldaEditado";
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { entradaTabla, horarioVista, jornadaTabla, quePasaTabla } from "@/lib/asistencia/vistasMonitor.mjs";
 import { cn } from "@/lib/utils";
@@ -26,9 +28,11 @@ const PUNTO = {
   salieron: "bg-slate-300",
 };
 const CHIP_BASE = "inline-flex max-w-full rounded-lg px-2.5 py-1 text-[13px] font-semibold leading-snug";
-const COLUMNAS = 6;
+const COLUMNAS = 7;
+// Igual que la columna «Editado» de Asistencias: «Sí» abre qué cambió, quién y cuándo.
+const editadoDe = (reg) => Boolean(Number(reg?.correccion)) || (Number(reg?.checadas_corregidas) || 0) > 0;
 
-function Renglon({ r, debe, onAbrirDia }) {
+function Renglon({ r, debe, onAbrirDia, formatear }) {
   const reg = r.dia.registro;
   const nombre = nombreDe(reg);
   const area = areaDe(reg);
@@ -131,6 +135,17 @@ function Renglon({ r, debe, onAbrirDia }) {
           </span>
         ) : null}
       </td>
+      <td
+        data-editado
+        className={cn(
+          // Celular: solo se muestra si se editó (junto a la frase); escritorio: siempre, como en Asistencias.
+          editadoDe(reg) ? "relative z-10 order-5 mt-1.5 block basis-full p-0 lg:mt-0" : "hidden",
+          "lg:table-cell lg:border-t lg:border-slate-100 lg:px-2 lg:py-2.5 lg:text-center lg:align-middle"
+        )}
+      >
+        <span className="text-[13px] text-slate-500 lg:hidden">Editado: </span>
+        <CeldaEditado registro={reg} formatear={formatear} grande />
+      </td>
       <td className="contents p-0 lg:table-cell lg:border-t lg:border-slate-100 lg:pr-3 lg:align-middle">
         {/* Celular: cubre toda la tarjeta. Escritorio: botón de 44 px con la flecha; el resto del renglón abre con clic. */}
         <button
@@ -151,7 +166,8 @@ function Renglon({ r, debe, onAbrirDia }) {
 }
 
 // `grupos`: [{ clave, titulo, filas }] de gruposTabla (ya filtrados); `cuentas`: «Debe N» por id_empleado.
-export default function TablaHoy({ grupos, cuentas, onAbrirDia }) {
+export default function TablaHoy({ grupos, cuentas, onAbrirDia, zona }) {
+  const formatear = useMemo(() => crearFormateadorCambios({ tiposPermiso: null, empleados: [], zona }), [zona]);
   return (
     <table
       aria-label="Personas de hoy"
@@ -159,13 +175,13 @@ export default function TablaHoy({ grupos, cuentas, onAbrirDia }) {
     >
       <thead className="hidden lg:table-header-group">
         <tr className="text-left text-[13px] font-semibold uppercase tracking-[0.04em] text-slate-600">
-          <th scope="col" className="w-[20%] py-3 pl-5 pr-3 font-semibold">
+          <th scope="col" className="w-[19%] py-3 pl-5 pr-3 font-semibold">
             Persona
           </th>
-          <th scope="col" className="w-[15%] px-3 py-3 font-semibold">
+          <th scope="col" className="w-[13%] px-3 py-3 font-semibold">
             Horario
           </th>
-          <th scope="col" className="w-[17%] px-3 py-3 font-semibold">
+          <th scope="col" className="w-[15%] px-3 py-3 font-semibold">
             Entrada
           </th>
           <th scope="col" className="px-3 py-3 font-semibold">
@@ -173,6 +189,9 @@ export default function TablaHoy({ grupos, cuentas, onAbrirDia }) {
           </th>
           <th scope="col" className="hidden w-[12%] px-3 py-3 font-semibold xl:table-cell">
             Jornada
+          </th>
+          <th scope="col" className="w-[84px] px-2 py-3 text-center font-semibold">
+            Editado
           </th>
           <th scope="col" className="w-11 py-3 pr-4">
             <span className="sr-only">Abrir día</span>
@@ -203,7 +222,7 @@ export default function TablaHoy({ grupos, cuentas, onAbrirDia }) {
             </th>
           </tr>
           {g.filas.map((r) => (
-            <Renglon key={r.dia.id} r={r} onAbrirDia={onAbrirDia} debe={Number(cuentas[Number(r.dia.registro.id_empleado)]) || 0} />
+            <Renglon key={r.dia.id} r={r} onAbrirDia={onAbrirDia} formatear={formatear} debe={Number(cuentas[Number(r.dia.registro.id_empleado)]) || 0} />
           ))}
         </tbody>
       ))}

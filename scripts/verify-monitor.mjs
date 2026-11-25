@@ -105,7 +105,7 @@ function datos() {
       comida_checada: { salida: t("00:30"), regreso: t("00:59"), minutos: 29, minutos_programados: 30 },
       permisos_horas_dia: [{ id: 1, tipo_horas: "sale_antes", hora_inicio: "07:00", hora_fin: "08:00" }],
     }),
-    reg("Rosa", "Pérez", "Ventas", "07:00", "15:00", tramos([["07:00", "10:30"]])), // salió antes
+    reg("Rosa", "Pérez", "Ventas", "07:00", "15:00", { ...tramos([["07:00", "10:30"]]), correccion: 1 }), // salió antes · editado
     reg("Beto", "Ruiz", "Ventas", "12:00", "20:00"), // por entrar
     reg("Ana", "López", "Producción", "08:00", "17:00", { ...tramos([["08:00", "11:00"]]), comida_checada: enComida("11:00") }),
     reg("Gil", "Prueba", "Planta", null, null, { tipo_registro_nombre: "Día de Descanso" }),
@@ -357,8 +357,11 @@ try {
   // Tabla semántica: encabezados de columna, encabezados de grupo (rowgroup) y nombre de cada renglón (rowheader).
   assert.deepEqual(
     (await tabla.getByRole("columnheader").allInnerTexts()).map((x) => x.trim()),
-    ["Persona", "Horario", "Entrada", "Qué pasa", "Jornada", "Abrir día"]
+    ["Persona", "Horario", "Entrada", "Qué pasa", "Jornada", "Editado", "Abrir día"]
   );
+  // Columna «Editado» (como en Asistencias): «Sí» en quien se corrigió, «No» en los demás.
+  assert.equal((await tabla.locator('tr[data-persona="Rosa Pérez"] [data-editado]').innerText()).trim(), "Sí");
+  assert.equal((await tabla.locator('tr[data-persona="Armando González"] [data-editado]').innerText()).trim(), "No");
   assert.equal(await tabla.locator("thead th").last().locator(".sr-only").count(), 1, "«Abrir día» solo para lector de pantalla");
   assert.deepEqual(await grupos(tabla), GRUPOS);
   assert.deepEqual(await tituloGrupos(tabla), [
