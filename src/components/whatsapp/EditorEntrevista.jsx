@@ -3,6 +3,7 @@
 // Editor de la entrevista de una vacante (R2): hasta 8 preguntas que el agente hace por WhatsApp. Cada pregunta define
 // qué respuestas descartan o alertan. Reordenar con botones (sin arrastrar). PUT reemplaza todas las preguntas.
 // En escritorio es un diálogo; en teléfono ocupa toda la pantalla.
+// Lumo fase A (25/11/2026): «Sugerir con IA» propone preguntas; las elegidas entran como nuevas, sin guardar.
 import { useEffect, useRef, useState } from "react";
 import useSWR from "swr";
 import { ArrowDown, ArrowUp, ListChecks, Loader2, Plus, RefreshCw, Trash2, X } from "lucide-react";
@@ -15,6 +16,7 @@ import {
 } from "@/lib/whatsapp/entrevista.mjs";
 import { guardarPreguntas, obtener, rutaPreguntas } from "./api";
 import { AvisoSinGuardar, CLASE_ENTRADA, DIALOGO_PANTALLA_COMPLETA } from "./controles";
+import SugerenciasIA from "./SugerenciasIA";
 
 const enfocar = (selector) => requestAnimationFrame(() => document.querySelector(selector)?.focus());
 
@@ -243,6 +245,11 @@ export default function EditorEntrevista({ abierto, onCambiar, idVacante, titulo
         ) : (
           <form onSubmit={guardar} noValidate data-editor-entrevista className="flex min-h-0 flex-1 flex-col">
             <div className="grid min-h-0 flex-1 content-start gap-3 overflow-y-auto bg-gray-50 px-4 py-4 sm:px-5">
+              <SugerenciasIA idVacante={idVacante} actuales={total} onAgregar={(nuevas) => {
+                cambiarLista([...preguntas, ...nuevas]);
+                setAnuncio(nuevas.length === 1 ? "Se agregó 1 pregunta sugerida. Revísala y guarda." : `Se agregaron ${nuevas.length} preguntas sugeridas. Revísalas y guarda.`);
+                enfocar(`[data-clave="${nuevas[0].clave}"] input`);
+              }} />
               {!total ? (
                 <div className="grid place-items-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white px-4 py-8 text-center">
                   <ListChecks className="size-8 text-emerald-600" aria-hidden="true" />

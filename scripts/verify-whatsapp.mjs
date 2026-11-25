@@ -1631,7 +1631,7 @@ async function bandejaWhatsappWeb(browser, errores) {
   await page.locator('[data-chip-agente="encendido"]').filter({ hasText: "Agente encendido" }).waitFor();
   assert.equal(await columna.getByRole("link", { name: "Entrevistas" }).getAttribute("href"), "/panel/whatsapp?vista=entrevistas");
   await columna.getByRole("button", { name: "Más opciones" }).click();
-  assert.deepEqual(await page.getByRole("menu", { name: "Más opciones" }).getByRole("menuitem").allInnerTexts(), ["Salud del agente", "Enlaces de vacantes", "Configurar agente"]);
+  assert.deepEqual(await page.getByRole("menu", { name: "Más opciones" }).getByRole("menuitem").allInnerTexts(), ["Salud del agente", "Base de conocimiento", "Enlaces de vacantes", "Configurar agente"]);
   await page.keyboard.press("Escape");
   assert.deepEqual(await columna.getByRole("group", { name: "Filtrar conversaciones" }).getByRole("button").allInnerTexts(), ["Todos", "Atención", "Califica", "Con alerta", "No califica", "Incompleto"]);
   assert.equal(await columna.getByRole("combobox", { name: "Etapa" }).count(), 1, "etapa como filtro compacto");

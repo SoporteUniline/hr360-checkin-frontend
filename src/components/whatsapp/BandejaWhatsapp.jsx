@@ -17,7 +17,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import { Activity, AlertTriangle, ArrowLeft, Bot, CalendarDays, Link2, MessageCircle, MoreVertical, RefreshCw, X } from "lucide-react";
+import { Activity, AlertTriangle, ArrowLeft, BookOpenCheck, Bot, CalendarDays, Link2, MessageCircle, MoreVertical, RefreshCw, X } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { formatearTelefono } from "@/lib/whatsapp/telefono.mjs";
 import { mensajeErrorApi } from "@/lib/whatsapp/reglas.mjs";
@@ -43,6 +43,7 @@ import CitaChat from "./CitaChat";
 import EnlaceWhatsappVacante from "./EnlaceWhatsappVacante";
 import Entrevistas from "./Entrevistas";
 import SaludAgente from "./SaludAgente";
+import BaseConocimiento from "./BaseConocimiento";
 import ProcesoChat, { BannerSugerencia } from "./ProcesoChat";
 import useMenuColapsado from "./useMenuColapsado";
 
@@ -161,7 +162,8 @@ export default function BandejaWhatsapp() {
   const params = useSearchParams();
   const abierta = params.get("c");
   const vistaUrl = params.get("vista");
-  const vista = !abierta && (vistaUrl === "entrevistas" || vistaUrl === "salud") ? vistaUrl : "conversaciones";
+  // Lumo fase A (25/11/2026): «Base de conocimiento» (?vista=conocimiento) con las preguntas que el agente no supo contestar.
+  const vista = !abierta && (vistaUrl === "entrevistas" || vistaUrl === "salud" || vistaUrl === "conocimiento") ? vistaUrl : "conversaciones";
   const abrioDesdeLista = useRef(false);
   const { empresas, idEmpresa, setIdEmpresa } = useEmpresa(dataUser);
   const rol = dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
@@ -490,7 +492,8 @@ export default function BandejaWhatsapp() {
   const panel = (
     <PanelCandidato entrevista={entrevista} preguntasSinRespuesta={preguntasSinRespuesta} cargando={cargandoHilo && !hilo}
       onAtendido={atender} marcando={marcando} nombreAsistente={nombreAsistente} ahora={ahora}
-      cita={citaActiva(hilo)} modoAgenda={agendaEmpresa?.quien_agenda ?? null} onAprobar={aprobar} aprobando={aprobando} />
+      cita={citaActiva(hilo)} modoAgenda={agendaEmpresa?.quien_agenda ?? null} onAprobar={aprobar} aprobando={aprobando}
+      requisitos={hilo?.requisitos ?? null} enlaceConocimiento={`${pathname}?vista=conocimiento`} />
   );
   // Cita de la ficha (misma tarjeta y acciones que antes estaban sobre el chat); su diálogo se controla desde aquí.
   const tarjetaCita = conversacion && citasHilo ? (
@@ -593,6 +596,9 @@ export default function BandejaWhatsapp() {
               <DropdownMenuItem asChild className={ITEM_MENU}>
                 <Link href={`${pathname}?vista=salud`} scroll={false}><Activity aria-hidden="true" /> Salud del agente</Link>
               </DropdownMenuItem>
+              <DropdownMenuItem asChild className={ITEM_MENU}>
+                <Link href={`${pathname}?vista=conocimiento`} scroll={false}><BookOpenCheck aria-hidden="true" /> Base de conocimiento</Link>
+              </DropdownMenuItem>
               {conEnlaces ? <DropdownMenuItem className={ITEM_MENU} onSelect={() => { pendienteMenu.current = () => setVacantesAbierto(true); }}><Link2 aria-hidden="true" /> Enlaces de vacantes</DropdownMenuItem> : null}
               <DropdownMenuItem className={ITEM_MENU} onSelect={() => { pendienteMenu.current = () => setAgenteAbierto(true); }}><Bot aria-hidden="true" /> Configurar agente</DropdownMenuItem>
             </DropdownMenuContent>
@@ -640,8 +646,10 @@ export default function BandejaWhatsapp() {
 
       {/* ——— Conversación, ficha, o Entrevistas / Salud ——— */}
       {conVista ? (
-        <VistaLateral titulo={vista === "entrevistas" ? "Entrevistas" : "Salud del agente"} pathname={pathname}>
-          {vista === "entrevistas" ? <Entrevistas idEmpresa={idEmpresa} ahora={ahora} /> : <SaludAgente idEmpresa={idEmpresa} ahora={ahora} pathname={pathname} conTitulo={false} />}
+        <VistaLateral titulo={vista === "entrevistas" ? "Entrevistas" : vista === "conocimiento" ? "Base de conocimiento" : "Salud del agente"} pathname={pathname}>
+          {vista === "entrevistas" ? <Entrevistas idEmpresa={idEmpresa} ahora={ahora} />
+            : vista === "conocimiento" ? <BaseConocimiento idEmpresa={idEmpresa} ahora={ahora} pathname={pathname} />
+              : <SaludAgente idEmpresa={idEmpresa} ahora={ahora} pathname={pathname} conTitulo={false} />}
         </VistaLateral>
       ) : abierta ? (
         <div className="relative flex min-h-0 min-w-0 flex-1">
