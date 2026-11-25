@@ -2,7 +2,8 @@
 /* eslint-disable @next/next/no-img-element -- logos de las empresas (S3) con tamaño fijo; next/image exige dominios */
 import Link from "next/link";
 import { Briefcase, Building2, Clock, MapPin, RotateCw, SearchX, Inbox } from "lucide-react";
-import { esNueva, formatoSueldo, haceCuanto, textoPlano, ubicacionVacante } from "@/lib/bolsaTrabajo.mjs";
+import { esNueva, etiquetaWhatsApp, formatoSueldo, haceCuanto, textoPlano, ubicacionVacante, whatsappDeVacante } from "@/lib/bolsaTrabajo.mjs";
+import IconoWhatsApp from "@/components/IconoWhatsApp";
 
 function Logo({ v }) {
   if (v.url_imagen) return <img className="bt-vac-logo" src={v.url_imagen} alt="" width={56} height={56} loading="lazy" decoding="async" />;
@@ -15,6 +16,8 @@ function Vacante({ v, ahora }) {
   const fecha = haceCuanto(v.fecha_publicacion, ahora);
   const lugar = ubicacionVacante(v);
   const extracto = textoPlano(v.descripcion, 180);
+  // (25/11/2026) Acceso secundario a WhatsApp si el API trae el enlace; queda por encima del enlace de toda la tarjeta.
+  const wa = whatsappDeVacante(v);
   return (
     <li>
       <article className="bt-vac" data-vacante={v.slug}>
@@ -35,6 +38,12 @@ function Vacante({ v, ahora }) {
           {sueldo ? <p className="bt-sueldo"><span className="sr-only">Sueldo: </span>{sueldo}</p> : null}
           {esNueva(v.fecha_publicacion, ahora) ? <span className="bt-nueva">Nueva</span> : null}
           {fecha ? <p className="bt-fecha"><Clock aria-hidden="true" />{fecha}</p> : null}
+          {wa ? (
+            <a className="bt-vac-wa" href={wa.enlace} target="_blank" rel="noopener noreferrer" aria-label={etiquetaWhatsApp(v.titulo)}>
+              <IconoWhatsApp />
+              <span>WhatsApp</span>
+            </a>
+          ) : null}
         </div>
       </article>
     </li>

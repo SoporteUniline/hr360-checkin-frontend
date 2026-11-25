@@ -37,6 +37,14 @@
 .lh .vc-btn-postular:disabled { background: #c9cde0; color: var(--ink); cursor: not-allowed; transform: none; }
 .lh .vc-icono { width: 54px; height: 54px; flex-shrink: 0; border-radius: 12px; border: 1.5px solid #c9cde0; background: #fff; color: var(--ink); display: grid; place-items: center; cursor: pointer; }
 .lh .vc-icono:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+/* «Pedir información por WhatsApp» (25/11/2026). Verde de WhatsApp oscurecido: blanco sobre #15803d = 5.0:1. */
+.lh .vc-wa-bloque { display: grid; gap: 8px; margin-top: -8px; }
+.lh .vc-wa { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; padding: 0 12px; border-radius: 12px; background: #15803d; color: #fff; font: 600 .98rem/1.2 var(--f); text-align: center; text-decoration: none; }
+.lh .vc-wa svg { width: 22px; height: 22px; flex-shrink: 0; }
+.lh .vc-wa:hover { background: #166534; color: #fff; }
+.lh .vc-wa:focus-visible { outline: 3px solid #15803d; outline-offset: 3px; }
+.lh .vc-wa-apoyo { color: var(--body); font-size: .9rem; text-align: center; }
+.lh .vc-wa-barra { display: none; }
 .lh .vc-aviso { display: flex; gap: 10px; align-items: flex-start; padding: 14px 16px; border-radius: 14px; background: var(--soft); color: var(--ink); font-size: .95rem; font-weight: 500; line-height: 1.45; }
 .lh .vc-aviso.ok { background: var(--green-soft); color: #14532d; }
 .lh .vc-aviso svg { width: 20px; height: 20px; flex-shrink: 0; color: var(--green); margin-top: 1px; }
@@ -133,6 +141,11 @@
   .lh.vc.con-barra { padding-bottom: 96px; }
   .lh .vc-postular { position: fixed; z-index: 40; left: 0; right: 0; bottom: 0; flex-wrap: nowrap; padding: 12px max(16px, env(safe-area-inset-left, 0px)) max(12px, env(safe-area-inset-bottom, 0px)); background: rgba(255, 255, 255, .96); backdrop-filter: blur(10px); border-top: 1px solid var(--line); box-shadow: 0 -12px 28px -18px rgba(11, 16, 51, .35); }
   .lh .vc-postular > .vc-aviso { display: none; }
+  /* WhatsApp a la mano del pulgar: junto a «Postularme ahora»; con el botón del perfil queda solo el icono. */
+  .lh .vc-postular .vc-btn-postular { min-width: 0; }
+  .lh .vc-postular > .vc-wa-barra { display: inline-flex; flex: 0 0 auto; padding: 0 16px; }
+  .lh .vc-postular:has(.vc-icono) > .vc-wa-barra { width: 54px; padding: 0; }
+  .lh .vc-postular:has(.vc-icono) > .vc-wa-barra .vc-wa-txt { display: none; }
 }
 @media (max-width: 600px) {
   .lh .vc-cab { padding-block: 16px 48px; }
