@@ -12,6 +12,10 @@ import {
   Menu,
   Pin,
   PinOff,
+  ScanFace,
+  LogOut,
+  Utensils,
+  DoorOpen,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -44,6 +48,9 @@ import ClockNavigation from './Clock/ClockNavigation';
 import { hora12 } from "@/lib/hora12.mjs";
 import { conVoyAComer, segundosRestantes, DURACION_VOY_A_COMER_S } from "@/lib/reloj/voyAComer.mjs";
 import { BotonVoyAComer, AvisoVoyAComer } from "./Clock/VoyAComer";
+import ResultadoChecada from "./Clock/ResultadoChecada";
+import AvisoKiosco from "./Clock/AvisoKiosco";
+import { crearSonidoReloj, leerSonidoActivo, guardarSonidoActivo } from "@/lib/reloj/sonidoReloj.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -139,6 +146,55 @@ export default function RelojChecador({
   };
   // Reloj de la empresa (/<slug>): kiosco a pantalla completa, sin desplazar. El del empleado conserva su diseño.
   const kiosco = !modoEmpleado;
+  // Kiosco: qué panel se ve a la izquierda (Rostro, Código o QR). La cámara sigue reconociendo con cualquiera.
+  const [metodoKiosco, setMetodoKiosco] = useState("rostro");
+  // Kiosco: los avisos (código inválido, cara que no coincide…) van en grande arriba; en la app, como siempre.
+  const [avisoKiosco, setAvisoKiosco] = useState(null);
+  const temporizadorAviso = useRef(null);
+  useEffect(() => () => clearTimeout(temporizadorAviso.current), []);
+  // Kiosco: sonido corto al checar y tono grave en los errores que se ven en pantalla (máx. uno cada 3 s). Se desbloquea
+  // con el primer toque (los navegadores no dejan sonar antes); la bocina lo silencia y se recuerda en el aparato.
+  const sonidoRef = useRef(null);
+  const [sonidoActivo, setSonidoActivo] = useState(true);
+  useEffect(() => {
+    if (!kiosco) return undefined;
+    let almacen = null;
+    try { almacen = window.localStorage; } catch { /* sin almacenamiento */ }
+    const activo = leerSonidoActivo(almacen);
+    const sonido = crearSonidoReloj({
+      activo,
+      crearContexto: () => {
+        // Antes del primer toque el navegador no deja sonar: no se crea el contexto (evita avisos en la consola).
+        if (navigator.userActivation && !navigator.userActivation.hasBeenActive) return null;
+        const Contexto = window.AudioContext || window.webkitAudioContext;
+        return Contexto ? new Contexto() : null;
+      },
+    });
+    sonidoRef.current = sonido;
+    setSonidoActivo(activo);
+    const desbloquear = () => sonido.desbloquear();
+    window.addEventListener("pointerdown", desbloquear, true);
+    window.addEventListener("keydown", desbloquear, true);
+    return () => {
+      window.removeEventListener("pointerdown", desbloquear, true);
+      window.removeEventListener("keydown", desbloquear, true);
+      sonido.cerrar();
+      sonidoRef.current = null;
+    };
+  }, [kiosco]);
+  const cambiarSonido = () => {
+    const nuevo = !sonidoActivo;
+    sonidoRef.current?.fijarActivo(nuevo);
+    try { guardarSonidoActivo(window.localStorage, nuevo); } catch { /* solo esta sesión */ }
+    setSonidoActivo(nuevo);
+  };
+  const avisar = (texto, tono = "error", duracion = 5000) => {
+    if (!kiosco) { enqueueSnackbar(texto, { variant: tono }); return; }
+    if (tono === "error") sonidoRef.current?.error();
+    clearTimeout(temporizadorAviso.current);
+    setAvisoKiosco({ texto, tono });
+    temporizadorAviso.current = setTimeout(() => setAvisoKiosco(null), duracion);
+  };
 
   // Prepare recognition while subscription and clock data are being checked.
   // Camera and GPS permissions are requested only by the visible facial panel.
@@ -249,6 +305,8 @@ export default function RelojChecador({
   const temporizadorPopup = useRef(null);
   const router = useRouter();
   useEffect(() => () => clearTimeout(temporizadorPopup.current), []);
+  // Kiosco: la confirmación se queda 3.5 s (se lee a un paso de distancia); con motivo de «pendiente», 8 s.
+  const duracionResultado = (data) => (data.pending && data.motivo ? 8000 : kiosco ? 3500 : 2500);
   const mostrarResultado = (data) => {
     clearTimeout(temporizadorPopup.current);
     // App del empleado: al checar regresa a su Inicio (ahí ve su jornada actualizada). Con error del
@@ -264,11 +322,15 @@ export default function RelojChecador({
       errorServidor: Boolean(data.errorServidor),
       localValidated: Boolean(data.local_validated),
       success: !data.pending,
+      hora: hora12(dayjs().tz(EMPRESA_TIMEZONE)),
+      duracion: duracionResultado(data),
     });
+    if (data.pending && data.errorServidor) sonidoRef.current?.error();
+    else if (!data.pending) sonidoRef.current?.exito(data.movimiento || data.message);
     temporizadorPopup.current = setTimeout(() => {
       setPopupInfo(null);
       if (volverAInicio) router.replace("/empleado/panel/inicio");
-    }, data.pending && data.motivo ? 8000 : 2500);
+    }, duracionResultado(data));
     mutate();
   };
 
@@ -300,7 +362,7 @@ export default function RelojChecador({
         const pos = await getCurrentLocation();
         setUbicacionGPS(pos);
         if (!pos) {
-          enqueueSnackbar("Permite el acceso a ubicación y activa el GPS para checar.", {variant: "error"});
+          avisar("Permite el acceso a ubicación y activa el GPS para checar.");
           return;
         }
         response = await submitMovement({
@@ -331,12 +393,10 @@ export default function RelojChecador({
       if (kiosco && err.response?.data?.code === "METHOD_CODE_FACE" && !offline) {
         setMostrarCamara(true);
         setCodigoCara(codigo);
-        enqueueSnackbar("Ahora mira a la cámara para confirmar que eres tú.", { variant: "info" });
+        avisar("Ahora mira a la cámara para confirmar que eres tú.", "info");
         return;
       }
-      enqueueSnackbar(err.response?.data?.error || err.message || "Error al registrar", {
-        variant: "error",
-      });
+      avisar(err.response?.data?.error || err.message || "Error al registrar");
     } finally {
       setRegistrando(false);
     }
@@ -375,9 +435,7 @@ export default function RelojChecador({
       setPendiente(null);
       setCodigoEmpleado("");
     } catch (error) {
-      enqueueSnackbar(error.response?.data?.error || error.message || "Error al registrar", {
-        variant: "error",
-      });
+      avisar(error.response?.data?.error || error.message || "Error al registrar");
     } finally {
       setRegistrando(false);
     }
@@ -398,7 +456,7 @@ export default function RelojChecador({
   const finCodigoCara = (evento) => {
     setCodigoCara(null);
     tecladoCerradoRef.current = Date.now();
-    if (evento?.tipo === "fallo") enqueueSnackbar(evento.mensaje, { variant: "error", autoHideDuration: 5000 });
+    if (evento?.tipo === "fallo") avisar(evento.mensaje, "error", 5000);
   };
   const pedirCodigo = () => {
     if (!kiosco || tecladoCara || codigoCara || Date.now() - tecladoCerradoRef.current < 5000) return;
@@ -441,7 +499,7 @@ export default function RelojChecador({
       }
     } catch (err) {
       setPregunta(null);
-      enqueueSnackbar(err.response?.data?.error || err.message || "No se pudo registrar", { variant: "error" });
+      avisar(err.response?.data?.error || err.message || "No se pudo registrar");
     } finally {
       setRepitiendo(false);
     }
@@ -551,13 +609,21 @@ export default function RelojChecador({
     return <ErrorPage message="No se pudieron cargar los registros." />;
 
   const conexion = estadoConexion({ offline });
-  const accionCodigoCara = !kiosco ? null : codigoCara ? (
-    <button type="button" onClick={() => finCodigoCara(null)}
-      className="min-h-11 rounded-full bg-white/95 px-4 text-sm font-semibold text-slate-800 shadow-lg">Cancelar · usar solo la cara</button>
+  const estiloAccionCamara = "inline-flex min-h-12 max-w-full items-center gap-2 rounded-full bg-white px-5 text-base font-semibold text-slate-900 shadow-lg ring-1 ring-slate-900/10 hover:bg-slate-50 active:scale-[0.98]";
+  // En «Código» o «QR» el teclado ya está a la vista: el botón solo acompaña al método «Rostro» (y al «Código y cara» en curso).
+  const accionCodigoCara = !kiosco || (metodoKiosco !== "rostro" && !codigoCara) ? null : codigoCara ? (
+    <button type="button" onClick={() => finCodigoCara(null)} className={estiloAccionCamara}>
+      <XCircle className="size-5 shrink-0 text-slate-500" aria-hidden="true" /><span className="truncate">Cancelar · usar solo la cara</span>
+    </button>
   ) : (
-    <button type="button" onClick={() => setTecladoCara({ motivo: "boton" })} data-boton-codigo-cara
-      className="min-h-11 rounded-full bg-white/95 px-4 text-sm font-semibold text-slate-800 shadow-lg">¿No te reconoce? Escribe tu código</button>
+    <button type="button" onClick={() => setTecladoCara({ motivo: "boton" })} data-boton-codigo-cara className={estiloAccionCamara}>
+      <Keyboard className="size-5 shrink-0 text-brand" aria-hidden="true" /><span className="truncate">¿No te reconoce? Usa tu código</span>
+    </button>
   );
+  const cambiarMetodoKiosco = (id) => {
+    setMetodoKiosco(id);
+    if (id === "rostro" && !mostrarCamara) abrirCamara();
+  };
   const panelRostro = (
     <FacialRecognitionPanel
       isOpen={mostrarCamara}
@@ -574,6 +640,7 @@ export default function RelojChecador({
       onCodigoCara={finCodigoCara}
       onPedirCodigo={pedirCodigo}
       accionInferior={accionCodigoCara}
+      onErrorVisible={kiosco ? () => sonidoRef.current?.error() : undefined}
     />
   );
 
@@ -584,38 +651,50 @@ export default function RelojChecador({
           <PantallaKiosco
             horaActual={horaActual}
             fechaActual={fechaActual}
+            nombreEmpresa={nombreEmpresa}
             onTocarHora={tocarHora}
             conexion={conexion}
             menu={dataUser ? <ClockNavigation companyId={idEmpresa} companySlug={companySlug} /> : null}
+            metodo={metodoKiosco}
+            onCambiarMetodo={cambiarMetodoKiosco}
             codigo={codigoEmpleado}
             setCodigo={setCodigoEmpleado}
             onRegistrar={registrarMovimiento}
             onAbrirQR={handleOpenQR}
             registrando={registrando || loadingGPS}
-            enqueueSnackbar={enqueueSnackbar}
+            avisar={avisar}
+            sonido={{ activo: sonidoActivo, onCambiar: cambiarSonido }}
             avisoUbicacion={ubicacionGPS ? `Última lectura: precisión ±${Math.ceil(ubicacionGPS.accuracy)} m. Usa ubicación precisa para checar.` : null}
             camara={!offline ? (
               <>
                 {panelRostro}
-                <AvisoVoyAComer activo={Boolean(voyAComer)} segundos={segundosComer} posicion="top-16 sm:top-3" />
+                {/* Avisos sobre el video: «Código y cara» y «Salida a comer» (entre los botones de la cámara, sin taparlos). */}
+                <div className="pointer-events-none absolute inset-x-0 top-3 z-10 flex flex-wrap justify-center gap-2 pl-16 pr-28">
+                  {codigoCara && (
+                    <p className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-brand px-3 py-1.5 text-sm font-semibold text-white shadow-lg" data-chip-codigo-cara>
+                      <ScanFace className="size-4 shrink-0" aria-hidden="true" />Código y cara
+                    </p>
+                  )}
+                  <AvisoVoyAComer activo={Boolean(voyAComer)} segundos={segundosComer} enLinea corto />
+                </div>
                 {/* Ajuste del aparato: discreto sobre el video (antes era una franja «Cámara siempre encendida»). */}
                 {mostrarCamara && (
                   <button type="button" onClick={cambiarCamaraFija} aria-pressed={camaraFija}
                     aria-label="Cámara siempre encendida" title={camaraFija ? "Cámara siempre encendida: queda lista para la siguiente persona" : "La cámara se apaga al checar"}
-                    className={`absolute left-3 top-3 z-10 grid size-10 place-items-center rounded-full bg-slate-900/55 text-white ${camaraFija ? "" : "opacity-70"}`}>
+                    className={`absolute left-3 top-3 z-10 grid size-10 place-items-center rounded-full bg-slate-900/55 text-white backdrop-blur-sm ${camaraFija ? "" : "opacity-70"}`}>
                     {camaraFija ? <Pin className="size-5" aria-hidden="true" /> : <PinOff className="size-5" aria-hidden="true" />}
                   </button>
                 )}
               </>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center gap-2 bg-slate-100 p-6 text-center">
-                <Camera className="size-10 text-slate-400" aria-hidden="true" />
-                <p className="font-semibold text-slate-700">Rostro no disponible sin conexión</p>
-                <p className="text-sm text-slate-500">Restablece la conexión para registrar una checada.</p>
+              <div className="flex h-full flex-col items-center justify-center gap-3 bg-slate-100 p-6 text-center">
+                <span className="grid size-16 place-items-center rounded-2xl bg-white text-slate-400 shadow-sm"><Camera className="size-8" aria-hidden="true" /></span>
+                <p className="text-lg font-semibold text-slate-800">Rostro no disponible sin conexión</p>
+                <p className="text-sm text-slate-600">Restablece la conexión para registrar una checada.</p>
               </div>
             )}
             recientes={<UltimosRegistros movimientos={movimientos} isLoading={isLoading} formatearHora={formatearHora} empleadosActivos={empleadosActivos} totalRegistros={totalRegistros} />}
-            extra={<BotonVoyAComer variante="kiosco" activo={Boolean(voyAComer)} segundos={segundosComer} onCambiar={cambiarVoyAComer} disabled={offline} />}
+            voyAComer={{ activo: Boolean(voyAComer), segundos: segundosComer, total: DURACION_VOY_A_COMER_S, onCambiar: cambiarVoyAComer, disabled: offline }}
           />
         ) : (
         <div className="mx-auto max-w-7xl md:space-y-6">
@@ -832,16 +911,21 @@ export default function RelojChecador({
 
         {tecladoCara && <TecladoCodigoCara motivo={tecladoCara.motivo} onContinuar={continuarCodigoCara} onCancelar={cerrarTecladoCara} />}
         {pregunta && (
-          <div className={kiosco ? "fixed inset-0 z-100 flex items-center justify-center bg-slate-900/40 p-4" : "fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-100 md:inset-0 md:flex md:items-center md:justify-center md:bg-slate-900/40 md:p-4"}>
-            <div role="alertdialog" aria-labelledby="pregunta-repetida" className="mx-auto w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-200">
-              <p className="text-base font-bold text-slate-900">{pregunta.empleado?.nombre} {pregunta.empleado?.apellido_paterno}</p>
-              <p id="pregunta-repetida" className="mt-1 text-sm text-slate-700">{String(pregunta.pregunta).replace(/\.?$/, ".")} ¿Registrar otra vez?</p>
-              <p className="mt-1 text-xs text-slate-500">Solo si de verdad sales o regresas; si fue un doble toque, no hace falta.</p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setPregunta(null)} disabled={repitiendo}
-                  className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">No, está bien</button>
-                <button type="button" onClick={registrarDeTodosModos} disabled={repitiendo}
-                  className="min-h-11 rounded-xl bg-brand px-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60">{repitiendo ? "Registrando…" : "Sí, registrar"}</button>
+          <div className={kiosco ? "fixed inset-0 z-100 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm" : "fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-100 md:inset-0 md:flex md:items-center md:justify-center md:bg-slate-900/40 md:p-4"}>
+            <div role="alertdialog" aria-labelledby="pregunta-repetida" className={`mx-auto w-full rounded-2xl border border-slate-200 bg-white shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-200 ${kiosco ? "max-w-md p-6" : "max-w-sm p-4"}`}>
+              <div className="flex items-start gap-3">
+                <span className={`grid shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600 ${kiosco ? "size-12" : "size-10"}`}><Clock4 className="size-6" aria-hidden="true" /></span>
+                <div className="min-w-0">
+                  <p className={`font-bold text-slate-900 ${kiosco ? "text-xl" : "text-base"}`}>{pregunta.empleado?.nombre} {pregunta.empleado?.apellido_paterno}</p>
+                  <p id="pregunta-repetida" className={`mt-1 text-slate-700 ${kiosco ? "text-base" : "text-sm"}`}>{String(pregunta.pregunta).replace(/\.?$/, ".")} ¿Registrar otra vez?</p>
+                  <p className="mt-1 text-xs text-slate-500">Solo si de verdad sales o regresas; si fue un doble toque, no hace falta.</p>
+                </div>
+              </div>
+              <div className={`grid grid-cols-2 gap-2 ${kiosco ? "mt-5" : "mt-3"}`}>
+                <Button type="button" variant="outline" onClick={() => setPregunta(null)} disabled={repitiendo}
+                  className={`rounded-xl font-semibold text-slate-700 ${kiosco ? "h-12 text-base" : "h-11"}`}>No, está bien</Button>
+                <Button type="button" onClick={registrarDeTodosModos} disabled={repitiendo}
+                  className={`rounded-xl font-semibold ${kiosco ? "h-12 text-base" : "h-11"}`}>{repitiendo ? "Registrando…" : "Sí, registrar"}</Button>
               </div>
             </div>
           </div>
@@ -872,84 +956,47 @@ export default function RelojChecador({
           );
         })()}
 
-        {popupInfo && (
-          <div className={`fixed inset-0 z-100 items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 ${kiosco ? "flex" : "hidden md:flex"}`}>
-            <div className="bg-white rounded-[3rem] shadow-2xl p-8 md:p-10 text-center max-w-sm w-full transform animate-bounce-in border border-slate-100">
-              <div className="relative mb-6">
-                <img
-                  src={popupInfo.foto_perfil}
-                  className="w-32 h-32 object-cover rounded-full mx-auto border-8 border-slate-50 shadow-xl"
-                  alt="perfil"
-                />
-                <div
-                  className={`absolute bottom-0 right-1/4 w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-4 border-white ${
-                    popupInfo.pending ? (popupInfo.errorServidor ? "bg-amber-500" : "bg-blue-500") : popupInfo.success ? "bg-green-500" : "bg-red-500"
-                  }`}
-                >
-                  {popupInfo.pending ? (
-                    <Clock4 className="w-5 h-5 text-white" />
-                  ) : popupInfo.success ? (
-                    <CheckCircle className="w-5 h-5 text-white" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-white" />
-                  )}
-                </div>
-              </div>
-              <h3 className="text-3xl font-black text-slate-800 mb-2 tracking-tighter">
-                {popupInfo.nombre}
-              </h3>
-              <p className="text-slate-500 font-bold uppercase text-xs tracking-widest mb-6">
-                {popupInfo.movimiento}
-              </p>
-              {popupInfo.pending && popupInfo.motivo && (
-                <p className="-mt-3 mb-5 text-sm font-medium text-amber-700">{popupInfo.motivo}</p>
-              )}
-              {popupInfo.volviendo && <p className="-mt-3 mb-5 text-sm text-slate-500">Regresando a tu inicio…</p>}
-              <div
-                className={`py-3 px-6 rounded-2xl inline-flex items-center gap-2 ${
-                  popupInfo.pending
-                    ? popupInfo.errorServidor ? "bg-amber-50 text-amber-800" : "bg-blue-50 text-blue-800"
-                    : popupInfo.success
-                    ? "bg-green-50 text-green-600"
-                    : "bg-red-50 text-red-600"
-                }`}
-              >
-                {popupInfo.pending ? <Clock4 className="w-5 h-5" /> : popupInfo.success ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
-                <span className="font-black text-sm uppercase">{popupInfo.pending ? (popupInfo.errorServidor ? 'Error del servidor · avisa a RH' : 'Pendiente de subir') : popupInfo.success ? '¡Éxito!' : 'No se registró · avisa a RH'}</span>
-              </div>
-            </div>
-          </div>
-        )}
+        {popupInfo && <ResultadoChecada info={popupInfo} duracion={popupInfo.duracion} className={kiosco ? "flex" : "hidden md:flex"} />}
+        <AvisoKiosco aviso={kiosco ? avisoKiosco : null} onCerrar={() => { clearTimeout(temporizadorAviso.current); setAvisoKiosco(null); }} />
 
         {mostrarModalTurno && (
           <div className="fixed inset-0 z-110 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
-            <div className="bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl p-8 w-full max-w-sm animate-in slide-in-from-bottom-10 duration-300">
-              <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden" />
+            <div role="dialog" aria-modal="true" aria-labelledby="titulo-turno" className="w-full max-w-md rounded-t-3xl md:rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl animate-in slide-in-from-bottom-10 duration-300">
+              <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-slate-200 md:hidden" />
               {/* Opciones que manda el servidor: «Salir a comer» / «Registrar salida» o las de cierre manual. */}
-              <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">
-                {pendiente?.opciones?.includes("salida_comida") ? "¿Sales a comer?" : "Turno abierto"}
-              </h2>
+              <div className="flex items-start gap-3">
+                <span className={`grid size-12 shrink-0 place-items-center rounded-xl ${pendiente?.opciones?.includes("salida_comida") ? "bg-amber-50 text-amber-600" : "bg-brand/10 text-brand"}`}>
+                  {pendiente?.opciones?.includes("salida_comida") ? <Utensils className="size-6" aria-hidden="true" /> : <DoorOpen className="size-6" aria-hidden="true" />}
+                </span>
+                <div className="min-w-0">
+                  <h2 id="titulo-turno" className="text-2xl font-bold tracking-tight text-slate-900">
+                    {pendiente?.opciones?.includes("salida_comida") ? "¿Sales a comer?" : "Turno abierto"}
+                  </h2>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                    {pendiente?.opciones?.includes("salida_comida")
+                      ? "Elige si sales a comer (tu jornada sigue abierta) o si terminas tu jornada."
+                      : "Detectamos que ya tienes un turno en proceso. ¿Cuál es el siguiente paso?"}
+                  </p>
+                </div>
+              </div>
               {/* (26/11/2026) «Voy a comer» de quien ya comió (cierre manual): el aviso del servidor y sus opciones. */}
               {pendiente?.aviso === "comida_ya_registrada" && (
-                <p className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" data-aviso-comida>Ya registraste tu comida hoy.</p>
+                <p className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" data-aviso-comida>Ya registraste tu comida hoy.</p>
               )}
-              <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed">
-                {pendiente?.opciones?.includes("salida_comida")
-                  ? "Elige si sales a comer (tu jornada sigue abierta) o si terminas tu jornada."
-                  : "Detectamos que ya tienes un turno en proceso. ¿Cuál es el siguiente paso?"}
-              </p>
-              <div className="flex flex-col gap-3">
+              <div className="mt-6 flex flex-col gap-2.5">
                 {(pendiente?.opciones?.length ? pendiente.opciones : OPCIONES_SIN_DATOS).map((opcion) => {
                   const estilo = {
-                    salida_comida: "bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-200 disabled:bg-amber-300",
-                    salida: "bg-white text-blue-700 border-2 border-blue-200 hover:bg-blue-50",
-                    salida_temporal: "bg-slate-100 hover:bg-slate-200 text-slate-900 border-none",
-                    cerrar_turno: "bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-200 border-none disabled:bg-red-300",
+                    salida_comida: "bg-amber-400 text-amber-950 hover:bg-amber-500",
+                    salida: "border border-slate-300 bg-white text-slate-900 hover:bg-slate-50",
+                    salida_temporal: "bg-slate-100 text-slate-900 hover:bg-slate-200",
+                    cerrar_turno: "bg-red-600 text-white hover:bg-red-700",
                   }[opcion] || "bg-slate-100 text-slate-900";
+                  const Icono = { salida_comida: Utensils, salida: LogOut, salida_temporal: DoorOpen, cerrar_turno: LogOut }[opcion];
                   const texto = { salida_comida: "Salir a comer", salida: "Registrar salida", salida_temporal: "Salida temporal", cerrar_turno: "Cerrar turno" }[opcion] || opcion;
                   return (
                     <Button key={opcion} onClick={() => registrarConAccion(opcion)} disabled={registrando}
-                      className={`w-full py-7 rounded-2xl font-bold transition-all disabled:opacity-50 ${estilo}`}>
+                      className={`h-14 w-full rounded-xl text-base font-semibold shadow-none transition-colors disabled:opacity-50 ${estilo}`}>
+                      {Icono && !registrando && <Icono className="size-5" aria-hidden="true" />}
                       {registrando ? "Procesando..." : texto}
                     </Button>
                   );
@@ -962,7 +1009,7 @@ export default function RelojChecador({
                   }}
                   disabled={registrando}
                   variant="ghost"
-                  className="w-full py-4 text-slate-400 font-bold hover:text-slate-600 disabled:opacity-30"
+                  className="h-12 w-full rounded-xl text-base font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-30"
                 >
                   Cancelar
                 </Button>
@@ -972,33 +1019,14 @@ export default function RelojChecador({
         )}
       </main>
 
-      <style jsx>{`
-        @keyframes bounce-in {
-          0% {
-            transform: scale(0.8) translateY(20px);
-            opacity: 0;
-          }
-          100% {
-            transform: scale(1) translateY(0);
-            opacity: 1;
-          }
-        }
-        .animate-bounce-in {
-          animation: bounce-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-      `}</style>
 
       {registrando && !mostrarQR && (
-        <div className="fixed inset-0 z-200 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center gap-4">
-            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-            <div className="text-center">
-              <p className="font-black text-slate-800 text-lg uppercase tracking-tighter">
-                Procesando Registro
-              </p>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
-                Obteniendo ubicación y validando...
-              </p>
+        <div className="fixed inset-0 z-200 flex items-center justify-center bg-slate-900/30 p-4 backdrop-blur-[2px]">
+          <div role="status" className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white px-6 py-5 shadow-2xl">
+            <span className="size-10 shrink-0 animate-spin rounded-full border-4 border-brand border-t-transparent" aria-hidden="true" />
+            <div>
+              <p className="text-lg font-semibold text-slate-900">Registrando tu checada…</p>
+              <p className="text-sm text-slate-500">Obteniendo ubicación y validando</p>
             </div>
           </div>
         </div>

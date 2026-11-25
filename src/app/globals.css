@@ -4,11 +4,6 @@
 @import "./employee-fields.css";
 
 @custom-variant dark (&:is(.dark *));
-/* Reloj checador en modo kiosco (src/components/Clock/PantallaKiosco.jsx): acomodo según el alto disponible
-   para que siempre quepa en una pantalla, también con el celular acostado. */
-@custom-variant kiosco-horizontal (@media (orientation: landscape) and (min-height: 32rem));
-@custom-variant kiosco-bajo (@media (orientation: landscape) and (max-height: 31.99rem));
-@custom-variant kiosco-grande (@media (min-width: 48rem) and (min-height: 32rem));
 
 @theme inline {
   /* Marca ADAMIA: habilita utilidades bg-brand / text-brand / from-brand /
@@ -465,4 +460,19 @@ th *,
 [data-slot="table-head"] * {
   text-transform: none;
   letter-spacing: normal;
+}
+
+/* Reloj checador (src/components/Clock/ResultadoChecada.jsx): entrada de la confirmación y barra que se vacía mientras
+   se muestra. */
+@keyframes bounce-in {
+  0% { transform: scale(0.92) translateY(16px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+.animate-bounce-in { animation: bounce-in 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+@keyframes vaciar {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-bounce-in { animation: none; }
 }

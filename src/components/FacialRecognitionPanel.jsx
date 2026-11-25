@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from "react";
-import { Camera, Power, RotateCcw } from "lucide-react";
+import { Camera, Power, RotateCcw, ScanFace } from "lucide-react";
 import { enqueueSnackbar } from "notistack";
 import axiosInstance from "@/lib/axios";
 import { Button } from "./ui/button";
@@ -32,6 +32,8 @@ const FacialRecognitionPanel = ({
   onPedirCodigo,
   // Botones del reloj debajo del aviso de estado (p. ej. «¿No te reconoce? Escribe tu código»).
   accionInferior = null,
+  // Reloj de la empresa: el aviso de error apareció en pantalla (para su sonido; los reintentos silenciosos no cuentan).
+  onErrorVisible,
 }) => {
   // El análisis corre en un intervalo creado al encender la cámara: leer `continuo`
   // directo dejaba el valor de ese momento y el interruptor no surtía efecto hasta reiniciarla.
@@ -541,11 +543,17 @@ const FacialRecognitionPanel = ({
     onClose();
   };
 
+  const onErrorVisibleRef = useRef(onErrorVisible);
+  onErrorVisibleRef.current = onErrorVisible;
+  useEffect(() => {
+    if (error) onErrorVisibleRef.current?.(error);
+  }, [error]);
+
   const getStatusMessage = () => {
     if (error) return { text: error, color: "bg-red-600" };
     if (modelError) return { text: modelError, color: "bg-red-600" };
     if (!faceApiLoaded)
-      return { text: "Preparando reconocimiento facial...", color: "bg-gray-700" };
+      return { text: pantallaCompleta ? "Preparando reconocimiento…" : "Preparando reconocimiento facial...", color: "bg-gray-700" };
     if (isLoading)
       return { text: "Procesando reconocimiento...", color: "bg-gray-700" };
     if (!cameraReady)
@@ -647,14 +655,15 @@ const FacialRecognitionPanel = ({
                     style={cameraFacing === "user" ? { transform: "scaleX(-1)" } : undefined}
                   />
                   {pantallaCompleta && (
-                    <div aria-hidden="true" className={`pointer-events-none absolute left-1/2 top-[44%] h-[52%] max-h-80 aspect-[3/4] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-[3px] shadow-[0_0_0_9999px_rgba(2,6,23,0.35)] transition-colors ${acercate ? "border-amber-400" : resultadoChecada === "registrada" || faceDetected ? "border-green-400" : resultadoChecada ? "border-amber-400" : "border-white/85"}`} />
+                    // Marco del rostro: óvalo grueso con el resto del video atenuado; verde al detectar, ámbar si hay que acercarse.
+                    <div aria-hidden="true" data-marco-rostro className={`pointer-events-none absolute left-1/2 top-[42%] h-[58%] max-h-[30rem] aspect-[3/4] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-4 shadow-[0_0_0_9999px_rgba(15,23,42,0.42)] transition-colors duration-300 ${acercate ? "border-amber-400" : resultadoChecada === "registrada" || faceDetected ? "border-emerald-400" : resultadoChecada ? "border-amber-400" : "border-white"}`} />
                   )}
                   <div className={`absolute right-3 flex gap-2 ${pantallaCompleta ? (ubicacionGPS ? "top-14" : "top-3") : "md:hidden top-4"}`}>
                     {pantallaCompleta ? (<>
                       <button type="button" aria-label="Cambiar de cámara" onClick={() => setCameraFacing((prev) => (prev === "user" ? "environment" : "user"))}
-                        className="grid size-10 place-items-center rounded-full bg-slate-900/55 text-white"><RotateCcw className="size-5" /></button>
+                        className="grid size-10 place-items-center rounded-full bg-slate-900/55 text-white backdrop-blur-sm"><RotateCcw className="size-5" /></button>
                       <button type="button" aria-label="Apagar cámara" onClick={handleOpenFacialModal}
-                        className="grid size-10 place-items-center rounded-full bg-slate-900/55 text-white"><Power className="size-5" /></button>
+                        className="grid size-10 place-items-center rounded-full bg-slate-900/55 text-white backdrop-blur-sm"><Power className="size-5" /></button>
                     </>) : (<>
                     <Button
                       onClick={() =>
@@ -680,14 +689,24 @@ const FacialRecognitionPanel = ({
 
                   {(() => {
                     const { text, color } = getStatusMessage();
+                    // Pantalla completa (kiosco y celular): aviso grande y legible a un paso; en espera, blanco con el azul de marca.
+                    const grande = {
+                      "bg-gray-600": "bg-white text-slate-900", "bg-gray-700": "bg-white/95 text-slate-700",
+                      "bg-blue-600": "bg-brand text-white", "bg-green-600": "bg-emerald-600 text-white",
+                      "bg-amber-600": "bg-amber-400 text-amber-950", "bg-red-600": "bg-red-600 text-white",
+                    }[color] || `${color} text-white`;
                     return (
-                      <div className={`absolute inset-x-0 flex flex-col items-center gap-2 px-4 ${pantallaCompleta ? "bottom-4" : "bottom-3"}`}>
+                      <div className={`absolute inset-x-0 flex flex-col items-center px-4 ${pantallaCompleta ? "bottom-4 gap-3 sm:bottom-6 [@container(max-height:26rem)_and_(min-width:40rem)]:flex-row [@container(max-height:26rem)_and_(min-width:40rem)]:justify-center" : "bottom-3 gap-2"}`}>
                         <div
                           role="status"
                           data-estado-camara
-                          className={`px-4 py-2 text-white text-sm font-medium shadow-lg ${color} bg-opacity-90 text-center ${pantallaCompleta ? "max-w-full rounded-full" : "rounded-lg"}`}
+                          className={pantallaCompleta
+                            ? `flex max-w-full items-center gap-2.5 rounded-2xl px-4 py-2.5 text-center text-base font-semibold shadow-lg [@container(min-width:28rem)]:px-5 [@container(min-width:28rem)]:py-3 [@container(min-width:28rem)]:text-lg [@container(min-width:40rem)]:text-xl ${grande}`
+                            : `px-4 py-2 text-white text-sm font-medium shadow-lg ${color} bg-opacity-90 text-center rounded-lg`}
                         >
-                          {text}
+                          {pantallaCompleta && color === "bg-gray-600" && <ScanFace className="size-6 shrink-0 text-brand" aria-hidden="true" />}
+                          {pantallaCompleta && color === "bg-gray-700" && <span aria-hidden="true" className="size-4 shrink-0 animate-spin rounded-full border-2 border-slate-400 border-t-transparent" />}
+                          <span>{text}</span>
                         </div>
                         {accionInferior}
                       </div>

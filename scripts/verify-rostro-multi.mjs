@@ -5,7 +5,7 @@
 //  POST /checador/reloj/registrar-facial y POST /checador/reloj/registrar y guarda los intentos fallidos.
 //  1) Reloj de la empresa (1440 y 390): cara sola con referencias por pose; una persona «Código y cara» que intenta con la
 //     cara sola → se le pide su código (teclado grande, teclas ≥ 44 px) y UN solo POST manda cara + código (1 a 1); si
-//     escribe solo su código (METHOD_CODE_FACE) la cámara confirma; «¿No te reconoce? Escribe tu código» con código
+//     escribe solo su código (METHOD_CODE_FACE) la cámara confirma; «¿No te reconoce? Usa tu código» con código
 //     inexistente, sin rostro y cara que no coincide; un rostro parecido (89 %) no checa y queda como intento.
 //  2) App del empleado (390): manda `modo: "app"` con su sesión; el servidor compara SOLO con sus fotos (un compañero no
 //     checa) y guarda el intento como «App del empleado».
@@ -22,6 +22,7 @@ import { createServer } from "node:net";
 import { createRequire } from "node:module";
 import { mkdir } from "node:fs/promises";
 import { faceapiPoses, completarPoses, HUELLA_FUENTE } from "./rostro-faceapi-poses.mjs";
+import { AUDIO_FALSO, NOTA } from "./audio-falso.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -313,12 +314,13 @@ try {
     window.__escena = { persona: "ninguna", pose: "frente" };
   });
   await ctxK.addInitScript({ content: faceapiPoses });
+  await ctxK.addInitScript({ content: AUDIO_FALSO });
   await rutas(ctxK, null);
   const k = await nuevaPagina(ctxK, "kiosco 1440");
   await k.goto(base + "/demo", { waitUntil: "domcontentloaded" });
-  await k.getByPlaceholder("Ingresa tu código").waitFor({ timeout: 30000 });
+  const tonosError = () => k.evaluate((f) => window.__sonidos.filter((x) => x.f === f).map((x) => x.t), NOTA.error);
   await k.locator("[data-estado-camara]").waitFor({ timeout: 30000 });
-  const botonCodigoCara = k.getByRole("button", { name: "¿No te reconoce? Escribe tu código" });
+  const botonCodigoCara = k.getByRole("button", { name: "¿No te reconoce? Usa tu código" });
   await botonCodigoCara.waitFor();
   assert.ok((await botonCodigoCara.boundingBox()).height >= 44, "botón «¿No te reconoce?» de 44 px");
   const aceptadas = (id) => checadas.filter((c) => c.id === id);
@@ -377,6 +379,7 @@ try {
 
   // b2) Luis (también «Código y cara») escribe solo su código en el teclado del reloj: METHOD_CODE_FACE → la cámara
   //     confirma con ese código. (Caro ya checó: el reloj no la repite en unos segundos.)
+  await k.locator("[data-metodo=codigo]").click(); // rediseño 26/11/2026: el teclado está en «Código»
   const campoCodigo = k.getByPlaceholder("Ingresa tu código");
   await campoCodigo.fill("3030");
   await campoCodigo.press("Enter");
@@ -385,10 +388,11 @@ try {
   await hasta(() => aceptadas(30).length === 1, "Luis confirmado con la cámara", 20000);
   assert.equal(aceptadas(30)[0].body.codigo, "3030");
   assert.equal(aceptadas(30)[0].url, "/checador/reloj/registrar-facial");
+  await k.locator("[data-metodo=rostro]").click(); // «¿No te reconoce?» acompaña al método «Rostro»
   await escena(k, "ninguna");
   await dormir(3000);
 
-  // c) «¿No te reconoce? Escribe tu código»: el servidor dice si el código no existe o si no tiene rostro.
+  // c) «¿No te reconoce? Usa tu código»: el servidor dice si el código no existe o si no tiene rostro.
   const codigoYCara = async (codigo, quien) => {
     await botonCodigoCara.click();
     const t = k.getByRole("dialog", { name: "Checar con código y cara" });
@@ -399,8 +403,10 @@ try {
     await k.getByText("Mira a la cámara para confirmar que eres tú").waitFor({ timeout: 5000 });
     await escena(k, quien);
   };
+  const errorAntes = (await tonosError()).length;
   await codigoYCara("9999", "otra");
   await k.getByText("Ese código no existe en esta empresa. Revísalo e intenta de nuevo.").first().waitFor({ timeout: 15000 });
+  await hasta(async () => (await tonosError()).length === errorAntes + 1, "tono de error al mostrar «Ese código no existe»", 5000);
   await escena(k, "ninguna");
   await dormir(2500);
   await codigoYCara("4004", "otra");
@@ -415,8 +421,15 @@ try {
   await dormir(1500);
 
   // e) Un rostro parecido (89 %) con la cara sola: no checa y queda como intento fallido (lo guarda el servidor).
+  await dormir(3100);
+  const desdeParecida = Date.now();
   await escena(k, "parecida");
   await hasta(() => intentos.some((i) => i.motivo === "sin_coincidencia" && i.id_empleado === 15), "intento sin coincidencia", 20000);
+  await k.locator("[data-estado-camara]").filter({ hasText: /coincidencia/i }).waitFor({ timeout: 20000 });
+  await dormir(7000); // la cámara sigue reintentando con el aviso a la vista
+  const tonos = (await tonosError()).filter((x) => x >= desdeParecida);
+  assert.ok(tonos.length >= 1, "suena al aparecer «sin coincidencia» en pantalla");
+  assert.ok(tonos.every((x, i) => i === 0 || x - tonos[i - 1] >= 2990), `reintentos sin tono extra (uno cada 3 s): ${tonos.map((x) => x - desdeParecida)}`);
   await captura(k, "kiosco-1440-sin-coincidencia");
   await escena(k, "ninguna");
   assert.equal(aceptadas(15).length, 1, "el parecido no checa");
@@ -452,8 +465,8 @@ try {
   await rutas(ctxK2, null);
   const k2 = await nuevaPagina(ctxK2, "kiosco 390");
   await k2.goto(base + "/demo", { waitUntil: "domcontentloaded" });
-  await k2.getByPlaceholder("Ingresa tu código").waitFor({ timeout: 30000 });
-  await k2.getByRole("button", { name: "¿No te reconoce? Escribe tu código" }).click();
+  await k2.locator("[data-estado-camara]").waitFor({ timeout: 30000 });
+  await k2.getByRole("button", { name: "¿No te reconoce? Usa tu código" }).click();
   const t2 = k2.getByRole("dialog", { name: "Checar con código y cara" });
   await t2.waitFor();
   for (const d of "30") await t2.getByRole("button", { name: d, exact: true }).click();
@@ -494,7 +507,7 @@ try {
   const app = await nuevaPagina(ctxE, "app 390");
   await app.goto(base + "/empleado/reloj-checador", { waitUntil: "domcontentloaded" });
   await app.locator("[data-estado-camara]").waitFor({ timeout: 30000 });
-  assert.equal(await app.getByRole("button", { name: "¿No te reconoce? Escribe tu código" }).count(), 0, "en la app no hay código y cara");
+  assert.equal(await app.getByRole("button", { name: "¿No te reconoce? Usa tu código" }).count(), 0, "en la app no hay código y cara");
   const antes = checadas.length;
   await escena(app, "luis"); // un compañero frente al celular de Ana (en el kiosco sí lo reconocería)
   await hasta(() => intentos.some((i) => i.modo === "app"), "intento de la app guardado", 20000);

@@ -1,5 +1,5 @@
 // Verificación en navegador del reloj checador de la empresa (/<slug>) como kiosco: en 1440×900, 1280×720, 1024×768,
-// tablet vertical 768×1024 y celular 390×844 todo cabe en una pantalla (sin desplazar el documento), sin la barra del
+// tabletas 1180×820, 820×1180 y 768×1024, 1920×1080, 1366×768 y celular 390×844 todo cabe en una pantalla (sin desplazar el documento), sin la barra del
 // sitio público ni el encabezado «Reloj checador / Registro de entradas… / Reconocimiento offline preparado…», con la
 // hora, el código, el teclado (teclas ≥ 56 px; ≥ 48 px en celular) y «Registrar» dentro de la pantalla, y los avisos
 // «¿Registrar otra vez?» y el resultado centrados. Sin errores de JavaScript. Backend simulado: nada sale a internet.
@@ -25,9 +25,13 @@ if (process.env.CAPTURAS) await mkdir(process.env.CAPTURAS, { recursive: true })
 const captura = (pg, nombre) => (process.env.CAPTURAS ? pg.screenshot({ path: `${process.env.CAPTURAS}/${nombre}.png` }) : null);
 
 const TAMANOS = [
+  { nombre: "1920x1080", width: 1920, height: 1080 },
   { nombre: "1440x900", width: 1440, height: 900 },
+  { nombre: "1366x768", width: 1366, height: 768 },
   { nombre: "1280x720", width: 1280, height: 720 },
   { nombre: "1024x768", width: 1024, height: 768 },
+  { nombre: "tablet-1180x820", width: 1180, height: 820, isMobile: true, hasTouch: true },
+  { nombre: "tablet-820x1180", width: 820, height: 1180, isMobile: true, hasTouch: true },
   { nombre: "tablet-768x1024", width: 768, height: 1024, isMobile: true, hasTouch: true },
   { nombre: "celular-390x844", width: 390, height: 844, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
 ];
@@ -71,10 +75,22 @@ try {
     pg.on("pageerror", (e) => errores.push(e.message));
 
     await pg.goto(base + "/demo", { waitUntil: "domcontentloaded" });
-    const codigo = pg.getByPlaceholder("Ingresa tu código");
-    await codigo.waitFor({ state: "visible", timeout: 30000 });
+    await pg.locator("[data-estado-camara]").waitFor({ timeout: 30000 });
     await pg.getByText(/^\d{1,2}:\d{2}:\d{2}$/).waitFor({ timeout: 10000 });
     await dormir(2500); // cámara falsa, perfil sin conexión y registros terminan de pintarse
+    // Rediseño 26/11/2026: abre en «Rostro», con el aviso grande y «¿No te reconoce? Usa tu código» completo dentro de la cámara.
+    const seccionCamara = await pg.getByRole("region", { name: "Cámara" }).boundingBox();
+    for (const [loc, que] of [[pg.locator("[data-estado-camara]"), "aviso de la cámara"], [pg.getByRole("button", { name: "¿No te reconoce? Usa tu código" }), "«¿No te reconoce?»"]]) {
+      const b = await loc.boundingBox();
+      assert.ok(b && b.y >= seccionCamara.y && b.y + b.height <= seccionCamara.y + seccionCamara.height + 0.5 && b.x >= seccionCamara.x - 0.5 && b.x + b.width <= seccionCamara.x + seccionCamara.width + 0.5, `${t.nombre}: ${que} completo dentro de la cámara`);
+      assert.ok(b.height >= 44, `${t.nombre}: ${que} de ${Math.round(b.height)} px`);
+    }
+    const sinScrollRostro = await pg.evaluate(() => document.scrollingElement.scrollHeight <= innerHeight && document.scrollingElement.scrollWidth <= innerWidth);
+    assert.ok(sinScrollRostro, `${t.nombre}: en «Rostro» sin desplazamiento`);
+    await captura(pg, `reloj-${t.nombre}-rostro`);
+    await pg.getByRole("button", { name: /^Código$/ }).click();
+    const codigo = pg.getByPlaceholder("Ingresa tu código");
+    await codigo.waitFor({ state: "visible", timeout: 10000 });
 
     // 1) Una sola pantalla: el documento no se desplaza.
     const medidas = await pg.evaluate(() => ({ alto: document.scrollingElement.scrollHeight, ancho: document.scrollingElement.scrollWidth, vh: innerHeight, vw: innerWidth }));
@@ -146,7 +162,7 @@ try {
     await ctx.close();
   }
   exito = true;
-  console.log("OK reloj kiosco: una sola pantalla en 5 tamaños, sin barra pública ni encabezado, hora/código/teclado visibles y avisos centrados");
+  console.log(`OK reloj kiosco: una sola pantalla en ${TAMANOS.length} tamaños, sin barra pública ni encabezado, hora/código/teclado visibles y avisos centrados`);
 } finally {
   await browser.close();
   try { process.kill(-next.pid); } catch { next.kill(); }
