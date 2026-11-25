@@ -66,7 +66,15 @@ export const FILTROS = [
 export const paramsFiltro = (valor) => FILTROS.find((f) => f.valor === valor)?.params ?? {};
 
 // ——— Preguntas de la entrevista por vacante ———
+// Lumo fase B2 (25/11/2026): las mismas preguntas son también los CAMPOS DE LA ENTREVISTA. uso = «filtro» (califica,
+// como siempre) o «dato» (solo informa, con obligatoria). Tipos fecha y archivo solo como dato. 8 de filtro y 20 en total.
 export const MAX_PREGUNTAS = 8;
+export const MAX_CAMPOS = 20;
+export const TIPOS_SOLO_DATO = new Set(["fecha", "archivo"]);
+export const USOS = [
+  { valor: "filtro", texto: "Filtra", ayuda: "Califica al candidato" },
+  { valor: "dato", texto: "Solo informa", ayuda: "Dato para el reclutador" },
+];
 export const MAX_OPCIONES = 10;
 export const LIMITE_PREGUNTA = 300;
 export const LIMITE_OPCION = 80;
@@ -76,6 +84,8 @@ export const TIPOS = [
   { valor: "opciones", texto: "Opciones" },
   { valor: "numero", texto: "Número" },
   { valor: "texto", texto: "Texto libre" },
+  { valor: "fecha", texto: "Fecha (solo informa)" },
+  { valor: "archivo", texto: "Archivo (solo informa)" },
 ];
 const TIPOS_VALIDOS = new Set(TIPOS.map((t) => t.valor));
 
@@ -85,9 +95,9 @@ const opcion = (texto, efecto = "ok") => ({ clave: nuevaClave(), texto, efecto }
 
 // En el formulario cada opción lleva su efecto («ok», «descarta» o «alerta»): así una respuesta no puede descartar y
 // alertar a la vez. Para «numero» los rangos se guardan como texto mientras se escriben.
-export function preguntaNueva(tipo = "si_no") {
+export function preguntaNueva(tipo = "si_no", uso = "filtro") {
   return {
-    clave: nuevaClave(), id: null, texto: "", tipo, activa: true,
+    clave: nuevaClave(), id: null, texto: "", tipo, activa: true, uso: TIPOS_SOLO_DATO.has(tipo) ? "dato" : uso, obligatoria: true,
     opciones: tipo === "si_no" ? OPCIONES_SI_NO.map((t) => opcion(t)) : tipo === "opciones" ? [opcion(""), opcion("")] : [],
     descarta: { min: "", max: "" }, alerta: { min: "", max: "" },
   };
@@ -96,8 +106,15 @@ export function preguntaNueva(tipo = "si_no") {
 // Cambiar el tipo conserva el texto y reinicia lo que ya no aplica.
 export function cambiarTipo(pregunta, tipo) {
   if (!TIPOS_VALIDOS.has(tipo) || pregunta.tipo === tipo) return pregunta;
-  const base = preguntaNueva(tipo);
-  return { ...base, clave: pregunta.clave, id: pregunta.id, texto: pregunta.texto, activa: pregunta.activa };
+  const base = preguntaNueva(tipo, pregunta.uso ?? "filtro");
+  return { ...base, clave: pregunta.clave, id: pregunta.id, texto: pregunta.texto, activa: pregunta.activa, obligatoria: pregunta.obligatoria !== false };
+}
+
+// Cambiar para qué sirve: un dato no descarta ni alerta (se limpian los efectos); fecha y archivo solo pueden ser dato.
+export function cambiarUso(pregunta, uso) {
+  if (pregunta.uso === uso || (uso === "filtro" && TIPOS_SOLO_DATO.has(pregunta.tipo))) return pregunta;
+  const limpia = { ...pregunta, uso, opciones: (pregunta.opciones ?? []).map((o) => ({ ...o, efecto: "ok" })), descarta: { min: "", max: "" }, alerta: { min: "", max: "" } };
+  return uso === "filtro" ? { ...limpia, obligatoria: true } : limpia;
 }
 
 const comoTextoNumero = (v) => (v === null || v === undefined || v === "" || !Number.isFinite(Number(v)) ? "" : String(v));
@@ -107,7 +124,8 @@ const mismaOpcion = (a, b) => String(a ?? "").trim().toLowerCase() === String(b 
 // Pregunta del API → pregunta del formulario.
 export function preguntaDesdeApi(p) {
   const tipo = TIPOS_VALIDOS.has(p?.tipo) ? p.tipo : "texto";
-  const base = { ...preguntaNueva(tipo), id: p?.id ?? null, texto: String(p?.texto ?? ""), activa: p?.activa !== false };
+  const uso = p?.uso === "dato" || TIPOS_SOLO_DATO.has(tipo) ? "dato" : "filtro";
+  const base = { ...preguntaNueva(tipo, uso), id: p?.id ?? null, texto: String(p?.texto ?? ""), activa: p?.activa !== false, obligatoria: uso === "filtro" ? true : p?.obligatoria !== false };
   if (tipo === "si_no" || tipo === "opciones") {
     const textos = tipo === "si_no" ? OPCIONES_SI_NO : (Array.isArray(p?.opciones) ? p.opciones.map(String) : []);
     const descartan = Array.isArray(p?.descartan) ? p.descartan : [];
@@ -155,7 +173,10 @@ export function validarPreguntas(lista) {
   const preguntas = Array.isArray(lista) ? lista : [];
   const errores = preguntas.map(() => ({}));
   let general = "";
-  if (preguntas.length > MAX_PREGUNTAS) general = `Máximo ${MAX_PREGUNTAS} preguntas por vacante.`;
+  if (preguntas.length > MAX_CAMPOS) general = `Máximo ${MAX_CAMPOS} preguntas por vacante.`;
+  else if (preguntas.filter((p) => p?.uso !== "dato").length > MAX_PREGUNTAS) {
+    general = preguntas.some((p) => p?.uso === "dato") ? `Máximo ${MAX_PREGUNTAS} preguntas que filtran por vacante.` : `Máximo ${MAX_PREGUNTAS} preguntas por vacante.`;
+  }
   const salida = preguntas.map((p, i) => {
     const e = errores[i];
     const texto = String(p?.texto ?? "").trim().replace(/\s+/g, " ");
@@ -163,7 +184,10 @@ export function validarPreguntas(lista) {
     else if (texto.length > LIMITE_PREGUNTA) e.texto = `Máximo ${LIMITE_PREGUNTA} caracteres.`;
     if (!e.texto && preguntas.slice(0, i).some((q) => mismaOpcion(String(q?.texto ?? "").replace(/\s+/g, " "), texto))) e.texto = "Esta pregunta está repetida.";
     if (!TIPOS_VALIDOS.has(p?.tipo)) e.tipo = "Elige el tipo de respuesta.";
-    const cuerpo = { orden: i + 1, texto, tipo: p?.tipo, opciones: null, descartan: null, alertan: null, activa: p?.activa !== false };
+    const dato = p?.uso === "dato";
+    if (!dato && TIPOS_SOLO_DATO.has(p?.tipo)) e.tipo = "Las de fecha o archivo solo informan.";
+    // Una de filtro manda el mismo cuerpo de siempre (el servidor la toma como filtro); un dato agrega uso y obligatoria.
+    const cuerpo = { orden: i + 1, texto, tipo: p?.tipo, opciones: null, descartan: null, alertan: null, activa: p?.activa !== false, ...(dato ? { uso: "dato", obligatoria: p?.obligatoria !== false } : {}) };
     if (p?.id !== null && p?.id !== undefined) cuerpo.id = p.id;
     if (p?.tipo === "si_no" || p?.tipo === "opciones") {
       const opciones = (p.opciones ?? []).map((o) => ({ ...o, texto: String(o.texto ?? "").trim().replace(/\s+/g, " ") }));
@@ -178,11 +202,11 @@ export function validarPreguntas(lista) {
       const efecto = (t) => opciones.find((o) => mismaOpcion(o.texto, t))?.efecto ?? "ok";
       const descartan = textos.filter((t) => efecto(t) === "descarta");
       const alertan = textos.filter((t) => efecto(t) === "alerta");
-      if (!e.opciones && textos.length && descartan.length === textos.length) e.descartan = "Al menos una respuesta debe dejar pasar al candidato.";
+      if (!dato && !e.opciones && textos.length && descartan.length === textos.length) e.descartan = "Al menos una respuesta debe dejar pasar al candidato.";
       cuerpo.opciones = textos;
-      cuerpo.descartan = descartan;
-      cuerpo.alertan = alertan;
-    } else if (p?.tipo === "numero") {
+      cuerpo.descartan = dato ? null : descartan;
+      cuerpo.alertan = dato ? null : alertan;
+    } else if (p?.tipo === "numero" && !dato) {
       const d = validarRango(p.descarta, "Respuestas que descartan");
       const a = validarRango(p.alerta, "Respuestas que alertan");
       if (d.error) e.descartan = d.error;
@@ -214,6 +238,10 @@ export function describirFueraDeRango(rango) {
 export function vistaPreviaPregunta(p) {
   const texto = String(p?.texto ?? "").trim() || "(escribe la pregunta)";
   const partes = [];
+  if (p?.uso === "dato") {
+    const como = p.tipo === "archivo" ? "se sube en el formulario" : p.tipo === "fecha" ? "se guarda la fecha" : "se guarda la respuesta";
+    return `Ej.: ${texto} → ${como} · ${p.obligatoria === false ? "opcional" : "obligatorio"} · no califica`;
+  }
   if (p?.tipo === "si_no" || p?.tipo === "opciones") {
     const con = (efecto) => (p.opciones ?? []).filter((o) => o.efecto === efecto && String(o.texto).trim()).map((o) => String(o.texto).trim());
     const d = con("descarta");
@@ -229,6 +257,16 @@ export function vistaPreviaPregunta(p) {
     return `Ej.: ${texto} → solo se guarda la respuesta`;
   }
   return `Ej.: ${texto} → ${partes.length ? partes.join(" · ") : "cualquier respuesta pasa"}`;
+}
+
+// Origen de un campo de la entrevista en la ficha.
+const ORIGENES = { boton: "Tocó un botón", texto: "Lo escribió", agente: "Lo registró el agente", formulario: "Lo llenó en el formulario" };
+export const etiquetaOrigenCampo = (origen) => ORIGENES[origen] ?? "";
+// Valor que se muestra en la ficha («15/01/2027» para una fecha).
+export function valorCampo(c) {
+  if (c?.valor == null || c.valor === "") return "";
+  if (c.tipo === "fecha" && /^\d{4}-\d{2}-\d{2}$/.test(c.valor)) { const [a, m, d] = c.valor.split("-"); return `${d}/${m}/${a}`; }
+  return String(c.valor);
 }
 
 export const textoConteoPreguntas = (n) => (!n ? "Sin entrevista" : n === 1 ? "1 pregunta" : `${n} preguntas`);

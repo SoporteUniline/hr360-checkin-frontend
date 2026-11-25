@@ -1,6 +1,6 @@
 // Lumo fase A (25/11/2026): reglas de pantalla de la base de conocimiento y de «Sugerir con IA».
 // Espejo de las del API (que es el que manda): solo evitan mandar algo que el servidor va a rechazar.
-import { MAX_PREGUNTAS, preguntaDesdeApi } from "./entrevista.mjs";
+import { MAX_CAMPOS, MAX_PREGUNTAS, preguntaDesdeApi } from "./entrevista.mjs";
 
 export const LIMITE_PREGUNTA_K = 500;
 export const LIMITE_RESPUESTA_K = 2000;
@@ -50,6 +50,11 @@ export function sugerenciaAPregunta(s) {
 
 // ¿Cuántas más caben en la vacante? (máximo 8 en total)
 export const espacioPreguntas = (actuales) => Math.max(0, MAX_PREGUNTAS - (Number(actuales) || 0));
+// Lumo fase B2: con campos de la entrevista caben 8 de filtro y 20 en total. modo «entrevista» = datos (solo los 20).
+export function espacioSugerencias({ total = 0, filtros = total, modo = "filtro" } = {}) {
+  const libres = MAX_CAMPOS - (Number(total) || 0);
+  return Math.max(0, modo === "entrevista" ? libres : Math.min(libres, MAX_PREGUNTAS - (Number(filtros) || 0)));
+}
 
 export function textoDescartadas(descartadas) {
   const d = Number(descartadas?.discriminatorias) || 0;

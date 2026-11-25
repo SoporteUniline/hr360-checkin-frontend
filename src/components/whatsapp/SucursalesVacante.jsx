@@ -48,7 +48,7 @@ export default function SucursalesVacante({ abierto, onCambiar, idVacante, titul
 
   return (
     <Dialog open={abierto} onOpenChange={onCambiar}>
-      <DialogContent className={`${DIALOGO_PANTALLA_COMPLETA} sm:max-w-lg`}>
+      <DialogContent className={`${DIALOGO_PANTALLA_COMPLETA} sm:max-w-lg`} data-sucursales-vacante>
         <DialogHeader className="border-b border-gray-200 px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] pr-14 text-left">
           <DialogTitle>Sucursales de la vacante</DialogTitle>
           <DialogDescription>

@@ -493,7 +493,7 @@ export default function BandejaWhatsapp() {
     <PanelCandidato entrevista={entrevista} preguntasSinRespuesta={preguntasSinRespuesta} cargando={cargandoHilo && !hilo}
       onAtendido={atender} marcando={marcando} nombreAsistente={nombreAsistente} ahora={ahora}
       cita={citaActiva(hilo)} modoAgenda={agendaEmpresa?.quien_agenda ?? null} onAprobar={aprobar} aprobando={aprobando}
-      requisitos={hilo?.requisitos ?? null} enlaceConocimiento={`${pathname}?vista=conocimiento`} />
+      requisitos={hilo?.requisitos ?? null} enlaceConocimiento={`${pathname}?vista=conocimiento`} idConversacion={conversacion?.id ?? null} />
   );
   // Cita de la ficha (misma tarjeta y acciones que antes estaban sobre el chat); su diálogo se controla desde aquí.
   const tarjetaCita = conversacion && citasHilo ? (

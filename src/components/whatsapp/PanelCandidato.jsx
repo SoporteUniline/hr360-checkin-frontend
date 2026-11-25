@@ -16,6 +16,8 @@ import {
 } from "@/lib/whatsapp/entrevista.mjs";
 import { necesitaAprobacionAgenda } from "@/lib/whatsapp/agenda.mjs";
 import { etiquetaEstadoRequisito, resumenRequisitos } from "@/lib/whatsapp/requisitos.mjs";
+// Lumo fase B2: sección «Entrevista» con cada campo (filtro y datos), su valor, su origen y el enlace del formulario.
+import CamposEntrevista from "./CamposEntrevista";
 
 const COLOR_SEVERIDAD = { verde: "bg-emerald-100 text-emerald-800", ambar: "bg-amber-100 text-amber-900", rojo: "bg-red-100 text-red-700" };
 export const TARJETA_FICHA = "bg-white px-5 py-4";
@@ -47,7 +49,7 @@ function Seccion({ titulo, children }) {
 
 export default function PanelCandidato({
   entrevista, preguntasSinRespuesta = [], cargando, onAtendido, marcando, nombreAsistente, ahora,
-  cita = null, modoAgenda = null, onAprobar = null, aprobando = false, requisitos = null, enlaceConocimiento = null,
+  cita = null, modoAgenda = null, onAprobar = null, aprobando = false, requisitos = null, enlaceConocimiento = null, idConversacion = null,
 }) {
   const quien = nombreAsistente?.trim() || "El agente";
   if (!entrevista) {
@@ -111,6 +113,10 @@ export default function PanelCandidato({
           </p>
         ) : null}
       </Seccion>
+      {entrevista.campos?.length ? (
+        <CamposEntrevista campos={entrevista.campos} formulario={entrevista.formulario ?? null} idConversacion={idConversacion} ahora={ahora}
+          puedeFormulario={Boolean(idConversacion) && consentimientoAceptado(entrevista.consentimiento)} />
+      ) : (
       <Seccion titulo={respuestas.length ? `Respuestas · ${respuestas.length}` : "Respuestas"}>
         {respuestas.length ? (
           <ul className="grid gap-2" aria-label="Respuestas del candidato">
@@ -132,6 +138,7 @@ export default function PanelCandidato({
           <p className="text-[13px] text-gray-600">Todavía no hay respuestas.</p>
         )}
       </Seccion>
+      )}
       {entrevista.resumen || entrevista.puntajes ? (
         <Seccion titulo="Resumen de la IA">
           {entrevista.resumen ? (
