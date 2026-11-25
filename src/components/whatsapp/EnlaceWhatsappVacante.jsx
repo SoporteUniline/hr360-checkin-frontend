@@ -1,7 +1,7 @@
 "use client";
 
 // «Enlace de WhatsApp» de una vacante (R1): el candidato abre el chat con el mensaje que identifica la vacante.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Check, Copy, ExternalLink, FileText, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -125,9 +125,18 @@ export function EnlaceVacanteEnLinea({ idVacante, titulo, slug = null, subtitulo
   );
 }
 
-export default function EnlaceWhatsappVacante({ idVacante, titulo, variante = "outline", className = "" }) {
-  const [abierto, setAbierto] = useState(false);
+// Con `abierto`/`onCambiar` el diálogo se controla desde fuera (menú «Acciones» del chat) y no se pinta el botón.
+export default function EnlaceWhatsappVacante({ idVacante, titulo, variante = "outline", className = "", abierto: abiertoExterno, onCambiar }) {
+  const [abiertoPropio, setAbiertoPropio] = useState(false);
+  const controlado = typeof onCambiar === "function";
+  const abierto = controlado ? Boolean(abiertoExterno) : abiertoPropio;
+  const setAbierto = controlado ? onCambiar : setAbiertoPropio;
   const { estado, copiado, cargar, copiar } = useEnlaceVacante(idVacante);
+  // Controlado: se pide el enlace cada vez que se abre.
+  useEffect(() => {
+    if (controlado && abiertoExterno && idVacante) cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [controlado, abiertoExterno, idVacante]);
 
   const abrir = async () => {
     setAbierto(true);
@@ -137,9 +146,11 @@ export default function EnlaceWhatsappVacante({ idVacante, titulo, variante = "o
   if (!idVacante) return null;
   return (
     <>
-      <Button type="button" variant={variante} size="sm" onClick={abrir} className={`min-h-9 ${className}`}>
-        <MessageCircle className="size-4 text-emerald-600" /> Enlace de WhatsApp
-      </Button>
+      {!controlado ? (
+        <Button type="button" variant={variante} size="sm" onClick={abrir} className={`min-h-9 ${className}`}>
+          <MessageCircle className="size-4 text-emerald-600" /> Enlace de WhatsApp
+        </Button>
+      ) : null}
       <Dialog open={abierto} onOpenChange={setAbierto}>
         <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
           <DialogHeader>

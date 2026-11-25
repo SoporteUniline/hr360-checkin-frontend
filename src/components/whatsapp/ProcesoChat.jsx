@@ -46,8 +46,8 @@ async function aceptarSugerencia(idPostulacion, etapa) {
   return postulacion;
 }
 
-// Aviso en el hilo, junto a la cita: «El agente sugiere pasar a Entrevista · Pasar» (p. ej. al agendar). En escritorio
-// ancho (≥1280 px) no se repite: la misma sugerencia está arriba en la columna del candidato.
+// Aviso en el hilo: «El agente sugiere pasar a Entrevista · Pasar» (p. ej. al agendar). La bandeja lo muestra mientras la
+// ficha del candidato está cerrada; con la ficha abierta, la misma sugerencia está en su tarjeta de proceso.
 export function BannerSugerencia({ proceso, onCambio }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -68,7 +68,7 @@ export function BannerSugerencia({ proceso, onCambio }) {
     }
   };
   return (
-    <div role="status" data-banner-sugerencia={etapa} className="flex flex-wrap xl:hidden items-center gap-2 border-b border-violet-200 bg-violet-50 px-3 py-2 text-[13px] text-violet-950 md:px-4">
+    <div role="status" data-banner-sugerencia={etapa} className="flex flex-wrap items-center gap-2 border-b border-violet-200 bg-violet-50 px-3 py-2 text-[13px] text-violet-950 md:px-4">
       <Sparkles className="size-4 shrink-0 text-violet-600" aria-hidden="true" />
       <span className="min-w-0 flex-1 font-medium">{texto}</span>
       <Button type="button" size="sm" onClick={aceptar} loading={busy} className="min-h-11 bg-violet-700 hover:bg-violet-800 md:min-h-8">
@@ -83,8 +83,9 @@ const enCampo = (el) => Boolean(el && (el.isContentEditable || ["INPUT", "TEXTAR
 
 // proceso: hilo.proceso (o null). puedeIniciar: aceptó el aviso pero aún no tiene proceso. conversacion: la del hilo.
 // onCambio(anuncio?): refrescar la conversación y la lista. atajos: escuchar los atajos de teclado (una sola instancia).
-// enHoja: dentro de la hoja inferior (su encabezado ya dice «Proceso de selección»).
-export default function ProcesoChat({ proceso, puedeIniciar = false, conversacion, empresa = "", onCambio, atajos = false, enHoja = false }) {
+// enHoja: dentro de la hoja inferior (su encabezado ya dice «Proceso de selección»). enFicha: tarjeta de la ficha del
+// candidato (fondo blanco sin borde, como «Info. del contacto» de WhatsApp).
+export default function ProcesoChat({ proceso, puedeIniciar = false, conversacion, empresa = "", onCambio, atajos = false, enHoja = false, enFicha = false }) {
   const idPostulacion = proceso?.id_postulacion ?? null;
   const { detail, error: errorDetalle, mutate: recargarDetalle } = usePostulacion(idPostulacion);
   // El hilo se consulta cada 3 s: si cambió la etapa o la sugerencia (p. ej. al agendar una cita), se trae el expediente.
@@ -164,7 +165,7 @@ export default function ProcesoChat({ proceso, puedeIniciar = false, conversacio
 
   if (!proceso) {
     return (
-      <section ref={raiz} aria-label="Proceso de selección" data-proceso-chat="sin-proceso" className="grid gap-2 rounded-xl border border-gray-200 bg-white p-3 text-[13px] text-gray-700">
+      <section ref={raiz} aria-label="Proceso de selección" data-proceso-chat="sin-proceso" className={`grid gap-2 bg-white text-[13px] text-gray-700 ${enFicha ? "px-5 py-4" : "rounded-xl border border-gray-200 p-3"}`}>
         <h3 className="text-[12px] font-bold uppercase tracking-wide text-gray-500">Proceso de selección</h3>
         {puedeIniciar ? (
           <>
@@ -185,7 +186,7 @@ export default function ProcesoChat({ proceso, puedeIniciar = false, conversacio
   const notas = detail ? [...detail.notes].reverse() : [];
   const historial = detail ? [...detail.activity].reverse() : [];
   return (
-    <section ref={raiz} aria-label="Proceso de selección" data-proceso-chat={etapaActual} className="grid gap-3 rounded-xl border border-gray-200 bg-white p-3">
+    <section ref={raiz} aria-label="Proceso de selección" data-proceso-chat={etapaActual} className={`grid gap-3 bg-white ${enFicha ? "px-5 py-4" : "rounded-xl border border-gray-200 p-3"}`}>
       <div className="flex flex-wrap items-center gap-2">
         <h3 className={enHoja ? "sr-only" : "text-[12px] font-bold uppercase tracking-wide text-gray-500"}>Proceso de selección</h3>
         {enHoja ? <span className="text-[12.5px] font-semibold text-gray-600">Etapa actual</span> : null}

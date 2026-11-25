@@ -4,6 +4,8 @@
 // Mismas reglas que el texto: sin control o con la ventana de 24 h cerrada no se envía nada (queda «Enviar seguimiento»).
 // Archivos: clip o «+ → Adjuntar archivo», arrastrar al hilo (escritorio) o pegar una imagen; vista previa, comentario,
 // barra de avance con «Cancelar envío». Micrófono: grabadora con tiempo, cancelar y «Detener y enviar» (máx. 5 min).
+// Estilo WhatsApp Web (25/11/2026): barra gris con el cuadro blanco. Sin permiso para escribir no se muestra un cuadro
+// deshabilitado: el motivo ocupa su lugar con la acción que lo resuelve (`accion`, p. ej. «Tomar control»).
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CalendarClock, FileText, Loader2, MailPlus, Mic, Paperclip, Plus, SendHorizontal, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -133,10 +135,10 @@ function BarraGrabacion({ segundos, onCancelar, onDetener }) {
   );
 }
 
-const ICONO = "grid size-11 shrink-0 place-items-center rounded-full text-gray-600 transition-colors hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40";
+const ICONO = "grid size-11 shrink-0 place-items-center rounded-full text-[#54656F] transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40";
 
 export default function ComposerChat({
-  permiso, onEnviar, enviando, ventanaCerrada = false, onSeguimiento = null, onEnviarAdjunto = null, pendiente, ofrecer = null,
+  permiso, onEnviar, enviando, ventanaCerrada = false, onSeguimiento = null, onEnviarAdjunto = null, pendiente, ofrecer = null, accion = null,
 }) {
   const [texto, setTexto] = useState("");
   const [subiendo, setSubiendo] = useState(false);
@@ -209,20 +211,29 @@ export default function ComposerChat({
     </p>
   ) : null;
 
+  const conSeguimiento = ventanaCerrada && !!onSeguimiento;
   return (
-    <div className="border-t border-gray-200 bg-white px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-      {ventanaCerrada && onSeguimiento ? <Seguimiento onSeguimiento={onSeguimiento} /> : null}
-      {!permiso.puede && permiso.motivo && !(ventanaCerrada && onSeguimiento) ? (
-        <p role="status" className={`mb-2 rounded-lg border p-2.5 text-[13px] ${permiso.ventanaCerrada ? "border-amber-200 bg-amber-50 text-amber-900" : "border-gray-200 bg-gray-50 text-gray-700"}`}>
-          {permiso.motivo}
-        </p>
+    <div className="bg-[#F0F2F5] px-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 lg:px-4" data-composer="">
+      {conSeguimiento ? <Seguimiento onSeguimiento={onSeguimiento} /> : null}
+      {!permiso.puede && permiso.motivo && !conSeguimiento ? (
+        <div className="flex items-center gap-2.5 lg:gap-3" data-sin-permiso="">
+          <p role="status" className={`flex min-h-11 min-w-0 flex-1 items-center rounded-lg px-3.5 py-2 text-[13px] lg:text-[14px] ${permiso.ventanaCerrada ? "bg-amber-50 text-amber-900" : "bg-white text-[#54656F]"}`}>
+            {permiso.motivo}
+          </p>
+          {accion ? (
+            <Button type="button" onClick={accion.onClick} loading={accion.cargando} aria-label={accion.etiqueta ?? accion.texto}
+              className="min-h-11 shrink-0 rounded-full bg-[#1D5CF5] px-4 text-[14px] font-bold hover:bg-[#1747C4]">
+              {accion.texto}
+            </Button>
+          ) : null}
+        </div>
       ) : null}
       {aviso}
       {adjunto && permiso.puede ? <VistaAdjunto adjunto={adjunto} onQuitar={quitar} bloqueado={subiendo} /> : null}
       {subiendo ? <Avance progreso={progreso} onCancelar={() => control.current?.abort()} /> : null}
       <input ref={selector} type="file" accept={ACEPTAR_ARCHIVOS} className="hidden" tabIndex={-1} aria-hidden="true" data-selector-archivo
         onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) elegir(f); }} />
-      {grabadora.grabando ? (
+      {!permiso.puede ? null : grabadora.grabando ? (
         <BarraGrabacion segundos={grabadora.segundos} onCancelar={grabadora.cancelar} onDetener={grabadora.detener} />
       ) : (
         <div className="flex items-end gap-1.5 md:gap-2">
@@ -269,7 +280,7 @@ export default function ComposerChat({
                 }
               }}
               placeholder={!permiso.puede ? "No puedes escribir en esta conversación" : adjunto ? "Agrega un comentario (opcional)" : "Escribe un mensaje"}
-              className="block max-h-40 min-h-11 w-full resize-none rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base leading-snug outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100 md:text-sm"
+              className="block max-h-40 min-h-11 w-full resize-none rounded-lg border-0 bg-white px-3.5 py-2.5 text-base leading-snug text-[#111B21] outline-none placeholder:text-[#54656F] focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:cursor-not-allowed disabled:bg-gray-100 md:text-[15px]"
             />
           </label>
           {onEnviarAdjunto ? (
@@ -282,15 +293,15 @@ export default function ComposerChat({
             onClick={enviar}
             disabled={!puedeEnviar}
             aria-label={adjunto ? "Enviar archivo" : "Enviar mensaje"}
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-600 text-white transition-colors hover:bg-emerald-700 disabled:bg-gray-300"
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-700 text-white transition-colors hover:bg-emerald-800 disabled:bg-[#D1D7DB] disabled:text-[#54656F]"
           >
             {ocupado ? <Loader2 className="size-5 animate-spin" /> : <SendHorizontal className="size-5" />}
           </button>
         </div>
       )}
       {permiso.puede ? (
-        <p className="mt-1 flex justify-between gap-2 text-[11px] text-gray-400">
-          <span className="hidden md:inline">Enter para enviar · Shift + Enter para un salto de línea{onEnviarAdjunto ? " · Arrastra o pega un archivo para adjuntarlo" : ""}</span>
+        <p className="mt-1 flex justify-between gap-2 px-1 text-[11px] text-[#54656F]">
+          <span className="hidden lg:inline">Enter para enviar · Shift + Enter para un salto de línea{onEnviarAdjunto ? " · Arrastra o pega un archivo para adjuntarlo" : ""}</span>
           {texto.length > limite - 600 ? <span className={texto.length >= limite ? "text-red-600" : ""}>{texto.length}/{limite}</span> : null}
         </p>
       ) : null}

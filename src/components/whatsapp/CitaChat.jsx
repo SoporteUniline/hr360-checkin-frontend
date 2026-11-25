@@ -4,6 +4,9 @@
 // Cancelar · Asistió / No asistió · Confirmar y «Ofrecer horarios». Reusa el selector de horarios y el diálogo de
 // cancelación de citas.jsx. Cada acción avisa con `onCambio(accion, respuesta)` para pintar la línea de sistema y refrescar.
 // En teléfono las acciones se pliegan detrás de «Acciones» para no quitarle alto al chat.
+// Bandeja estilo WhatsApp Web: vive como tarjeta «Entrevista» de la ficha del candidato (`enFicha`, acciones siempre a la
+// vista). El diálogo de agendar se puede controlar desde fuera (`dialogo`/`onDialogo`) para abrirlo desde el encabezado
+// del chat o el menú «Acciones» aunque la ficha esté cerrada.
 import { useState } from "react";
 import { CalendarCheck2, CalendarClock, CalendarPlus, CalendarX2, Check, ChevronDown, ExternalLink, MapPin, Send, UserCheck, UserX, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,8 +34,11 @@ function Lugar({ cita }) {
   );
 }
 
-export default function CitaChat({ conversacion, activa, ultima, hoy, onCambio, ofrecer }) {
-  const [dialogo, setDialogo] = useState(""); // agendar | mover | cancelar
+export default function CitaChat({ conversacion, activa, ultima, hoy, onCambio, ofrecer, enFicha = false, dialogo: dialogoExterno, onDialogo }) {
+  const [dialogoPropio, setDialogoPropio] = useState(""); // agendar | mover | cancelar
+  const controlado = typeof onDialogo === "function";
+  const dialogo = controlado ? dialogoExterno || "" : dialogoPropio;
+  const setDialogo = controlado ? onDialogo : setDialogoPropio;
   const [ocupado, setOcupado] = useState("");
   const [aviso, setAviso] = useState("");
   const [abierta, setAbierta] = useState(false);
@@ -59,7 +65,8 @@ export default function CitaChat({ conversacion, activa, ultima, hoy, onCambio, 
   const descripcion = `${conversacion.contacto?.nombre || "Candidato"} · ${conversacion.vacante?.titulo || "vacante"}`;
 
   return (
-    <section aria-label="Cita de entrevista" data-cita-chat={cita ? cita.estado : "ninguna"} className="border-b border-gray-200 bg-white px-3 py-2 md:px-4">
+    <section aria-label="Cita de entrevista" data-cita-chat={cita ? cita.estado : "ninguna"} className={enFicha ? "bg-white px-5 py-4" : "border-b border-gray-200 bg-white px-3 py-2 md:px-4"}>
+      {enFicha ? <h3 className="mb-2 text-[13px] text-[#54656F]">Entrevista</h3> : null}
       <div className="flex min-w-0 items-center gap-2.5">
         <span className={`grid size-9 shrink-0 place-items-center rounded-lg ${cita ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-500"}`} aria-hidden="true">
           {cita ? <CalendarCheck2 className="size-5" /> : <CalendarClock className="size-5" />}
@@ -82,12 +89,14 @@ export default function CitaChat({ conversacion, activa, ultima, hoy, onCambio, 
             </>
           )}
         </div>
-        <button type="button" onClick={() => setAbierta((v) => !v)} aria-expanded={abierta} aria-controls="acciones-cita-chat"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg border border-gray-300 px-2.5 text-[13px] font-semibold text-gray-700 md:hidden">
-          Acciones <ChevronDown className={`size-4 transition-transform ${abierta ? "rotate-180" : ""}`} aria-hidden="true" />
-        </button>
+        {!enFicha ? (
+          <button type="button" onClick={() => setAbierta((v) => !v)} aria-expanded={abierta} aria-controls="acciones-cita-chat"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg border border-gray-300 px-2.5 text-[13px] font-semibold text-gray-700 md:hidden">
+            Acciones <ChevronDown className={`size-4 transition-transform ${abierta ? "rotate-180" : ""}`} aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
-      <div id="acciones-cita-chat" className={`mt-2 flex flex-wrap gap-1.5 ${abierta ? "" : "max-md:hidden"}`} role="group" aria-label="Acciones de la cita">
+      <div id="acciones-cita-chat" className={`mt-2 flex flex-wrap gap-1.5 ${abierta || enFicha ? "" : "max-md:hidden"}`} role="group" aria-label="Acciones de la cita">
         {cita ? (
           <>
             {a.confirmar ? (

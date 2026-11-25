@@ -476,3 +476,20 @@ th *,
 @media (prefers-reduced-motion: reduce) {
   .animate-bounce-in { animation: none; }
 }
+
+/* (25/11/2026) Bandeja de WhatsApp a pantalla completa, como WhatsApp Web: el área del panel toma el alto de la ventana
+   (sin scroll de página) y cada columna de la bandeja hace su propio scroll. Solo en /panel/whatsapp (marca
+   [data-bandeja-completa]); el encabezado del panel no cambia. dvh + interactive-widget=resizes-content: el teclado
+   del celular encoge el alto y no tapa el cuadro para escribir. */
+body:has([data-bandeja-completa]) [data-slot="sidebar-inset"] {
+  height: 100dvh;
+  min-height: 0;
+}
+@media (min-width: 768px) {
+  /* El panel «inset» deja 0.5rem arriba y abajo. */
+  body:has([data-bandeja-completa]) [data-slot="sidebar-inset"] { height: calc(100dvh - 1rem); }
+}
+body:has([data-bandeja-completa]) .panel-modules-content {
+  min-height: 0;
+  padding: 0;
+}
