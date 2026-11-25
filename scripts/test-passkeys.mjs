@@ -109,3 +109,20 @@ test(".well-known: archivos válidos solo con las variables; si faltan, 404", as
   const llena = respuestaJson({ a: 1 });
   assert.deepEqual([llena.status, llena.headers.get("content-type"), await llena.json()], [200, "application/json", { a: 1 }]);
 });
+
+test("llave recordada: directo a Face ID con allowCredentials internal; olvidar y validar", async () => {
+  const m = await import("../src/lib/passkeys/modelo.mjs");
+  const datos = new Map();
+  const local = { getItem: (k) => datos.get(k) ?? null, setItem: (k, v) => datos.set(k, String(v)), removeItem: (k) => datos.delete(k) };
+  assert.equal(m.llaveRecordada(local), null);
+  const base = { challenge: "abc", rpId: "adamia.com.mx", userVerification: "required" };
+  assert.deepEqual(m.conLlaveRecordada(base, null), base, "sin llave: lista normal");
+  m.recordarLlave(local, "no válida!");
+  assert.equal(m.llaveRecordada(local), null, "no guarda basura");
+  m.recordarLlave(local, "AbCdEfGhIjKlMnOp_-123");
+  assert.equal(m.llaveRecordada(local), "AbCdEfGhIjKlMnOp_-123");
+  assert.deepEqual(m.conLlaveRecordada(base, m.llaveRecordada(local)).allowCredentials, [{ id: "AbCdEfGhIjKlMnOp_-123", type: "public-key", transports: ["internal"] }]);
+  assert.equal(m.conLlaveRecordada(base, "x").challenge, "abc", "conserva el reto del servidor");
+  m.olvidarLlave(local);
+  assert.equal(m.llaveRecordada(local), null);
+});

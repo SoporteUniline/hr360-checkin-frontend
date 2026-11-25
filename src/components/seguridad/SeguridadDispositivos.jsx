@@ -15,7 +15,7 @@ import {
   activarPasskey, cerrarSesionPorId, cerrarTodasLasSesiones, listarPasskeys, listarSesiones, quitarPasskey, renombrarPasskey,
 } from "@/lib/passkeys/api";
 import { fechaCorta, marcarActivada, marcarQuitada, mensajeFalla, nombreMetodo, RUTA_LOGIN_SESION_CERRADA } from "@/lib/passkeys/modelo.mjs";
-import usePlataforma from "./usePlataforma";
+import usePlataforma, { passkeysBloqueadasEnApp } from "./usePlataforma";
 import { IconoMetodo } from "./OfertaPasskey";
 
 const tarjeta = "rounded-2xl border border-slate-200 bg-white p-4 sm:p-5";
@@ -95,6 +95,8 @@ export default function SeguridadDispositivos({ encabezado = null }) {
   const [errorCarga, setErrorCarga] = useState(false);
   const [activando, setActivando] = useState(false);
   const [errorActivar, setErrorActivar] = useState(null);
+  const [enAppSinPasskeys, setEnAppSinPasskeys] = useState(false);
+  useEffect(() => setEnAppSinPasskeys(passkeysBloqueadasEnApp()), []);
   const [confirmar, setConfirmar] = useState(null);
 
   const cargar = useCallback(async () => {
@@ -190,12 +192,17 @@ export default function SeguridadDispositivos({ encabezado = null }) {
             <h2 id="titulo-passkeys" className="text-base font-bold text-[#080d36]">Face ID, huella y passkeys</h2>
             <p className="mt-1 text-sm text-slate-600">Entra sin contraseña desde los dispositivos que actives. Tu cara o tu huella nunca salen de tu teléfono: ADAMIA solo guarda una llave pública.</p>
           </div>
-          {!aviso ? (
+          {!aviso && !enAppSinPasskeys ? (
             <Button type="button" onClick={activar} loading={activando} startIcon={<IconoMetodo plataforma={plataforma} />} className="min-h-11 shrink-0 rounded-xl bg-brand px-4 text-white">
               Activar en este dispositivo
             </Button>
           ) : null}
         </div>
+        {enAppSinPasskeys && !aviso ? (
+          <p role="status" data-passkeys-app className="mt-3 rounded-xl bg-slate-100 p-3 text-sm text-slate-700">
+            En la app de ADAMIA llega en la próxima versión. Mientras, actívalo desde el navegador de tu celular o de tu computadora en adamia.com.mx.
+          </p>
+        ) : null}
         {errorActivar ? <p role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{errorActivar}</p> : null}
         {aviso ? <p role="status" className="mt-3 rounded-xl bg-slate-100 p-3 text-sm text-slate-600">{aviso}</p> : null}
         <div className="mt-4">
