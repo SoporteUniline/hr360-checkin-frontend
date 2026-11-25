@@ -9,6 +9,7 @@ import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import { aplicarPropuesta, minutosEstimados, nuevaPregunta, preguntasDe, textoMinutos } from "@/lib/clima/modelo.mjs";
 import { Boton, ChipIA, Tarjeta, errorDe, get, ruta } from "./ui";
+import IndicadorCreditos from "@/components/ia/IndicadorCreditos";
 
 const LLAVE_REVISION = "clima:revision-ia";
 const IDEAS = [
@@ -32,6 +33,8 @@ export function UsoIa({ idEmpresa }) {
         Adamia AI no está activa en tu empresa. El dueño la enciende desde el botón «Adamia AI».
       </p>
     );
+  // (25/11/2026) Con créditos de Adamia AI se muestra el saldo en pesos (nunca el costo). Sin la migración, como antes.
+  if (data.creditos?.disponible) return <IndicadorCreditos creditos={data.creditos} />;
   return (
     <p className="text-[12.5px] text-slate-500">
       Uso de Adamia AI este mes: {data.usos_mes} consultas · ${Number(data.gasto_mes_usd).toFixed(2)} de $
