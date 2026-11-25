@@ -1,7 +1,8 @@
 // Verificación en navegador del dashboard de resultados de clima (diseño aprobado 25/11/2026) con backend simulado
 // (scripts/lib/clima-simulado.mjs): aviso de confianza, KPIs, dimensiones contra la empresa y la anterior, lectura,
 // pregunta por pregunta, participación y mapa por área, plan de acción (agregar, editar, estado, eliminar), comentarios
-// y evolución. A 1440 y 390 px: sin scroll horizontal de página, tablas con scroll en su caja, objetivos táctiles de
+// y evolución; «Plan de acción sugerido» de Adamia AI → acciones con un clic (agregar una, agregar todas, «Ya está en el
+// plan», falta asignar responsable y fecha, Adamia AI apagada). A 1440 y 390 px: sin scroll horizontal de página, tablas con scroll en su caja, objetivos táctiles de
 // 44 px, gráficos con texto alterno y contraste de 4.5:1.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build
 //      && PLAYWRIGHT_MODULE_PATH=… CAPTURAS=<carpeta> node scripts/verify-clima-dashboard.mjs
@@ -236,6 +237,63 @@ try {
   await sinDesborde(rh, "plan 1440");
   console.log("PASS: plan de acción — validar, agregar con responsable y fecha, estado, editar y eliminar");
 
+  // 2b) Adamia AI → plan de acción con un clic: sugerencias con dimensión y por qué; la que ya está en el plan se marca;
+  // «Agregar al plan» y «Agregar todas» usan POST /campanias/30/acciones sin responsable ni fecha; luego se asignan.
+  const sug = rh.getByRole("region", { name: "Plan de acción sugerido" });
+  const planR = rh.getByRole("region", { name: "Plan de acción", exact: true });
+  await sug.getByRole("button", { name: "Proponer plan" }).click();
+  await sug.getByText("Publicar los horarios del sábado con 1 semana de anticipación.").waitFor({ timeout: 15000 });
+  await sug.getByText("Por qué: Carga de trabajo es la dimensión más baja en Almacén (5.1 de 10).").waitFor();
+  await sug.getByText("Carga de trabajo", { exact: true }).waitFor();
+  assert.equal(await sug.getByText("Ya está en el plan").count(), 1, "la plática 1 a 1 ya está en el plan (501)");
+  await sug.getByRole("button", { name: "Agregar todas al plan (2)" }).waitFor();
+  const antesIa = S.estado.llamadasAcciones.length;
+  await sug.getByRole("button", { name: /^Agregar al plan «Publicar los horarios/ }).click();
+  await planR.getByText("Publicar los horarios del sábado con 1 semana de anticipación.").waitFor({ timeout: 15000 });
+  assert.deepEqual(S.estado.llamadasAcciones.at(-1), {
+    m: "POST",
+    e: "/campanias/30/acciones",
+    cuerpo: { texto: "Publicar los horarios del sábado con 1 semana de anticipación.", dimension: "carga", id_responsable: null, fecha_limite: null },
+  });
+  await rh.getByText("Se agregó 1 acción al plan. Asigna responsable y fecha en el plan.").waitFor();
+  await planR.getByText("1 por asignar").waitFor();
+  await planR.getByText("⚠ Falta asignar responsable y fecha límite").waitFor();
+  assert.equal(await sug.getByText("Ya está en el plan").count(), 2);
+  await sug.getByRole("button", { name: "Agregar 1 al plan" }).click();
+  await sug.getByText("Todas las sugerencias ya están en el plan.").waitFor({ timeout: 15000 });
+  await planR.getByText("2 por asignar").waitFor();
+  assert.equal(S.estado.llamadasAcciones.length, antesIa + 2, "una petición por sugerencia, sin repetir la que ya estaba");
+  assert.equal(S.estado.acciones.filter((a) => a.idCampania === 30 && /Plática 1 a 1/.test(a.texto)).length, 1, "sin duplicados");
+  await sinDesborde(rh, "plan sugerido 1440");
+  await accesible(rh, "plan sugerido 1440");
+  await sug.scrollIntoViewIfNeeded();
+  await captura(rh, "1440-plan-sugerido-agregado");
+  await sug.screenshot({ path: process.env.CAPTURAS ? `${process.env.CAPTURAS}/1440-tarjeta-plan-sugerido.png` : undefined }).catch(() => {});
+  await planR.screenshot({ path: process.env.CAPTURAS ? `${process.env.CAPTURAS}/1440-plan-por-asignar.png` : undefined }).catch(() => {});
+  // Asignar responsable y fecha a una acción agregada desde Adamia AI.
+  await planR.getByRole("button", { name: /^Asignar «Publicar los horarios/ }).click();
+  const asig = rh.getByRole("dialog", { name: "Editar acción" });
+  await asig.getByText("Falta asignar responsable y fecha límite: elige quién responde y para cuándo.").waitFor();
+  await asig.getByRole("combobox", { name: "Responsable" }).fill("Persona 2");
+  await asig.getByRole("option", { name: /^Persona 2\b/ }).click();
+  await asig.getByLabel("Fecha límite").fill("2027-01-31");
+  await asig.getByRole("button", { name: "Guardar cambios" }).click();
+  await planR.getByText("1 por asignar").waitFor({ timeout: 15000 });
+  assert.equal(S.estado.llamadasAcciones.at(-1).m, "PATCH");
+  assert.equal(S.estado.llamadasAcciones.at(-1).cuerpo.id_responsable, 102);
+  console.log("PASS: Adamia AI → plan de acción con un clic (agregar, agregar todas, ya está en el plan, por asignar y asignar)");
+
+  // 2c) Adamia AI apagada: lo ya sugerido se ve (no gasta IA) pero no se puede volver a proponer.
+  S.estado.iaActiva = false;
+  const apagada = await sesion({ width: 1440, height: 1000 });
+  await ir(apagada, "/panel/clima");
+  const sugA = apagada.getByRole("region", { name: "Plan de acción sugerido" });
+  await sugA.getByText("Adamia AI no está activa en tu empresa.", { exact: false }).waitFor({ timeout: 30000 });
+  await sugA.getByText("Publicar los horarios del sábado con 1 semana de anticipación.").waitFor();
+  assert.equal(await sugA.getByRole("button", { name: "Volver a proponer" }).isDisabled(), true);
+  S.estado.iaActiva = true;
+  console.log("PASS: con Adamia AI apagada se ven las sugerencias guardadas y no se puede volver a proponer");
+
   // 3) Descargar el informe PDF.
   const descarga = rh.waitForEvent("download");
   await rh.getByRole("button", { name: "Descargar informe PDF" }).click();
@@ -264,6 +322,8 @@ try {
   console.log("PASS 1440: primera medición sin áreas, como la maqueta");
 
   // 5) Celular 390: todo apila, sin scroll horizontal de página, tablas con scroll en su caja, objetivos de 44 px.
+  // Para el celular: una sugerencia sin agregar (se quita «Reconocimiento mensual…» del plan simulado).
+  S.estado.acciones = S.estado.acciones.filter((a) => !/^Reconocimiento mensual por área/.test(a.texto));
   const cel = await sesion({ width: 390, height: 844 });
   await ir(cel, "/panel/clima");
   await cel.getByText("Con 142 respuestas, la lectura es confiable.").waitFor({ timeout: 30000 });
@@ -285,6 +345,18 @@ try {
   assert.equal(apilado.columnasKpi, 1, "390: KPIs en una columna");
   assert.ok(apilado.asideDebajo, "390: el plan y los comentarios van debajo");
   await captura(cel, "390-dashboard");
+  const sugCel = cel.getByRole("region", { name: "Plan de acción sugerido" });
+  const planCel = cel.getByRole("region", { name: "Plan de acción", exact: true });
+  await sugCel.getByRole("button", { name: "Agregar 1 al plan" }).waitFor({ timeout: 15000 });
+  await sugCel.screenshot({ path: process.env.CAPTURAS ? `${process.env.CAPTURAS}/390-tarjeta-plan-sugerido.png` : undefined }).catch(() => {});
+  await sugCel.getByRole("button", { name: /^Agregar al plan «Reconocimiento mensual/ }).tap();
+  await sugCel.getByText("Todas las sugerencias ya están en el plan.").waitFor({ timeout: 15000 });
+  await planCel.getByText("1 por asignar").waitFor();
+  await planCel.getByText("⚠ Falta asignar responsable y fecha límite").waitFor();
+  await sinDesborde(cel, "plan sugerido 390");
+  await accesible(cel, "plan sugerido 390");
+  await planCel.screenshot({ path: process.env.CAPTURAS ? `${process.env.CAPTURAS}/390-plan-por-asignar.png` : undefined }).catch(() => {});
+  await sugCel.screenshot({ path: process.env.CAPTURAS ? `${process.env.CAPTURAS}/390-tarjeta-plan-sugerido-agregada.png` : undefined }).catch(() => {});
   await cel.getByLabel("Medición", { exact: true }).selectOption("32");
   await cel.getByText("Con 4 respuestas, lee esto como una señal, no como una medición firme.").waitFor({ timeout: 30000 });
   await sinDesborde(cel, "primera medición 390");
