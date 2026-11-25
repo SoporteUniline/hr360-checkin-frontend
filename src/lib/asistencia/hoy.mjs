@@ -178,6 +178,14 @@ export function estadoHoy(dia, ahora) {
     : null;
   const salida = { ...conChecadas, ultimaSalida, comidaTomada, diferencia: programados != null ? trabajados - programados : null };
   if (!normal) return { ...salida, estado: "ya_salio", grupo: "salieron", orden: -ultimaSalida };
+  // Trabajó todo antes de su entrada programada (p. ej. turno de la tarde que vino en la mañana): lo que le falta
+  // es su jornada menos lo trabajado, no «hasta su hora de salida».
+  if (ultimaSalida <= entradaProg && programados != null) {
+    const fuera = { ...salida, fueraDeHorario: true };
+    const falta = Math.max(0, programados - trabajados);
+    if (falta <= dia.toleranciaSalida) return { ...fuera, estado: "ya_salio", grupo: "salieron", orden: -ultimaSalida };
+    return { ...fuera, estado: "salio_antes", grupo: "atencion", urgente: true, prioridad: 2, faltaron: falta, orden: -falta };
+  }
   const limite = salidaProg - dia.toleranciaSalida;
   if (ultimaSalida >= limite) return { ...salida, estado: "ya_salio", grupo: "salieron", orden: -ultimaSalida };
   const cubre = dia.permisos.find((p) => {
@@ -273,7 +281,9 @@ export function describir(r) {
       detalleTono = r.sePasoComida ? "amarillo" : "normal";
       break;
     case "salio_antes":
-      detalle = `Salió ${horaDe(r.ultimaSalida)} · faltaron ${formatearMinutos(r.faltaron)}`;
+      detalle = r.fueraDeHorario
+        ? `Checó fuera de su horario · trabajó ${formatearMinutos(r.trabajados)} de ${formatearMinutos(r.programados)}`
+        : `Salió ${horaDe(r.ultimaSalida)} · faltaron ${formatearMinutos(r.faltaron)}`;
       detalleTono = "rosa";
       break;
     case "ya_salio": {
