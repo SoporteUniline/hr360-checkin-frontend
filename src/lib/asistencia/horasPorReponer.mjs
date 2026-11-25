@@ -81,7 +81,8 @@ export function tarjetasResumen(totales) {
 export function movimientosFila(cuenta) {
   return [...movimientosCuenta(cuenta)].reverse().map((m) => ({
     ...m,
-    accion: m.cargo?.id_solicitud ? "cancelar" : m.cierre && !m.deshecho ? "deshacer" : null,
+    // Un «Rebajar» que ya va en una nómina por autorizar o autorizada no se deshace (el backend responde 409).
+    accion: m.cargo?.id_solicitud ? "cancelar" : m.cierre && !m.deshecho && !m.bloqueado ? "deshacer" : null,
   }));
 }
 

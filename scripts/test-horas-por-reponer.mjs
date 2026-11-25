@@ -69,6 +69,13 @@ test("movimientos de la fila: del más viejo al más nuevo; Cancelar en permisos
     ["2026-11-20", "Condonado", -30, "deshacer"],
     ["2026-11-21", "Rebajado", -30, null],
   ]);
+  // (26/11/2026) Un «Rebajar» que ya va en una nómina por autorizar o autorizada no ofrece Deshacer; en borrador sí.
+  const conNomina = (estado, bloqueado) => movimientosFila({ cierres: [{ id: 5, tipo: "rebaja", minutos: 60, creado_en: "2026-11-18 10:00:00",
+    nomina: { id_periodo: 1, fecha_inicio: "2026-11-16", fecha_fin: "2026-11-22", estado, importe: 37.5, bloqueado } }] })[0];
+  assert.equal(conNomina("autorizado", true).accion, null);
+  assert.equal(conNomina("por_autorizar", true).accion, null);
+  assert.equal(conNomina("borrador", false).accion, "deshacer");
+  assert.match(conNomina("autorizado", true).nomina, /^Descontado en la nómina del 16 al 22 nov 2026/);
   const parcial = movimientosFila({ cargos: [{ id_solicitud: 1, fecha: "2026-11-05", minutos: 60 }],
     reposiciones: [{ id_horas_extra: 5, fecha: "2026-11-05", minutos: 0, registrado: 60, desde: "17:00", hasta: "18:00", origen: "registro" }] });
   assert.match(parcial.find((x) => x.clave === "h5").nota, /Registró 1 h; cuenta 0 min/);

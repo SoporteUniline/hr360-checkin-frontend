@@ -27,3 +27,14 @@ Lógica pura: `src/lib/asistencia/horasPorReponer.mjs` (la regla de cierre la us
 ## Pruebas
 - `scripts/test-horas-por-reponer.mjs` (CI, «Asistencias — cálculo…»).
 - `scripts/verify-horas-reponer.mjs` (navegador, backend simulado, 1440 y 390).
+
+## «Rebajar en nómina» en la nómina (26/11/2026)
+El backend descuenta cada «Rebajar» en la nómina («Horas no repuestas (2 h)», misma tarifa por hora que las horas sin
+goce; una sola vez; periodo del día del cierre o el siguiente si ese ya está autorizado — backend
+`docs/horas-por-reponer.md`). Cada cierre «rebaja» de `GET /checador/cuenta-horas/:id` trae `nomina` o null.
+- Movimientos (pestaña, Panel empleado → Permisos y la cuenta del empleado en su inicio): debajo del «Rebajado» dice
+  «Se descontará en la próxima nómina», «Va en la nómina del 16 al 22 nov 2026 (borrador) · $37.50», «En la nómina del …,
+  por autorizar · …» o «Descontado en la nómina del … · …» (`textoNominaCierre` en `src/lib/asistencia/permisoHoras.mjs`).
+- Ya no se ofrece «Deshacer» si esa nómina está por autorizar o autorizada (`bloqueado`); el backend responde 409.
+- Pruebas: `scripts/test-permiso-horas.mjs`, `scripts/test-horas-por-reponer.mjs`, `scripts/verify-horas-reponer.mjs` y
+  `scripts/verify-permisos-horas.mjs`.
