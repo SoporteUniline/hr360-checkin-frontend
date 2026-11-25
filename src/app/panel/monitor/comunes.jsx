@@ -1,31 +1,28 @@
 "use client";
 
-// Piezas que comparten las tres vistas del Monitor (Tablero, Línea del día y Lista): nombre, área, avatar, chips y la
-// elección de vista recordada por usuario. Los textos salen de src/lib/asistencia/tablero.mjs y vistasMonitor.mjs.
+// Piezas que comparten las vistas del Monitor (Tabla y Línea del día): nombre, área, avatar, chip y la elección de vista
+// recordada por usuario. Los textos salen de src/lib/asistencia/vistasMonitor.mjs (y monitor.mjs, hoy.mjs).
 import { useCallback, useEffect, useState } from "react";
 import { claveVistaMonitor, VISTA_POR_DEFECTO, vistaValida, VISTAS_MONITOR } from "@/lib/asistencia/vistasMonitor.mjs";
-import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 import { cn } from "@/lib/utils";
 
 export const nombreDe = (r) => [r.nombre, r.apellido_paterno].filter(Boolean).join(" ");
 export const iniciales = (r) => `${r.nombre?.[0] ?? ""}${r.apellido_paterno?.[0] ?? ""}`.toUpperCase() || "?";
 export const areaDe = (r) => r.departamento || r.puesto || "";
 
-// Tonos de tablero.mjs → clases de Tailwind.
+// Tonos de vistasMonitor.mjs / monitor.mjs → clases de Tailwind (texto -800 sobre fondo -100: contraste ≥ 4.5:1).
 export const CHIP = {
   azul: "bg-blue-100 text-blue-800",
   violeta: "bg-violet-100 text-violet-800",
   amarillo: "bg-yellow-100 text-yellow-800",
   rojo: "bg-red-100 text-red-800",
   naranja: "bg-orange-100 text-orange-800",
-  celeste: "bg-sky-100 text-sky-800",
   gris: "bg-slate-100 text-slate-700",
   ambar: "bg-amber-100 text-amber-800",
+  verde: "bg-green-100 text-green-800",
+  rosa: "bg-rose-100 text-rose-800",
+  neutro: "bg-slate-100 text-slate-700",
 };
-
-// Chips de la tarjeta del Tablero más «Debe N» (cuenta de horas), igual en las tres vistas.
-export const chipsPersona = (ficha, debe) =>
-  debe > 0 ? [...ficha.chips, { texto: `Debe ${formatearMinutos(debe)}`, tono: "ambar" }] : ficha.chips;
 
 export function Avatar({ registro, tono, className = "" }) {
   return (
@@ -34,23 +31,6 @@ export function Avatar({ registro, tono, className = "" }) {
       className={cn("grid size-7 shrink-0 place-items-center rounded-full text-[11px] font-bold", CHIP[tono], className)}
     >
       {iniciales(registro)}
-    </span>
-  );
-}
-
-export function Chips({ chips, className = "" }) {
-  if (!chips.length) return null;
-  return (
-    <span className={cn("flex flex-wrap gap-1", className)}>
-      {chips.map((c, i) => (
-        <span
-          key={i}
-          data-chip
-          className={cn("inline-flex max-w-full rounded-[10px] px-2 py-0.5 text-[11.5px] font-semibold leading-tight", CHIP[c.tono])}
-        >
-          {c.texto}
-        </span>
-      ))}
     </span>
   );
 }
@@ -71,7 +51,8 @@ export function ChipEstado({ estado, className = "" }) {
 }
 
 // Vista elegida, recordada por usuario en este navegador. Se lee después de montar (el servidor no ve localStorage):
-// la primera pintura es el Tablero y cambia en cuanto se lee. Sin localStorage (privado, bloqueado) queda el Tablero.
+// la primera pintura es la Tabla y cambia en cuanto se lee. Sin localStorage (privado, bloqueado) queda la Tabla; las
+// vistas retiradas («tablero», «lista») guardadas antes también abren la Tabla (vistaValida).
 export function useVistaMonitor(idUsuario) {
   const clave = claveVistaMonitor(idUsuario);
   const [vista, setVista] = useState(VISTA_POR_DEFECTO);
@@ -104,7 +85,7 @@ export function SelectorVista({ vista, onElegir, className = "" }) {
     <div
       role="group"
       aria-label="Vista del Monitor"
-      className={cn("grid grid-cols-3 rounded-[11px] border border-slate-200 bg-white p-0.5 lg:inline-grid", className)}
+      className={cn("grid grid-cols-2 rounded-[11px] border border-slate-200 bg-white p-0.5 lg:inline-grid", className)}
     >
       {VISTAS_MONITOR.map((v) => (
         <button

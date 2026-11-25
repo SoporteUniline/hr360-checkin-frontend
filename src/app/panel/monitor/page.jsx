@@ -91,7 +91,7 @@ export default function MonitorPage() {
 
   // Tocar a una persona abre el reloj de su día: la misma ventana con la que se corrige en Asistencias.
   const [relojDe, setRelojDe] = useState(null);
-  // Tablero | Línea del día | Lista: recordada por usuario en este navegador.
+  // Tabla | Línea del día: recordada por usuario en este navegador (las vistas retiradas abren la Tabla).
   const [vista, setVista] = useVistaMonitor(dataUser?.id_usuario);
 
   const contenido =

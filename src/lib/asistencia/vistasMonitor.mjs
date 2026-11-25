@@ -1,39 +1,41 @@
-// Monitor › «Línea del día» y «Lista» (maqueta aprobada Monitor.dc.html): lo que cada vista agrega sobre el Tablero.
-// Los estados (hoy.mjs → estadoHoy), el orden de urgencia y los textos de cada persona (tablero.mjs → columnasTablero,
-// fichaTablero) se reutilizan tal cual; aquí solo el eje de horas, la posición de cada tramo y de «ahora», el chip de
-// estado y la vista elegida. Sin React ni zona del navegador. Probado en scripts/test-monitor.mjs.
+// Monitor › «Tabla» (vista por defecto) y «Línea del día»: lo que cada vista agrega sobre los estados de hoy.mjs
+// (estadoHoy). La Tabla reutiliza los grupos y la frase de cada persona del «Monitor de mi equipo» (monitor.mjs →
+// grupoMonitor, razonMonitor; maqueta aprobada Main.dc.html) y la jornada de describir (hoy.mjs); la Línea, el orden de
+// urgencia (tablero.mjs → columnasTablero). Aquí solo el ajuste de grupos de RH, la entrada, el eje de horas, la posición
+// de cada tramo y de «ahora», el chip de estado y la vista elegida. Sin React ni zona del navegador.
+// Probado en scripts/test-monitor.mjs.
 //
 // Escala: minutos absolutos de la hora de pared de la empresa (los mismos de estadoHoy). Un turno nocturno de ayer
 // queda en minutos negativos respecto a hoy y el eje lo incluye sin trucos (las marcas muestran la hora del día).
 import { marcaEnMinutos } from "../fechaHora.mjs";
 import { describir, horaDe, VENTANA_COMIDA_ANTES } from "./hoy.mjs";
+import { conPermisoHoras, grupoMonitor, razonMonitor, saldraTarde, textoPermisoHoras } from "./monitor.mjs";
 import { columnasTablero, COLUMNAS_CELULAR, enHoraExtra, enTurno } from "./tablero.mjs";
 import { formatearMinutos } from "./jornada.mjs";
 
 const HORA = 60;
 
-// —— Vista elegida (selector Tablero | Línea del día | Lista) ——
+// —— Vista elegida (selector Tabla | Línea del día) ——
 export const VISTAS_MONITOR = [
-  { clave: "tablero", titulo: "Tablero" },
+  { clave: "tabla", titulo: "Tabla" },
   { clave: "linea", titulo: "Línea del día" },
-  { clave: "lista", titulo: "Lista" },
 ];
-export const VISTA_POR_DEFECTO = "tablero";
-// Lo guardado en localStorage (puede venir vacío, viejo o manipulado) → una vista válida.
+export const VISTA_POR_DEFECTO = "tabla";
+// Lo guardado en localStorage (puede venir vacío, viejo o manipulado) → una vista válida. «tablero» y «lista» (vistas
+// retiradas, la Tabla las reemplaza) y cualquier otro valor desconocido → la Tabla.
 export const vistaValida = (valor) => (VISTAS_MONITOR.some((v) => v.clave === valor) ? valor : VISTA_POR_DEFECTO);
 // Una elección por usuario (mismo navegador, varias cuentas de RH).
 export const claveVistaMonitor = (idUsuario) => `adamia.monitor.vista.${idUsuario ?? "anonimo"}`;
 
-// —— Orden de urgencia (el de las secciones del Tablero en celular) ——
-// No han llegado → En comida → Trabajando → Por entrar → Ya salieron → Descanso; dentro de cada una, el orden del Tablero.
+// —— Orden de urgencia (Línea del día y base del orden de la Tabla) ——
+// No han llegado → En comida → Trabajando → Por entrar → Ya salieron → Descanso; dentro de cada uno, por hora y nombre.
 export function ordenUrgencia(resultados, nombreDe = () => "") {
   const porClave = new Map(columnasTablero(resultados, nombreDe).map((c) => [c.clave, c.personas]));
   return COLUMNAS_CELULAR.flatMap((c) => porClave.get(c.clave) ?? []);
 }
 
-// —— Chip de estado (columna derecha de la Línea y de la Lista) ——
-// Mismos nombres que la vista de hoy (describir de hoy.mjs), con «Hora extra» del Tablero y sin repetir «Llegó tarde»
-// (ya va en los chips). Tonos de tablero.mjs.
+// —— Chip de estado (columna derecha de la Línea del día) ——
+// Mismos nombres que la vista de hoy (describir de hoy.mjs), con «Hora extra» y «Sin checar salida».
 export function estadoVista(r, ahora) {
   if (enHoraExtra(r, ahora)) return { texto: "Hora extra", tono: "violeta" };
   if (r.estado === "trabajando")
@@ -51,10 +53,86 @@ export function estadoVista(r, ahora) {
   return { texto: chip, tono };
 }
 
-// Horario programado en texto («9:00 a.m.–6:00 p.m.»), para la Lista.
+// Horario programado en texto («9:00 a.m.–6:00 p.m.»), columna «Horario» de la Tabla.
 export function horarioVista(r) {
   if (r.entradaProg == null || r.salidaProg == null || r.dia?.tipo?.clase !== "normal") return "Sin horario hoy";
   return `${horaDe(r.entradaProg)}–${horaDe(r.salidaProg)}`;
+}
+
+// —— Tabla (maqueta aprobada Main.dc.html / MovilMonitor.dc.html) ——
+// Un renglón por persona en UN grupo, del más urgente al menos. Son los grupos del «Monitor de mi equipo»
+// (grupoMonitor) con tres ajustes de RH:
+//   · 🧭 «Sin checar salida» (pasó el aviso de 15 min) va a Requiere atención: no se presume hora extra.
+//   · Hora extra sin autorizar va con «Saldrán tarde / hora extra»; «En comida» (sin pasarse) va con «En jornada».
+//   · Descanso, vacaciones y sin horario van con «Con permiso / descanso».
+export const GRUPOS_TABLA = [
+  { clave: "atencion", titulo: "Requiere atención" },
+  { clave: "permiso", titulo: "Con permiso / descanso" },
+  { clave: "saldran_tarde", titulo: "Saldrán tarde / hora extra" },
+  { clave: "jornada", titulo: "En jornada" },
+  { clave: "proximos", titulo: "Por entrar" },
+  { clave: "salieron", titulo: "Ya salieron" },
+];
+const sinChecarSalida = (r) => r.estado === "trabajando" && r.debiaSalirHace != null;
+const DE_MONITOR = { comida: "jornada", no_laboran: "permiso" };
+
+export function grupoTabla(r, ahora) {
+  if (sinChecarSalida(r)) return "atencion";
+  const g = grupoMonitor(r);
+  if (g === "jornada" && enHoraExtra(r, ahora)) return "saldran_tarde";
+  return DE_MONITOR[g] ?? g;
+}
+
+// Dentro de «Requiere atención»: faltó, no ha llegado, salió antes, se pasó de comida, sin checar salida, llegó tarde.
+// Los demás grupos conservan el orden de urgencia (y dentro, el de su hora).
+const prioridadAtencion = (r) => (sinChecarSalida(r) ? 3.5 : r.estado === "trabajando" && r.llegoTarde != null ? 4 : r.prioridad ?? 0);
+
+// → [{ clave, titulo, filas }] solo los grupos con alguien, en el orden de GRUPOS_TABLA.
+export function gruposTabla(resultados, nombreDe = () => "", ahora) {
+  const en = new Map(GRUPOS_TABLA.map((g) => [g.clave, []]));
+  for (const r of ordenUrgencia(resultados, nombreDe)) en.get(grupoTabla(r, ahora)).push(r);
+  en.get("atencion").sort((a, b) => prioridadAtencion(a) - prioridadAtencion(b)); // estable: conserva el orden de urgencia
+  return GRUPOS_TABLA.map((g) => ({ ...g, filas: en.get(g.clave) })).filter((g) => g.filas.length);
+}
+
+// Columna «Qué pasa»: UNA frase con su tono y, a lo más, un chip secundario que de verdad aporte (llegó tarde, si la
+// frase no lo dice; un permiso por horas fuera del grupo de permisos; o «Debe N» de la cuenta de horas).
+// Tonos: rojo, naranja, rosa, amarillo, azul, violeta, verde, gris, neutro, ambar (clases en monitor/comunes.jsx).
+export function quePasaTabla(r, { debe = 0, ahora } = {}) {
+  const grupo = grupoTabla(r, ahora);
+  let frase;
+  if (sinChecarSalida(r)) frase = { texto: `Sin checar salida · debía salir hace ${formatearMinutos(r.debiaSalirHace)}`, tono: "rojo" };
+  else if (grupo === "saldran_tarde" && !saldraTarde(r)) frase = { texto: `En hora extra desde ${horaDe(r.salidaProg)}`, tono: "violeta" };
+  else {
+    const razon = razonMonitor(r);
+    // En RH el permiso es violeta (como su contador y la Línea del día).
+    frase = { texto: razon.texto, tono: grupo === "permiso" ? "violeta" : razon.tono };
+  }
+  const dijoTarde = grupo === "atencion" && !sinChecarSalida(r) && r.estado === "trabajando" && r.llegoTarde != null;
+  const candidatos = [
+    r.llegoTarde != null && !dijoTarde ? { texto: `Llegó tarde +${formatearMinutos(r.llegoTarde)}`, tono: "naranja" } : null,
+    grupo !== "permiso" && conPermisoHoras(r) ? { texto: r.dia.permisos.map(textoPermisoHoras).join(" · "), tono: "violeta" } : null,
+    debe > 0 ? { texto: `Debe ${formatearMinutos(debe)}`, tono: "ambar" } : null,
+  ];
+  return { ...frase, extra: candidatos.find(Boolean) ?? null };
+}
+
+// Columna «Entrada»: la primera entrada real (naranja si llegó tarde) y, si ya salió, su salida: «7:55 a.m. → 3:10 p.m.».
+export function entradaTabla(r) {
+  if (r.primeraEntrada == null) return null;
+  const salio = r.estado === "ya_salio" || r.estado === "salio_antes";
+  return { entrada: horaDe(r.primeraEntrada), salida: salio ? horaDe(r.ultimaSalida) : null, tarde: r.llegoTarde != null };
+}
+
+// Columna «Jornada»: lo trabajado contra lo programado (describir de hoy.mjs, sin la diferencia «· −4 h 30» de quien
+// ya salió: la frase ya dice si salió antes) y el tono de su barra.
+export function jornadaTabla(r, ahora) {
+  const { jornada, avance } = describir(r);
+  if (jornada == null) return null;
+  const texto = jornada.split(" · ")[0];
+  const salio = r.estado === "ya_salio" || r.estado === "salio_antes";
+  const tono = salio ? "gris" : enHoraExtra(r, ahora) ? "violeta" : "azul";
+  return { texto, avance, tono };
 }
 
 // —— Eje de horas ——

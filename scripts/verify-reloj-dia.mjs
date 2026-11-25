@@ -332,6 +332,34 @@ try {
   await elegir(r1.getByLabel("Motivo"), "olvido");
   assert.equal(await r1.getByRole("alert").count(), 0);
   await elegir(dlg.locator('[data-renglon="3"]').getByLabel("Motivo"), "fuera");
+  // (25/11/2026) La hora extra va fuera de la jornada (LFT art. 66): en 9:00–1:00 «Hora extra» está deshabilitada y explica por qué.
+  const DENTRO = "La hora extra va antes de su entrada (9:00 a.m.) o después de su salida (4:00 p.m.). Dentro de la jornada usa «Jornada»";
+  const opcionExtra = page.locator('[data-select-con-iconos] [role=option][data-valor="extra"]');
+  await r1.getByLabel("Concepto").click();
+  await opcionExtra.waitFor();
+  assert.equal(await opcionExtra.getAttribute("aria-disabled"), "true", "«Hora extra» deshabilitada dentro de la jornada");
+  assert.match(await opcionExtra.innerText(), /Dentro de la jornada \(9:00 a\.m\.–4:00 p\.m\.\) usa «Jornada»/);
+  await opcionExtra.click({ force: true }).catch(() => {});
+  if (await page.locator("[data-select-con-iconos]").count()) await page.keyboard.press("Escape");
+  await page.locator("[data-select-con-iconos]").waitFor({ state: "detached" });
+  assert.equal(await valorDe(r1.getByLabel("Concepto")), "jornada", "no se puede elegir");
+  // 1:40–4:08 tiene una parte fuera: sí se puede elegir, pero marca el error junto a la fila y sugiere «Separar».
+  const rA3 = dlg.locator('[data-renglon="3"]');
+  await elegir(rA3.getByLabel("Concepto"), "extra");
+  const errA3 = await rA3.getByRole("alert").innerText();
+  assert.ok(errA3.startsWith(DENTRO) && /Separar/.test(errA3), errA3);
+  assert.equal(await dlg.getByRole("button", { name: "Guardar" }).isDisabled(), true, "con la extra dentro de la jornada no se guarda");
+  // Forzarla dentro: se mueve la salida a las 4:00 → error exacto y la opción ya no se puede elegir.
+  await rA3.getByLabel("Salida").fill("16:00");
+  assert.equal(await rA3.getByRole("alert").innerText(), DENTRO);
+  await rA3.getByLabel("Concepto").click();
+  await opcionExtra.waitFor();
+  assert.equal(await opcionExtra.getAttribute("aria-disabled"), "true");
+  await page.keyboard.press("Escape");
+  await page.locator("[data-select-con-iconos]").waitFor({ state: "detached" });
+  await rA3.getByLabel("Salida").fill("16:08");
+  await elegir(rA3.getByLabel("Concepto"), "jornada");
+  assert.equal(await rA3.getByRole("alert").count(), 0, "de vuelta a «Jornada» sin error");
   // (24/11/2026) Desplegable propio dentro del diálogo, con teclado: Enter abre, flechas, Enter elige; Esc cierra solo el menú.
   const conc = r1.getByLabel("Concepto");
   const menu = page.locator("[data-select-con-iconos]");
