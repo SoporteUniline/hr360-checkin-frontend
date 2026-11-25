@@ -154,9 +154,14 @@ export function cuerpoPut(renglones, { fecha, zona } = {}) {
       anulado: Boolean(r.anulado),
       id_autoriza: r.autoriza_no ? null : r.id_autoriza ?? null,
       autoriza_no: Boolean(r.autoriza_no),
+      // «No fue comida»: quita la marca de «Salir a comer» puesta por error (el servidor no cambia horas).
+      ...(r.quitarComida ? { quitar_comida: true } : {}),
     })),
   };
 }
+
+// «No fue comida» en la franja de comida: el tramo deja de contar como salida a comer.
+export const quitarComida = (renglones, k) => renglones.map((x) => (x.k === k ? { ...x, salioAComer: false, quitarComida: true } : x));
 
 // Errores 400 del servidor ({ errores: [{ indice, error }] }) → { [clave del renglón]: texto }.
 export function erroresPorRenglon(respuesta, renglones) {
