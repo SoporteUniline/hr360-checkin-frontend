@@ -99,6 +99,11 @@
 .lh .bt-sueldo { font: 700 1.05rem/1.2 var(--fh); color: var(--ink); font-variant-numeric: tabular-nums; max-width: 22ch; }
 .lh .bt-fecha { font-size: .86rem; color: var(--muted); white-space: nowrap; }
 .lh .bt-fecha svg { width: 14px; height: 14px; display: inline; vertical-align: -2px; margin-right: 4px; }
+/* Acceso discreto a WhatsApp (25/11/2026): sobre el enlace que cubre la tarjeta; #15803d sobre blanco = 5.0:1. */
+.lh .bt-vac-wa { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; margin-top: 4px; border: 1.5px solid #b7e4c7; border-radius: 999px; background: #fff; color: #15803d; font: 600 .88rem/1 var(--f); text-decoration: none; white-space: nowrap; }
+.lh .bt-vac-wa svg { width: 18px; height: 18px; flex-shrink: 0; }
+.lh .bt-vac-wa:hover { background: var(--green-soft); border-color: #15803d; color: #166534; }
+.lh .bt-vac-wa:focus-visible { outline: 3px solid #15803d; outline-offset: 2px; }
 .lh .bt-nueva { font: 700 .76rem/1 var(--f); color: #15803d; background: var(--green-soft); border-radius: 999px; padding: 5px 10px; }
 
 /* Cargando, vacío y error */
@@ -185,6 +190,7 @@
   .lh .bt-vac-logo { width: 48px; height: 48px; }
   .lh .bt-vac-lado { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 8px 14px; text-align: left; padding-top: 10px; border-top: 1px solid var(--line); }
   .lh .bt-vac-lado .bt-fecha { margin-left: auto; }
+  .lh .bt-vac-lado .bt-vac-wa { margin-top: 0; }
   .lh .bt-esq { grid-template-columns: 48px minmax(0, 1fr); }
   .lh .bt-esq > i { width: 48px; height: 48px; }
   .lh .bt-pag .num, .lh .bt-pag .hueco { display: none; }

@@ -5,6 +5,8 @@
 //   GET /vacantes/filter?giro=&ciudad=&entidad=&pais=&titulo=&id_empresa=&tipo_contratacion=&page=&limit=
 //   (cada filtro es LIKE %valor%; vacío = sin filtro). Responde { total, page, limit, data: [vacante + nombre_empresa,
 //   giro, url_imagen] }. El API no filtra por modalidad.
+//   (25/11/2026) Cada vacante de la lista y GET /vacantes/slug/:slug traen `whatsapp: { enlace, asistente } | null`: el
+//   enlace wa.me de la vacante (el mismo que copia RH) para «Pedir información por WhatsApp». null = no se muestra.
 
 export const LIMITE_VACANTES = 10;
 
@@ -318,3 +320,31 @@ export function jsonLdSeguro(objeto) {
     .replace(/\u2028/g, "\\u2028")
     .replace(/\u2029/g, "\\u2029");
 }
+
+// ——— WhatsApp de la vacante (25/11/2026) ———
+// { enlace, asistente } solo si el API mandó un enlace https://wa.me/<dígitos>; cualquier otra cosa → null (no se muestra
+// el botón). Así un dato raro nunca termina en el href de la página pública.
+export function whatsappDeVacante(v) {
+  const w = v?.whatsapp;
+  const enlace = typeof w?.enlace === "string" ? w.enlace.trim() : "";
+  if (!enlace) return null;
+  let url;
+  try {
+    url = new URL(enlace);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:" || url.hostname !== "wa.me" || url.port || url.username || url.password || !/^\/\d{8,15}$/.test(url.pathname)) return null;
+  return { enlace, asistente: w.asistente === true };
+}
+
+export const TEXTO_WHATSAPP = "Pedir información por WhatsApp";
+
+// Nombre accesible del botón (lectores de pantalla): incluye la vacante y que se abre en otra pestaña.
+export function etiquetaWhatsApp(titulo) {
+  const t = texto(titulo);
+  return `${TEXTO_WHATSAPP}${t ? ` sobre la vacante ${t}` : ""} (se abre en otra pestaña)`;
+}
+
+// Texto de apoyo bajo el botón: con el agente encendido responde el asistente; si no, una persona del equipo.
+export const apoyoWhatsApp = (wa) => (wa?.asistente ? "Te responde nuestro asistente en minutos." : "Te responde el equipo de reclutamiento.");

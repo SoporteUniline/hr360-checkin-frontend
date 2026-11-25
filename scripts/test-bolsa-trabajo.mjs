@@ -6,6 +6,7 @@ import {
   FILTROS_INICIALES, consultaVacantes, filtrosDesdeUrl, urlDeFiltros, filtrosActivos, hayFiltros, cambiarFiltro, quitarFiltro,
   opcionesUbicacion, valorUbicacion, aplicarUbicacion, formatoSueldo, haceCuanto, esNueva, diasDesde, textoPlano,
   ubicacionVacante, paginas, totalPaginas, textoConteo, sueldoEstructurado, jobPostingLd, jsonLdSeguro,
+  whatsappDeVacante, etiquetaWhatsApp, apoyoWhatsApp, TEXTO_WHATSAPP,
 } from "../src/lib/bolsaTrabajo.mjs";
 
 test("la consulta a /vacantes/filter conserva nombres y orden del contrato", () => {
@@ -152,4 +153,27 @@ test("el JSON-LD no puede cerrar la etiqueta <script>", () => {
   const s = jsonLdSeguro({ t: "</script><script>alert(1)</script> & \u2028" });
   assert.doesNotMatch(s, /<|>|&|\u2028/);
   assert.deepEqual(JSON.parse(s), { t: "</script><script>alert(1)</script> & \u2028" });
+});
+
+test("WhatsApp de la vacante: solo enlaces https://wa.me/<número>; lo demás no se muestra", () => {
+  const enlace = "https://wa.me/5215550000000?text=Hola%2C%20me%20interesa%20m%C3%A1s%20informaci%C3%B3n.%20ID%3A%20a1b2c3d4e5f6a1b2c3d4e5f6";
+  assert.deepEqual(whatsappDeVacante({ whatsapp: { enlace, asistente: true } }), { enlace, asistente: true });
+  assert.deepEqual(whatsappDeVacante({ whatsapp: { enlace } }), { enlace, asistente: false }, "asistente solo si es true");
+  assert.deepEqual(whatsappDeVacante({ whatsapp: { enlace, asistente: "true" } }).asistente, false);
+  for (const malo of [
+    undefined, null, {}, { whatsapp: null }, { whatsapp: {} }, { whatsapp: { enlace: "" } }, { whatsapp: { enlace: 5 } },
+    { whatsapp: { enlace: "javascript:alert(1)" } }, { whatsapp: { enlace: "http://wa.me/5215550000000" } },
+    { whatsapp: { enlace: "https://wa.me.evil.mx/5215550000000" } }, { whatsapp: { enlace: "https://evil.mx/?wa.me/5215550000000" } },
+    { whatsapp: { enlace: "https://wa.me/" } }, { whatsapp: { enlace: "https://wa.me/abc" } }, { whatsapp: { enlace: "https://user@wa.me/5215550000000" } },
+    { whatsapp: { enlace: "https://wa.me:8443/5215550000000" } }, { whatsapp: { enlace: "no es url" } },
+  ]) assert.equal(whatsappDeVacante(malo), null, JSON.stringify(malo));
+});
+
+test("WhatsApp de la vacante: nombre accesible y texto de apoyo", () => {
+  assert.equal(TEXTO_WHATSAPP, "Pedir información por WhatsApp");
+  assert.equal(etiquetaWhatsApp("  Chofer repartidor "), "Pedir información por WhatsApp sobre la vacante Chofer repartidor (se abre en otra pestaña)");
+  assert.equal(etiquetaWhatsApp(""), "Pedir información por WhatsApp (se abre en otra pestaña)");
+  assert.equal(apoyoWhatsApp({ asistente: true }), "Te responde nuestro asistente en minutos.");
+  assert.equal(apoyoWhatsApp({ asistente: false }), "Te responde el equipo de reclutamiento.");
+  assert.equal(apoyoWhatsApp(null), "Te responde el equipo de reclutamiento.");
 });
