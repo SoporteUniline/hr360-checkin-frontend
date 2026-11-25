@@ -240,7 +240,11 @@ async function instalarMocks(ctx, usuario) {
         .filter((c) => !atencion || c.entrevista?.requiere_atencion === true);
       const pagina = Number(url.searchParams.get("pagina") || 1);
       const limite = Number(url.searchParams.get("limite") || 30);
-      return json({ conversaciones: lista.slice((pagina - 1) * limite, pagina * limite), total: lista.length });
+      // wa2: resumen de la franja «requiere atención» (como el servidor: sin importar búsqueda ni filtro; sin las tomadas).
+      const pendientes = S.conversaciones.filter((c) => S.entrevistas[c.id]?.requiere_atencion === true && c.modo === "ia")
+        .sort((a, b) => String(b.ultimo_mensaje?.creado_en ?? "").localeCompare(String(a.ultimo_mensaje?.creado_en ?? "")));
+      const atencionResumen = { total: pendientes.length, primeros: pendientes.slice(0, 3).map((c) => ({ id: c.id, contacto: c.contacto, motivo: S.entrevistas[c.id].motivo_atencion })) };
+      return json({ conversaciones: lista.slice((pagina - 1) * limite, pagina * limite), total: lista.length, atencion: atencionResumen });
     }
     if (ruta === "/vacantes") {
       return json({ vacantes: url.searchParams.get("empresa") === "11" ? [] : S.vacantes });
@@ -458,7 +462,8 @@ try {
   const errores = [];
   // SOLO_CHAT=1: corre solo el bloque del chat todo-en-uno (para iterar rápido).
   if (process.env.SOLO_AGENDA) { await agendaCalendario(browser, errores); assert.deepEqual(errores, []); exito = true; console.log("OK agenda"); throw new Error("__solo__"); }
-  if (process.env.SOLO_BANDEJA) { await bandejaWhatsappWeb(browser, errores); assert.deepEqual(errores, []); exito = true; throw new Error("__solo__"); }
+  if (process.env.SOLO_BANDEJA) { await bandejaWhatsappWeb(browser, errores); await franjaAtencionWeb(browser, errores); assert.deepEqual(errores, []); exito = true; throw new Error("__solo__"); }
+  if (process.env.SOLO_FRANJA) { await franjaAtencionWeb(browser, errores); assert.deepEqual(errores, []); exito = true; console.log("OK franja de atención"); throw new Error("__solo__"); }
   if (process.env.SOLO_CHAT) { await chatTodoEnUno(browser, errores); assert.deepEqual(errores, []); exito = true; console.log("OK chat todo-en-uno"); throw new Error("__solo__"); }
 
   // ——— 1. Bandeja en escritorio ———
@@ -1484,6 +1489,7 @@ try {
   await chatTodoEnUno(browser, errores);
   await agendaCalendario(browser, errores);
   await bandejaWhatsappWeb(browser, errores);
+  await franjaAtencionWeb(browser, errores);
 
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
@@ -1491,6 +1497,108 @@ try {
 } catch (e) { if (e?.message !== "__solo__") throw e; } finally { await browser.close(); next.kill(); if (!exito) process.exitCode = 1; }
 
 // ——— 24. Bandeja estilo WhatsApp Web (maqueta aprobada 25/11/2026): pantalla completa, menú «Acciones», ficha y teléfono ———
+// ——— wa2: franja «requiere atención» arriba de la lista (1440 y 390) ———
+// Contraste WCAG de dos colores rgb(a) calculados por el navegador.
+function contrasteRgb(a, b) {
+  const lum = (c) => {
+    const [r, g, bl] = c.match(/\d+(\.\d+)?/g).slice(0, 3).map(Number).map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
+  };
+  const [l1, l2] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (l1 + 0.05) / (l2 + 0.05);
+}
+function estadoFranja() {
+  S = estadoInicial();
+  S.agente.activo = true;
+  // Ana (IA) pidió hablar con una persona; Candidato 6 (IA) espera aprobar agenda; Carlos (tomado por Pedro) no cuenta.
+  S.entrevistas[1] = { etapa: "preguntas", consentimiento: true, nombre: "Ana Ruiz", calificacion: "con_alerta", resumen: "", puntajes: null,
+    requiere_atencion: true, motivo_atencion: "pidió hablar con una persona", pregunta_actual: null, respuestas: [{ texto_pregunta: "¿Cuántos años tienes?", respuesta: "55", severidad: "alerta" }] };
+  S.entrevistas[1006] = { ...S.entrevistas[1006], requiere_atencion: true, motivo_atencion: "aprobar agenda" };
+}
+async function franjaAtencionWeb(browser, errores) {
+  estadoFranja();
+  const OUTF = process.env.CAPTURAS_FRANJA || OUT;
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await ctx.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(ctx, reclutadora);
+  const page = await ctx.newPage();
+  page.on("pageerror", (e) => errores.push(e.message));
+  await page.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
+  const franja = page.locator("[data-franja-atencion]");
+  await franja.waitFor({ timeout: 30000 });
+  const columna = page.getByRole("region", { name: "Chats" });
+  assert.equal(await columna.locator("[data-franja-atencion]").count(), 1, "la franja va en la columna de chats");
+  assert.equal(await franja.getAttribute("role"), "status");
+  assert.equal(await franja.getAttribute("data-franja-atencion"), "2", "Carlos (tomado por Pedro) no cuenta");
+  const textoFranja = async () => (await franja.innerText()).replace(/\n+/g, "\n").replace(/\n ·/g, " ·");
+  assert.match(await textoFranja(), /^2 candidatos necesitan atención\nAna Ruiz pidió hablar con una persona · y 1 más\nVer$/);
+  assert.doesNotMatch(await franja.innerText(), /\p{Extended_Pictographic}/u, "sin emoji en la interfaz (ícono lucide)");
+  assert.equal(await franja.locator("svg.lucide").count(), 1);
+  // Arriba de la lista: antes del buscador y de la primera fila.
+  const yFranja = (await franja.boundingBox()).y;
+  assert.ok(yFranja < (await page.getByRole("searchbox", { name: "Buscar conversación" }).boundingBox()).y, "arriba de la lista");
+  const ver = franja.getByRole("button");
+  assert.ok(await tamano(ver) >= 44, "«Ver» de 44 px");
+  // Tailwind 4 da los colores en oklch: el navegador los pasa a sRGB pintándolos en un canvas.
+  const colores = await franja.evaluate((el) => {
+    const lienzo = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+    const rgb = (c) => { lienzo.clearRect(0, 0, 1, 1); lienzo.fillStyle = c; lienzo.fillRect(0, 0, 1, 1); const [r, g, b] = lienzo.getImageData(0, 0, 1, 1).data; return `rgb(${r}, ${g}, ${b})`; };
+    const b = el.querySelector("button");
+    return { texto: rgb(getComputedStyle(el).color), fondo: rgb(getComputedStyle(el).backgroundColor), boton: rgb(getComputedStyle(b).color) };
+  });
+  assert.ok(contrasteRgb(colores.texto, colores.fondo) >= 4.5, `contraste del texto: ${JSON.stringify(colores)}`);
+  assert.ok(contrasteRgb(colores.boton, colores.fondo) >= 4.5, "contraste del botón");
+  console.log(`Franja de atención: contraste ${contrasteRgb(colores.texto, colores.fondo).toFixed(2)}:1 (${colores.texto} sobre ${colores.fondo})`);
+  const caja = await franja.boundingBox();
+  assert.ok(caja.height <= 64, `compacta: ${caja.height}px`);
+  if (OUTF) await page.screenshot({ path: OUTF + "/franja-01-escritorio.png" });
+
+  // «Ver» con varios → filtra «Atención» (la lista pide atencion=1); con el filtro puesto, «Abrir chat» abre el primero.
+  await ver.click();
+  await page.getByRole("button", { name: "Atención", pressed: true }).waitFor();
+  for (let i = 0; i < 50 && !pedidos.some((x) => x.ruta === "/conversaciones" && /atencion=1/.test(x.params)); i++) await dormir(100);
+  assert.ok(pedidos.some((x) => x.ruta === "/conversaciones" && /atencion=1/.test(x.params)));
+  await franja.getByRole("button", { name: /^Abrir el chat: Ana Ruiz pidió hablar con una persona$/ }).click();
+  await page.waitForURL(/\?c=1$/);
+  const hilo = page.getByRole("region", { name: /Conversación con Ana Ruiz/ });
+  await hilo.locator("[data-banner-atencion]").waitFor();
+  if (OUTF) await page.screenshot({ path: OUTF + "/franja-02-abierto.png" });
+  // «Marcar como atendido» → la franja baja a 1 al momento (sin esperar al sondeo).
+  await hilo.getByRole("button", { name: "Marcar como atendido" }).click();
+  await page.locator('[data-franja-atencion="1"]').waitFor({ timeout: 3000 });
+  assert.match(await textoFranja(), /^1 candidato necesita atención\nCandidato 6 espera que apruebes su entrevista\nAbrir chat$/);
+  await franja.getByRole("button").click();
+  await page.waitForURL(/\?c=1006$/);
+  // Tomar el control también la quita: ya la atiende alguien.
+  await page.getByRole("region", { name: /Conversación con Candidato 6/ }).getByRole("button", { name: "Tomar control", exact: true }).first().click();
+  await franja.waitFor({ state: "detached", timeout: 3000 });
+  if (OUTF) await page.screenshot({ path: OUTF + "/franja-03-sin-pendientes.png" });
+  await ctx.close();
+
+  // Teléfono (390): visible arriba de la lista, sin scroll horizontal, «Ver» de 44 px y texto recortado sin desbordar.
+  estadoFranja();
+  S.conversaciones[0].contacto = { ...S.conversaciones[0].contacto, nombre: "Ana Guadalupe Ruiz de la Garza Montemayor" };
+  const movil = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await movil.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(movil, reclutadora);
+  const tel = await movil.newPage();
+  tel.on("pageerror", (e) => errores.push(e.message));
+  await tel.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
+  const franjaT = tel.locator("[data-franja-atencion]");
+  await franjaT.waitFor({ timeout: 30000 });
+  assert.ok(await sinScrollHorizontal(tel), "sin scroll horizontal a 390");
+  const cajaT = await franjaT.boundingBox();
+  assert.ok(cajaT.x >= 12 && cajaT.x + cajaT.width <= 390 - 12, `margen de 12 px: ${JSON.stringify(cajaT)}`);
+  assert.ok(await tamano(franjaT.getByRole("button")) >= 44);
+  assert.ok(await franjaT.locator("[data-franja-detalle]").evaluate((el) => el.scrollWidth > el.clientWidth), "el detalle largo se recorta con «…»");
+  assert.match(await franjaT.innerText(), /y 1 más/, "«y 1 más» siempre se ve");
+  if (OUTF) await tel.screenshot({ path: OUTF + "/franja-04-movil.png" });
+  await franjaT.getByRole("button").tap();
+  await tel.getByRole("button", { name: "Atención", pressed: true }).waitFor();
+  if (OUTF) await tel.screenshot({ path: OUTF + "/franja-05-movil-filtro.png" });
+  await movil.close();
+}
+
 async function bandejaWhatsappWeb(browser, errores) {
   S = estadoInicial();
   S.agente.activo = true; // como en la maqueta: «Agente encendido»

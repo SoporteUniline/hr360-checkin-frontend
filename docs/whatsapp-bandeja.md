@@ -43,6 +43,33 @@ Se ve y se usa como WhatsApp Web. Solo cambió la presentación: mismas llamadas
   completa. Objetivos ≥44 px, sin scroll horizontal a 390 px; con `interactive-widget=resizes-content` el teclado encoge
   el alto y el cuadro para escribir queda a la vista.
 
+## Franja «requiere atención» (wa2, 25/11/2026)
+
+`FranjaAtencion.jsx` + `src/lib/whatsapp/atencion.mjs`. Va arriba de la lista de chats, antes del buscador, cuando uno o
+más candidatos piden hablar con una persona o su entrevista pide atención. Ejemplo: «2 candidatos necesitan atención ·
+Ana Ruiz pidió hablar con una persona · y 1 más · Ver».
+
+- **Datos:** `atencion: { total, primeros }` llega en la misma respuesta de `GET /conversaciones`. El servidor cuenta las
+  empresas de la sesión, sin importar búsqueda, filtro ni página. Las conversaciones que ya tomó un reclutador no
+  cuentan. Se actualiza con el refresco normal de la lista (5 s), sin otro sondeo.
+- **Cuándo desaparece:** al pulsar «Marcar como atendido» o «Tomar control» se recarga la lista al momento.
+- **Motivo:** se muestra en palabras cortas («espera que apruebes su entrevista», «revisa una respuesta de filtro»,
+  «el agente no pudo contestar»…). El nombre largo se recorta con «…»; «y N más» siempre se ve.
+- **Botón:**
+  - con un candidato dice «Abrir chat» y abre su chat;
+  - con varios dice «Ver» y filtra «Atención»;
+  - con el filtro ya puesto, abre el primero.
+- **Accesibilidad:**
+  - `role="status"`: se anuncia cuando cambia;
+  - ícono `AlertTriangle` de lucide, sin emoji;
+  - texto rojo 800 sobre rojo 50: contraste 7.64:1 medido;
+  - botón de 44 px;
+  - en teléfono (390 px), margen de 12 px y sin scroll horizontal.
+- **Pruebas:**
+  - `node --test scripts/test-whatsapp-atencion.mjs` (en CI);
+  - bloque «franja» de `scripts/verify-whatsapp.mjs` (`SOLO_FRANJA=1`; también corre con `SOLO_BANDEJA=1`), a 1440 y 390
+    px, con las capturas `franja-0*.png`.
+
 Menús: las opciones que abren un diálogo o la ficha se ejecutan cuando el menú terminó de cerrarse (en
 `onCloseAutoFocus`), para que el diálogo no herede la capa del menú (el primer Escape se perdía) y el foco quede en el
 destino.
