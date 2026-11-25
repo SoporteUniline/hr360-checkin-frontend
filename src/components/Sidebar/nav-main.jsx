@@ -62,6 +62,7 @@ import {
   MessageCircle,
   LayoutGrid,
   Activity,
+  PartyPopper,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -565,6 +566,13 @@ const menuGroups = [
         url: "/panel/reglas-aviso",
         rol: "Recruiter",
         icon: BellRing,
+      },
+      // Avisos y felicitaciones: plantillas de correo de cumpleaños y aniversario (las de WhatsApp son fijas).
+      {
+        title: "Plantillas de felicitación",
+        url: "/panel/plantillas-felicitacion",
+        rol: "Recruiter",
+        icon: PartyPopper,
       },
       {
         title: "Campos personalizados",
