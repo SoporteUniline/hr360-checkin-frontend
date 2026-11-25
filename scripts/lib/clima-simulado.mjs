@@ -163,14 +163,14 @@ const TABLERO = {
     invitados: 165,
     contestadas: 142,
     participacion: 86,
-    minimo: 5,
+    minimo: 1,
     disponibles: true,
     agruparPor: "area",
     clima: {
       respuestas: 142,
       invitados: 165,
       participacion: 86,
-      minimo: 5,
+      minimo: 1,
       suficiente: true,
       general: 7.6,
       enps: { valor: 28, promotores: 48, detractores: 20, pasivos: 32, n: 142 },
@@ -179,9 +179,11 @@ const TABLERO = {
         { clave: "Almacén", nombre: "Almacén", n: 31, general: 6.1, dimensiones: dims([6.8, 6.0, 5.6, 5.1, 6.2, 7.4, 5.8, 7.0]) },
         { clave: "Caja", nombre: "Caja", n: 28, general: 7.0, dimensiones: dims([7.5, 7.0, 6.8, 7.2, 6.2, 8.0, 6.4, 7.6]) },
         { clave: "Oficina", nombre: "Oficina", n: 22, general: 8.3, dimensiones: dims([8.4, 8.0, 7.8, 8.1, 7.6, 8.9, 8.6, 8.5]) },
+        // Desde el 25/11/2026 clima muestra grupos desde 1 respuesta: Reparto (4) ya se ve.
+        { clave: "Reparto", nombre: "Reparto", n: 4, general: 6.8, dimensiones: dims([7.0, 6.5, 6.0, 6.6, 6.4, 7.8, 6.9, 7.2]) },
         { clave: "Ventas", nombre: "Ventas", n: 57, general: 7.9, dimensiones: dims([8.1, 7.3, 6.6, 7.2, 6.9, 8.4, 7.3, 8.3]) },
       ],
-      gruposOcultos: 1,
+      gruposOcultos: 0,
     },
     comentarios: [
       {
@@ -194,10 +196,40 @@ const TABLERO = {
   anterior: { id: 29, nombre: "Clima mayo 2026", cierra_el: "2026-05-20", comparacion: { general: 0.4, enps: 6, participacion: 5 } },
   mediciones: [
     { id: 30, nombre: "Clima noviembre 2026", cierra_el: "2026-11-20" },
+    { id: 31, nombre: "Pulso del taller", cierra_el: "2026-11-24" },
     { id: 29, nombre: "Clima mayo 2026", cierra_el: "2026-05-20" },
   ],
   abiertas: [],
   nom035: { campania: { id: 40 }, disponibles: true, nivel: "medio", dominiosAltos: 2 },
+};
+
+// Empresa chica (25/11/2026): 1 de 3 personas contestó y el servidor ya manda resultados, grupo y comentario.
+const TABLERO_CHICO = {
+  ...TABLERO,
+  actual: {
+    campania: { id: 31, nombre: "Pulso del taller", tipo: "clima", estado: "cerrada", abre_el: "2026-11-17", cierra_el: "2026-11-24" },
+    invitados: 3,
+    contestadas: 1,
+    participacion: 33,
+    minimo: 1,
+    disponibles: true,
+    motivo: null,
+    agruparPor: "area",
+    clima: {
+      respuestas: 1,
+      invitados: 3,
+      participacion: 33,
+      minimo: 1,
+      suficiente: true,
+      general: 6.9,
+      enps: { valor: 100, promotores: 100, detractores: 0, pasivos: 0, n: 1 },
+      dimensiones: dims([7.5, 5.0, 10.0, 7.5, 5.0, 7.5, 5.0, 7.5]),
+      grupos: [{ clave: "Taller", nombre: "Taller", n: 1, general: 6.9, dimensiones: dims([7.5, 5.0, 10.0, 7.5, 5.0, 7.5, 5.0, 7.5]) }],
+      gruposOcultos: 0,
+    },
+    comentarios: [{ clave: "abi2", texto: "Si pudieras cambiar una sola cosa de tu trabajo, ¿cuál sería?", respuestas: ["Que haya más herramientas."] }],
+  },
+  anterior: null,
 };
 
 const dom = (nombre, valor, nivel) => ({ nombre, valor, nivel });
@@ -554,7 +586,7 @@ export function datosSimulados() {
           tipo: "clima",
           cierra_el: c.cierra_el,
           anonima: true,
-          minimo: 5,
+          minimo: 1,
           secciones: c.definicion.secciones,
           escala: ESCALA,
         };
@@ -583,7 +615,7 @@ export function datosSimulados() {
     const e = p.slice("/checador/clima".length);
     const c = estado.campania;
 
-    if (e === "/inicio") return json({ ok: true, empresa: { activos: 165, guias: ["I", "III"], muestraGuiaIII: 116 }, catalogo: CATALOGO, minimo: 5 });
+    if (e === "/inicio") return json({ ok: true, empresa: { activos: 165, guias: ["I", "III"], muestraGuiaIII: 116 }, catalogo: CATALOGO, minimo: 1, minimoNom035: 5 });
     if (e === "/plantillas" && m === "GET") return json({ ok: true, plantillas: [estado.plantilla] });
     if (e === "/plantillas" && m === "POST") {
       if (cuerpo.clave_origen) return json({ ok: true, plantilla: estado.plantilla }, 201);
@@ -632,7 +664,8 @@ export function datosSimulados() {
         total: elegidas.length,
         porArea,
         gruposChicos: Object.keys(porArea).filter((a) => porArea[a] < 5),
-        minimo: 5,
+        equipoPequeno: 5,
+        minimoNom035: 5,
       });
     }
     if (e === "/campanias" && m === "POST") {
@@ -686,7 +719,7 @@ export function datosSimulados() {
           { id: 2, nombre: "Persona 2", estado: "pendiente" },
         ],
       });
-    if (e.startsWith("/tablero")) return json(TABLERO);
+    if (e.startsWith("/tablero")) return json(url.searchParams.get("campania") === "31" ? TABLERO_CHICO : TABLERO);
     if (e === "/campanias/40/resultados") return json(NOM_RESULTADOS);
     if (e === "/campanias/40/guia1") {
       const canal = (id) => (estado.canalizados.filter((x) => x.id === id).at(-1)?.canalizado ? "2026-11-24T10:00:00Z" : null);

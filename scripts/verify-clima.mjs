@@ -194,14 +194,16 @@ try {
   await captura(rh, "1440-editor");
   console.log("PASS: editor (texto, tipo opción, guardado con versión, vista previa)");
 
-  // 3) Lanzar: por área (Caja + Ventas), fechas, recordatorio y canales; aviso de grupos chicos.
+  // 3) Lanzar: por área (Caja + Ventas), fechas, recordatorio y canales; aviso de privacidad de equipos pequeños
+  //    (25/11/2026: ya no «esos resultados se verán solo juntos»; clima los muestra desde 1 respuesta).
   await rh.getByRole("button", { name: "Siguiente: lanzar →" }).click();
   await rh.waitForURL("**/panel/clima/encuestas/lanzar/21", { timeout: 30000 });
   await rh.getByRole("button", { name: "Por área o puesto" }).click();
   await rh.getByRole("button", { name: "Caja", exact: true }).click();
   await rh.getByRole("button", { name: "Reparto", exact: true }).click();
   await rh.getByText("9 personas").first().waitFor();
-  await rh.getByText(/Con menos de 5 por área \(Reparto\)/).waitFor();
+  await rh.getByText("Equipos pequeños (Reparto): las respuestas no llevan nombre, pero RH podría deducir quién contestó.").waitFor();
+  assert.equal(await rh.getByText(/se verán solo juntos|no se podrán mostrar/).count(), 0, "sin el aviso del mínimo de 5");
   await rh.getByRole("checkbox", { name: /WhatsApp/ }).isDisabled();
   await sinDesborde(rh, "lanzar 1440");
   await captura(rh, "1440-lanzar");
@@ -213,21 +215,37 @@ try {
   await rh.getByText("Quién ya contestó (nunca qué contestó).").waitFor();
   console.log("PASS: lanzar con destinatarios, fechas, canales y seguimiento de participación");
 
-  // 4) Tablero (1440): clima general, eNPS, participación, NOM-035 y mapa de calor sin el grupo de menos de 5.
+  // 4) Tablero (1440): clima general, eNPS, participación, NOM-035 y mapa de calor con todos los grupos (Reparto con 4).
   await ir(rh, "/panel/clima");
   await rh.getByText("Clima general", { exact: true }).waitFor({ timeout: 30000 });
   await rh.getByText("+28").waitFor();
   await rh.getByText("142 de 165 personas").waitFor();
   const mapa = rh.getByRole("region", { name: "Por área y dimensión" });
-  assert.equal(await mapa.getByRole("row").count(), 6, "4 áreas + toda la empresa + encabezado");
-  assert.equal(await mapa.getByText("Reparto").count(), 0, "Reparto (4 respuestas) no aparece");
-  await mapa.getByText(/1 grupo\(s\) con menos de 5 respuestas/).waitFor();
+  assert.equal(await mapa.getByRole("row").count(), 7, "5 áreas + toda la empresa + encabezado");
+  assert.equal(await mapa.getByText("Reparto").count(), 1, "Reparto (4 respuestas) ya aparece");
+  assert.equal(await mapa.getByText(/no se muestran por separado/).count(), 0, "ningún grupo oculto en clima");
   const descarga = rh.waitForEvent("download");
   await rh.getByRole("button", { name: "Descargar informe PDF" }).click();
   assert.match((await descarga).suggestedFilename(), /informe-clima-30\.pdf/);
   await sinDesborde(rh, "tablero 1440");
   await captura(rh, "1440-tablero");
-  console.log("PASS: tablero con mínimo de 5 e informe PDF");
+  console.log("PASS: tablero con todos los grupos (sin mínimo de 5 en clima) e informe PDF");
+
+  // 4a) Empresa chica: 1 de 3 contestó y se ven resultados, el grupo y el comentario (antes «Sin resultados que mostrar»).
+  await rh.getByLabel("Medición").selectOption("31");
+  await rh.getByText("1 de 3 personas").waitFor({ timeout: 30000 });
+  assert.equal(await rh.getByText("Sin resultados que mostrar").count(), 0);
+  assert.equal(await rh.getByText(/al menos 5/).count(), 0);
+  const mapaChico = rh.getByRole("region", { name: "Por área y dimensión" });
+  await mapaChico.getByText("Taller").first().waitFor();
+  await rh.getByText("Comentarios abiertos (1)", { exact: false }).click();
+  await rh.getByText("Que haya más herramientas.", { exact: false }).first().waitFor();
+  assert.equal(await rh.getByRole("button", { name: "Descargar informe PDF" }).isEnabled(), true);
+  await sinDesborde(rh, "tablero 1 respuesta 1440");
+  await captura(rh, "1440-tablero-1-respuesta");
+  await rh.getByLabel("Medición").selectOption("30");
+  await rh.getByText("142 de 165 personas").waitFor({ timeout: 30000 });
+  console.log("PASS: tablero con 1 respuesta: resultados, grupo, comentario y PDF disponibles");
 
   // 4b) Adamia AI en el tablero: temas con cita anonimizada, plan de acción y convertirlo en tareas.
   const temas = rh.getByRole("region", { name: "Lo que dicen" });
@@ -307,6 +325,8 @@ try {
   await ana.getByRole("link", { name: /Clima general/ }).click({ timeout: 30000 });
   await ana.getByText("Pregunta 1 de 6").waitFor({ timeout: 30000 });
   await ana.getByText("Anónima", { exact: true }).waitFor();
+  await ana.getByText("Tus respuestas no llevan tu nombre. En equipos pequeños, RH podría deducir quién contestó.").waitFor();
+  assert.equal(await ana.getByText(/grupos de 5 o más/).count(), 0, "clima ya no promete grupos de 5 o más");
   await sinDesborde(ana, "390-contestar");
   await pantallaCompletaLegible(ana, "390-contestar");
   await ana.getByRole("button", { name: "9", exact: true }).click();
@@ -340,6 +360,8 @@ try {
   // 8) NOM-035 en el celular: Guía I con un «Sí» abre II a IV; filtros de clientes y jefe; aviso de confidencialidad.
   await ir(ana, "/empleado/panel/encuestas/41");
   await ana.getByText("Parte 1 · Guía I (con tu nombre y confidencial).").waitFor({ timeout: 30000 });
+  // La NOM-035 conserva su regla: Guías II/III anónimas por grupo de 5 o más.
+  await ana.getByText(/los resultados se muestran en grupos de 5 o más/).waitFor();
   await captura(ana, "390-nom035-inicio");
   await ana.getByRole("button", { name: "Empezar" }).click();
   await ana.getByText("Confidencial", { exact: true }).waitFor();

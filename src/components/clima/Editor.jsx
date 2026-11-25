@@ -11,7 +11,6 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import axios from "@/lib/axios";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  MINIMO,
   TIPOS,
   agregarPregunta,
   agregarSeccion,
@@ -332,8 +331,8 @@ export default function Editor({ id, idEmpresa, revision: RevisionIa = null }) {
           <Tarjeta titulo="Privacidad">
             <ul className="space-y-2 text-[13px] text-slate-700">
               <li>✓ Respuestas anónimas: la respuesta no se guarda con el nombre de nadie.</li>
-              <li>✓ No se muestran resultados de grupos con menos de {MINIMO} respuestas.</li>
-              <li>✓ El área o el jefe solo se usan para agrupar, y solo si el grupo tiene {MINIMO} o más personas.</li>
+              <li>✓ El área o el jefe solo se usan para agrupar; los resultados se ven desde 1 respuesta.</li>
+              <li>! En equipos pequeños RH podría deducir quién contestó: a tu gente se le avisa al contestar.</li>
             </ul>
           </Tarjeta>
         </aside>

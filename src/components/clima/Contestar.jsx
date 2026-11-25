@@ -4,8 +4,9 @@
 // La misma pantalla sirve para la app del empleado, la liga personal (WhatsApp) y la vista previa del editor.
 import { useEffect, useMemo, useState } from "react";
 import {
+  AVISO_PRIVACIDAD_CLIMA,
   ESCALA,
-  MINIMO,
+  MINIMO_NOM035,
   armarRespuesta,
   avance,
   llaveBorrador,
@@ -176,7 +177,7 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
         {principal ? (
           <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-[16px] leading-relaxed text-blue-950">
             <strong>Parte 2 · Guía {principal} (anónima).</strong> Nadie ve tu nombre junto a tus respuestas; los resultados se muestran en
-            grupos de {MINIMO} o más.
+            grupos de {MINIMO_NOM035} o más.
           </div>
         ) : null}
         <button type="button" onClick={() => setI(0)} className="min-h-14 w-full rounded-2xl bg-brand text-[18px] font-bold text-white">
@@ -226,7 +227,9 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
       <p className="mt-6 text-[15px] leading-relaxed text-slate-500">
         {confidencial
           ? "Esta parte va con tu nombre para poder apoyarte. Solo la ven RH y el dueño; nunca sale en reportes."
-          : `Nadie de tu empresa ve tu nombre junto a tus respuestas. Los resultados se muestran solo en grupos de ${MINIMO} o más personas.`}
+          : encuesta.tipo === "nom035"
+          ? `Nadie de tu empresa ve tu nombre junto a tus respuestas. Los resultados se muestran solo en grupos de ${MINIMO_NOM035} o más personas.`
+          : AVISO_PRIVACIDAD_CLIMA}
       </p>
       {error ? (
         <p role="alert" className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-[15px] text-red-800">

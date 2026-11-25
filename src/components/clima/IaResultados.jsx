@@ -212,7 +212,7 @@ function Plan({ idEmpresa, idCampania, nom035 = false }) {
         <p className="text-[13px] text-slate-600">
           {nom035
             ? "Arma el programa de intervención (8.4) para los dominios en nivel medio o mayor."
-            : "Propone acciones concretas para las áreas y dimensiones más bajas. A la IA solo van números de grupos de 5+."}
+            : "Propone acciones concretas para las áreas y dimensiones más bajas. A la IA solo van números agregados, sin nombres."}
         </p>
       )}
       <div className="mt-3 grid gap-2">
