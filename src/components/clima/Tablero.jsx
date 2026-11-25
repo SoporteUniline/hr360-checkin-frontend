@@ -343,6 +343,13 @@ function PorArea({ r, cl }) {
         </h2>
         {!mapa ? <span className="text-[12.5px] text-slate-600">el mapa de resultados por {quien} aparece con 2 grupos o más</span> : null}
       </div>
+      {pg.sinDesglose ? (
+        <p data-sin-desglose className="mt-3 text-sm leading-relaxed text-slate-700">
+          Contestaron <b className="text-slate-900">{pg.total?.contestadas ?? 0} de {pg.total?.invitados ?? 0}</b>. Esta encuesta guardó las
+          respuestas sin {quien} (se lanzó con la regla anterior de mínimo 5 personas por {quien}), así que no se puede saber
+          cuántos contestaron de cada una. La siguiente encuesta sí mostrará la participación por {quien}.
+        </p>
+      ) : null}
       <ul className="mt-3.5 space-y-3 text-sm">
         {pg.grupos.map((g) => {
           const t = textoParticipacion(g.contestadas, g.invitados);
@@ -359,7 +366,7 @@ function PorArea({ r, cl }) {
           );
         })}
       </ul>
-      {pg.sinGrupos ? (
+      {pg.sinDesglose ? null : pg.sinGrupos ? (
         <p className="mt-2.5 text-[13px] text-slate-600">
           Tus empleados no tienen área asignada. Asígnalas en Empleados para ver resultados por área en la siguiente encuesta.
         </p>
