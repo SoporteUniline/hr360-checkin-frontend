@@ -67,6 +67,13 @@ export function CambiosPendientesProvider({ children }) {
 
   useEffect(() => { ajustarHistorial(); }, [conCambios, ajustarHistorial]);
 
+  // (25/11/2026) Lo publica para quien recarga datos solo (Asistencias y Monitor: lib/asistencia/refrescoAsistencias.js):
+  // con cambios sin guardar no se recarga nada por SSE, foco ni sondeo; al cerrar la edición se hace lo pendiente.
+  useEffect(() => {
+    window.__adamiaCambiosPendientes = conCambios;
+    window.dispatchEvent(new CustomEvent("adamia-cambios-pendientes", { detail: { hay: conCambios } }));
+  }, [conCambios]);
+
   // Salir de verdad: sin preguntar otra vez y sin dejar la entrada extra en el historial.
   // - Si la acción navega (navega: true), recibe { reemplazar }: con la entrada extra arriba, navega reemplazándola
   //   (router.replace, history.go(-2)) en vez de hacer back() y luego push (dos recorridos seguidos se pisan en Next).

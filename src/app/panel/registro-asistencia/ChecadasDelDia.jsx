@@ -6,6 +6,7 @@
 // La comida se distingue: «checada en el reloj» o «manual» (agregada desde el panel, con quién y Editar / Quitar).
 
 import dayjs from "dayjs";
+import { conRefrescoAsistencias } from "@/lib/asistencia/refrescoAsistencias";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { Coffee, Pencil, Save, X } from "lucide-react";
@@ -45,7 +46,7 @@ export default function ChecadasDelDia({ empleado, activo = true, mutateAsistenc
     handleSaveMovimientoClick,
     handleCancelMovimientoEdit,
     handleMovimientoFieldChange,
-  } = useEntradaSalida(mutate);
+  } = useEntradaSalida(conRefrescoAsistencias(mutate));
 
   const hora = (v) => (valida(v) ? dayjs.tz(v, DB_TIMEZONE).tz(zona).format("HH:mm") : "");
   // Para mostrar (12 h); `hora` (HH:mm) queda para los campos de captura.
