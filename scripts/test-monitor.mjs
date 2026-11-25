@@ -644,3 +644,9 @@ test("línea del día: turno nocturno (de ayer a hoy, comida de madrugada)", () 
     ]
   );
 });
+
+test("trabajó fuera de su horario: la razón dice cuánto trabajó de su jornada, no «faltaron» hasta su salida", () => {
+  const fuera = { ...reg({ hora_entrada_programada: "16:10:00", hora_salida_programada: "20:10:00",
+    hora_salida_comida_programada: null, hora_regreso_comida_programada: null }), ...conTramos([["07:56", "11:28"]]) };
+  assert.equal(razonMonitor(estado(fuera, "21:56")).texto, "Fuera de su horario · trabajó 3 h 32 min de 4 h");
+});

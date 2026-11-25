@@ -148,6 +148,8 @@ function razonAtencion(r) {
     case "no_ha_llegado":
       return { texto: `No ha llegado · debía entrar hace ${formatearMinutos(r.debiaEntrarHace)}`, tono: "naranja" };
     case "salio_antes":
+      if (r.fueraDeHorario)
+        return { texto: `Fuera de su horario · trabajó ${formatearMinutos(r.trabajados)} de ${formatearMinutos(r.programados)}`, tono: "rosa" };
       return { texto: `Salió antes · ${horaDe(r.ultimaSalida)} · faltaron ${formatearMinutos(r.faltaron)}`, tono: "rosa" };
     case "en_comida":
       return { texto: `En comida ${r.llevaComida}${r.minutosComida != null ? ` de ${r.minutosComida}` : ""} min`, tono: "rojo" };
