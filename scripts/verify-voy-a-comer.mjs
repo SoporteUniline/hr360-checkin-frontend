@@ -7,6 +7,9 @@
 // prendido muestra el aviso sobre la cámara y su cuenta, se apaga al usarse y solo a los 30 s; sin desplazamiento en el
 // kiosco ni teclas más chicas; sin errores de JavaScript. Nada sale a internet. Sonido del kiosco (AudioContext simulado):
 // suena al checar (entrada, salida a comer más cálida) y en el error en pantalla (uno cada 3 s), y la bocina lo silencia.
+// (27/11/2026) Confirmación con los datos del servidor: «Retardo · 12 min» y «Tu salida: 6:00 p.m.» al entrar, «Regresa a las
+// 2:30 p.m.» al salir a comer, «Salió antes · 30 min» al cerrar turno; servidor viejo (sin campos) no muestra chips; y en
+// «Últimos» la salida con tipo_cierre 'comida' dice «Comida» en ámbar.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build && node scripts/verify-voy-a-comer.mjs
 // Capturas: CAPTURAS=/ruta/carpeta node scripts/verify-voy-a-comer.mjs
 import assert from "node:assert/strict";
@@ -55,7 +58,11 @@ function backend() {
     if (p.endsWith("/empresas/slug/demo")) return json({ id_empresa: 7, nombre: "Demo" });
     if (p.endsWith("/eventos-checada")) return route.abort();
     if (p.endsWith("/registros-del-dia") || p.endsWith("/registros-del-dia-empleado")) {
-      return json({ registrosHoy: [{ nip: "1001", nombre: "Ana Torres", entrada: hace(240), salida: null, estado: "Abierto" }], activosHoy: 1, totalRegistrosHoy: 1, zona_horaria: "America/Mexico_City" });
+      return json({ registrosHoy: [
+        { nip: "1002", nombre: "Mara Ruiz", entrada: hace(300), salida: hace(5), estado: "Cerrado", tipo_cierre: "comida" },
+        { nip: "1003", nombre: "Luis Peña", entrada: hace(400), salida: hace(20), estado: "Cerrado", tipo_cierre: null },
+        { nip: "1001", nombre: "Ana Torres", entrada: hace(240), salida: null, estado: "Abierto" },
+      ], activosHoy: 1, totalRegistrosHoy: 3, zona_horaria: "America/Mexico_City" });
     }
     if (p.endsWith("/reloj/registrar") || p.endsWith("/reloj/registrar-facial")) {
       const ev = req.postDataJSON();
@@ -65,15 +72,19 @@ function backend() {
       const empleado = { nombre: quien.nombre, apellido_paterno: quien.apellido_paterno };
       // Misma regla que el servidor: salida_comida vale si aún no come; si ya comió, salida normal o pregunta (manual).
       if (ev.accion === "salida_comida") {
-        if (!estado.comio.has(ev.codigo)) { estado.comio.add(ev.codigo); return json({ message: "Salida a comer registrada. ¡Buen provecho!", empleado }); }
+        if (!estado.comio.has(ev.codigo)) {
+          estado.comio.add(ev.codigo);
+          return json({ message: "Salida a comer registrada. ¡Buen provecho!", salida_programada: "18:00", regreso_comida: "14:30", empleado });
+        }
         if (quien.manual) {
           return json({ requiereDecision: true, opciones: ["salida_temporal", "cerrar_turno"], aviso: "comida_ya_registrada",
             message: "Ya registraste tu comida hoy. ¿Salida temporal o cierras tu turno?", empleado });
         }
+        // Sin campos nuevos (como un servidor viejo): la confirmación no muestra chips.
         return json({ message: "Ya registraste tu comida hoy. Registramos tu salida.", empleado });
       }
-      if (ev.accion === "cerrar_turno") return json({ message: "Turno cerrado", empleado });
-      return json({ message: "Entrada registrada", empleado });
+      if (ev.accion === "cerrar_turno") return json({ message: "Turno cerrado", salida_programada: "18:00", puntualidad: { estado: "salio_antes", minutos: 30 }, empleado });
+      return json({ message: "Entrada registrada", puntualidad: { estado: "retardo", minutos: 12 }, salida_programada: "18:00", empleado });
     }
     return json({ data: [], results: [], employees: [], total: 0 });
   }
@@ -138,9 +149,32 @@ try {
     assert.ok(await sinScroll(), `${t.nombre}: una sola pantalla`);
     await captura(pg, `kiosco-${t.nombre}-apagado`);
 
+    // «Últimos»: la salida con tipo_cierre 'comida' dice «Comida» en ámbar (a 1440 la tarjeta se ve junto al código).
+    const ultimos = pg.locator("section[aria-label='Últimos registros']").filter({ visible: true });
+    if (t.nombre === "1440") {
+      const filaMara = ultimos.locator("li", { hasText: "Mara Ruiz" });
+      await filaMara.waitFor({ timeout: 15000 });
+      const comidaTxt = filaMara.getByText("Comida", { exact: true });
+      assert.equal(await comidaTxt.count(), 1, "«Últimos»: la salida a comer dice «Comida»");
+      assert.match(await comidaTxt.evaluate((e) => getComputedStyle(e).color), /rgb\(180, 83, 9\)|oklch\(0\.555 0\.163 48\.998\)/, "«Comida» en ámbar");
+      assert.equal(await ultimos.locator("li", { hasText: "Luis Peña" }).getByText("Salida", { exact: true }).count(), 1, "una salida normal sigue «Salida»");
+      await captura(pg, "ultimos-comida-1440", ultimos);
+      await captura(pg, `kiosco-${t.nombre}-ultimos-comida`);
+    }
+
     // Apagado: la checada va sin acción (el que solo checa no nota nada).
+    // Confirmación con retardo y su salida programada (chips del servidor).
     await teclear("1001");
-    await esperarResultado("Entrada registrada");
+    await resultado.filter({ hasText: "Entrada registrada" }).waitFor({ state: "visible", timeout: 20000 });
+    const chips = () => pg.locator("[data-resultado-zona] [data-chip]").allInnerTexts();
+    assert.deepEqual(await chips(), ["Retardo · 12 min", "Tu salida: 6:00 p.m."], `${t.nombre}: chips de la entrada`);
+    const ambar = await pg.locator("[data-resultado-zona] [data-chip=retardo]").evaluate((e) => getComputedStyle(e).backgroundColor);
+    assert.match(ambar, /rgb\(254, 243, 199\)|oklch\(0\.962 0\.059 95\.617\)/, `${t.nombre}: retardo en ámbar (${ambar})`);
+    for (const chip of await pg.locator("[data-resultado-zona] [data-chip]").all()) await dentro(chip, t, "chip de la confirmación");
+    await dormir(500); // animación de entrada
+    await captura(pg, `kiosco-${t.nombre}-confirmacion-retardo`);
+    if (t.nombre === "1440") await captura(pg, "confirmacion-retardo-1440");
+    await resultado.waitFor({ state: "hidden", timeout: 10000 });
     assert.equal(estado.envios.at(-1).accion, undefined);
     assert.ok((await sonidos()).includes(NOTA.entrada), `${t.nombre}: suena la entrada`);
 
@@ -167,6 +201,7 @@ try {
     await captura(pg, `kiosco-${t.nombre}-prendido`);
     await teclear("1001");
     await resultado.filter({ hasText: "Salida a comer registrada" }).waitFor({ state: "visible", timeout: 20000 });
+    assert.deepEqual(await chips(), ["Regresa a las 2:30 p.m."], `${t.nombre}: al salir a comer, a qué hora regresa`);
     await dormir(500); // animación de entrada
     await captura(pg, `kiosco-${t.nombre}-salida-a-comer`);
     await resultado.waitFor({ state: "hidden", timeout: 10000 });
@@ -180,6 +215,7 @@ try {
     await boton.click();
     await teclear("1001");
     await resultado.filter({ hasText: "Ya registraste tu comida hoy" }).waitFor({ state: "visible", timeout: 20000 });
+    assert.equal(await pg.locator("[data-chips-confirmacion]").count(), 0, `${t.nombre}: sin campos del servidor, sin chips`);
     await dormir(500);
     await captura(pg, `kiosco-${t.nombre}-ya-comio`);
     await resultado.waitFor({ state: "hidden", timeout: 10000 });
@@ -194,7 +230,9 @@ try {
     await dormir(400);
     await captura(pg, `kiosco-${t.nombre}-manual-ya-comio`);
     await pg.getByRole("button", { name: "Cerrar turno" }).click();
-    await esperarResultado("Turno cerrado");
+    await resultado.filter({ hasText: "Turno cerrado" }).waitFor({ state: "visible", timeout: 20000 });
+    assert.deepEqual(await chips(), ["Salió antes · 30 min"], `${t.nombre}: salió antes, sin «Tu salida»`);
+    await resultado.waitFor({ state: "hidden", timeout: 10000 });
     assert.deepEqual(estado.envios.slice(-2).map((e) => [e.codigo, e.accion]), [["1002", "salida_comida"], ["1002", "cerrar_turno"]]);
     assert.equal(await boton.getAttribute("aria-checked"), "false");
 
@@ -279,6 +317,11 @@ try {
     await codigo.press("Enter");
     await pg.getByText(/Salida a comer registrada/).filter({ visible: true }).first().waitFor({ timeout: 20000 });
     assert.equal(estado.envios.at(-1).accion, "salida_comida");
+    // La app usa la misma confirmación (tarjeta en escritorio, aviso abajo en el celular) con sus chips.
+    const chipApp = pg.locator("[data-chip=regreso]").filter({ visible: true });
+    assert.equal(await chipApp.count(), 1, `app ${t.nombre}: «Regresa a las…» visible`);
+    assert.equal(await chipApp.innerText(), "Regresa a las 2:30 p.m.");
+    await dentro(chipApp, t, "chip de la app");
     await captura(pg, `app-${t.nombre}-salida-a-comer`);
     assert.deepEqual(errores, [], `${t.nombre}: sin errores de JavaScript`);
     console.log(`ok app ${t.nombre}: «Voy a comer» manda salida_comida con la misma regla del servidor`);

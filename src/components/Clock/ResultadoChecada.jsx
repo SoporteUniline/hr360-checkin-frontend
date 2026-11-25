@@ -2,6 +2,7 @@
 // Confirmación grande después de checar (reloj de la empresa y app del empleado en escritorio): «¡Listo, Ana!», qué se
 // registró y a qué hora. Dura unos segundos (la barra de abajo se vacía) y el reloj vuelve solo. Solo presentación.
 import { AlertTriangle, Check, CheckCircle2, Clock4, LogIn, LogOut, Utensils, XCircle } from "lucide-react";
+import { TONOS_CHIP } from "@/lib/reloj/confirmacion.mjs";
 
 const iniciales = (nombre) => String(nombre || "").trim().split(/\s+/).slice(0, 2).map((p) => p[0] || "").join("").toUpperCase() || "?";
 
@@ -19,6 +20,22 @@ const TONOS = {
   comida: { Icono: Utensils, hora: "text-amber-700", insignia: "bg-amber-500", barra: "bg-amber-500" },
   otro: { Icono: CheckCircle2, hora: "text-slate-900", insignia: "bg-emerald-500", barra: "bg-brand" },
 };
+
+// (27/11/2026) Chips que manda el servidor: «A tiempo», «Retardo · 12 min», «Salió antes · 30 min», «Tu salida: 6:00 p.m.»,
+// «Regresa a las 2:30 p.m.» (src/lib/reloj/confirmacion.mjs). Sin datos no se dibuja nada.
+export function ChipsConfirmacion({ chips, grande = false, className = "" }) {
+  if (!chips?.length) return null;
+  return (
+    <ul data-chips-confirmacion className={`flex flex-wrap justify-center gap-2 ${className}`}>
+      {chips.map((c) => (
+        <li key={c.clave} data-chip={c.clave}
+          className={`rounded-full px-3.5 py-1.5 text-sm font-semibold ${grande ? "[@container(min-width:40rem)]:px-5 [@container(min-width:40rem)]:py-2 [@container(min-width:40rem)]:text-lg" : ""} ${TONOS_CHIP[c.tono] ?? TONOS_CHIP.neutro}`}>
+          {c.texto}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 // Kiosco (maqueta aprobada 26/11/2026): la confirmación ocupa la zona de la cámara: fondo de color suave, la palomita
 // grande, qué se registró, «¡Listo, Diego!» y la hora. Los textos crecen con el tamaño de la zona (container queries).
@@ -49,6 +66,7 @@ export function ResultadoEnZona({ info, duracion }) {
           {estado ? primerNombre || "Checada" : `¡Listo, ${primerNombre || "registrado"}!`}
         </p>
         {info.hora && !estado && <p className={`text-3xl font-extrabold tabular-nums [@container(min-width:40rem)]:text-5xl ${z.texto}`}>{info.hora}</p>}
+        {!estado && <ChipsConfirmacion chips={info.chips} grande className="mt-1" />}
         <div className="mt-1 flex flex-wrap justify-center gap-2.5">
           <span className="rounded-full bg-white px-4 py-2 text-sm font-medium text-slate-700 [@container(min-width:40rem)]:text-base">{info.nombre}</span>
           {estado && <span className={`rounded-full bg-white px-4 py-2 text-sm font-semibold [@container(min-width:40rem)]:text-base ${z.texto}`}>{estado}</span>}
@@ -84,6 +102,7 @@ export default function ResultadoChecada({ info, duracion, className = "" }) {
         <p className="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{estado ? primerNombre || "Checada" : `¡Listo, ${primerNombre || "registrado"}!`}</p>
         <p className="mt-2 text-lg font-medium text-slate-700">{info.movimiento}</p>
         {info.hora && !estado && <p className={`mt-3 text-5xl font-bold tabular-nums tracking-tight sm:text-6xl ${tono.hora}`}>{info.hora}</p>}
+        {!estado && <ChipsConfirmacion chips={info.chips} className="mt-4" />}
         <p className="mt-3 text-sm text-slate-500">{info.nombre}</p>
         {estado && (
           <p className={`mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold ${estado.clase}`}>

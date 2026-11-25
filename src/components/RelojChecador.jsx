@@ -50,7 +50,8 @@ import ClockNavigation from './Clock/ClockNavigation';
 import { hora12 } from "@/lib/hora12.mjs";
 import { conVoyAComer, segundosRestantes, DURACION_VOY_A_COMER_S } from "@/lib/reloj/voyAComer.mjs";
 import { BotonVoyAComer, AvisoVoyAComer } from "./Clock/VoyAComer";
-import ResultadoChecada, { ResultadoEnZona } from "./Clock/ResultadoChecada";
+import ResultadoChecada, { ChipsConfirmacion, ResultadoEnZona } from "./Clock/ResultadoChecada";
+import { chipsConfirmacion } from "@/lib/reloj/confirmacion.mjs";
 import AvisoKiosco from "./Clock/AvisoKiosco";
 import { crearSonidoReloj, leerSonidoActivo, guardarSonidoActivo } from "@/lib/reloj/sonidoReloj.mjs";
 import { crearPantallaEncendida } from "@/lib/reloj/pantallaEncendida.mjs";
@@ -335,6 +336,8 @@ export default function RelojChecador({
       localValidated: Boolean(data.local_validated),
       success: !data.pending,
       hora: hora12(dayjs().tz(EMPRESA_TIMEZONE)),
+      // (27/11/2026) Puntualidad, tu salida y regreso de comida, si el servidor los manda.
+      chips: chipsConfirmacion(data),
       duracion: duracionResultado(data),
     });
     if (data.pending && data.errorServidor) sonidoRef.current?.error();
@@ -969,6 +972,7 @@ export default function RelojChecador({
                   <span className="truncate">{estado}</span>
                 </p>
                 {popupInfo.pending && popupInfo.motivo && <p className="mt-1 text-xs text-amber-700">{popupInfo.motivo}</p>}
+                {popupInfo.success && <ChipsConfirmacion chips={popupInfo.chips} className="mt-1.5 !justify-start [&>li]:px-2 [&>li]:py-0.5 [&>li]:text-xs" />}
                 {popupInfo.volviendo && <p className="mt-1 text-xs text-slate-500">Regresando a tu inicio…</p>}
               </div>
               <span className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{horaCorta}</span>
