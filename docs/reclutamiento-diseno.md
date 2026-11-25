@@ -89,3 +89,22 @@ La prueba recorre creación/validación, texto enriquecido, formulario, reordena
 La revisión visual complementa estas pruebas: una página sin desbordamiento global todavía puede tener un modal o una pestaña recortados.
 
 Resultado de esta entrega: recorrido completo aprobado en Chromium a 1440 y 390 px, sin errores de JavaScript ni escrituras HTTP desde el módulo. ESLint de los archivos nuevos y `next build` aprobados. El build conserva la advertencia del módulo existente `face-api.js` sobre `fs` en reconocimiento de empleados, ajena a Reclutamiento. Las fuentes se sustituyeron por un fixture local exclusivamente durante las pruebas de este entorno.
+
+## «Pedir información por WhatsApp» en la vacante y la bolsa (25/11/2026)
+- **API (backend, sin rutas nuevas):** `GET /vacantes/slug/:slug` y cada elemento de `GET /vacantes/filter` traen
+  `whatsapp: { enlace, asistente } | null`. El enlace es el mismo que copia RH en la bandeja (mismo token), así que el
+  mensaje llega al agente de reclutamiento con la empresa y la vacante. `null` = la empresa no tiene WhatsApp, no hay número,
+  la vacante no recibe postulaciones o falta la migración. Detalle: `docs/whatsapp-reclutamiento.md` del backend.
+- **Validación en el navegador:** `whatsappDeVacante` (`src/lib/bolsaTrabajo.mjs`) solo acepta `https://wa.me/<dígitos>`;
+  cualquier otra cosa no se muestra (nunca llega al `href`).
+- **Página de la vacante** (`VacanteDetalle.jsx`, `vacante.css`): botón verde «Pedir información por WhatsApp» debajo de
+  «Postularme», con el texto de apoyo «Te responde nuestro asistente en minutos.» (agente encendido) o «Te responde el equipo
+  de reclutamiento.». En celular y tableta (≤ 980 px) también va en la barra fija junto a «Postularme ahora» como «WhatsApp»
+  (solo el icono si está el botón del perfil). Pestaña nueva con `rel="noopener noreferrer"`, nombre accesible con el título
+  de la vacante, 54 px de alto, blanco sobre `#15803d` (5.0:1). Sin enlace no aparece nada.
+- **Bolsa** (`ListaVacantes.jsx`, `bolsa.css`): acceso discreto «WhatsApp» (44 px, `#15803d` sobre blanco) en la columna
+  lateral de la tarjeta, por encima del enlace que cubre la tarjeta (tocarlo no abre la vacante).
+- Icono: `src/components/IconoWhatsApp.jsx` (SVG en línea, sin pedirlo a internet).
+- **Pruebas:** `scripts/test-bolsa-trabajo.mjs` (en CI: validación del enlace, nombre accesible, texto de apoyo) y
+  `scripts/verify-whatsapp-vacante.mjs` (Playwright, API simulada, 1440 y 390: href exacto, ausente con `null` o enlace no
+  wa.me, pestaña nueva sin `opener`, ≥ 44 px, contraste ≥ 4.5:1, barra del pulgar, sin scroll horizontal).

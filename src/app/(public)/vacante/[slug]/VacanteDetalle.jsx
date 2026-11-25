@@ -26,11 +26,14 @@ import Cookies from "js-cookie";
 import { useSnackbar } from "notistack";
 import PreguntasVacante, { faltantes } from "./ApplicationForm/PreguntasVacante";
 import { respuestasParaEnviar } from "@/lib/reclutamiento/respuestas.mjs";
-import { formatoSueldo, haceCuanto, textoPlano, ubicacionVacante } from "@/lib/bolsaTrabajo.mjs";
+import { apoyoWhatsApp, etiquetaWhatsApp, formatoSueldo, haceCuanto, textoPlano, TEXTO_WHATSAPP, ubicacionVacante, whatsappDeVacante } from "@/lib/bolsaTrabajo.mjs";
+import IconoWhatsApp from "@/components/IconoWhatsApp";
 
 // Página pública de una vacante. La lógica de postulación no cambia: sin sesión,
 // formulario con verificación del teléfono (OTP) y preguntas propias; con sesión de candidato, confirmación con las
 // mismas preguntas y POST /postulaciones/postulacion-auth.
+// (25/11/2026) «Pedir información por WhatsApp» (data.whatsapp del API): en la tarjeta, debajo de «Postularme», y en
+// celular también en la barra fija junto a «Postularme ahora». Sin enlace no se muestra nada.
 
 const tieneTexto = (html) => textoPlano(html).length > 0;
 
@@ -51,6 +54,23 @@ function Requisito({ titulo, html }) {
       <dt>{titulo}</dt>
       <dd className="vc-prosa" dangerouslySetInnerHTML={{ __html: sanearHtml(html) }} />
     </div>
+  );
+}
+
+// Enlace a WhatsApp de la vacante. compacto: el de la barra fija del celular (solo «WhatsApp»).
+function BotonWhatsApp({ wa, titulo, compacto = false }) {
+  return (
+    <a
+      className={compacto ? "vc-wa vc-wa-barra" : "vc-wa"}
+      href={wa.enlace}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={etiquetaWhatsApp(titulo)}
+      aria-describedby="vc-wa-apoyo"
+    >
+      <IconoWhatsApp />
+      <span className="vc-wa-txt">{compacto ? "WhatsApp" : TEXTO_WHATSAPP}</span>
+    </a>
   );
 }
 
@@ -224,6 +244,7 @@ export default function VacanteDetalle() {
     ["Publicada", data.fecha_publicacion ? formatearFecha(data.fecha_publicacion) : ""],
   ].filter(([, v]) => v && String(v).trim());
   const hayRequisitos = [data.escolaridad, data.experiencia, data.habilidades, data.idiomas].some(tieneTexto);
+  const wa = whatsappDeVacante(data);
 
   let accion = null;
   let conBarra = false; // en celular, «Postularme ahora» queda fijo abajo
@@ -262,6 +283,7 @@ export default function VacanteDetalle() {
               <Eye aria-hidden="true" />
             </button>
           )}
+          {wa ? <BotonWhatsApp wa={wa} titulo={data.titulo} compacto /> : null}
         </div>
       );
     }
@@ -335,6 +357,12 @@ export default function VacanteDetalle() {
               </dl>
             ) : null}
             {accion}
+            {wa ? (
+              <div className="vc-wa-bloque">
+                <BotonWhatsApp wa={wa} titulo={data.titulo} />
+                <p id="vc-wa-apoyo" className="vc-wa-apoyo">{apoyoWhatsApp(wa)}</p>
+              </div>
+            ) : null}
             <SocialShare titulo={data.nombre_empresa ? `${data.titulo} en ${data.nombre_empresa}` : data.titulo} />
           </div>
         </aside>
