@@ -104,7 +104,7 @@ export function DialogoReposicion({ fila, hoy, autorizadores, idAutorizaInicial,
 
 const TITULOS = { rebaja: "Rebajar en nómina", condonacion: "Condonar" };
 const AYUDAS = {
-  rebaja: "Se descuenta en nómina del siguiente periodo y deja de contar en su cuenta.",
+  rebaja: "Se descuenta en la nómina del periodo de hoy (si ya está autorizada, en la siguiente) y deja de contar en su cuenta.",
   condonacion: "Se le perdona: deja de contar en su cuenta. Escribe por qué.",
 };
 export function DialogoCierre({ fila, tipo, guardando, onGuardar, onCerrar }) {

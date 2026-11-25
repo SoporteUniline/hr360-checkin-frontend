@@ -54,6 +54,13 @@ try {
     if (p.endsWith("/offline/perfil")) return json({ id_empleado: 101, id_empresa: 10, nombre: "Ana Torres", metodo: "codigo", metodo_chequeo: "Código", cierre_turno: "Automático", checar_gps: false, prepared_at: new Date().toISOString() });
     if (p.endsWith("/slug")) return json({ slug: "prueba" });
     if (p.endsWith("/offline/empresa/perfil")) return json({ scope: "company", id_empresa: 10, slug: "prueba", nombre: "Empresa prueba", grant: "concesion-prueba", prepared_at: new Date().toISOString() });
+    // El reloj ya solo registra en línea (registrarEnLinea → /checador/reloj/registrar); /sincronizar queda para la cola vieja.
+    if (p.endsWith("/reloj/registrar")) {
+      const ev = req.postDataJSON();
+      acciones.push(ev.accion ?? "auto");
+      if (!ev.accion) return json({ requiereDecision: true, opciones: ["salida_comida", "salida"], message: "¿Sales a comer o terminas tu jornada?", empleado: { nombre: "Ana", apellido_paterno: "Torres" } });
+      return json({ message: "Salida a comer registrada. ¡Buen provecho!", empleado: { nombre: "Ana", apellido_paterno: "Torres" } });
+    }
     if (p.endsWith("/sincronizar")) {
       const ev = req.postDataJSON();
       acciones.push(ev.action);

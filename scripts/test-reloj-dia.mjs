@@ -261,3 +261,16 @@ test("pausaComidaTras: la pausa después de un tramo cerrado con «Salir a comer
   const normal = ordenar(desdeApi([base(1, `${F} 09:00:00`, `${F} 14:00:00`), base(2, `${F} 14:00:00`, null)], { fecha: F }));
   assert.equal(pausaComidaTras(normal, 0), null, "una salida normal no es comida");
 });
+
+// (25/11/2026) «No fue comida»: marcó «Salir a comer» en su última salida por error.
+test("quitarComida: el tramo deja de ser comida y el PUT pide quitar la marca", async () => {
+  const { quitarComida, pausaComidaTras } = await import("../src/lib/asistencia/relojDia.mjs");
+  const F = "2026-11-24";
+  const base = (id, e, s, o = {}) => ({ id, entrada: e, salida: s, entrada_reloj: e, salida_reloj: s, concepto: "jornada", origen: "reloj", ...o });
+  const regs = desdeApi([base(1, `${F} 18:45:00`, `${F} 20:44:00`, { tipo_cierre: "comida" })], { fecha: F });
+  assert.ok(pausaComidaTras(ordenar(regs), 0), "antes: hay comida");
+  const sin = quitarComida(regs, regs[0].k);
+  assert.equal(pausaComidaTras(ordenar(sin), 0), null, "después: ya no");
+  assert.deepEqual(cuerpoPut(sin, { fecha: F }).registros[0].quitar_comida, true);
+  assert.equal("quitar_comida" in cuerpoPut(regs, { fecha: F }).registros[0], false, "sin tocar no se manda");
+});

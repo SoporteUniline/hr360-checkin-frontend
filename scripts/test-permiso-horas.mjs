@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { etiquetaPermisoHoras, horarioPermiso, movimientosCuenta } from "../src/lib/asistencia/permisoHoras.mjs";
+import { etiquetaPermisoHoras, horarioPermiso, movimientosCuenta, rangoNomina, textoNominaCierre } from "../src/lib/asistencia/permisoHoras.mjs";
 import { cambiosAutorizar, cambiosQuitar, estadoHorasExtra, FORMA_REPOSICION, resumenHorasExtra } from "../src/lib/asistencia/horasExtra.mjs";
 
 test("textos del permiso por horas en 12 h", () => {
@@ -37,4 +37,22 @@ test("movimientos de la cuenta: cargos suman, reposiciones y cierres restan, del
     ["2026-11-19", "Condonado", -30], ["2026-11-18", "Reposición", -60], ["2026-11-17", "Llega tarde · hasta 11:00 a.m.", 180],
   ]);
   assert.equal(m[0].nota, "Buen trabajo · por Laura");
+});
+
+// (26/11/2026) «Rebajar en nómina» dice en qué nómina se descontó o que se descontará en la próxima.
+test("cierre «Rebajar»: en qué nómina va y si ya no se puede deshacer", () => {
+  const nom = (estado, bloqueado) => ({ id_periodo: 4, fecha_inicio: "2026-11-16", fecha_fin: "2026-11-22", estado, importe: 37.5, bloqueado });
+  const rebaja = { id: 7, tipo: "rebaja", minutos: 60, creado_en: "2026-11-18 10:00:00" };
+  const espacio = (t) => t.replace(/\s/g, " ");
+  assert.equal(textoNominaCierre({ ...rebaja, nomina: null }), "Se descontará en la próxima nómina");
+  assert.equal(espacio(textoNominaCierre({ ...rebaja, nomina: nom("borrador", false) })), "Va en la nómina del 16 al 22 nov 2026 (borrador) · $37.50");
+  assert.equal(espacio(textoNominaCierre({ ...rebaja, nomina: nom("por_autorizar", true) })), "En la nómina del 16 al 22 nov 2026, por autorizar · $37.50");
+  assert.equal(espacio(textoNominaCierre({ ...rebaja, nomina: nom("autorizado", true) })), "Descontado en la nómina del 16 al 22 nov 2026 · $37.50");
+  assert.equal(textoNominaCierre({ ...rebaja, borrado_en: "2026-11-19 09:00:00", nomina: null }), null, "deshecho: sin texto de nómina");
+  assert.equal(textoNominaCierre({ id: 8, tipo: "condonacion", minutos: 30 }), null, "solo «Rebajar»");
+  assert.equal(rangoNomina("2026-11-30", "2026-12-06"), "30 nov al 6 dic 2026");
+  assert.equal(rangoNomina("2026-12-28", "2027-01-03"), "28 dic 2026 al 3 ene 2027");
+  const [m] = movimientosCuenta({ cargos: [], reposiciones: [], cierres: [{ ...rebaja, nomina: nom("autorizado", true) }] });
+  assert.deepEqual([m.texto, m.bloqueado, espacio(m.nomina)], ["Rebajado", true, "Descontado en la nómina del 16 al 22 nov 2026 · $37.50"]);
+  assert.equal(movimientosCuenta({ cierres: [{ ...rebaja, nomina: nom("borrador", false) }] })[0].bloqueado, false);
 });

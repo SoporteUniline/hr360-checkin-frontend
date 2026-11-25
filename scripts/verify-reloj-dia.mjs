@@ -200,6 +200,17 @@ async function sinDesborde(loc, etiqueta) {
   const sobra = await loc.evaluate((el) => el.scrollWidth - el.clientWidth);
   assert.ok(sobra <= 1, `${etiqueta}: desplazamiento horizontal (${sobra}px)`);
 }
+// (25/11/2026) Reloj compacto: el cuerpo del modal no se desplaza (scrollTop 0) y la última fila con su motivo cabe a la vista.
+async function compacto(dlg, n, etiqueta) {
+  assert.equal(await dlg.locator("[data-renglon]").count(), n, `${etiqueta}: ${n} renglones`);
+  const cuerpo = dlg.locator(".overflow-y-auto").first();
+  const caja = await cuerpo.evaluate((el) => ({ top: el.scrollTop, abajo: el.getBoundingClientRect().bottom, arriba: el.getBoundingClientRect().top }));
+  assert.equal(caja.top, 0, `${etiqueta}: sin desplazar`);
+  for (const loc of [dlg.locator(`[data-renglon="${n}"]`), dlg.locator(`[data-renglon="${n}"]`).getByLabel("Motivo")]) {
+    const b = await loc.boundingBox();
+    assert.ok(b && b.y >= caja.arriba - 1 && b.y + b.height <= caja.abajo + 1, `${etiqueta}: la fila ${n} y su motivo se ven sin scroll (${b?.y + b?.height} > ${caja.abajo})`);
+  }
+}
 async function esperar(cond, texto) {
   for (let i = 0; i < 80; i++) { if (cond()) return; await dormir(100); }
   throw new Error(`No llegó: ${texto}`);
@@ -308,7 +319,12 @@ try {
   const dlg = page.getByRole("dialog", { name: /Alondra Munguía/ });
   const r1 = dlg.locator('[data-renglon="1"]');
   await r1.waitFor({ timeout: 10000 });
-  assert.match(await dlg.innerText(), /HORARIO DEL DÍA[\s\S]*9:00 a\.m\. – 4:00 p\.m\.[\s\S]*Retardo \+18 min/i);
+  // (25/11/2026) Encabezado compacto: fecha · área · jornada · comida en una línea; el estado en la franja de resumen.
+  assert.match(await dlg.locator("[data-slot=dialog-description]").innerText(), /^Lun 23\/11\/2026 · Ventas · Jornada 9:00 a\.m\.–4:00 p\.m\. · Comida 1:00–2:00 p\.m\.$/);
+  assert.match(await dlg.innerText(), /Jornada 9:00 a\.m\.–4:00 p\.m\.[\s\S]*Retardo \+18 min/);
+  assert.equal(await dlg.getByText(/Horario del día|Calendario y pagos|Cálculo automático/i).count(), 0, "sin las cajas de antes");
+  assert.match(await dlg.locator("[data-calendario]").innerText(), /^Día normal$/);
+  assert.match(await dlg.locator("[data-calendario]").getAttribute("title"), /Lo pone la ley o el catálogo/, "la ayuda del calendario es el título del chip");
   await r1.getByLabel("Entrada").fill("09:00");
   assert.equal(await r1.getByRole("alert").innerText(), "Cambiaste la hora: elige el motivo.");
   assert.match(await r1.innerText(), /reloj: 9:18 a\.m\./);
@@ -358,6 +374,7 @@ try {
   assert.equal(await extra.getByText(/dobles|triples|tiempo por tiempo/i).count(), 1, "solo el texto de la ley, sin pedir forma de pago");
   await elegir(extra.getByLabel("Quién autoriza"), "3");
   assert.equal(await extra.getByRole("alert").count(), 0);
+  if (capturas) { await dormir(300); await page.screenshot({ path: `${capturas}/1440-extra-autorizacion.png` }); }
   await dlgM.getByRole("button", { name: "Guardar" }).click();
   await dlgM.waitFor({ state: "detached", timeout: 10000 });
   assert.deepEqual(pet.reloj[3].cuerpo.registros.slice(2), [
@@ -386,10 +403,17 @@ try {
 
   // 7b) (24/11/2026) «Si puse salida temprano, tendría que decirme a qué horas»: el tipo parcial exige su hora.
   // Rosa (9:00–4:00, comida 11:00–11:30, checó el día completo): Salida temprano · Permiso personal sin hora → no guarda.
+  // (25/11/2026) Reloj compacto: a 1440×900, con 3 renglones, la fila 3 y su motivo se ven sin desplazar el modal.
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.getByRole("button", { name: "Abrir el reloj de Rosa Díaz" }).click();
   const dR = page.getByRole("dialog", { name: /Rosa Díaz/ });
   const permR = dR.locator("[data-permiso-dia]");
   await permR.waitFor({ timeout: 10000 });
+  await dormir(400); // fin de la animación de entrada
+  await compacto(dR, 3, "Rosa 1440×900");
+  assert.match(await dR.locator('[data-renglon="2"]').innerText(), /30 min/, "la fila de comida dice su duración");
+  assert.match(await dR.locator('[data-renglon="2"]').getAttribute("class"), /bg-amber-50/, "la fila de comida va en ámbar");
+  if (capturas) await page.screenshot({ path: `${capturas}/1440-normal.png` });
   await elegir(permR.getByLabel("Qué pasó"), "32");
   await elegir(permR.getByLabel("Motivo"), { label: "Permiso personal" });
   const avisoHora = "Salida temprano: indica a qué hora salió (debe ser antes de las 4:00 p.m.)";
@@ -414,6 +438,8 @@ try {
   }
   await permR.getByLabel("¿A qué hora salió?").fill("14:00");
   assert.equal(await permR.getByRole("alert").count(), 0);
+  await compacto(dR, 3, "Rosa con permiso parcial 1440×900");
+  if (capturas) { await dormir(300); await page.screenshot({ path: `${capturas}/1440-permiso-parcial.png` }); }
   const r3 = dR.locator('[data-renglon="3"]');
   assert.equal(await r3.getByLabel("Salida").inputValue(), "14:00", "la última salida queda a las 2:00 p.m.");
   assert.equal(await valorDe(r3.getByLabel("Motivo")), "permiso", "motivo de corrección «Por el permiso del día»");
@@ -422,6 +448,7 @@ try {
   await selectsSinRecorte(dR, "reloj con permiso 1440");
   await dR.getByRole("button", { name: "Guardar" }).click();
   await dR.waitFor({ state: "detached", timeout: 10000 });
+  await page.setViewportSize({ width: 1440, height: 1000 });
   assert.deepEqual(pet.reloj.at(-1), { id: 508, cuerpo: {
     registros: [
       { id: 7401, entrada: `${F} 09:00:00`, salida: `${F} 11:00:00`, concepto: "jornada", motivo: null, anulado: false, id_autoriza: null, autoriza_no: false },
@@ -494,7 +521,21 @@ try {
   await comidaReloj.waitFor({ timeout: 15000 });
   assert.match(await comidaReloj.innerText(), /11:21 a\.m\. → 11:46 a\.m\. · 25 min/);
   assert.equal(await comidaReloj.count(), 1);
-  await page.keyboard.press("Escape");
+  // La franja de comida es una fila delgada entre los dos tramos (no una tarjeta).
+  assert.ok((await comidaReloj.boundingBox()).height <= 34, "franja de comida delgada");
+  assert.equal(await dlgFrida.locator("[data-renglon] + [data-comida-reloj] + [data-renglon]").count(), 1, "entre los dos tramos");
+  if (capturas) { await dormir(300); await page.screenshot({ path: `${capturas}/1440-comida.png` }); }
+  // «No fue comida» (marcó «Salir a comer» por error): la franja se va y el PUT pide quitar la marca de ese tramo.
+  await comidaReloj.getByRole("button", { name: "No fue comida" }).click();
+  await comidaReloj.waitFor({ state: "detached", timeout: 5000 });
+  const antesNoComida = pet.reloj.length;
+  await dlgFrida.getByRole("button", { name: "Guardar" }).click();
+  for (let i = 0; i < 50 && pet.reloj.length === antesNoComida; i++) await dormir(100);
+  const putFrida = pet.reloj.at(-1);
+  assert.equal(putFrida.id, 510);
+  assert.deepEqual(putFrida.cuerpo.registros.find((x) => x.id === 7801).quitar_comida, true);
+  assert.equal("quitar_comida" in putFrida.cuerpo.registros.find((x) => x.id === 7802), false);
+  // Guardar cierra el reloj solo (no se pulsa Escape: con cambios a medio guardar abriría «¿Salir sin guardar?»).
   await dlgFrida.waitFor({ state: "detached", timeout: 10000 });
 
   // 8) Masivos: «Marcar como…» (solo sin checadas) y «Cargar horario normal…» (sin checadas o sin salida), motivo obligatorio.
@@ -563,6 +604,73 @@ try {
   }
   await hoja.getByRole("button", { name: "Cerrar el reloj" }).click();
   await hoja.waitFor({ state: "detached", timeout: 10000 });
+
+  // (25/11/2026) Reloj compacto a 390: tarjetas por checada, resumen en 4 columnas, 44 px, sin desbordes; casos normal,
+  // comida («Salir a comer»), extra con autorización y permiso parcial.
+  const abrirMovil = async (n) => {
+    await page.getByText(n).first().click();
+    await page.getByRole("button", { name: "Abrir el reloj del día" }).first().click();
+    const d = page.getByRole("dialog", { name: new RegExp(n) });
+    await d.locator('[data-renglon="1"]').waitFor({ timeout: 15000 });
+    await dormir(500);
+    return d;
+  };
+  const revisarMovil = async (d, etiqueta) => {
+    await sinDesborde(d.locator(".overflow-y-auto").first(), etiqueta);
+    await sinDesborde(page.locator("html"), `${etiqueta} (página)`);
+    const chicos = await d.evaluate((el) => [...el.querySelectorAll("input,[role=combobox],button")].filter((c) => c.offsetParent)
+      .filter((c) => c.getBoundingClientRect().height < 43.5).map((c) => c.getAttribute("aria-label") || c.textContent.trim()));
+    assert.deepEqual(chicos, [], `${etiqueta}: controles de 44 px`);
+    await selectsSinRecorte(d, etiqueta);
+    for (const t of await d.locator("[data-renglon],[data-comida-reloj]").all()) {
+      const b = await t.boundingBox();
+      assert.ok(b.x >= 0 && b.x + b.width <= 390.5, `${etiqueta}: la tarjeta cabe (${b.x}+${b.width})`);
+    }
+    const sobranTextos = await d.evaluate((el) => [...el.querySelectorAll("p,span,b")].filter((e) => e.offsetParent && e.scrollWidth > e.clientWidth + 1
+      && getComputedStyle(e).overflow !== "visible").map((e) => e.innerText.slice(0, 40)));
+    assert.deepEqual(sobranTextos, [], `${etiqueta}: textos recortados`);
+  };
+  const resumenMovil = async (d) => {
+    const cols = await d.locator("[data-calculo] > *").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+    assert.equal(cols.length, 4);
+    assert.ok(cols.every((t) => Math.abs(t - cols[0]) <= 1), `resumen en 4 columnas en una línea (${cols.join(",")})`);
+  };
+  const hRosa = await abrirMovil("Rosa Díaz");
+  await resumenMovil(hRosa);
+  await revisarMovil(hRosa, "Rosa 390");
+  // Tarjeta: entrada → salida y ✕ en la misma línea; el motivo abajo.
+  const t1 = hRosa.locator('[data-renglon="1"]');
+  const [bE, bS, bX, bM] = await Promise.all([t1.getByLabel("Entrada"), t1.getByLabel("Salida"), t1.getByRole("button", { name: "Anular checada" }), t1.getByLabel("Motivo")].map((l) => l.boundingBox()));
+  assert.ok(Math.abs(bE.y - bS.y) < 1 && Math.abs(bE.y - bX.y) < 1 && bM.y > bE.y + bE.height, "tarjeta: hora → hora y ✕ arriba, motivo abajo");
+  if (capturas) await page.screenshot({ path: `${capturas}/390-normal.png` });
+  const permM = hRosa.locator("[data-permiso-dia]");
+  await elegir(permM.getByLabel("Qué pasó"), "32");
+  await elegir(permM.getByLabel("Motivo"), { label: "Permiso personal" });
+  await permM.getByLabel("¿A qué hora salió?").fill("14:00");
+  assert.equal(await permM.getByRole("alert").count(), 0);
+  await revisarMovil(hRosa, "Rosa permiso 390");
+  if (capturas) { await dormir(300); await page.screenshot({ path: `${capturas}/390-permiso-parcial.png` }); }
+  await hRosa.getByRole("button", { name: "Guardar" }).click();
+  await hRosa.waitFor({ state: "detached", timeout: 10000 });
+  assert.deepEqual(pet.reloj.at(-1).cuerpo.permiso_dia, { id_tipo: 32, id_motivo: 2, motivo: "Permiso personal", horas: "reponen" });
+
+  const hFrida = await abrirMovil("Frida Serrano");
+  await hFrida.locator("[data-comida-reloj]").waitFor();
+  await revisarMovil(hFrida, "Frida 390");
+  if (capturas) await page.screenshot({ path: `${capturas}/390-comida.png` });
+  await hFrida.getByRole("button", { name: "Cerrar el reloj" }).click();
+  await hFrida.waitFor({ state: "detached", timeout: 10000 });
+
+  const hMario = await abrirMovil("Mario Gómez");
+  await hMario.getByRole("button", { name: /^Separar 3 h 02 min/ }).click();
+  const extraM = hMario.locator('[data-renglon="4"]');
+  await elegir(extraM.getByLabel("Quién autoriza"), "3");
+  await revisarMovil(hMario, "Mario extra 390");
+  await extraM.scrollIntoViewIfNeeded();
+  if (capturas) { await dormir(300); await page.screenshot({ path: `${capturas}/390-extra-autorizacion.png` }); }
+  await hMario.getByRole("button", { name: "Guardar" }).click();
+  await hMario.waitFor({ state: "detached", timeout: 10000 });
+  assert.equal(pet.reloj.at(-1).cuerpo.registros.at(-1).id_autoriza, 3);
   await page.getByText("Armando González").first().click();
   const estadoMovil = page.getByLabel("Qué pasó de Armando González");
   await estadoMovil.waitFor({ timeout: 10000 });

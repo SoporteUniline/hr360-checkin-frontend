@@ -67,8 +67,11 @@ const cuentas = {
     cargos: [{ id_solicitud: 201, fecha: "2026-11-10", tipo_horas: "llega_tarde", hora_fin: "11:00", minutos: 420, estado: "calculado", motivo: "Permiso personal" }],
     reposiciones: [], cierres: [] },
   17: { persona: persona(17, "Frida Serrano", "Ventas", "2026-11-17", 7, ["Escuela de los hijos"], 1),
-    cargos: [{ id_solicitud: 301, fecha: "2026-11-17", tipo_horas: "sale_antes", hora_inicio: "12:00", minutos: 300, estado: "calculado", motivo: "Escuela de los hijos" }],
-    reposiciones: [{ id_asistencia: 77, fecha: "2026-11-20", minutos: 30 }], cierres: [] },
+    cargos: [{ id_solicitud: 301, fecha: "2026-11-17", tipo_horas: "sale_antes", hora_inicio: "12:00", minutos: 330, estado: "calculado", motivo: "Escuela de los hijos" }],
+    reposiciones: [{ id_asistencia: 77, fecha: "2026-11-20", minutos: 30 }],
+    // (26/11/2026) Un «Rebajar» de octubre que ya se descontó en una nómina autorizada: dice en cuál y no se deshace.
+    cierres: [{ id: 8, tipo: "rebaja", minutos: 30, nota: null, creado_por_nombre: "Laura Méndez", creado_en: "2026-10-30 10:00:00", borrado_en: null,
+      nomina: { id_periodo: 4, fecha_inicio: "2026-10-26", fecha_fin: "2026-11-01", estado: "autorizado", importe: 18.75, bloqueado: true } }] },
   18: { persona: persona(18, "Luis García", "Development", "2026-11-22", 2, ["Trámite"], 1),
     cargos: [{ id_solicitud: 401, fecha: "2026-11-22", tipo_horas: "llega_tarde", hora_fin: "10:00", minutos: 60, estado: "calculado", motivo: "Trámite" }],
     reposiciones: [], cierres: [] },
@@ -133,7 +136,7 @@ async function simular(page) {
       const id = Number(m[1]); const c = cuerpo();
       pet.cierres.push({ id, cuerpo: c });
       cuentas[id].cierres.push({ id: siguienteId++, tipo: c.tipo, minutos: c.minutos, nota: c.nota ?? null, creado_por_nombre: "Laura Méndez",
-        creado_en: "2026-11-24 12:00:00", borrado_en: null });
+        creado_en: "2026-11-24 12:00:00", borrado_en: null, ...(c.tipo === "rebaja" ? { nomina: null } : {}) });
       return json({ ok: true, data: cuenta(id) });
     }
     m = /\/checador\/cuenta-horas\/(\d+)$/.exec(p);
@@ -309,6 +312,21 @@ try {
   await esperar(() => pet.cierres.length === 1, "POST rebaja");
   assert.deepEqual(pet.cierres[0], { id: 15, cuerpo: { tipo: "rebaja", minutos: 60, nota: "siguiente periodo" } });
   await tarjeta("cerrado").getByText("1 h · 0 min").waitFor({ timeout: 10000 });
+  // (26/11/2026) El «Rebajar» recién hecho dice que se descontará en la próxima nómina y se puede deshacer.
+  const nuevo = det.locator(`[data-movimiento="x${siguienteId - 1}"]`);
+  await nuevo.waitFor({ timeout: 10000 });
+  assert.match(await nuevo.innerText(), /Rebajado[\s\S]*siguiente periodo · por Laura Méndez[\s\S]*Se descontará en la próxima nómina[\s\S]*Deshacer/);
+  await foto(page, "1440-rebajar-proxima-nomina", det);
+  // Frida: su «Rebajar» de octubre ya está en una nómina autorizada → en cuál y sin Deshacer.
+  await page.locator('tr[data-fila-reponer="17"]').click();
+  const detFrida = page.locator('[data-detalle-cuenta="17"]');
+  const rebajaFrida = detFrida.locator('[data-movimiento="x8"]');
+  await rebajaFrida.waitFor({ timeout: 10000 });
+  assert.equal((await rebajaFrida.locator("[data-nomina-cierre]").innerText()).replace(/\s/g, " "), "Descontado en la nómina del 26 oct al 1 nov 2026 · $18.75");
+  assert.equal(await rebajaFrida.getByRole("button", { name: /Deshacer/ }).count(), 0, "ya autorizada: no se deshace");
+  await nadaSeSale(page, '[data-detalle-cuenta="17"]', "detalle con nómina 1440");
+  await foto(page, "1440-rebajar-descontado", detFrida);
+  await page.locator('tr[data-fila-reponer="17"]').click();
 
   await page.getByRole("button", { name: "Más acciones de Alondra Munguía" }).click();
   const panelEmpleado = page.getByRole("menuitem", { name: "Ver en Panel empleado" });
@@ -383,7 +401,8 @@ try {
   console.log("OK · pestaña «Horas por reponer» junto a Registros y Horas de ley con su número (4) y ?vista=reponer · resumen (total con personas, "
     + "más de 30 días en rojo, repuesto y rebajado/condonado del mes) · filas con desde/hace N días (rojo ≥ 30), por qué y lo último · filtros "
     + "(búsqueda sin acentos, área, solo más de 30 días) · fila desplegada con movimientos, saldo y «Qué hacer» · Registrar reposición → PUT exacto · "
-    + "Deshacer cierre → POST · Cancelar permiso → PATCH exacto · Rebajar y Condonar → POST exactos · Exportar Excel (leído) · Ver en Panel empleado · "
+    + "Deshacer cierre → POST · Cancelar permiso → PATCH exacto · Rebajar y Condonar → POST exactos · Rebajar dice en qué nómina (próxima / "
+    + "descontado, sin Deshacer) · Exportar Excel (leído) · Ver en Panel empleado · "
     + "1440 y 390 sin desbordes, controles de 44 px · sin errores de JS");
 } finally {
   await browser.close();

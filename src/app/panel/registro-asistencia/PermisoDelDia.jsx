@@ -7,6 +7,7 @@
 // Un tipo parcial pide su hora (obligatoria): «¿A qué hora entró?», «¿A qué hora salió?» o «Salió a las» / «Regresó a
 // las»; el reloj ajusta las checadas con ella (lib/asistencia/horaPermiso.mjs).
 // Lógica en lib/asistencia/quePasoMotivo.mjs y tiposGoce.mjs (el servidor recalcula al guardar).
+// (25/11/2026) Compacto: va en la franja de resumen del reloj; los campos aparecen junto a «Qué pasó» solo cuando hacen falta.
 import { cn } from "@/lib/utils";
 import { HORAS, minutosNoTrabajados, normalizarTipo, textoNoTrabajadas, textoNomina } from "@/lib/asistencia/tiposGoce.mjs";
 import { aplicado, opcionesMotivo, opcionesTipo, parVacio, tiposCaptura } from "@/lib/asistencia/quePasoMotivo.mjs";
@@ -27,20 +28,25 @@ export default function PermisoDelDia({ permiso, onCambio, tipos, motivos, regs,
   const conPermiso = Boolean(tipo && motivo);
   const camposHora = n ? CAMPOS_HORA[n.alcance] ?? [] : [];
 
+  // En la franja de resumen del reloj, a la derecha: «Qué pasó» y, solo cuando hacen falta, motivo, hora, horas no
+  // trabajadas y goce en la misma línea. La ayuda larga queda como título (tooltip).
+  const ayuda = tipo ? "" : "Si llegó tarde, salió temprano o salió en medio turno con permiso, elige qué pasó y el motivo: el día queda con goce y las horas se tratan como diga el motivo.";
   return (
-    <section data-permiso-dia className="flex flex-col gap-2">
-      <h3 className="text-[11.5px] font-semibold uppercase tracking-[0.07em] text-slate-500">Permiso del día <span className="font-normal normal-case tracking-normal">(opcional)</span></h3>
-      <div className={cn("flex flex-col gap-3 rounded-xl border px-4 py-3", conPermiso ? "border-violet-200 bg-violet-50/40" : "border-slate-200")}>
-        <QuePasoMotivo etiquetas tipoOpciones={opcionesTipo(lista, { conAsistencia: false })} tipoVacio="Asistencia"
-          tipo={permiso?.tipo ?? ""} onTipo={(v) => onCambio(v ? { ...parVacio(v), motivo: permiso?.motivo ?? "", texto: permiso?.texto ?? "" } : null)}
-          motivoVisible={Boolean(tipo)} motivoOpciones={opcionesMotivo(motivos)} motivoVacio="Sin permiso"
-          motivo={permiso?.motivo ?? ""} onMotivo={(m) => onCambio({ ...permiso, motivo: m, texto: "", horas: null })}
-          esOtro={Boolean(motivo?.otro)} texto={permiso?.texto ?? ""} onTexto={(t) => onCambio({ ...permiso, texto: t })} />
+    <section data-permiso-dia title={ayuda || undefined} className="flex min-w-0 max-w-full flex-col gap-1.5 max-sm:w-full">
+      <div className="flex min-w-0 flex-wrap items-start justify-end gap-x-3 gap-y-2 max-sm:justify-start">
+        {/* Sin tipo solo está «Qué pasó»: una columna (el par trae dos). */}
+        <div className={cn("min-w-0 max-w-full max-sm:w-full", tipo ? "w-[420px]" : "w-[220px] [&_[data-que-paso-motivo]>span]:grid-cols-1")}>
+          <QuePasoMotivo etiquetas tipoOpciones={opcionesTipo(lista, { conAsistencia: false })} tipoVacio="Asistencia"
+            tipo={permiso?.tipo ?? ""} onTipo={(v) => onCambio(v ? { ...parVacio(v), motivo: permiso?.motivo ?? "", texto: permiso?.texto ?? "" } : null)}
+            motivoVisible={Boolean(tipo)} motivoOpciones={opcionesMotivo(motivos)} motivoVacio="Sin permiso"
+            motivo={permiso?.motivo ?? ""} onMotivo={(m) => onCambio({ ...permiso, motivo: m, texto: "", horas: null })}
+            esOtro={Boolean(motivo?.otro)} texto={permiso?.texto ?? ""} onTexto={(t) => onCambio({ ...permiso, texto: t })} />
+        </div>
         {camposHora.length ? (
-          <div data-permiso-hora className="grid gap-3 sm:grid-cols-2">
+          <div data-permiso-hora className="flex min-w-0 gap-3 max-sm:w-full">
             {camposHora.map(([campo, etiqueta]) => (
-              <label key={campo} className="flex min-w-0 flex-col gap-1">
-                <span className="text-[12px] font-medium text-slate-500">{etiqueta} <span className="text-rose-600" aria-hidden>*</span></span>
+              <label key={campo} className="flex w-[132px] min-w-0 flex-col gap-1 max-sm:flex-1">
+                <span className="whitespace-nowrap text-[12px] font-medium text-slate-500">{etiqueta} <span className="text-rose-600" aria-hidden>*</span></span>
                 <input type="time" aria-label={etiqueta} required value={horas?.[campo] ?? ""} onChange={(e) => onHora?.(campo, e.target.value)}
                   className={cn(claseCampo({ error: errorHora }).replace("appearance-none", ""), "pr-2.5 tabular-nums")} />
               </label>
@@ -48,36 +54,33 @@ export default function PermisoDelDia({ permiso, onCambio, tipos, motivos, regs,
           </div>
         ) : null}
         {conPermiso ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex min-w-0 flex-col gap-1">
-              <span className="text-[12px] font-medium text-slate-500" aria-hidden>Horas no trabajadas</span>
+          <div className="flex min-w-0 items-start gap-3 max-sm:w-full">
+            <div className="flex w-[250px] min-w-0 flex-col gap-1 max-sm:flex-1">
+              <span className="text-[12px] font-medium text-slate-500" aria-hidden>Horas no trabajadas{r.horasCambian ? "" : " 🔒"}</span>
               <SelectConIconos aria="Horas no trabajadas" valor={horasTrato ?? "reponen"} disabled={!r.horasCambian}
                 onCambio={(v) => onCambio({ ...permiso, horas: v })} opciones={HORAS.map(([v, t]) => ({ valor: v, texto: t, ...ICONO_HORAS[v] }))} />
-              {r.horasCambian ? null : <span className="text-[12px] text-slate-400">🔒 Lo fija el motivo</span>}
             </div>
-            <div className="flex min-w-0 flex-col gap-1">
+            <div className="flex shrink-0 flex-col gap-1">
               <span className="text-[12px] font-medium text-slate-500">Goce del día</span>
-              <span data-goce-fijo className="inline-flex h-9 items-center text-[13.5px] text-slate-700 max-sm:h-11">🔒 Con goce</span>
+              <span data-goce-fijo title="Con motivo, el día es con goce" className="inline-flex h-9 items-center whitespace-nowrap text-[13.5px] text-slate-700 max-sm:h-11">🔒 Con goce</span>
             </div>
           </div>
         ) : null}
-        {conPermiso ? (
-          <div data-permiso-calculo className="flex flex-col gap-0.5 text-[13.5px]">
-            <b className="font-semibold text-violet-800">{textoNoTrabajadas(minutos, horasTrato)}</b>
-            <span className="text-slate-600">{textoNomina({ parcial: true, goce: "con", horas: horasTrato, minutos })}</span>
-          </div>
-        ) : tipo ? (
-          <p className="text-[12.5px] text-slate-500">Sin motivo no hay permiso: cuenta como retardo o salida antes, como siempre.</p>
-        ) : (
-          <p className="text-[12.5px] text-slate-500">Si llegó tarde, salió temprano o salió en medio turno con permiso, elige qué pasó y el motivo: el día queda con goce y las horas se tratan como diga el motivo.</p>
-        )}
-        {origen ? (
-          <p data-permiso-origen className="text-[12.5px] text-slate-500">
-            Viene de la solicitud{origen === true ? "" : ` #${origen}`} aprobada en Permisos; si lo cambias aquí, se corrige solo este día.
-          </p>
-        ) : null}
-        {error ? <p role="alert" className="text-[13px] font-medium text-rose-700">{error}</p> : null}
       </div>
+      {conPermiso ? (
+        <div data-permiso-calculo className="flex flex-wrap justify-end gap-x-2 text-[13px] max-sm:justify-start">
+          <b className="font-semibold text-violet-800">{textoNoTrabajadas(minutos, horasTrato)}</b>
+          <span className="text-slate-600">{textoNomina({ parcial: true, goce: "con", horas: horasTrato, minutos })}</span>
+        </div>
+      ) : tipo ? (
+        <p className="text-right text-[12.5px] text-slate-500 max-sm:text-left">Sin motivo no hay permiso: cuenta como retardo o salida antes, como siempre.</p>
+      ) : null}
+      {origen ? (
+        <p data-permiso-origen className="text-right text-[12.5px] text-slate-500 max-sm:text-left">
+          Viene de la solicitud{origen === true ? "" : ` #${origen}`} aprobada en Permisos; si lo cambias aquí, se corrige solo este día.
+        </p>
+      ) : null}
+      {error ? <p role="alert" className="text-right text-[13px] font-medium text-rose-700 max-sm:text-left">{error}</p> : null}
     </section>
   );
 }

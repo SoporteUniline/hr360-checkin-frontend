@@ -11,13 +11,23 @@ import { ClipboardList } from "lucide-react";
 import axios from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
-import { fechaCorta } from "@/lib/clima/modelo.mjs";
+import { AVISO_CAMBIO_MINIMO, AVISO_PRIVACIDAD_CLIMA, fechaCorta } from "@/lib/clima/modelo.mjs";
 import { RUTA_EMPLEADO, RUTA_PANEL, rutaEncuesta } from "@/lib/clima/pendientes.mjs";
 import { BASE, Cargando, Vacio, codigoDe, errorDe, get } from "./ui";
 import { LLAVE_MIS_ENCUESTAS } from "./AvisoEncuestas";
 import Contestar from "./Contestar";
 
-const AVISO_ANONIMA = "Tu opinión cuenta y es anónima: nadie de tu empresa ve tu nombre junto a tus respuestas.";
+const AVISO_ANONIMA = `Tu opinión cuenta. ${AVISO_PRIVACIDAD_CLIMA}`;
+
+// Aviso del cambio de regla (25/11/2026, aprobado por el dueño): quien contestó cuando se prometía «solo grupos de 5 o
+// más» se entera aquí, sin correos nuevos.
+function AvisoCambio() {
+  return (
+    <p role="note" data-aviso-cambio-clima className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[13.5px] text-amber-950">
+      {AVISO_CAMBIO_MINIMO}
+    </p>
+  );
+}
 
 function Lista({ base, enPanel }) {
   const { dataUser } = useAuth();
@@ -44,6 +54,7 @@ function Lista({ base, enPanel }) {
           <p className="text-[14px] text-slate-600">{AVISO_ANONIMA}</p>
         </>
       )}
+      <AvisoCambio />
       {!pendientes.length ? (
         <Vacio titulo="No tienes encuestas pendientes" texto="Cuando tu empresa lance una, aparecerá aquí." />
       ) : (

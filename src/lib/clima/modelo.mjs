@@ -1,7 +1,13 @@
 // Clima y NOM-035 en el navegador (lógica pura, sin React ni red; probada en scripts/test-clima.mjs).
-// El servidor califica, aplica el mínimo de 5 y decide qué se muestra: aquí solo se arma lo que la pantalla necesita.
+// El servidor califica, aplica el mínimo de cada tipo y decide qué se muestra: aquí solo se arma lo que la pantalla necesita.
 
-export const MINIMO = 5;
+// Mínimos (decisión del dueño, 25/11/2026): clima muestra resultados desde 1 respuesta; la NOM-035 (Guías II y III)
+// conserva el mínimo de 5 que pide la norma. Son constantes separadas a propósito.
+export const MINIMO_NOM035 = 5;
+// Aviso honesto al contestar clima: la respuesta no lleva nombre, pero en equipos pequeños se puede deducir quién fue.
+export const AVISO_PRIVACIDAD_CLIMA = "Tus respuestas no llevan tu nombre. En equipos pequeños, RH podría deducir quién contestó.";
+// Nota para quienes ya contestaron con la regla anterior (se mostraba solo en grupos de 5 o más).
+export const AVISO_CAMBIO_MINIMO = "Cambio: los resultados de las encuestas de clima se ven aunque respondan pocas personas.";
 
 export const NIVELES = Object.freeze({
   nulo: { texto: "Nulo", largo: "Nulo o despreciable", fondo: "bg-sky-100", tinta: "text-sky-800", punto: "bg-sky-500" },
@@ -63,7 +69,7 @@ export const ESTADOS = Object.freeze({
 });
 
 // ───────── mapa de calor ─────────
-// Filas: toda la empresa y los grupos que el servidor dejó ver (5+). Columnas: dimensiones.
+// Filas: toda la empresa y los grupos que el servidor dejó ver (clima: desde 1 respuesta). Columnas: dimensiones.
 export function mapaCalor(clima) {
   if (!clima?.suficiente) return { columnas: [], filas: [] };
   const columnas = clima.dimensiones.map((d) => ({ clave: d.clave, nombre: d.nombre }));

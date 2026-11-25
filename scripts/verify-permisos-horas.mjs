@@ -84,8 +84,10 @@ try {
     if (p.endsWith("/checador/cuenta-horas/300/cierres") && req.method() === "POST") {
       const cuerpo = JSON.parse(req.postData() || "{}");
       cierres.push(cuerpo);
-      cuenta = { ...cuenta, debe: cuenta.debe - cuerpo.minutos, total_cerrado: cuerpo.minutos,
-        cierres: [{ id: 9, tipo: cuerpo.tipo, minutos: cuerpo.minutos, nota: cuerpo.nota ?? null, creado_por_nombre: "RH Prueba", creado_en: "2026-11-19 10:00:00" }] };
+      // (26/11/2026) Un «Rebajar» recién hecho aún no está en una nómina: nomina = null.
+      cuenta = { ...cuenta, debe: cuenta.debe - cuerpo.minutos, total_cerrado: cuenta.total_cerrado + cuerpo.minutos,
+        cierres: [...cuenta.cierres, { id: 9 + cierres.length, tipo: cuerpo.tipo, minutos: cuerpo.minutos, nota: cuerpo.nota ?? null, creado_por_nombre: "RH Prueba",
+          creado_en: "2026-11-19 10:00:00", ...(cuerpo.tipo === "rebaja" ? { nomina: null } : {}) }] };
       return json({ ok: true, data: cuenta });
     }
     if (p.endsWith("/checador/empleados/panel-empleado/lista")) {
@@ -164,11 +166,29 @@ try {
     assert.match(await seccion.innerText(), /Condonado[\s\S]*Buen desempeño · por RH Prueba[\s\S]*−1 h/);
     assert.equal(await seccion.getByLabel("Horas").count(), 0, "el formulario se cierra al guardar");
     if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/permiso-horas-cuenta.png" });
+
+    // (26/11/2026) «Rebajar» 1 h: dice que se descontará en la próxima nómina y se puede deshacer.
+    await seccion.getByRole("button", { name: "Rebajar" }).click();
+    await seccion.getByLabel("Horas").fill("1");
+    await seccion.getByRole("button", { name: "Guardar" }).click();
+    for (let i = 0; i < 60 && cierres.length < 2; i++) await dormir(100);
+    assert.deepEqual(cierres[1], { tipo: "rebaja", minutos: 60 });
+    await seccion.getByText("Se descontará en la próxima nómina").waitFor({ timeout: 10000 });
+    assert.equal(await seccion.getByRole("button", { name: "Deshacer cierre" }).count(), 2);
+    // Ya autorizada esa nómina: dice en cuál se descontó, con su importe, y ya no ofrece Deshacer.
+    cuenta.cierres.at(-1).nomina = { id_periodo: 4, fecha_inicio: "2026-11-16", fecha_fin: "2026-11-22", estado: "autorizado", importe: 37.5, bloqueado: true };
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await pestana.first().click();
+    const nomina = seccion.locator("[data-nomina-cierre]");
+    await nomina.waitFor({ timeout: 15000 });
+    assert.equal((await nomina.innerText()).replace(/\s/g, " "), "Descontado en la nómina del 16 al 22 nov 2026 · $37.50");
+    assert.equal(await seccion.getByRole("button", { name: "Deshacer cierre" }).count(), 1, "solo la condonación se deshace");
+    if (process.env.CAPTURAS) await seccion.screenshot({ path: process.env.CAPTURAS + "/panel-empleado-rebaja-en-nomina.png" });
   }
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK permisos por horas · etiqueta en Asistencias (sin «Repone»: la extra se decide en el reloj) · alta por horas (sale y regresa, se repone) · cuenta en la ficha (condonar con nota)");
+  console.log("OK permisos por horas · etiqueta en Asistencias (sin «Repone»: la extra se decide en el reloj) · alta por horas (sale y regresa, se repone) · cuenta en la ficha (condonar con nota; rebajar dice en qué nómina se descuenta y ya no se deshace si está autorizada)");
 } finally {
   await browser.close();
   next.kill();

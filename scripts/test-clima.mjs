@@ -189,3 +189,13 @@ test("destinatarios: resumen en chips y antigüedad", () => {
   assert.equal(M.llaveBorrador(4, "abcdefghijklmnopq"), "adamia-clima-borrador:liga:abcdefghijkl");
   assert.equal(M.masDias("2026-11-30", 1), "2026-12-01");
 });
+
+// Decisión del dueño (25/11/2026): clima muestra resultados desde 1 respuesta; la NOM-035 conserva su mínimo de 5.
+test("mínimos y avisos: sin mínimo de clima en el navegador, NOM-035 con 5 y avisos honestos", () => {
+  assert.equal(M.MINIMO, undefined, "ya no hay un mínimo compartido entre clima y NOM-035");
+  assert.equal(M.MINIMO_NOM035, 5);
+  assert.match(M.AVISO_PRIVACIDAD_CLIMA, /no llevan tu nombre/);
+  assert.match(M.AVISO_PRIVACIDAD_CLIMA, /equipos pequeños, RH podría deducir quién contestó/);
+  assert.doesNotMatch(M.AVISO_PRIVACIDAD_CLIMA, /5 o más/);
+  assert.match(M.AVISO_CAMBIO_MINIMO, /^Cambio: los resultados de las encuestas de clima se ven aunque respondan pocas personas\.$/);
+});

@@ -41,7 +41,28 @@ export function etiquetaPermisoHoras(p) {
     : { texto: `Permiso · por reponer ${formatearMinutos(min)}`, detalle: `${base} · va a su cuenta de horas`, tono: "azul" };
 }
 
+// (26/11/2026) «Rebajar en nómina»: en qué nómina se descuenta (el backend manda `cierre.nomina` o null).
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const partes = (iso) => { const [a, m, d] = String(iso ?? "").slice(0, 10).split("-").map(Number); return { a, m, d }; };
+export function rangoNomina(inicio, fin) {
+  const i = partes(inicio), f = partes(fin);
+  if (!i.a || !f.a) return "";
+  if (i.a === f.a && i.m === f.m) return `${i.d} al ${f.d} ${MESES[f.m - 1]} ${f.a}`;
+  return `${i.d} ${MESES[i.m - 1]}${i.a === f.a ? "" : ` ${i.a}`} al ${f.d} ${MESES[f.m - 1]} ${f.a}`;
+}
+const pesos = (n) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(Number(n) || 0);
+export function textoNominaCierre(c) {
+  if (!c || c.tipo !== "rebaja" || c.borrado_en) return null;
+  const n = c.nomina;
+  if (!n) return "Se descontará en la próxima nómina";
+  const rango = rangoNomina(n.fecha_inicio, n.fecha_fin);
+  if (n.estado === "autorizado") return `Descontado en la nómina del ${rango} · ${pesos(n.importe)}`;
+  if (n.estado === "por_autorizar") return `En la nómina del ${rango}, por autorizar · ${pesos(n.importe)}`;
+  return `Va en la nómina del ${rango} (borrador) · ${pesos(n.importe)}`;
+}
+
 // Movimientos de la cuenta, del más reciente al más antiguo: { fecha, texto, minutos (+ debe / − abona), cierre? }.
+// Los «Rebajar» traen `nomina` (texto de en qué nómina va) y `bloqueado` (ya no se deshace: nómina por autorizar o autorizada).
 export function movimientosCuenta(cuenta) {
   if (!cuenta) return [];
   const cierres = { rebaja: "Rebajado", condonacion: "Condonado", otro: "Cerrado" };
@@ -62,7 +83,7 @@ export function movimientosCuenta(cuenta) {
     ...(cuenta.cierres ?? []).map((c) => ({
       clave: `x${c.id}`, fecha: String(c.creado_en ?? "").slice(0, 10), texto: cierres[c.tipo] ?? "Cerrado",
       minutos: -c.minutos, nota: [c.nota, c.creado_por_nombre && `por ${c.creado_por_nombre}`].filter(Boolean).join(" · ") || null,
-      cierre: c, deshecho: Boolean(c.borrado_en),
+      cierre: c, deshecho: Boolean(c.borrado_en), nomina: textoNominaCierre(c), bloqueado: Boolean(!c.borrado_en && c.nomina?.bloqueado),
     })),
   ].sort((a, b) => b.fecha.localeCompare(a.fecha));
 }

@@ -26,6 +26,7 @@ const next = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start"
   env: { ...process.env, JWT_SECRET: secret },
 });
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+const CAMBIO = "Cambio: los resultados de las encuestas de clima se ven aunque respondan pocas personas.";
 
 const empresas_detalle = [
   { id_empresa: 7, nombre: "Tiendas del Centro", estado: "Activo", zona_horaria: "America/Mexico_City" },
@@ -193,6 +194,10 @@ try {
   await entrar(ana, "ana@prueba.invalid");
   await ana.waitForURL("**/empleado/panel/encuestas", { timeout: 30000 });
   await ana.getByRole("link", { name: /Clima general/ }).waitFor({ timeout: 30000 });
+  // Cambio de regla (25/11/2026): nota para quien ya contestó y aviso honesto de privacidad, sin correos nuevos.
+  await ana.getByText(CAMBIO).waitFor();
+  await ana.getByText(/Tus respuestas no llevan tu nombre\. En equipos pequeños, RH podría deducir quién contestó\./).first().waitFor();
+  assert.equal(await ana.getByText(/grupos de 5 o más/).count(), 0);
   await sinDesborde(ana, "390 encuestas del empleado");
   await captura(ana, "390-empleado-encuestas-tras-login");
   console.log("PASS: correo → /login?next=/mis-encuestas → tras entrar, la lista de encuestas del empleado");
@@ -249,6 +254,7 @@ try {
   await duena.getByRole("heading", { name: "Mis encuestas" }).waitFor({ timeout: 30000 });
   await duena.getByRole("link", { name: /Pulso de diciembre/ }).waitFor({ timeout: 30000 });
   await duena.getByText(/Taller Norte · Encuesta de clima|Encuesta de clima/).first().waitFor();
+  await duena.getByText(CAMBIO).waitFor();
   await sinDesborde(duena, "1440 mis encuestas del panel");
   await captura(duena, "1440-panel-mis-encuestas");
   console.log("PASS: /mis-encuestas sin sesión → login con next → panel «Mis encuestas» de la dueña");
