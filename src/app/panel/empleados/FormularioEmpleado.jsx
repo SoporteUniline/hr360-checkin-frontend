@@ -52,8 +52,8 @@ import TabReconocimiento from "./tabs/TabReconocimiento";
 import TabGPS from "./tabs/TabGPS";
 import PanelEmpleadoDocumentos from "@/app/panel/panel-empleado/components/PanelEmpleadoDocumentos";
 import BotonCredencial from "@/components/BotonCredencial";
-import { toPng } from "html-to-image";
-import { qrComoDataUrl } from "@/lib/qrImagen.mjs";
+import EncabezadoFicha from "./EncabezadoFicha";
+import { iniciales, lineaSubtitulo, numeroEmpleado } from "@/lib/empleado/credencial.mjs";
 import { camposCambiados, copiarValores, hayCambiosPendientes, valoresIguales } from "@/lib/cambiosPendientes.mjs";
 import { useGuardiaSalida } from "@/components/cambios/CambiosPendientes";
 import EstadoCambios from "@/components/cambios/EstadoCambios";
@@ -205,7 +205,6 @@ export default function FormularioEmpleado({
     empresaCamposAnterior.current = empresaCampos ? String(empresaCampos) : null;
   }, [empresaCampos, form]);
 
-  const nipActual = form.watch("nip");
 
   const normalizarHorarios = React.useCallback(
     (horarios = []) =>
@@ -772,6 +771,12 @@ export default function FormularioEmpleado({
     swr_config,
   );
 
+  const nombreFicha = [valoresActuales.nombre, valoresActuales.apellido_paterno, valoresActuales.apellido_materno]
+    .map((v) => String(v ?? "").trim()).filter(Boolean).join(" ") || (editar || soloLectura ? "Empleado" : "Nuevo empleado");
+  // Empresa de la credencial: la que trae la ficha o, si no, la del usuario de RH con esa empresa.
+  const nombreEmpresa = (dataUser?.empresas_detalle || []).find((e) => String(e.id_empresa) === String(valoresActuales.id_empresa))?.nombre
+    || dataUser?.empresa?.nombre_empresa || "";
+
   if (isLoading) {
     return (
       <div className="flex flex-col justify-center items-center gap-3 h-100">
@@ -803,179 +808,83 @@ export default function FormularioEmpleado({
     <Form {...form}>
       {/* Contenedor principal: columna fija en mobile, flujo normal en desktop */}
       <div className={`flex flex-col sm:block sm:h-auto ${enVentana ? "h-full" : "h-[calc(100dvh-3.5rem)]"}`}>
-        {/* ── Header mobile (oscuro, fijo arriba) ── */}
-        <div className="sm:hidden bg-white text-[#080d36] border-b border-slate-200 px-4 pt-3 pb-3 shrink-0">
-          <div className="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              className="flex min-h-11 items-center gap-2 text-[#080d36] active:opacity-70 min-w-0"
-              onClick={regresar}
+        {/* ── Encabezado compacto (una sola franja): regresar, foto, nombre y estado, datos clave, credencial, guardar ── */}
+        <EncabezadoFicha
+          textoRegresar={textoRegresar}
+          onRegresar={regresar}
+          foto={(
+            <ImageUpload
+              imagePreview={imagePreview}
+              setImagePreview={setImagePreview}
+              setSelectedFile={setSelectedFile}
+              soloLectura={soloLectura}
+              iniciales={iniciales(valoresActuales)}
+            />
+          )}
+          nombre={nombreFicha}
+          estado={(editar || soloLectura) ? values?.estado : null}
+          subtitulo={lineaSubtitulo({
+            puesto: valoresActuales.puesto,
+            area: valoresActuales.departamento,
+            numero: numeroEmpleado(valoresActuales),
+            fechaIngreso: valoresActuales.fecha_ingreso,
+          })}
+          credencial={(soloLectura || editar) && values ? (
+            <BotonCredencial
+              empleado={{ ...values, ...valoresActuales }}
+              empresa={values.nombre_empresa || nombreEmpresa}
+              foto={imagePreview}
+              hayCambios={hayCambios}
+            />
+          ) : null}
+          estadoCambios={editar && !soloLectura ? <EstadoCambios hayCambios={hayCambios} campos={cambiados} /> : null}
+          guardar={soloLectura ? null : (
+            <Button
+              type="submit"
+              form="formulario-empleado"
+              data-boton-guardar
+              disabled={!botonGuardarActivo || isSubmitting}
+              className={`min-h-10 rounded-[10px] px-[18px] text-sm font-bold ${botonGuardarActivo
+                ? "bg-brand hover:bg-blue-700 text-white shadow-sm"
+                : "bg-slate-200 text-slate-500 shadow-none disabled:opacity-100"}`}
             >
-              <Icon
-                icon="material-symbols:arrow-back"
-                width={20}
-                height={20}
-                className="shrink-0"
-              />
-              <span className="text-sm font-semibold truncate">
-                {soloLectura || editar
-                  ? values
-                    ? `${values.nombre} ${values.apellido_paterno}`
-                    : "Empleado"
-                  : "Nuevo empleado"}
-              </span>
-            </button>
-            {editar && !soloLectura && <EstadoCambios hayCambios={hayCambios} campos={cambiados} />}
-          </div>
-        </div>
-
-        {/* ── Header desktop (tarjeta blanca) ── */}
-        <div className="hidden sm:block bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-          <div className="flex justify-between items-center">
-            <button
-              type="button"
-              className="flex items-center gap-2 text-[#2563EB] hover:text-[#1d4ed8] transition-colors font-medium"
-              onClick={regresar}
-            >
-              <Icon icon="material-symbols:arrow-back" width={20} height={20} />
-              <span className="text-sm">{textoRegresar}</span>
-            </button>
-
-            <div className="flex items-center gap-3">
-              {editar && !soloLectura && <EstadoCambios hayCambios={hayCambios} campos={cambiados} />}
-              {soloLectura ? null : (
-                <Button
-                  type="submit"
-                  form="formulario-empleado"
-                  data-boton-guardar
-                  disabled={!botonGuardarActivo || isSubmitting}
-                  className={botonGuardarActivo
-                    ? "bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
-                    : "bg-gray-100 text-gray-400 font-medium shadow-none disabled:opacity-100"}
-                >
-                  {isSubmitting ? "Guardando…" : editar ? "Guardar" : "Registrar"}
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
+              {isSubmitting ? "Guardando…" : editar ? "Guardar" : "Registrar"}
+            </Button>
+          )}
+        />
 
         {/* ── Área scrolleable ── */}
         <div className="flex-1 overflow-y-auto sm:overflow-visible">
           <form
             id="formulario-empleado"
             onSubmit={form.handleSubmit(onValidSubmit, onInvalidSubmit)}
-            className="space-y-0 sm:space-y-6"
+            className="space-y-0"
           >
-            {/* SECCIÓN: Foto + Info + QR */}
-            <div className="bg-white border-b border-gray-100 sm:rounded-xl sm:shadow-sm sm:border sm:border-gray-100 p-4 sm:p-6">
-              <div className="flex flex-col md:flex-row gap-4 sm:gap-6 items-start">
-                {/* 1. Foto de Perfil */}
-                <div className="shrink-0">
-                  <ImageUpload
-                    imagePreview={imagePreview}
-                    setImagePreview={setImagePreview}
-                    setSelectedFile={setSelectedFile}
-                    soloLectura={soloLectura}
-                  />
-                </div>
-
-                {/* 2. Información Principal (Nombre y Puesto) */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-                    Empleado
-                  </p>
-
-                  <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 truncate">
-                    {`${form.watch("nombre")} ${form.watch(
-                      "apellido_paterno",
-                    )} ${form.watch("apellido_materno")}` || "Nuevo empleado"}
-                  </h2>
-
-                  <p className="text-sm text-gray-500 truncate">
-                    {form.watch("puesto") || "Sin puesto asignado"}
-                  </p>
-
-                  {(soloLectura || editar) && values && (
-                    <div className="pt-3">
-                      <BotonCredencial
-                        empleado={values}
-                        imagePreview={imagePreview}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* 3. QR de Acceso (solo visible en md+) */}
-                {(editar || soloLectura) && nipActual && (
-                  <div className="hidden md:flex flex-col items-center justify-center p-3 bg-gray-50 border rounded-xl shadow-inner min-w-35">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase mb-2">
-                      Acceso QR
-                    </span>
-                    <img
-                      src={qrComoDataUrl(nipActual, { celda: 6 })}
-                      alt="QR Empleado"
-                      className="w-24 h-24 lg:w-32 lg:h-32 object-contain"
-                      key={nipActual}
-                    />
-                    <div className="mt-2 text-center">
-                      <p className="text-[10px] text-gray-400 uppercase leading-none">
-                        Código
-                      </p>
-                      <span className="text-sm font-mono font-bold text-blue-600">
-                        {nipActual}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* QR compacto en mobile (debajo del nombre/puesto) */}
-              {(editar || soloLectura) && nipActual && (
-                <div className="md:hidden mt-3 flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
-                  <img
-                    src={qrComoDataUrl(nipActual, { celda: 4 })}
-                    alt="QR Empleado"
-                    className="w-12 h-12 object-contain shrink-0"
-                    key={nipActual}
-                  />
-                  <div>
-                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wide mb-0.5">
-                      Acceso QR
-                    </p>
-                    <span className="text-base font-mono font-bold text-blue-600">
-                      {nipActual}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* TABS */}
             <Tabs value={tab} onValueChange={setTab} className="w-full">
               <div className="bg-white sm:rounded-xl sm:shadow-sm sm:border sm:border-gray-100 overflow-hidden sm:mb-6">
                 <div className="overflow-x-auto">
                   <TabsList className="flex-nowrap w-max min-w-full bg-gray-50 rounded-none border-b border-gray-200 p-0 h-auto">
-                    <TabsTrigger value="personal" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
+                    <TabsTrigger value="personal" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none min-h-11 py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
                       <User className="h-4 w-4 sm:mr-2" />
                       <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Personal</span>
                     </TabsTrigger>
-                    <TabsTrigger value="trabajo" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
+                    <TabsTrigger value="trabajo" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none min-h-11 py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
                       <BriefcaseBusiness className="h-4 w-4 sm:mr-2" />
                       <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Trabajo</span>
                     </TabsTrigger>
-                    <TabsTrigger value="checador" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
+                    <TabsTrigger value="checador" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none min-h-11 py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
                       <ScanFace className="h-4 w-4 sm:mr-2" />
                       <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Checador y acceso</span>
                     </TabsTrigger>
-                    <TabsTrigger value="pago" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
+                    <TabsTrigger value="pago" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none min-h-11 py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
                       <Wallet className="h-4 w-4 sm:mr-2" />
                       <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Pago</span>
                     </TabsTrigger>
                     {(values?.id_empleado || camposConfigurados.some(c => c.activo && c.formulario && c.pestana === "documentos")) && (
                       <TabsTrigger
                         value="documentos"
-                        className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
+                        className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none min-h-11 py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
                       >
                         <FolderOpen className="h-4 w-4 sm:mr-2" />
                         <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Documentos</span>
