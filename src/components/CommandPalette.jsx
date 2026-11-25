@@ -140,6 +140,13 @@ const ALL_NAV_ITEMS = [
     section: "Admin",
     icon: MessageCircle,
   },
+  {
+    title: "Créditos de Adamia AI",
+    url: "/dashboard/creditos-ia",
+    rol: "Admin",
+    section: "Admin",
+    icon: CreditCard,
+  },
   // Recruiter — General
   {
     title: "Resumen",
@@ -352,6 +359,13 @@ const ALL_NAV_ITEMS = [
   {
     title: "Mi suscripción",
     url: "/panel/mi-suscripcion",
+    rol: "Recruiter",
+    section: "Ajustes",
+    icon: CreditCard,
+  },
+  {
+    title: "Créditos de Adamia AI",
+    url: "/panel/creditos-ia",
     rol: "Recruiter",
     section: "Ajustes",
     icon: CreditCard,
