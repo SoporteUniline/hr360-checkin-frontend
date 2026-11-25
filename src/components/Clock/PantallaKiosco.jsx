@@ -23,6 +23,8 @@ export default function PantallaKiosco({
   avisoUbicacion,
   camara,
   recientes,
+  // (26/11/2026) «Voy a comer»: va junto al código y el QR.
+  extra = null,
 }) {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const hora = horaActual.replace(/ [ap]\.m\.$/, "");
@@ -72,6 +74,7 @@ export default function PantallaKiosco({
           handleOpenQR={onAbrirQR}
           registrando={registrando}
           enqueueSnackbar={enqueueSnackbar}
+          extra={extra}
         />
         {avisoUbicacion && <p className="text-xs text-slate-600" role="status">{avisoUbicacion}</p>}
       </section>
