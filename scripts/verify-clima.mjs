@@ -261,9 +261,9 @@ try {
   await plan.getByRole("button", { name: "Convertir en tareas →" }).click();
   const dt = rh.getByRole("dialog", { name: "Convertir en tareas" });
   for (const sel of await dt.getByRole("combobox").all()) await sel.selectOption({ index: 1 });
-  await dt.getByRole("button", { name: "Crear 2 tareas" }).click();
-  await rh.getByText("Se crearon 2 tareas en el módulo de Tareas.").waitFor({ timeout: 15000 });
-  assert.equal(S.estado.tareas.length, 2);
+  await dt.getByRole("button", { name: "Crear 3 tareas" }).click();
+  await rh.getByText("Se crearon 3 tareas en el módulo de Tareas.").waitFor({ timeout: 15000 });
+  assert.equal(S.estado.tareas.length, 3);
   assert.ok(S.estado.tareas.every((t) => t.empresa === 7 && t.id_responsable === 101 && /^\d{4}-\d{2}-\d{2}$/.test(t.fecha_limite)));
   assert.match(S.estado.tareas[0].titulo, /^Almacén · Carga de trabajo: Publicar/);
   console.log("PASS: Adamia AI agrupa comentarios, propone plan y lo convierte en tareas");
