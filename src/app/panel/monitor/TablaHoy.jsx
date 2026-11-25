@@ -119,7 +119,7 @@ function Renglon({ r, debe, onAbrirDia, formatear }) {
       <td data-jornada className={cn("hidden", celda, "lg:hidden xl:table-cell")}>
         {j ? (
           <span className="flex flex-col gap-1">
-            <span className="text-[13px] leading-tight tabular-nums text-slate-600">{j.texto}</span>
+            <span className="whitespace-nowrap text-[13px] leading-tight tabular-nums text-slate-600">{j.texto}</span>
             {avance != null ? (
               <span
                 role="progressbar"
