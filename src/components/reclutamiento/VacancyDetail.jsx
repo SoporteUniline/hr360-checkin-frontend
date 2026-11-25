@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   CalendarDays,
+  ClipboardCheck,
   ExternalLink,
   FileText,
   ListChecks,
@@ -25,6 +26,7 @@ import PublicationPanel, { previewPath } from "./PublicationPanel";
 import { EnlaceVacanteEnLinea } from "@/components/whatsapp/EnlaceWhatsappVacante";
 import EditorEntrevista from "@/components/whatsapp/EditorEntrevista";
 import AgendaVacante from "@/components/whatsapp/AgendaVacante";
+import EditorRequisitos from "@/components/whatsapp/EditorRequisitos";
 import s from "./reclutamiento.module.css";
 
 export default function VacancyDetail({
@@ -279,6 +281,16 @@ export default function VacancyDetail({
                           <CalendarDays size={15} />
                           Agenda
                         </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="min-h-11 md:min-h-9"
+                          onClick={() => setDialog("requisitos")}
+                        >
+                          <ClipboardCheck size={15} />
+                          Requisitos
+                        </Button>
                       </>
                     }
                   />
@@ -323,6 +335,12 @@ export default function VacancyDetail({
           </div>
           <EditorEntrevista
             abierto={dialog === "interview"}
+            onCambiar={(open) => !open && setDialog(null)}
+            idVacante={vacancy.id}
+            titulo={vacancy.title}
+          />
+          <EditorRequisitos
+            abierto={dialog === "requisitos"}
             onCambiar={(open) => !open && setDialog(null)}
             idVacante={vacancy.id}
             titulo={vacancy.title}
