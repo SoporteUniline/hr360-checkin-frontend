@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
-import { ANTIGUEDADES, MINIMO, claveAntiguedad, masDias, resumenDestinatarios } from "@/lib/clima/modelo.mjs";
+import { ANTIGUEDADES, MINIMO_NOM035, claveAntiguedad, masDias, resumenDestinatarios } from "@/lib/clima/modelo.mjs";
 import { Aviso, Boton, Cargando, Tarjeta, Vacio, errorDe, get, ruta } from "./ui";
 
 const hoyMx = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
@@ -250,7 +250,9 @@ export default function Lanzar({ id, idEmpresa, inicio }) {
         </div>
         {previa.data?.gruposChicos?.length ? (
           <p className="mt-2 text-[12.5px] text-amber-800">
-            Con menos de {MINIMO} por área ({previa.data.gruposChicos.join(", ")}), esos resultados se verán solo juntos.
+            {nom
+              ? `Con menos de ${MINIMO_NOM035} por área (${previa.data.gruposChicos.join(", ")}), esos resultados se verán solo juntos.`
+              : `Equipos pequeños (${previa.data.gruposChicos.join(", ")}): las respuestas no llevan nombre, pero RH podría deducir quién contestó.`}
           </p>
         ) : null}
       </Tarjeta>

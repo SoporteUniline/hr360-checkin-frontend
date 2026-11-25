@@ -8,7 +8,7 @@ import useSWR from "swr";
 import { Download, Plus } from "lucide-react";
 import axios from "@/lib/axios";
 import { descargar } from "@/components/nomina/comun";
-import { MINIMO, atencion, colorCalor, fechaCorta, fmtDelta, fmtEnps, fmtUno, mapaCalor, NIVELES } from "@/lib/clima/modelo.mjs";
+import { atencion, colorCalor, fechaCorta, fmtDelta, fmtEnps, fmtUno, mapaCalor, NIVELES } from "@/lib/clima/modelo.mjs";
 import { Boton, Cargando, ChipEstado, Tarjeta, Vacio, errorDe, get, ruta } from "./ui";
 
 function Kpi({ titulo, valor, unidad, detalle, delta, puntos = false, href, tono = "text-slate-900" }) {
@@ -146,7 +146,7 @@ export default function Tablero({ idEmpresa, extra = null }) {
         <Abiertas abiertas={data.abiertas} />
         <Vacio
           titulo="Aún no hay resultados de clima"
-          texto="Lanza una encuesta con una plantilla profesional. Los resultados aparecen al cerrarla, con 5 respuestas o más."
+          texto="Lanza una encuesta con una plantilla profesional. Los resultados aparecen al cerrarla, aunque conteste una sola persona."
         >
           <Link
             href="/panel/clima/encuestas"
@@ -208,7 +208,7 @@ export default function Tablero({ idEmpresa, extra = null }) {
       {data.anterior ? <p className="-mt-2 text-[12.5px] text-slate-500">Comparado con «{data.anterior.nombre}».</p> : null}
 
       {!r.disponibles ? (
-        <Vacio titulo="Sin resultados que mostrar" texto={r.motivo || `Se necesitan al menos ${MINIMO} respuestas.`} />
+        <Vacio titulo="Sin resultados que mostrar" texto={r.motivo || "Todavía no hay respuestas."} />
       ) : (
         <>
           <div className="grid grid-cols-2 gap-2 sm:gap-3 xl:grid-cols-4">
@@ -246,7 +246,7 @@ export default function Tablero({ idEmpresa, extra = null }) {
                 <MapaCalor clima={cl} agruparPor={r.agruparPor} />
                 {cl.gruposOcultos ? (
                   <p className="mt-2 text-[12.5px] text-slate-500">
-                    {cl.gruposOcultos} grupo(s) con menos de {MINIMO} respuestas no se muestran por separado para proteger el anonimato
+                    {cl.gruposOcultos} grupo(s) no se muestran por separado para proteger el anonimato
                     (cuentan en «Toda la empresa»).
                   </p>
                 ) : null}
