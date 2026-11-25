@@ -7,6 +7,7 @@ import DiagnosticoReloj from "@/components/DiagnosticoReloj";
 import { useNativeBackButton } from "@/hooks/Capacitor/useNativeBackButton";
 import RetireOfflineWorker from '@/components/RetireOfflineWorker';
 import { CambiosPendientesProvider } from '@/components/cambios/CambiosPendientes';
+import OfertaPasskey from '@/components/seguridad/OfertaPasskey';
 
 export function ClientProviders({ children }) {
   useNativeBackButton();
@@ -21,6 +22,8 @@ export function ClientProviders({ children }) {
       <CambiosPendientesProvider>
         {children}
         <CommandPalette />
+        {/* «¿Activar Face ID para entrar más rápido?» justo después de entrar con contraseña. */}
+        <OfertaPasskey />
       </CambiosPendientesProvider>
     </AuthProvider>
   );

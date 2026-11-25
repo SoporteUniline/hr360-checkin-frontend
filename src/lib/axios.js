@@ -1,6 +1,7 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 import { fetchSeguro } from "./fetchSeguro.mjs";
+import { esSesionCerrada, RUTA_LOGIN_SESION_CERRADA } from "./passkeys/modelo.mjs";
 
 let offlineReady;
 export function ensureOfflineCache() {
@@ -22,7 +23,25 @@ function agregarTokenAlBackend(config) {
   return config;
 }
 
+// (25/11/2026) Sesión cerrada desde el servidor (otro dispositivo cerró «en todos», se quitó la passkey, baja, cambio de
+// contraseña): 401 SESION_REVOCADA / SESION_EXPIRADA → se borra el token y se va al login con aviso. Los demás 401 y los
+// 503 (servidor caído) siguen como antes. Ver docs/passkeys-sesiones.md.
+let saliendo = false;
+function alCerrarseLaSesion(error) {
+  const r = error?.response;
+  if (typeof window !== "undefined" && !saliendo && esSesionCerrada(r?.status, r?.data)) {
+    Cookies.remove("token");
+    delete instance.defaults.headers.common.Authorization;
+    if (!window.location.pathname.startsWith("/login")) {
+      saliendo = true;
+      window.location.assign(RUTA_LOGIN_SESION_CERRADA);
+    }
+  }
+  return Promise.reject(error);
+}
+
 if (typeof window !== 'undefined') {
+  axios.interceptors.response.use((r) => r, alCerrarseLaSesion);
   axios.defaults.adapter = 'fetch';
   // fetch que no deja pasar DOMException a axios (ver./fetchSeguro.mjs).
   axios.defaults.env = { ...(axios.defaults.env || {}), fetch: fetchSeguro };
@@ -54,5 +73,6 @@ instance.interceptors.request.use((config) => {
 
   return config;
 });
+instance.interceptors.response.use((r) => r, alCerrarseLaSesion);
 
 export default instance;

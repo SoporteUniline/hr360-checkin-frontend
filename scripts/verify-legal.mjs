@@ -45,10 +45,12 @@ try {
   const errores = [];
 
   // 1) Documentos: responsable, domicilio, versión; RFC solo en términos; nunca la CURP; aviso de borrador por pendientes.
-  for (const [ruta, titulo] of [["/aviso-privacidad", "Aviso de privacidad integral"], ["/terminos-condiciones", "Términos y condiciones del servicio"], ["/aviso-empleados", "Aviso de privacidad para empleados (plantilla)"]]) {
+  // (25/11/2026) Los dos avisos de privacidad cambiaron de versión: agregan la línea de Face ID / huella (passkeys).
+  for (const [ruta, titulo, version] of [["/aviso-privacidad", "Aviso de privacidad integral", "2026-11-25"], ["/terminos-condiciones", "Términos y condiciones del servicio", "2026-11-21"], ["/aviso-empleados", "Aviso de privacidad para empleados (plantilla)", "2026-11-25"]]) {
     const html = await (await fetch(base + ruta)).text();
     assert.ok(html.includes(titulo), `${ruta}: título`);
-    assert.match(html, /Versión (<!-- -->)?2026-11-21/, `${ruta}: versión`);
+    assert.match(html, new RegExp(`Versión (<!-- -->)?${version}`), `${ruta}: versión`);
+    if (ruta !== "/terminos-condiciones") assert.ok(html.includes("Tu cara o tu huella nunca salen de tu teléfono"), `${ruta}: línea de passkeys`);
     assert.ok(!html.includes("LEDD900608HJCNSG07"), `${ruta}: nunca la CURP`);
   }
   const aviso = await (await fetch(base + "/aviso-privacidad")).text();
@@ -103,7 +105,7 @@ try {
   await dormir(300);
   assert.equal(aceptaciones.length, 1);
   assert.equal(aceptaciones[0].contexto, "contacto");
-  assert.deepEqual(aceptaciones[0].documentos, [{ id: "aviso_privacidad", version: "2026-11-21" }]);
+  assert.deepEqual(aceptaciones[0].documentos, [{ id: "aviso_privacidad", version: "2026-11-25" }]);
   assert.equal(aceptaciones[0].correo, "ana@empresa.mx");
   await ctx2.close();
 

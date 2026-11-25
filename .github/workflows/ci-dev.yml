@@ -103,6 +103,9 @@ jobs:
       - name: Créditos de Adamia AI — saldo, recargas y panel del administrador
         run: node --test scripts/test-creditos-ia.mjs
 
+      - name: Passkeys (Face ID / huella) y sesiones revocables — lógica
+        run: node --test scripts/test-passkeys.mjs
+
       - name: Avisos y felicitaciones — campana, WhatsApp y plantillas de correo
         run: node --test scripts/test-avisos.mjs
 

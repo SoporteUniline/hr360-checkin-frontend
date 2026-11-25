@@ -19,7 +19,7 @@ const MODULOS_NUEVOS = [
   "src/components/landing/popups", "src/components/landing/sitio", "src/components/legal", "src/components/modulos",
   "src/components/nomina", "src/components/tareas", "src/components/whatsapp", "src/lib/asistencia",
   "src/lib/diagnostico-reloj", "src/lib/firma", "src/lib/legal", "src/lib/modulos", "src/lib/reloj", "src/lib/rostro",
-  "src/lib/sitio", "src/lib/tareas", "src/lib/whatsapp",
+  "src/lib/sitio", "src/lib/tareas", "src/lib/whatsapp", "src/lib/passkeys", "src/components/seguridad",
 ].map((d) => `${d}/**/*.{js,jsx,mjs}`);
 
 const eslintConfig = [
