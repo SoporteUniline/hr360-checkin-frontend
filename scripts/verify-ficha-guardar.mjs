@@ -335,7 +335,8 @@ try {
   assert.ok(await m.evaluate(() => document.documentElement.scrollWidth <= 390), "sin desborde horizontal");
   await captura(m, "390-con-cambios");
   await m.locator("#formulario-empleado").evaluate(() => {});
-  await m.locator("button:visible", { hasText: "Ana Torres" }).first().click(); // flecha de regresar del encabezado
+  // Flecha de regresar del encabezado compacto (desde 25/11/2026 es un ícono; su nombre accesible es «Regresar a la tabla»).
+  await m.getByRole("button", { name: "Regresar a la tabla" }).click();
   await preguntaVisible(m);
   await sinAnimaciones(m); // termina la animación de entrada (zoom 95 % → 100 %)
   await dormir(300);

@@ -94,6 +94,17 @@ export async function getScope(request, self = false) {
     "El módulo de Activos y uniformes no está activo para tu empresa.",
     403,
   );
+  // (16/12/2026) Usuario con acceso: su permiso en «Activos y uniformes» y sus empresas (los manda /users/verify/token;
+  // sin «permisos» = dueño o servidor viejo: como antes). GET = ver; lo demás = editar. Ver src/lib/permisos/permisos.mjs.
+  const permisos = user.esAcceso ? sesion.permisos : null;
+  if (permisos?.modulos) {
+    const nivel = permisos.modulos.activos ?? "sin_acceso";
+    const escribe = !["GET", "HEAD"].includes(String(request?.method || "GET").toUpperCase());
+    ensure(nivel !== "sin_acceso", "No tienes acceso a Activos y uniformes. Pídeselo al dueño de la cuenta.", 403);
+    ensure(!escribe || nivel === "editar", "Solo puedes ver Activos y uniformes. Para hacer cambios, pídele permiso de edición al dueño de la cuenta.", 403);
+    const empresas = (permisos.empresas || []).map(String);
+    ensure(!empresas.length || empresas.includes(companyId.data), "No tienes acceso a esta empresa. Pídeselo al dueño de la cuenta.", 403);
+  }
   const pool = activosPool();
   if (!self) {
     const [rows] = await pool.execute(

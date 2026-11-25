@@ -3,12 +3,15 @@
 // Plan de acción de una medición de clima: cada acción con dimensión, responsable (ficha de empleado), fecha límite y
 // estado. Desde la siguiente medición de la misma plantilla el servidor dice si su dimensión subió (no se guarda).
 // API: POST /campanias/:id/acciones · PATCH /acciones/:id · DELETE /acciones/:id (empresa de la sesión).
+// Las acciones agregadas desde «Plan de acción sugerido» (Adamia AI) llegan sin responsable ni fecha: se resaltan
+// («Falta asignar…») y el botón dice «Asignar». Al guardar desde el diálogo se piden los dos.
 import { useState } from "react";
 import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import SelectorEmpleado from "@/components/nomina/SelectorEmpleado";
 import { ESTADOS_ACCION, erroresAccion, fechaLarga, resumenPlan, textoSeguimiento } from "@/lib/clima/modelo.mjs";
+import { faltaAsignar, porAsignar, textoFalta } from "@/lib/clima/sugerencias.mjs";
 import { Boton, errorDe, ruta } from "./ui";
 
 const hoyMx = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
@@ -99,7 +102,9 @@ function Formulario({ idEmpresa, idCampania, dimensiones, accion, abierto, alCer
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{accion ? "Editar acción" : "Agregar acción"}</DialogTitle>
-          <DialogDescription>Qué se va a hacer, quién responde y para cuándo.</DialogDescription>
+          <DialogDescription>
+            {accion && faltaAsignar(accion).length ? `${textoFalta(accion)}: elige quién responde y para cuándo.` : "Qué se va a hacer, quién responde y para cuándo."}
+          </DialogDescription>
         </DialogHeader>
         {datos ? (
           <form id="form-accion" onSubmit={guardar} noValidate className="grid gap-3 text-sm">
@@ -200,21 +205,27 @@ function Accion({ a, dimensiones, atencion, onEditar, onEstado, cambiando }) {
   const dim = dimensiones.find((d) => d.clave === a.dimension) ?? null;
   const est = ESTADOS_ACCION[a.estado] ?? ESTADOS_ACCION.pendiente;
   const seg = textoSeguimiento(a, dim?.nombre);
+  const falta = faltaAsignar(a);
+  const sinResp = falta.includes("responsable");
+  const sinFecha = falta.includes("fecha límite");
   return (
-    <li className="flex flex-col gap-2 rounded-[14px] border border-slate-200 p-3.5">
+    <li className={`flex flex-col gap-2 rounded-[14px] border p-3.5 ${falta.length ? "border-amber-300 bg-amber-50/40" : "border-slate-200"}`}>
       <div className="flex min-w-0 items-start justify-between gap-2">
         <ChipDimension dim={dim} atencion={atencion.has(a.dimension)} />
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${est.clase}`}>{est.texto}</span>
       </div>
       <p className="break-words text-sm font-semibold text-slate-900">{a.texto}</p>
+      {falta.length ? (
+        <p className="rounded-lg bg-[#FEF3C7] px-2 py-1 text-[12.5px] font-semibold text-[#92400E]">⚠ {textoFalta(a)}</p>
+      ) : null}
       <div className="grid grid-cols-2 gap-2 text-[13px] text-slate-600">
         <span className="min-w-0">
           Responsable
-          <b className="block truncate text-slate-900">{a.responsable?.nombre ?? "Sin responsable"}</b>
+          <b className={`block truncate ${sinResp ? "text-[#92400E]" : "text-slate-900"}`}>{a.responsable?.nombre ?? "Por asignar"}</b>
         </span>
         <span>
           Fecha límite
-          <b className="block text-slate-900">{fechaLarga(a.fecha_limite)}</b>
+          <b className={`block ${sinFecha ? "text-[#92400E]" : "text-slate-900"}`}>{sinFecha ? "Por asignar" : fechaLarga(a.fecha_limite)}</b>
         </span>
       </div>
       <p className="text-[12.5px]" style={{ color: seg.tono }}>
@@ -237,8 +248,13 @@ function Accion({ a, dimensiones, atencion, onEditar, onEstado, cambiando }) {
             ))}
           </select>
         </label>
-        <Boton className="min-h-11" onClick={() => onEditar(a)} aria-label={`Editar «${a.texto.slice(0, 40)}»`}>
-          Editar
+        <Boton
+          variante={falta.length ? "primario" : "secundario"}
+          className="min-h-11"
+          onClick={() => onEditar(a)}
+          aria-label={`${falta.length ? "Asignar" : "Editar"} «${a.texto.slice(0, 40)}»`}
+        >
+          {falta.length ? "Asignar" : "Editar"}
         </Boton>
       </div>
     </li>
@@ -269,7 +285,10 @@ export default function PlanAccion({ idEmpresa, idCampania, plan, dimensiones, a
         <h2 id="titulo-plan" className="text-[17px] font-extrabold text-slate-900">
           Plan de acción
         </h2>
-        <span className="text-[12.5px] text-slate-600">{resumenPlan(acciones)}</span>
+        <span className="text-right text-[12.5px] text-slate-600">
+          {resumenPlan(acciones)}
+          {porAsignar(acciones) ? <span className="block font-semibold text-[#92400E]">{porAsignar(acciones)} por asignar</span> : null}
+        </span>
       </div>
       {acciones.length ? (
         <ul className="mt-3 flex flex-col gap-3">

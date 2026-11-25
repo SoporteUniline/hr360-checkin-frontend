@@ -1,6 +1,7 @@
 // Backend simulado de /api/checador/clima para scripts/verify-clima.mjs y scripts/verify-clima-dashboard.mjs (mismas
 // formas que modules/clima del backend).
 import { COMENTARIOS_SIN_AREAS, climaGrande, climaSinAreas, comparacionGrande, lectura } from "./clima-resultados-simulado.mjs";
+import { claveAccion } from "../../src/lib/clima/sugerencias.mjs";
 const ESCALA = ["Totalmente en desacuerdo", "En desacuerdo", "Ni de acuerdo ni en desacuerdo", "De acuerdo", "Totalmente de acuerdo"].map((texto, i) => ({
   valor: i + 1,
   texto,
@@ -437,7 +438,7 @@ const GUIA_III = {
 
 // Adamia AI simulada: mismas formas que modules/clima/controllers/iaController.js.
 function respuestaIa(e, cuerpo, estado) {
-  if (e === "/ia/estado") return { ok: true, activo: true, usos_mes: estado.llamadasIa.length + 12, gasto_mes_usd: 0.42, tope_mensual_usd: 5 };
+  if (e === "/ia/estado") return { ok: true, activo: estado.iaActiva, usos_mes: estado.llamadasIa.length + 12, gasto_mes_usd: 0.42, tope_mensual_usd: 5 };
   if (e === "/ia/crear") {
     return {
       ok: true,
@@ -517,24 +518,40 @@ function respuestaIa(e, cuerpo, estado) {
   if (cuerpo?.soloGuardado && !guardado) return { ok: true, vacio: true };
   return {
     ok: true,
+    // Sugerencias estructuradas (el servidor ya validó dimensión, texto ≤300 y por qué). La tercera ya está en el plan (501).
     acciones: [
       {
+        dimension: "carga",
         grupo: "Almacén",
         tema: "Carga de trabajo",
         accion: "Publicar los horarios del sábado con 1 semana de anticipación.",
+        porque: "Carga de trabajo es la dimensión más baja en Almacén (5.1 de 10).",
         responsable: "Jefe de almacén",
         plazoDias: 14,
         indicador: "Horarios publicados a tiempo",
       },
       {
+        dimension: "reconocimiento",
         grupo: "Toda la empresa",
         tema: "Reconocimiento",
         accion: "Reconocimiento mensual por área desde la app.",
+        porque: "Reconocimiento: 52 % favorable, 18 puntos bajo la empresa.",
         responsable: "RH",
         plazoDias: 30,
         indicador: "",
       },
+      {
+        dimension: "crecimiento",
+        grupo: "Toda la empresa",
+        tema: "Crecimiento",
+        accion: "Plática 1 a 1 de plan de carrera con cada persona.",
+        porque: "Crecimiento 6.6 de 10.",
+        responsable: "Jefes de área",
+        plazoDias: 45,
+        indicador: "Pláticas hechas",
+      },
     ],
+    descartadas: 0,
     programaNom035: [
       {
         dominio: "Jornada de trabajo",
@@ -586,6 +603,7 @@ export function datosSimulados() {
       },
     ],
     siguienteAccion: 600,
+    iaActiva: true,
     llamadasAcciones: [],
     tableros: [],
     llamadasIa: [],
@@ -818,6 +836,12 @@ export function datosSimulados() {
     const crearAccion = /^\/campanias\/(\d+)\/acciones$/.exec(e);
     if (crearAccion && m === "POST") {
       estado.llamadasAcciones.push({ m, e, cuerpo });
+      // Como el servidor: mismo texto y dimensión en la misma medición → 409 DUPLICADA.
+      const idC = Number(crearAccion[1]);
+      const clave = claveAccion(cuerpo.texto, cuerpo.dimension ?? null);
+      if (estado.acciones.some((x) => x.idCampania === idC && claveAccion(x.texto, x.dimension ?? null) === clave)) {
+        return json({ ok: false, codigo: "DUPLICADA", error: "Esa acción ya está en el plan." }, 409);
+      }
       const persona = PERSONAS.find((x) => x.id === cuerpo.id_responsable);
       const a = {
         id: estado.siguienteAccion++, idCampania: Number(crearAccion[1]), dimension: cuerpo.dimension, texto: cuerpo.texto,
@@ -920,6 +944,9 @@ export function datosSimulados() {
       return json({ ok: true }, 201);
     }
     if (e.startsWith("/ia/") || /\/ia\/(temas|plan)$/.test(e)) {
+      if (m === "POST" && !cuerpo?.soloGuardado && !estado.iaActiva) {
+        return json({ ok: false, codigo: "IA_APAGADA", error: "Adamia AI no está activa en esta empresa." }, 409);
+      }
       if (m === "POST" && !cuerpo?.soloGuardado) estado.llamadasIa.push({ ruta: e, cuerpo });
       return json(respuestaIa(e, cuerpo, estado));
     }

@@ -1,14 +1,16 @@
 "use client";
 
-// Adamia AI sobre resultados cerrados: temas de los comentarios (con cita anonimizada), plan de acción por área y
-// programa de intervención NOM-035, que se pueden convertir en tareas del módulo de Tareas.
+// Adamia AI sobre resultados cerrados: temas de los comentarios (con cita anonimizada), plan de acción sugerido y
+// programa de intervención NOM-035. Cada sugerencia de clima se agrega al plan de acción real (clima_acciones) con un
+// clic, sin responsable ni fecha (RH los asigna); también se pueden convertir en tareas del módulo de Tareas.
 import { useState } from "react";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { masDias } from "@/lib/clima/modelo.mjs";
-import { Boton, ChipIA, Tarjeta, errorDe, get, ruta } from "./ui";
+import { cuerpoAccion, estadoSugerencias, nombreDimension, resumenAgregadas } from "@/lib/clima/sugerencias.mjs";
+import { Boton, ChipIA, Tarjeta, codigoDe, errorDe, get, ruta } from "./ui";
 import { useIaEstado, UsoIa } from "./IaEncuesta";
 
 const hoyMx = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
@@ -177,12 +179,46 @@ export function ConvertirTareas({ idEmpresa, acciones, abierto, alCerrar }) {
   );
 }
 
-function Plan({ idEmpresa, idCampania, nom035 = false }) {
+// Una sugerencia de clima: dimensión, qué hacer, por qué y «Agregar al plan» (o «Ya está en el plan»).
+function Sugerencia({ s, dimensiones, agregando, onAgregar }) {
+  return (
+    <li className="flex flex-col gap-1.5 rounded-xl border border-slate-200 p-3">
+      <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
+        <span className="max-w-full truncate rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">{nombreDimension(s.dimension, dimensiones)}</span>
+        {s.grupo && s.grupo !== "Toda la empresa" ? <span className="max-w-full truncate rounded-full bg-slate-100 px-2 py-0.5 text-slate-700">{s.grupo}</span> : null}
+      </div>
+      <p className="break-words text-[13.5px] font-semibold text-slate-900">{s.accion}</p>
+      {s.porque ? <p className="break-words text-[12.5px] text-slate-600">Por qué: {s.porque}</p> : null}
+      {s.enPlan ? (
+        <p className="flex min-h-11 items-center gap-1.5 text-[13px] font-semibold text-emerald-800" role="status">
+          <span aria-hidden="true">✓</span> Ya está en el plan
+        </p>
+      ) : (
+        <Boton
+          className="min-h-11 w-full sm:w-auto sm:self-start"
+          onClick={() => onAgregar([s])}
+          disabled={agregando}
+          aria-label={`Agregar al plan «${s.accion.slice(0, 40)}»`}
+        >
+          + Agregar al plan
+        </Boton>
+      )}
+    </li>
+  );
+}
+
+function Plan({ idEmpresa, idCampania, nom035 = false, plan = null, dimensiones = [], alCambiar }) {
+  const { enqueueSnackbar } = useSnackbar();
   const g = useIaGuardada(idEmpresa, idCampania, "plan");
   const { generar, generando, activa } = useGenerar(idEmpresa, idCampania, "plan", g);
   const [tareas, setTareas] = useState(false);
+  const [agregando, setAgregando] = useState(false);
   const d = g.data && !g.data.vacio ? g.data : null;
   const lista = nom035 ? d?.programaNom035 ?? [] : d?.acciones ?? [];
+  // Solo el plan de clima se agrega a clima_acciones (NOM-035 lleva su programa de intervención).
+  const conPlan = !nom035 && Boolean(alCambiar);
+  const sugerencias = conPlan ? estadoSugerencias(lista, plan?.acciones ?? []) : [];
+  const pendientes = sugerencias.filter((x) => !x.enPlan);
   const acciones = nom035
     ? lista.map((a) => ({
         titulo: `NOM-035 · ${a.dominio}: ${a.acciones}`,
@@ -190,10 +226,31 @@ function Plan({ idEmpresa, idCampania, nom035 = false }) {
         plazoDias: a.plazoDias,
       }))
     : lista.map((a) => ({
-        titulo: `${a.grupo} · ${a.tema}: ${a.accion}`,
-        descripcion: a.indicador ? `Cómo medirlo: ${a.indicador}` : "",
+        titulo: `${a.grupo} · ${a.tema || nombreDimension(a.dimension, dimensiones)}: ${a.accion}`,
+        descripcion: [a.porque ? `Por qué: ${a.porque}` : "", a.indicador ? `Cómo medirlo: ${a.indicador}` : ""].filter(Boolean).join(" "),
         plazoDias: a.plazoDias,
       }));
+  // Una petición por sugerencia, en orden (el servidor bloquea la medición y rechaza duplicadas con 409 DUPLICADA).
+  const agregar = async (cuales) => {
+    setAgregando(true);
+    const resultados = [];
+    for (const s of cuales) {
+      try {
+        await axios.post(ruta(`/campanias/${idCampania}/acciones`, idEmpresa), cuerpoAccion(s));
+        resultados.push({ ok: true });
+      } catch (e) {
+        resultados.push({ ok: false, codigo: codigoDe(e), error: errorDe(e) });
+        if (codigoDe(e) === "LIMITE") break;
+      }
+    }
+    try {
+      await alCambiar();
+    } finally {
+      setAgregando(false);
+    }
+    const r = resumenAgregadas(resultados);
+    enqueueSnackbar(r.texto, { variant: r.variante });
+  };
   return (
     <Tarjeta
       id={nom035 ? undefined : "adamia-plan"}
@@ -201,12 +258,23 @@ function Plan({ idEmpresa, idCampania, nom035 = false }) {
       titulo={nom035 ? "Programa de intervención" : "Plan de acción sugerido"}
       accion={<ChipIA />}
     >
-      {lista.length ? (
+      {conPlan && sugerencias.length ? (
+        <>
+          <p className="mb-2 text-[12.5px] text-slate-600">
+            Se agregan al plan sin responsable ni fecha: asígnalos en «Plan de acción».
+          </p>
+          <ul className="space-y-2">
+            {sugerencias.map((s, i) => (
+              <Sugerencia key={i} s={s} dimensiones={dimensiones} agregando={agregando} onAgregar={agregar} />
+            ))}
+          </ul>
+        </>
+      ) : lista.length ? (
         <ul className="space-y-2">
           {lista.map((a, i) => (
             <li key={i} className="text-[13.5px] text-slate-700">
               <strong className="text-slate-900">
-                {nom035 ? `${a.dominio} · ${a.nivel.toLowerCase()}` : `${a.grupo} · ${a.tema.toLowerCase()}`}:
+                {nom035 ? `${a.dominio} · ${a.nivel.toLowerCase()}` : `${a.grupo} · ${(a.tema || nombreDimension(a.dimension, dimensiones)).toLowerCase()}`}:
               </strong>{" "}
               {nom035 ? a.acciones : a.accion}
               {a.responsable ? <span className="text-slate-500"> Responsable: {a.responsable}.</span> : null}
@@ -221,11 +289,20 @@ function Plan({ idEmpresa, idCampania, nom035 = false }) {
         </p>
       )}
       <div className="mt-3 grid gap-2">
+        {conPlan && sugerencias.length ? (
+          pendientes.length ? (
+            <Boton variante="primario" className="w-full" onClick={() => agregar(pendientes)} disabled={agregando}>
+              {agregando ? "Agregando…" : pendientes.length === 1 ? "Agregar 1 al plan" : `Agregar todas al plan (${pendientes.length})`}
+            </Boton>
+          ) : (
+            <p className="text-center text-[13px] font-semibold text-emerald-800">Todas las sugerencias ya están en el plan.</p>
+          )
+        ) : null}
         <Boton variante="ia" className="w-full" onClick={() => generar(Boolean(d))} disabled={generando || !activa}>
           {generando ? "Pensando…" : d ? "Volver a proponer" : nom035 ? "Proponer programa" : "Proponer plan"}
         </Boton>
         {lista.length ? (
-          <Boton variante="primario" className="w-full" onClick={() => setTareas(true)}>
+          <Boton variante={conPlan ? "fantasma" : "primario"} className="w-full" onClick={() => setTareas(true)}>
             {nom035 ? "Crear acciones y responsables →" : "Convertir en tareas →"}
           </Boton>
         ) : null}
@@ -240,11 +317,17 @@ function Plan({ idEmpresa, idCampania, nom035 = false }) {
 
 // Columna derecha del tablero de clima y bloque del programa NOM-035.
 export const iaTablero = (idEmpresa) =>
-  function IaTablero({ resultado }) {
+  function IaTablero({ resultado, plan, alCambiar }) {
     return (
       <>
         <Temas idEmpresa={idEmpresa} idCampania={resultado.campania.id} />
-        <Plan idEmpresa={idEmpresa} idCampania={resultado.campania.id} />
+        <Plan
+          idEmpresa={idEmpresa}
+          idCampania={resultado.campania.id}
+          plan={plan}
+          dimensiones={resultado.clima?.dimensiones ?? []}
+          alCambiar={alCambiar}
+        />
       </>
     );
   };

@@ -621,7 +621,7 @@ export default function Tablero({ idEmpresa, extra = null }) {
               />
               <Comentarios comentarios={r.comentarios} />
               <Evolucion evolucion={data.evolucion} cl={cl} cierra={r.campania.cierra_el} />
-              {extra ? extra({ resultado: r }) : null}
+              {extra ? extra({ resultado: r, plan: data.plan, alCambiar: () => mutate() }) : null}
             </aside>
           </div>
         </>

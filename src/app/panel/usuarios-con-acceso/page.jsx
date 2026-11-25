@@ -36,6 +36,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import TablePagination from "@/components/TablePagination";
+// (16/12/2026) Rol y permisos por módulo y empresas de cada acceso. Ver src/lib/permisos/permisos.mjs.
+import EditorPermisos, { valorInicial } from "@/components/permisos/EditorPermisos";
+import { plantilla as plantillaPorClave } from "@/lib/permisos/permisos.mjs";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,6 +62,18 @@ import {
   User,
   X,
 } from "lucide-react";
+
+function ResumenPermisos({ p }) {
+  if (!p) return <span className="text-[13px] text-gray-400">—</span>;
+  return (
+    <span className="block min-w-0">
+      <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[13px] font-semibold text-blue-800">
+        {plantillaPorClave(p.plantilla)?.nombre ?? "Personalizado"}
+      </span>
+      <span className="mt-0.5 block text-[13px] text-gray-600">{p.resumen}</span>
+    </span>
+  );
+}
 
 export default function UserAccessPage() {
   const { enqueueSnackbar } = useSnackbar();
@@ -99,6 +114,15 @@ export default function UserAccessPage() {
   const accesos = data?.data || [];
   const total = data?.total || 0;
 
+  // Permisos: catálogo (empresas del dueño) y resumen de cada acceso para la tabla.
+  const { data: catalogo } = useSWR("/checador/permisos-acceso/catalogo", fetcherWithToken, { revalidateOnFocus: false });
+  const { data: listaPermisos, mutate: mutatePermisos } = useSWR("/checador/permisos-acceso", fetcherWithToken, { revalidateOnFocus: false });
+  const permisosDe = new Map((listaPermisos?.data || []).map((p) => [p.id_acceso, p]));
+  const empresasDisponibles = catalogo?.empresas || [];
+  const [permisosForm, setPermisosForm] = useState(valorInicial);
+  const [cargandoPermisos, setCargandoPermisos] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+
   const abrirCrear = () => {
     setAccesoSeleccionado(null);
     setForm({
@@ -107,10 +131,11 @@ export default function UserAccessPage() {
       contrasenia: "",
       estado: "Activo",
     });
+    setPermisosForm(valorInicial());
     setOpenForm(true);
   };
 
-  const abrirEditar = (acceso) => {
+  const abrirEditar = async (acceso) => {
     setAccesoSeleccionado(acceso);
     setForm({
       nombre: acceso.nombre,
@@ -118,7 +143,17 @@ export default function UserAccessPage() {
       contrasenia: "",
       estado: acceso.estado,
     });
+    setPermisosForm(valorInicial());
     setOpenForm(true);
+    setCargandoPermisos(true);
+    try {
+      const { data: p } = await axios.get(`/checador/permisos-acceso/${acceso.id_acceso}`);
+      setPermisosForm({ plantilla: p.plantilla, permisos: p.permisos, empresas: p.empresas || [], soloAlgunas: (p.empresas || []).length > 0 });
+    } catch (error) {
+      enqueueSnackbar(error?.response?.data?.error || "No se pudieron leer los permisos de este acceso.", { variant: "error" });
+    } finally {
+      setCargandoPermisos(false);
+    }
   };
 
   const handleChange = (e) => {
@@ -170,11 +205,26 @@ export default function UserAccessPage() {
       }
     }
 
+    if (permisosForm.soloAlgunas && permisosForm.empresas.length === 0) {
+      enqueueSnackbar("Elige al menos una empresa o marca «Todas las empresas»", { variant: "warning" });
+      return false;
+    }
+
     return true;
   };
 
+  const guardarPermisos = (idAcceso) =>
+    axios.put(`/checador/permisos-acceso/${idAcceso}`, {
+      plantilla: permisosForm.plantilla,
+      permisos: permisosForm.permisos,
+      empresas: permisosForm.soloAlgunas ? permisosForm.empresas : [],
+    });
+
   const guardarAcceso = async () => {
     if (!validarFormulario()) return;
+    if (cargandoPermisos || guardando) return;
+    setGuardando(true);
+    let creado = null;
 
     try {
       if (accesoSeleccionado) {
@@ -188,12 +238,13 @@ export default function UserAccessPage() {
           },
           { headers: { Authorization: `Bearer ${token}` } },
         );
+        await guardarPermisos(accesoSeleccionado.id_acceso);
 
         enqueueSnackbar("Acceso actualizado correctamente", {
           variant: "success",
         });
       } else {
-        await axios.post(
+        const { data: nuevo } = await axios.post(
           "/checador/users/access",
           {
             nombre: form.nombre,
@@ -203,6 +254,8 @@ export default function UserAccessPage() {
           },
           { headers: { Authorization: `Bearer ${token}` } },
         );
+        creado = nuevo;
+        await guardarPermisos(nuevo.id_acceso);
 
         enqueueSnackbar("Acceso creado correctamente", {
           variant: "success",
@@ -211,11 +264,20 @@ export default function UserAccessPage() {
 
       setOpenForm(false);
       mutate();
+      mutatePermisos();
     } catch (error) {
-      enqueueSnackbar(
-        error?.response?.data?.error || "Error al guardar acceso",
-        { variant: "error" },
-      );
+      const motivo = error?.response?.data?.error || "Error al guardar acceso";
+      if (creado) {
+        // El acceso quedó creado pero sus permisos no: se abre en edición para reintentar (sin permisos = Administrador).
+        enqueueSnackbar(`El acceso se creó, pero sus permisos no se guardaron: ${motivo}. Revísalos y vuelve a guardar.`, { variant: "error" });
+        setAccesoSeleccionado(creado);
+        setForm((f) => ({ ...f, contrasenia: "", estado: "Activo" }));
+        mutate();
+      } else {
+        enqueueSnackbar(motivo, { variant: "error" });
+      }
+    } finally {
+      setGuardando(false);
     }
   };
 
@@ -277,15 +339,6 @@ export default function UserAccessPage() {
         <div className="mt-3 h-[2.5px] rounded bg-brand" />
       </div>
 
-      <div className="flex justify-end">
-        <Button
-          onClick={abrirCrear}
-          className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
-        >
-          <Plus className="h-4 w-4" /> Nuevo acceso
-        </Button>
-      </div>
-
       {/* Filtros homologados */}
       <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
         <div className="flex flex-col gap-2.5 md:flex-row md:items-end">
@@ -316,7 +369,7 @@ export default function UserAccessPage() {
       </div>
 
       {/* Tabla */}
-      <Card className="p-0 overflow-hidden border-gray-100">
+      <Card className="hidden p-0 overflow-hidden border-gray-100 md:block">
         <CardContent className="p-0">
           <div className="overflow-auto">
             <Table>
@@ -331,6 +384,9 @@ export default function UserAccessPage() {
                   <TableHead className="text-xs font-semibold uppercase text-gray-600">
                     Estado
                   </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    Rol y permisos
+                  </TableHead>
                   <TableHead className="text-right text-xs font-semibold uppercase text-gray-600">
                     Acciones
                   </TableHead>
@@ -341,7 +397,7 @@ export default function UserAccessPage() {
                 {isLoading ? (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={5}
                       className="text-center py-8 text-sm text-gray-600"
                     >
                       Cargando...
@@ -350,7 +406,7 @@ export default function UserAccessPage() {
                 ) : accesos.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={4}
+                      colSpan={5}
                       className="text-center py-10 text-sm text-gray-600"
                     >
                       {debouncedSearch
@@ -385,6 +441,9 @@ export default function UserAccessPage() {
                           >
                             {acceso.estado || "-"}
                           </span>
+                        </TableCell>
+                        <TableCell>
+                          <ResumenPermisos p={permisosDe.get(acceso.id_acceso)} />
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -424,6 +483,43 @@ export default function UserAccessPage() {
         </CardContent>
       </Card>
 
+      {/* Celular: tarjetas (sin scroll lateral) */}
+      <ul className="space-y-2 md:hidden" aria-label="Usuarios con acceso">
+        {isLoading ? (
+          <li className="rounded-xl border border-gray-100 bg-white p-4 text-center text-sm text-gray-600">Cargando...</li>
+        ) : accesos.length === 0 ? (
+          <li className="rounded-xl border border-gray-100 bg-white p-4 text-center text-sm text-gray-600">
+            {debouncedSearch ? "No se encontraron resultados para tu búsqueda." : "No hay usuarios registrados."}
+          </li>
+        ) : (
+          accesos.map((acceso) => {
+            const activo = String(acceso.estado || "").toLowerCase() === "activo";
+            return (
+              <li key={acceso.id_acceso} className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="break-words text-sm font-semibold text-gray-900">{acceso.nombre}</p>
+                    <p className="break-all text-[13px] text-gray-600">{acceso.correo}</p>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[13px] font-semibold ${activo ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-700"}`}>
+                    {acceso.estado || "-"}
+                  </span>
+                </div>
+                <div className="mt-2"><ResumenPermisos p={permisosDe.get(acceso.id_acceso)} /></div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Button variant="outline" className="min-h-11 gap-2 text-[13px]" onClick={() => abrirEditar(acceso)}>
+                    <Pencil className="h-4 w-4 text-[#2563EB]" /> Editar
+                  </Button>
+                  <Button variant="outline" className="min-h-11 gap-2 border-red-200 text-[13px] text-red-700 hover:bg-red-50" onClick={() => confirmarEliminar(acceso)}>
+                    <Trash2 className="h-4 w-4" /> Eliminar
+                  </Button>
+                </div>
+              </li>
+            );
+          })
+        )}
+      </ul>
+
       <TablePagination
         page={page}
         limit={limit}
@@ -433,7 +529,7 @@ export default function UserAccessPage() {
       />
 
       <Dialog open={openForm} onOpenChange={setOpenForm}>
-        <DialogContent className="p-0 overflow-hidden sm:max-w-lg">
+        <DialogContent className="flex max-h-[92dvh] flex-col gap-0 p-0 overflow-hidden sm:max-w-4xl">
           <DialogHeader className="p-5 bg-brand text-white">
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <span className="grid size-9 place-items-center rounded-lg bg-white/15">
@@ -446,7 +542,7 @@ export default function UserAccessPage() {
             </p>
           </DialogHeader>
 
-          <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+          <div className="min-h-0 flex-1 p-4 sm:p-5 space-y-4 overflow-y-auto">
             <Alert className="border-blue-200 bg-blue-50">
               <AlertDescription className="text-sm text-blue-900 flex items-start gap-2">
                 <Mail className="h-4 w-4 mt-0.5 text-blue-700" />
@@ -519,19 +615,28 @@ export default function UserAccessPage() {
                 </div>
               )}
             </form>
+
+            <div className="border-t border-gray-100 pt-4">
+              {cargandoPermisos ? (
+                <p role="status" className="text-sm text-gray-500">Cargando permisos…</p>
+              ) : (
+                <EditorPermisos valor={permisosForm} onChange={setPermisosForm} empresasDisponibles={empresasDisponibles} />
+              )}
+            </div>
           </div>
 
           <DialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
             <Button
               variant="outline"
               onClick={() => setOpenForm(false)}
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+              className="min-h-11 border-gray-300 text-gray-700 hover:bg-gray-100 sm:min-h-9"
             >
               <X className="h-4 w-4 mr-2" /> Cancelar
             </Button>
             <Button
               onClick={guardarAcceso}
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
+              disabled={guardando || cargandoPermisos}
+              className="min-h-11 bg-[#2563EB] hover:bg-[#1d4ed8] text-white sm:min-h-9"
             >
               <Save className="h-4 w-4 mr-2" /> Guardar
             </Button>
