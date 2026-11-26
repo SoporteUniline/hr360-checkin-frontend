@@ -533,7 +533,7 @@ export function EstadoWhatsapp() {
             {d.configurado && d.migracion && <Notice tone="green">Listo para enviar cuando enciendas «Avisos por WhatsApp» arriba.</Notice>}
             <details>
               <summary>Mensajes aprobados por WhatsApp (no se pueden cambiar)</summary>
-              {d.plantillas.map((p) => (
+              {(Array.isArray(d.plantillas) ? d.plantillas : []).map((p) => (
                 <p key={p.nombre}>
                   <strong>{p.nombre}</strong>: {p.cuerpo}
                 </p>
