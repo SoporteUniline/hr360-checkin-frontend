@@ -6,6 +6,10 @@ export const VISTAS_RH = [
   { path: "campanas", texto: "Campañas", scope: "campaigns" },
   { path: "plantillas", texto: "Plantillas", scope: "templates" },
   { path: "mis-pendientes", texto: "Por responder", scope: "assignments", soloConPendientes: true },
+  // (22/12/2026) Talento (docs/evaluaciones/talento.md).
+  { path: "objetivos", texto: "Objetivos", scope: "objectives" },
+  { path: "calibracion", texto: "Calibración y bono", scope: "calibration" },
+  { path: "reconocimientos", texto: "Feedback", scope: "feedback" },
   { path: "configuracion", texto: "Configuración", scope: "settings" },
 ];
 // Jefes y colaboradores trabajan por lo que tienen que responder.
@@ -13,6 +17,11 @@ export const VISTAS_PERSONALES = [
   { path: "mis-pendientes", texto: "Por responder", scope: "assignments" },
   { path: "equipo", texto: "Mi equipo", scope: "team" },
   { path: "mis-evaluaciones", texto: "Mis resultados", scope: "results" },
+  // (22/12/2026) Talento: objetivos, 1:1 y feedback; «Calibración» solo si RH lo designó.
+  { path: "objetivos", texto: "Objetivos", scope: "objectives" },
+  { path: "uno-a-uno", texto: "1:1", scope: "oneonones" },
+  { path: "reconocimientos", texto: "Feedback", scope: "feedback" },
+  { path: "calibracion", texto: "Calibración", scope: "calibration" },
 ];
 // Configuración: tres vistas que no dependen entre sí.
 export const SECCIONES_CONFIGURACION = [
