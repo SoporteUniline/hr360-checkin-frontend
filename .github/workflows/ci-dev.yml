@@ -103,6 +103,9 @@ jobs:
       - name: Asistencias — horas extra con la jornada diaria (misma regla que el servidor)
         run: node --test scripts/test-extra-del-dia.mjs
 
+      - name: Evaluación del desempeño — tablero, IA, evidencia y PDF (desemp1)
+        run: node --test scripts/test-evaluaciones-tablero.mjs scripts/test-evaluaciones-api.mjs
+
       - name: Asistencias y Monitor — refresco sin recargar (claves, SSE, ediciones abiertas)
         run: node --test scripts/test-refresco-asistencias.mjs
 

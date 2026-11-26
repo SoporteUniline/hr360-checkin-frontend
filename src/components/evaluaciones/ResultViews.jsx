@@ -20,6 +20,7 @@ import {
   ExportButton,
 } from "./ui";
 import { PlanList } from "./PlanViews";
+import { DescargarPdf, IaResultado, Evolucion, AvisoPrivacidad } from "./InsightViews";
 import {
   PERSPECTIVES,
   dateText,
@@ -51,6 +52,7 @@ export function Results() {
         title="Mis resultados"
         description="Tus evaluaciones publicadas y tu plan de acción."
       />
+      <AvisoPrivacidad />
       <Panel>
         <QueryState query={query}>
           <DataTable
@@ -112,7 +114,8 @@ export function ResultDetail({ campaignId, subjectId }) {
   const [action, setAction] = useState(""),
     [typedName, setTypedName] = useState(""),
     [accepted, setAccepted] = useState(false),
-    [observations, setObservations] = useState("");
+    [observations, setObservations] = useState(""),
+    [borradorPlan, setBorradorPlan] = useState(null);
   const r = query.data,
     own = String(subjectId) === actor.id;
   async function execute() {
@@ -143,15 +146,20 @@ export function ResultDetail({ campaignId, subjectId }) {
                 : "equipo"
             }
             actions={
-              !own &&
-              capabilities.scopes.includes("results") && (
-                <ExportButton
-                  filters={{
-                    campaignId: Number(campaignId),
-                    subjectId: Number(subjectId),
-                  }}
+              <div className="ev-actions">
+                {!own && capabilities.scopes.includes("results") && (
+                  <ExportButton
+                    filters={{
+                      campaignId: Number(campaignId),
+                      subjectId: Number(subjectId),
+                    }}
+                  />
+                )}
+                <DescargarPdf
+                  path={`${path}/report.pdf`}
+                  filename={`evaluacion-${campaignId}-${subjectId}.pdf`}
                 />
-              )
+              </div>
             }
           />
           <div className="ev-stack">
@@ -233,9 +241,21 @@ export function ResultDetail({ campaignId, subjectId }) {
                 </div>
               </Panel>
             )}
-            {capabilities.scopes.includes("plans") && (
-              <PlanList campaignId={campaignId} subjectId={subjectId} />
+            {!own && (
+              <IaResultado
+                campaignId={campaignId}
+                subjectId={subjectId}
+                onPlan={setBorradorPlan}
+              />
             )}
+            {capabilities.scopes.includes("plans") && (
+              <PlanList
+                campaignId={campaignId}
+                subjectId={subjectId}
+                borrador={borradorPlan}
+              />
+            )}
+            <Evolucion employeeId={subjectId} />
             {own && (r.publication?.publishedAt || r.publishedAt) && (
               <Panel title="Confirmación de recibido">
                 <div className="ev-pad ev-stack">

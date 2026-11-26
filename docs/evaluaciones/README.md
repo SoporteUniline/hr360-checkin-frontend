@@ -41,3 +41,28 @@ La prueba de navegador usa un JWT de prueba y solicitudes interceptadas: comprue
 No se dispuso de acceso al repositorio del backend ni de sesión/dirección de API de desarrollo en esta ejecución. Se debe comprobar el flujo completo contra el despliegue, especialmente los campos del detalle de plantilla (`versionId` o `templateVersionId`), los indicadores de `/dashboard` y los nombres/resúmenes de listados, que no tienen un ejemplo completo en la guía.
 
 La guía requiere aplicar `hr360-checkin-backend/migrations/20261013_produccion_evaluaciones_desempeno_completo.sql` antes de usar producción. No se ejecutó ninguna migración ni se activaron los trabajadores de correo. La rama de esta entrega es `ChatGPT`; no se modifica `main`.
+
+## (26/11/2026, desemp1) Plantillas base, tablero, PDF, Adamia AI, evidencia, aviso y WhatsApp
+
+Backend y reglas: `hr360-checkin-backend/docs/evaluaciones-desempeno.md` (migración `20261221_desempeno_plantillas_ia.sql`).
+Pantallas (`src/components/evaluaciones/InsightViews.jsx`; funciones puras en `src/lib/evaluaciones/tablero.mjs`):
+
+- **Plantillas**: galería «Plantillas base listas para usar» (operativo, administrativo, ventas/atención, jefes). «Usar esta
+  plantilla» crea una copia de la empresa y abre el editor. Ya no se empieza en blanco.
+- **Campaña** (RH y Dirección): «Tablero de la campaña» en lugar de los indicadores mínimos: avance por perspectiva y quién
+  falta, distribución por área, competencias de menor a mayor, mapa de calor competencia × área (en el teléfono, tarjetas
+  por competencia), brecha autoevaluación vs jefe, indicador NOM-035, CSV y **PDF de campaña**. «Pregúntale a tus
+  resultados» (Adamia AI, datos agregados).
+- **Resultado de una persona**: **PDF** (respeta lo que cada quien puede ver), «Adamia AI» con resumen 360° (RH/Dirección) y
+  plan sugerido (RH/Dirección/jefe) → «Crear plan con esta acción» abre el formulario de plan ya llenado (se guarda a mano),
+  y «Evolución» con calificación y competencias por campaña.
+- **Responder** (jefe/RH/autoevaluación): «Evidencia del periodo» (asistencia, puntualidad, faltas, retardos, horas extra,
+  tareas y checklists, con las ausencias justificadas fuera) y, para jefe/RH, «Borrador con Adamia AI»: llena el
+  formulario (solo las vacías o todas), **no guarda ni envía**.
+- **Empleado** («Por responder» y «Mis resultados»): aviso de privacidad versionado con «Lo leí».
+- **Configuración**: cuatro opciones nuevas (WhatsApp, borrador para jefes, aviso obligatorio y cierre incompleto, todas
+  apagadas) y estado de «Avisos por WhatsApp».
+
+Pruebas: `node --test scripts/test-evaluaciones-tablero.mjs` (CI, paso propio) y, después del build,
+`PLAYWRIGHT_MODULE_PATH=… CAPTURAS=… node scripts/verify-evaluaciones-tablero.cjs` (1440 y 390 px, red simulada: sin scroll
+horizontal, botones ≥ 44 px y texto ≥ 13 px en lo nuevo; la IA no guarda ni envía).

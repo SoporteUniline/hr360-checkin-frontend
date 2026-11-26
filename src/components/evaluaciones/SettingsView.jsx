@@ -17,6 +17,7 @@ import {
   QueryState,
   Pagination,
 } from "./ui";
+import { EstadoWhatsapp } from "./InsightViews";
 const labels = {
   employeeScore: "Colaborador puede ver su puntaje",
   employeeCategories: "Colaborador puede ver categorías",
@@ -27,6 +28,16 @@ const labels = {
   requireReceipt: "Solicitar confirmación de recibido",
   anonymousPeers: "Respuestas de pares anónimas",
   anonymousAscending: "Respuestas ascendentes anónimas",
+  // (26/11/2026, desemp1) Opciones nuevas (apagadas = como siempre).
+  whatsappNotices: "Avisos por WhatsApp además del correo",
+  aiManagerDraft: "Jefes pueden pedir un borrador a Adamia AI",
+  privacyNoticeRequired: "Pedir leer el aviso de privacidad antes de enviar",
+  closeWithAvailable: "Al cerrar incompleta, calcular con lo respondido",
+};
+const hints = {
+  whatsappNotices: "Por responder, resultado publicado y acuse pendiente. Usa el número de notificaciones de ADAMIA.",
+  aiManagerDraft: "La IA sugiere; el jefe revisa y envía. Usa créditos de Adamia AI.",
+  closeWithAvailable: "Pendiente de decisión: apagado, la calificación queda vacía mientras falte alguna respuesta.",
 };
 // Configuración en tres vistas con su dirección: Valores iniciales (/configuracion),
 // Niveles (/configuracion/niveles) y Acceso al módulo (/configuracion/acceso).
@@ -47,6 +58,7 @@ export function SettingsView({ seccion = SECCIONES_CONFIGURACION[0] }) {
         ))}
       </nav>
       {seccion.path === "configuracion" && <InitialSettings />}
+      {seccion.path === "configuracion" && <EstadoWhatsapp />}
       {seccion.path === "configuracion/niveles" && <Levels />}
       {seccion.path === "configuracion/acceso" && <Permissions />}
     </>
@@ -72,6 +84,7 @@ function SettingsEditor({ initial }) {
           <Toggle
             key={key}
             label={label}
+            hint={hints[key]}
             checked={config[key]}
             onChange={(value) => setConfig((c) => ({ ...c, [key]: value }))}
           />
