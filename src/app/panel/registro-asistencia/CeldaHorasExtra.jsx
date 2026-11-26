@@ -26,7 +26,7 @@ function DetalleAutorizar({ registro, minutos, onAutorizar, children }) {
       <PopoverContent className="w-72 border border-slate-200 bg-white p-4 shadow-xl" data-no-row-click onClick={detener}>
         <p className="text-sm font-semibold text-slate-900">Horas extra · {registro.nombre} {registro.apellido_paterno}</p>
         {minutos != null && (
-          <p className="mt-0.5 text-xs text-slate-500">{formatearMinutos(minutos)} después de la salida del horario</p>
+          <p className="mt-0.5 text-xs text-slate-500">{formatearMinutos(minutos)} de más sobre su jornada del día</p>
         )}
         <label className="mt-3 block text-xs font-semibold text-slate-500">
           Forma de pago
@@ -66,7 +66,7 @@ function DetalleAutorizar({ registro, minutos, onAutorizar, children }) {
 export default function CeldaHorasExtra({ info }) {
   const { estado, minutos } = info;
   if (estado === "sin") {
-    return <span className="text-slate-300" title={`Sin tiempo trabajado de más (cuenta desde ${UMBRAL_MINUTOS} min)`}>—</span>;
+    return <span className="text-slate-300" title={`Sin tiempo trabajado de más sobre su jornada del día (cuenta desde ${UMBRAL_MINUTOS} min)`}>—</span>;
   }
   const texto = minutos != null ? formatearMinutos(minutos) : "Sí";
   return (
@@ -75,7 +75,7 @@ export default function CeldaHorasExtra({ info }) {
         className={`font-semibold tabular-nums ${
           estado === "pendiente" ? "text-orange-700" : estado === "autorizada" ? "text-emerald-700" : estado === "reposicion" ? "text-sky-700" : "text-slate-400 line-through"
         }`}
-        title={estado === "no_autorizada" ? "No autorizadas: queda la constancia; si se quedó después de su horario, se paga hasta la salida del horario" : undefined}
+        title={estado === "no_autorizada" ? "No autorizadas: queda la constancia, las checadas no se mueven y se paga su jornada" : undefined}
       >
         {texto}
       </span>
@@ -103,7 +103,7 @@ export function CeldaAutorizarExtra({
         .filter(Boolean)
         .join(" · ")
     : no
-    ? "Se paga hasta la salida del horario; la checada del reloj se conserva"
+    ? "No se pagan: queda la constancia, las checadas no se mueven y se paga su jornada"
     : debe > 0
     ? `Debe ${formatearMinutos(debe)} de permisos por horas: «Repone» lo descuenta de su cuenta y no se paga como extra`
     : "Por autorizar";

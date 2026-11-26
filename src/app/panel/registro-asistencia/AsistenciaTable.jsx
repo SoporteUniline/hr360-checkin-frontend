@@ -632,7 +632,7 @@ export default function AsistenciaTable({
     noAutorizar: (r) =>
       hx.guardar(
         [{ registro: r, cambios: cambiosNoAutorizar(r, { quien: hx.usuario.nombre, zona: zonaDe(r) }) }],
-        `${nombreCorto(r)}: no autorizadas. Se paga hasta la salida del horario; la checada real se conserva.`,
+        `${nombreCorto(r)}: no autorizadas. Se paga su jornada; las checadas no se mueven.`,
       ),
     quitar: (r) =>
       hx.guardar([{ registro: r, cambios: cambiosQuitar(r, zonaDe(r)) }], `${nombreCorto(r)}: decisión quitada.`),

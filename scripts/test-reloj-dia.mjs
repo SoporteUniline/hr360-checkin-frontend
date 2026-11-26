@@ -37,8 +37,12 @@ test("resumen: retardo, comida, trabajadas y extra sin separar", () => {
   assert.equal(c.sinSeparar, 0, "8 min después de la salida no se separa");
   const mario = cargar([api(1, "07:51", "13:00"), api(2, "13:00", "14:00", { concepto: "comida" }), api(3, "14:00", "20:02")]);
   const m = resumen(mario, { entrada: "08:00", salida: "17:00", salida_comida: "13:00", regreso_comida: "14:00" });
+  // (26/11/2026, regla diaria; antes 182 = solo lo de después de la salida) 11 h 11 trabajadas de 8 h → 3 h 11 por autorizar.
   assert.equal(m.sinSeparar, 182);
-  assert.equal(m.extraPorAutorizar, 182);
+  assert.equal(m.trabajadas, 309 + 362);
+  assert.equal(m.programadas, 480);
+  assert.equal(m.extraPorAutorizar, 191);
+  assert.equal(m.sinSepararAntes, 0, "9 min antes de la entrada no se separan");
   assert.equal(m.estado.texto, "Asistió");
 });
 

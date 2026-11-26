@@ -40,8 +40,8 @@ export default function HorasExtraMovil({ registro, info, autorizador, guardando
       </p>
       <p className="text-xs text-gray-500">
         {estado === "no_autorizada"
-          ? "Se paga hasta la salida del horario; la checada del reloj se conserva."
-          : `Tiempo después de la salida del horario (cuenta desde ${UMBRAL_MINUTOS} min).`}
+          ? "No se pagan: queda la constancia y las checadas no se mueven (se paga su jornada)."
+          : `Lo trabajado de más sobre su jornada del día (cuenta desde ${UMBRAL_MINUTOS} min).`}
       </p>
 
       {debe > 0 && estado !== "reposicion" && (
