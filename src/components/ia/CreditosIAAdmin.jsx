@@ -5,7 +5,7 @@
 // empresa, regalos/ajustes con motivo y paquetes de recarga. El servidor valida todo (solo tipo_usuario Admin).
 // (25/12/2026) Arriba, la tarjeta «Cobro de Adamia AI» (CobroInterruptor.jsx) para encender/apagar el cobro.
 import { useMemo, useState } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { useSnackbar } from "notistack";
 import { Coins, Gift, ListOrdered, Loader2, Percent, Plus, TriangleAlert } from "lucide-react";
 import axios from "@/lib/axios";
@@ -382,7 +382,10 @@ export default function CreditosIAAdmin() {
   const [ajustar, setAjustar] = useState(null);
   const [ver, setVer] = useState(null);
   const [otra, setOtra] = useState("");
-  const refrescar = () => mutate();
+  const { mutate: mutarGlobal } = useSWRConfig();
+  // Un cambio aquí (tipo de cambio, bienvenida, margen…) cambia también lo que muestran el interruptor del cobro y la
+  // bienvenida: se recargan todas las vistas del panel de créditos, no solo el resumen del mes.
+  const refrescar = () => Promise.all([mutate(), mutarGlobal((k) => typeof k === "string" && k.startsWith("/checador/ia/admin/"))]);
   const t = data?.totales ?? {};
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4">
