@@ -42,7 +42,7 @@ export function SelectorEmpresa({ empresas, idEmpresa, setIdEmpresa }) {
   return (
     <label className="flex items-center gap-2 text-sm">
       <span className="text-gray-500">Empresa</span>
-      <select className="h-9 rounded-lg border border-gray-300 bg-white px-2" value={idEmpresa ?? ""} onChange={(e) => setIdEmpresa(Number(e.target.value))}>
+      <select className="h-11 rounded-lg border border-gray-300 bg-white px-2 sm:h-9" value={idEmpresa ?? ""} onChange={(e) => setIdEmpresa(Number(e.target.value))}>
         {empresas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
       </select>
     </label>

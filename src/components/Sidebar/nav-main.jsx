@@ -43,6 +43,7 @@ import {
   CalendarCheck2,
   FolderClosed,
   ShieldCheck,
+  Plug,
   UserCog,
   Monitor,
   CreditCard,
@@ -620,6 +621,13 @@ const menuGroups = [
         url: "/panel/usuarios-con-acceso",
         rol: "Recruiter",
         icon: ShieldCheck,
+      },
+      // (26/12/2026) Llaves de API de la empresa (solo el dueño): docs/api-integracion.md del backend.
+      {
+        title: "Integraciones",
+        url: "/panel/integraciones",
+        rol: "Recruiter",
+        icon: Plug,
       },
       {
         title: "Mi suscripción",
