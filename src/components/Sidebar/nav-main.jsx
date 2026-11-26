@@ -16,6 +16,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { Capacitor } from "@capacitor/core";
 import {
+  MessageSquareText,
   UsersIcon,
   ClipboardCheck,
   CircleUserRoundIcon,
@@ -208,6 +209,13 @@ const dashboardItems = [
     url: "/dashboard/whatsapp",
     rol: "Admin",
     icon: MessageCircle,
+  },
+  // (26/11/2026) Plantillas de WhatsApp de Meta (Zernio): crear, editar, enviar a aprobación y comparar con el sistema.
+  {
+    title: "Plantillas de WhatsApp",
+    url: "/dashboard/plantillas-whatsapp",
+    rol: "Admin",
+    icon: MessageSquareText,
   },
   // (25/11/2026) Créditos de Adamia AI: costo, cobro y ganancia por empresa; tipo de cambio, margen, regalos y paquetes.
   {

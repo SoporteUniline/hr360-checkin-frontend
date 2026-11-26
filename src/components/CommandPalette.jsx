@@ -45,6 +45,7 @@ import {
   UserRound,
   MessageCircle,
   Activity,
+  MessageSquareText,
 } from "lucide-react";
 
 // ─── Nav items estáticos (espejo del sidebar) ────────────────────────────────
@@ -139,6 +140,13 @@ const ALL_NAV_ITEMS = [
     rol: "Admin",
     section: "Admin",
     icon: MessageCircle,
+  },
+  {
+    title: "Plantillas de WhatsApp",
+    url: "/dashboard/plantillas-whatsapp",
+    rol: "Admin",
+    section: "Admin",
+    icon: MessageSquareText,
   },
   {
     title: "Créditos de Adamia AI",
