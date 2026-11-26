@@ -142,7 +142,7 @@ export default function CobroInterruptor({ alCambiar }) {
               : "Se mide todo, pero no se descuenta ni se bloquea. El cliente ve «Gratis por ahora: el cobro de Adamia AI aún no está activo»."}
           </p>
         </div>
-        <button type="button" disabled={!data.migracion} onClick={() => setDialogo({ activo: accion })}
+        <button type="button" disabled={!data.migracion} onClick={async () => { await mutate(); setDialogo({ activo: accion }); }}
           className={`${boton} w-full sm:w-auto ${accion ? "bg-emerald-700 text-white hover:bg-emerald-800" : "border border-red-300 bg-white text-red-700 hover:bg-red-50"}`}>
           {accion ? <Power className="size-4" /> : <PowerOff className="size-4" />} {accion ? "Encender cobro" : "Apagar cobro"}
         </button>
