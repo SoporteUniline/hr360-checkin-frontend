@@ -117,7 +117,7 @@ test("el reporte en texto es legible y no incluye datos de rostro ni coordenadas
 test("la ruta del servidor exige sesión válida y registra una línea [diag-reloj]", async () => {
   const fuente = await readFile(new URL("../src/app/api/diagnostico/reloj/route.js", import.meta.url), "utf8");
   const temporal = new URL("./.tmp-diag-route.mjs", import.meta.url);
-  await writeFile(temporal, fuente);
+  await writeFile(temporal, fuente.replace('"@/lib/demo-base-path.mjs"', '"../src/lib/demo-base-path.mjs"'));
   process.env.JWT_SECRET = "secreto-de-prueba";
   const lineas = [];
   const original = console.log;
