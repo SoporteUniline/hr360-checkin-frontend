@@ -149,8 +149,8 @@ function incidenciasDeRegistro(r, fallbackTimezone) {
     });
   }
 
-  // Misma regla que Asistencias: solo el tiempo después de la salida del horario
-  // (desde 15 min), y solo mientras no se haya autorizado o rechazado.
+  // Misma regla que Asistencias (la calcula el servidor): lo trabajado de más sobre su jornada del día
+  // (desde 30 min), y solo mientras no se haya autorizado o rechazado.
   const extra = estadoHorasExtra(r, tz);
   if (extra.estado === "pendiente") {
     incidencias.push({
@@ -537,7 +537,7 @@ export default function CentroIncidenciasPage() {
   const noAutorizarExtra = (inc) =>
     hx.guardar(
       [{ registro: inc.registro, cambios: cambiosNoAutorizar(inc.registro, { quien: hx.usuario.nombre, zona: inc.tz }) }],
-      `${nombreCompleto(inc.registro)}: no autorizadas. Se paga hasta la salida del horario.`,
+      `${nombreCompleto(inc.registro)}: no autorizadas. Se paga su jornada; las checadas no se mueven.`,
     );
 
   const abrirAsistencia = (inc) => {

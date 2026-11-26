@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useEvaluations, useEvaluationQuery } from "./EvaluationContext";
 import { normalizeTemplate } from "@/lib/evaluaciones/api.mjs";
+import { EvidenciaEvaluacion, BorradorIa } from "./InsightViews";
 import {
   Heading,
   Panel,
@@ -411,6 +412,17 @@ function ResponseEditor({ id, assignment }) {
           </div>
         </div>
         <aside className="ev-stack ev-sticky">
+          <EvidenciaEvaluacion assignment={assignment} />
+          <BorradorIa
+            assignment={assignment}
+            answers={answers}
+            locked={locked}
+            onApply={(siguientes, comentario) => {
+              setAnswers(siguientes);
+              if (comentario && !comment.trim()) setComment(comentario);
+              setDirty(true);
+            }}
+          />
           <Panel title="Secciones">
             <div className="ev-pad ev-stack">
               {template.categories.map((c, i) => {

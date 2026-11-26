@@ -26,6 +26,7 @@ import {
 } from "@/lib/evaluaciones/model.mjs";
 import { filasCampana, pasosCampana } from "@/lib/evaluaciones/avance.mjs";
 import { Indicadores } from "./Indicadores";
+import { PlantillasBase, TableroCampania, AvisoPrivacidad } from "./InsightViews";
 export function Templates() {
   const { api, perform, busy, navigate, capabilities } = useEvaluations();
   const [q, setQ] = useState(""),
@@ -74,6 +75,7 @@ export function Templates() {
           )
         }
       />
+      <PlantillasBase />
       <Panel>
         <div className="ev-filters">
           <SearchInput
@@ -318,7 +320,7 @@ export function CampaignDetail({ id }) {
               plans={abierta ? planes.data : []}
               loading={abierta && (!resultados.data || !planes.data)}
             />
-            {abierta && <Indicadores campaignId={id} />}
+            {abierta && <TableroCampania campaignId={id} />}
             <details className="ev-panel">
               <summary>
                 Cada evaluación (
@@ -531,6 +533,7 @@ export function Assignments() {
         title="Por responder"
         description="Evaluaciones asignadas a tu cuenta."
       />
+      <AvisoPrivacidad />
       <Panel>
         <QueryState query={query}>
           <DataTable

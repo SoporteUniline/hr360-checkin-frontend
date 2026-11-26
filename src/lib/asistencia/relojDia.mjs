@@ -9,6 +9,8 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 
+import { UMBRAL_EXTRA_MIN, extraDelDia } from "./extraDelDia.mjs";
+
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -16,8 +18,9 @@ export const DB_TZ = "America/Mexico_City";
 const FORMATO_BD = "YYYY-MM-DD HH:mm:ss";
 export const TOLERANCIA_MIN = 10;
 export const CONCEPTOS = [["jornada", "Jornada"], ["comida", "Comida"], ["extra", "Hora extra"]];
-// «Separar como hora extra» solo se ofrece desde 30 min después de la salida programada (como el mockup).
-const MIN_SEPARAR = 30;
+// «Separar como hora extra» se ofrece desde 30 min (el umbral único de horas extra, extraDelDia.mjs) y solo si hay extra
+// por autorizar en el día (regla diaria, 26/11/2026).
+const MIN_SEPARAR = UMBRAL_EXTRA_MIN;
 
 const HHMM = /^([01]\d|2[0-3]):([0-5]\d)$/;
 export const aMin = (h) => {
@@ -182,7 +185,9 @@ export function editado(r) {
   if (r.deSeparar) return false;
   if (r.origen === "manual" && r.nuevo) return true;
   if (r.anulado && !r.anuladoAntes) return true;
-  if (r.separado && r.ini === r.cIni) return false;
+  // Cortado con «Separar» (antes de la entrada y/o después de la salida): solo se movió al corte.
+  if (r.separado && (r.ini === r.cIni || (r.corteIni != null && r.ini === r.corteIni))
+    && (r.fin === r.cFin || (r.corteFin != null && r.fin === r.corteFin))) return false;
   return r.ini !== r.cIni || r.fin !== r.cFin;
 }
 
@@ -248,7 +253,9 @@ const esPermiso = (motivo) => /^tp:/.test(String(motivo ?? ""));
 
 // Cálculo del día (mockup resumen()). estadoDia: { texto, clave } del día sin checadas (falta, descanso, vacaciones…).
 // permiso: { alcance } del «Permiso del día» (tipo parcial): justifica la entrada tarde o la salida antes.
-export function resumen(regs, horario, { tolerancia = TOLERANCIA_MIN, estadoDia = null, permiso = null } = {}) {
+// extraDia: lo que el servidor manda en GET /:id/reloj → extra_dia (registradas fuera del reloj, autorización o constancia
+// del día completo y si tiene horario otros días). Horas extra con la regla diaria del servidor (extraDelDia.mjs).
+export function resumen(regs, horario, { tolerancia = TOLERANCIA_MIN, estadoDia = null, permiso = null, extraDia = null } = {}) {
   const v = vivos(regs);
   const h = horarioMin(horario);
   const largo = (r) => (r.ini != null && r.fin != null && r.fin > r.ini ? r.fin - r.ini : 0);
@@ -262,12 +269,29 @@ export function resumen(regs, horario, { tolerancia = TOLERANCIA_MIN, estadoDia 
   const salida = abierto || !fines.length ? null : Math.max(...fines);
   const finJ = jornada.map((r) => r.fin).filter((x) => x != null);
   const ultimaJornada = finJ.length ? Math.max(...finJ) : null;
-  const sinSeparar = h && !abierto && ultimaJornada != null && ultimaJornada - h.ps >= MIN_SEPARAR ? ultimaJornada - h.ps : 0;
+  const iniJ = jornada.map((r) => r.ini).filter((x) => x != null);
+  const primeraJornada = iniJ.length ? Math.min(...iniJ) : null;
   const comida = v.filter((r) => r.concepto === "comida").reduce((s, r) => s + largo(r), 0);
   const extraMin = extraReg.reduce((s, r) => s + largo(r), 0);
-  const trabajadas = jornada.reduce((s, r) => s + largo(r), 0) - sinSeparar;
-  const extraPorAutorizar = extraReg.filter(sinAutoriza).reduce((s, r) => s + largo(r), 0) + sinSeparar;
-  const extraNoAut = extraReg.filter((r) => r.autoriza_no).reduce((s, r) => s + largo(r), 0);
+  const trabajadas = trabajo.reduce((s, r) => s + largo(r), 0);
+  // Jornada programada: horario − comida del horario; sin comida en el horario, la comida del día (como el servidor).
+  const programadas = h ? h.ps - h.pe - (h.sc != null ? h.rc - h.sc : comida) : null;
+  const relojAut = extraReg.filter((r) => r.id_autoriza != null && !r.autoriza_no).reduce((s, r) => s + largo(r), 0);
+  const registradasFuera = extraDia?.registradas ?? [];
+  const x = extraDelDia({
+    trabajados: v.length && !abierto ? trabajadas : null, programados: programadas == null ? null : Math.max(0, programadas),
+    conHorarioOtrosDias: extraDia?.con_horario_otros_dias ?? true,
+    // El servidor cuenta las del reloj ya registradas (asistencias_horas_extra): aquí son los renglones autorizados en vivo.
+    registradas: registradasFuera.length && relojAut ? [...registradasFuera, { minutos: relojAut, forma_pago: "Pago de horas extras" }] : registradasFuera,
+    relojAutorizadas: relojAut,
+    relojNoAutorizadas: extraReg.filter((r) => r.autoriza_no).reduce((s, r) => s + largo(r), 0),
+    hrsExtra: extraDia?.hrs_extra, formaPago: extraDia?.forma_pago_extras, notas: extraDia?.notas_hrs_extra,
+  });
+  const hayPendiente = x.porAutorizar >= MIN_SEPARAR;
+  const sinSeparar = hayPendiente && h && !abierto && ultimaJornada != null && ultimaJornada - h.ps >= MIN_SEPARAR ? ultimaJornada - h.ps : 0;
+  const sinSepararAntes = hayPendiente && h && !abierto && primeraJornada != null && h.pe - primeraJornada >= MIN_SEPARAR ? h.pe - primeraJornada : 0;
+  const extraPorAutorizar = x.porAutorizar;
+  const extraNoAut = x.noAutorizadas;
   const primera = trabajo.slice().sort((a, b) => (a.ini ?? 0) - (b.ini ?? 0))[0];
   const ultima = jornada.slice().sort((a, b) => (b.fin ?? 0) - (a.fin ?? 0))[0];
   let estado;
@@ -288,8 +312,9 @@ export function resumen(regs, horario, { tolerancia = TOLERANCIA_MIN, estadoDia 
     else if (antes > tolerancia) estado = { texto: "Salió antes con permiso", clave: "just" };
     else estado = { texto: "Asistió", clave: "ok" };
   }
-  return { entrada, salida, abierto, comida, extraMin, extraPorAutorizar, extraNoAut, sinSeparar, trabajadas,
-    estado, hayRegs: v.length > 0, programadas: minutosProgramados(horario) };
+  return { entrada, salida, abierto, comida, extraMin, extraAutorizada: x.autorizadas, extraPorAutorizar, extraNoAut,
+    extraDetectadas: x.detectadas, sinSeparar, sinSepararAntes, trabajadas, estado, hayRegs: v.length > 0,
+    programadas: programadas == null ? minutosProgramados(horario) : Math.max(0, programadas) };
 }
 
 // ——— Acciones del modal ———
@@ -328,7 +353,18 @@ export function separarExtra(regs, horario) {
   const j = vivos(regs).filter((r) => r.concepto === "jornada" && r.fin != null).sort((a, b) => b.fin - a.fin)[0];
   if (!j || j.fin - h.ps < MIN_SEPARAR) return regs;
   const extra = { ...nuevoRenglon(h.ps, j.fin, "extra", ""), deSeparar: true };
-  return regs.map((r) => (r.k === j.k ? { ...r, fin: h.ps, separado: true } : r)).concat([extra]);
+  return regs.map((r) => (r.k === j.k ? { ...r, fin: h.ps, separado: true, corteFin: h.ps } : r)).concat([extra]);
+}
+
+// (26/11/2026) «Separar X antes de la entrada como hora extra»: parte la primera jornada en la entrada programada (llegó
+// temprano). El servidor lo reconoce igual (marcarSeparados): no pide motivo, sí quién autoriza.
+export function separarExtraAntes(regs, horario) {
+  const h = horarioMin(horario);
+  if (!h) return regs;
+  const j = vivos(regs).filter((r) => r.concepto === "jornada" && r.ini != null && r.fin != null).sort((a, b) => a.ini - b.ini)[0];
+  if (!j || h.pe - j.ini < MIN_SEPARAR || j.fin <= h.pe) return regs;
+  const extra = { ...nuevoRenglon(j.ini, h.pe, "extra", ""), deSeparar: true };
+  return regs.map((r) => (r.k === j.k ? { ...r, ini: h.pe, separado: true, corteIni: h.pe } : r)).concat([extra]);
 }
 
 // Anular (del reloj) / restaurar / quitar (agregado).
@@ -413,6 +449,7 @@ export function resumenServidor(r) {
   const e = r.estado ?? r.estado_calculado ?? {};
   return { trabajadas: Number(r.minutos_trabajados ?? 0), comida: Number(r.minutos_comida ?? 0), extraAutorizada: Number(r.minutos_extra ?? 0),
     extraPorAutorizar: Number(r.minutos_extra_por_autorizar ?? 0), abierto: Boolean(r.abierto), hayRegs: Number(r.checadas_vivas ?? 0) > 0,
+    programadas: r.minutos_programados ?? null,
     estado: { texto: e.texto ?? "—", clave: e.clave ?? "" } };
 }
 export function diaFila(fila) {
