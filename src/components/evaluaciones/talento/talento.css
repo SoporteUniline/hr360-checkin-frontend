@@ -1,0 +1,296 @@
+/* Talento (objetivos, 1:1, feedback, reconocimientos, calibración 9-box, bono, «Mi equipo»). Mismos colores y bordes que
+   evaluaciones.css; aquí todo el texto es ≥ 13 px y los controles táctiles miden ≥ 44 px. */
+.tl {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.tl small,
+.tl .tl-muted {
+  color: #64748b;
+  font-size: 13px;
+}
+.tl button,
+.tl .ev-input,
+.tl select,
+.tl a[role="button"] {
+  min-height: 44px;
+}
+.tl .ev-input {
+  font-size: 14px;
+}
+.tl-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.tl-toolbar > * {
+  min-width: 0;
+}
+.tl-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+}
+.tl-card {
+  border: 1px solid var(--ev-border, #e6eaf0);
+  border-radius: 12px;
+  padding: 16px;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tl-card h3 {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.35;
+}
+.tl-card p {
+  margin: 0;
+  font-size: 13px;
+}
+.tl-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tl-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  font-size: 13px;
+  color: #475569;
+}
+.tl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tl-list li {
+  border: 1px solid #eef2f7;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: #fbfcfe;
+}
+.tl-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.tl-form .tl-full {
+  grid-column: 1 / -1;
+}
+.tl-form label,
+.tl-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 550;
+  color: #334155;
+}
+.tl-choice {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.tl-choice button {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  font-size: 13px;
+  text-align: left;
+  line-height: 1.35;
+}
+.tl-choice button[aria-pressed="true"] {
+  border-color: #2563eb;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+.tl-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.tl-kpi {
+  border: 1px solid var(--ev-border, #e6eaf0);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.tl-kpi strong {
+  display: block;
+  font-size: 22px;
+  font-weight: 650;
+  color: #172033;
+}
+.tl-kpi span {
+  font-size: 13px;
+  color: #64748b;
+}
+/* 9-box: 3 × 3 con eje de desempeño a la izquierda y de potencial abajo. */
+.tl-ninebox {
+  display: grid;
+  grid-template-columns: 28px repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  align-items: stretch;
+}
+.tl-axis {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+}
+.tl-axis-x {
+  grid-column: 2 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  font-size: 13px;
+  color: #64748b;
+  text-align: center;
+}
+.tl-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px;
+  min-height: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.tl-box header {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+.tl-box[data-tone="green"] { background: #f0fdf4; }
+.tl-box[data-tone="blue"] { background: #eff6ff; }
+.tl-box[data-tone="amber"] { background: #fffbeb; }
+.tl-box[data-tone="red"] { background: #fef2f2; }
+.tl-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  padding: 6px 10px;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.tl-chip:disabled {
+  cursor: default;
+}
+.tl-chip[data-changed="true"] {
+  border-color: #2563eb;
+  box-shadow: inset 3px 0 0 #2563eb;
+}
+.tl-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.tl-chip b {
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.tl-money {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tl-wall {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.tl-quote {
+  font-size: 14px;
+  color: #172033;
+  line-height: 1.55;
+}
+.tl-split {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.tl-notes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 760px) {
+  .tl-form,
+  .tl-split,
+  .tl-notes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tl-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tl-cards,
+  .tl-wall {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tl-choice {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tl-ninebox {
+    grid-template-columns: 22px repeat(3, minmax(0, 1fr));
+    gap: 5px;
+  }
+  .tl-axis-x {
+    gap: 5px;
+  }
+  .tl-box {
+    padding: 6px;
+    min-height: 110px;
+  }
+  .tl-box header small {
+    display: none;
+  }
+  .tl-chip {
+    padding: 4px 6px;
+  }
+  .tl-toolbar > * {
+    flex: 1 1 100%;
+  }
+}
+/* Piezas compartidas de evaluaciones (insignias, descripciones, pestañas, tablas, barras) dentro de las vistas de
+   talento: mínimo 13 px, también en móvil. No cambia las demás vistas del módulo. */
+.ev-module .tl :is(.ev-badge, .ev-heading p, .ev-panel-head p, .ev-empty p, .ev-segments button, .ev-progress-wrap,
+  .ev-progress-wrap > div, .ev-progress-wrap span, .ev-table th, .ev-table td, .ev-actions > button, .ev-actions > a,
+  .ev-pagination, small) {
+  font-size: 13px;
+}
+.ev-module .tl .ev-progress-wrap > div:first-child:not(.ev-progress) {
+  font-size: 13px;
+}
+/* Etiquetas de cada dato en la tabla convertida a tarjetas (móvil): pseudo-elemento, no entra en :is(). */
+.ev-module .tl .ev-table td::before {
+  font-size: 13px;
+}
