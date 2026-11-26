@@ -131,7 +131,9 @@ export default function PopupVenta() {
   }
 
   return (
-    <div className="pv-fondo" onClick={(e) => e.target === e.currentTarget && cerrar()}>
+    // Solo se cierra con su botón «Cerrar» (o Escape, por accesibilidad): un clic afuera ya no lo cierra, para que el
+    // visitante no lo pierda por accidente.
+    <div className="pv-fondo">
       <div ref={dialogoRef} role="dialog" aria-modal="true" aria-labelledby="pv-titulo" className="pv-dialogo">
         <PopupTarjeta
           popup={popup}
