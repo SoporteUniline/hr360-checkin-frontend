@@ -172,9 +172,9 @@ async function entrar(pg, correo) {
 }
 async function contestar(pg) {
   await pg.getByText("Pregunta 1 de 2").waitFor({ timeout: 30000 });
-  await pg.getByRole("button", { name: "De acuerdo", exact: true }).click();
+  await pg.getByRole("radio", { name: "De acuerdo", exact: true }).click();
   await pg.getByText("Pregunta 2 de 2").waitFor();
-  await pg.getByRole("button", { name: "Sí", exact: true }).click();
+  await pg.getByRole("radio", { name: "Sí", exact: true }).click();
   await pg.getByRole("button", { name: "Enviar respuestas" }).click();
   await pg.getByText("¡Gracias por contestar!").waitFor({ timeout: 15000 });
 }

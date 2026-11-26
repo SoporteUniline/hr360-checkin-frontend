@@ -215,6 +215,9 @@ function Accion({ a, dimensiones, atencion, onEditar, onEstado, cambiando }) {
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${est.clase}`}>{est.texto}</span>
       </div>
       <p className="break-words text-sm font-semibold text-slate-900">{a.texto}</p>
+      {a.equipo ? (
+        <p className="text-[13px] font-semibold text-violet-800">Plan del equipo de {a.equipo.nombre ?? "un jefe"}</p>
+      ) : null}
       {falta.length ? (
         <p className="rounded-lg bg-[#FEF3C7] px-2 py-1 text-[12.5px] font-semibold text-[#92400E]">⚠ {textoFalta(a)}</p>
       ) : null}

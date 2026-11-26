@@ -1,4 +1,5 @@
 import MisEncuestas from "@/components/clima/MisEncuestas";
+import { vistaDeRuta } from "@/lib/clima/canales.mjs";
 import { RUTA_PANEL } from "@/lib/clima/pendientes.mjs";
 
 export const metadata = { title: "Mis encuestas | ADAMIA" };
@@ -8,9 +9,11 @@ export const metadata = { title: "Mis encuestas | ADAMIA" };
 export default async function Page({ params, searchParams }) {
   const { id = [] } = await params;
   const empresa = Number((await searchParams)?.empresa);
+  const v = vistaDeRuta(id);
   return (
     <MisEncuestas
-      id={id[0] ? Number(id[0]) : null}
+      id={v.vista === "encuesta" ? v.id : null}
+      equipo={v.vista === "equipo" ? v.id : null}
       empresa={Number.isInteger(empresa) && empresa > 0 ? empresa : null}
       base={RUTA_PANEL}
     />

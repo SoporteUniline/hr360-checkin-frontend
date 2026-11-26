@@ -10,6 +10,16 @@ import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import { ANTIGUEDADES, MINIMO_NOM035, claveAntiguedad, masDias, resumenDestinatarios } from "@/lib/clima/modelo.mjs";
 import { Aviso, Boton, Cargando, Tarjeta, Vacio, errorDe, get, ruta } from "./ui";
+import {
+  DIAS_RECORDATORIO,
+  RECORDATORIOS_SUGERIDOS,
+  alternarRecordatorio,
+  estadoWhatsapp,
+  fechasRecordatorios,
+  recordatoriosFuera,
+  textoCortoDias,
+  textoDiasAntes,
+} from "@/lib/clima/canales.mjs";
 
 const hoyMx = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
 const campo = "h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm";
@@ -29,7 +39,7 @@ function Modo({ activo, children, onClick }) {
   );
 }
 
-function Canal({ titulo, detalle, activo, alCambiar, pendiente }) {
+function Canal({ titulo, detalle, activo, alCambiar, pendiente, nota }) {
   return (
     <label
       className={`flex min-w-0 items-start gap-3 rounded-xl border p-3 ${
@@ -46,9 +56,10 @@ function Canal({ titulo, detalle, activo, alCambiar, pendiente }) {
       <span className="min-w-0">
         <span className="block text-sm font-semibold text-slate-900">
           {titulo}
-          {pendiente ? <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[11px] text-slate-600">Próximamente</span> : null}
+          {pendiente ? <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[13px] text-slate-600">No disponible</span> : null}
         </span>
-        <span className="block text-[12.5px] text-slate-500">{detalle}</span>
+        <span className="block text-[13px] text-slate-500">{detalle}</span>
+        {nota ? <span className="mt-1 block text-[13px] text-amber-800">{nota}</span> : null}
       </span>
     </label>
   );
@@ -71,6 +82,8 @@ export default function Lanzar({ id, idEmpresa, inicio }) {
       abre_el: c.abre_el ?? hoy,
       cierra_el: c.cierra_el ?? masDias(hoy, 10),
       recordatorio_dias: c.recordatorio_dias ?? 3,
+      // Hasta 3 recordatorios en días antes del cierre (con la migración de canales; si no, el de siempre).
+      recordatorios: c.recordatorios ?? (c.recordatorio_dias ? [] : [...RECORDATORIOS_SUGERIDOS]),
       canales: { app: true, correo: true, whatsapp: false, reloj: false, ...c.canales },
       destinatarios: { modo: "todos", areas: [], puestos: [], personas: [], antiguedad: {}, ...c.destinatarios },
     });
@@ -104,11 +117,18 @@ export default function Lanzar({ id, idEmpresa, inicio }) {
   const nom = c.tipo === "nom035";
   const preguntas = nom ? null : (c.definicion?.secciones ?? []).reduce((s, x) => s + x.preguntas.length, 0);
   const total = previa.data?.total ?? 0;
+  const canalesSrv = inicio?.canales;
+  const multiples = Boolean(canalesSrv?.migracion);
+  const wa = estadoWhatsapp(canalesSrv);
+  const proximos = fechasRecordatorios(f.abre_el, f.cierra_el, f.recordatorios);
+  const fuera = recordatoriosFuera(f.abre_el, f.cierra_el, f.recordatorios);
 
   const programar = async () => {
     setLanzando(true);
     try {
-      await axios.patch(ruta(`/campanias/${id}`, idEmpresa), { ...f, revision: c.revision });
+      const { recordatorios, ...resto } = f;
+      const cuerpo = multiples ? { ...resto, recordatorios, recordatorio_dias: null } : resto;
+      await axios.patch(ruta(`/campanias/${id}`, idEmpresa), { ...cuerpo, revision: c.revision });
       const r = await axios.post(ruta(`/campanias/${id}/lanzar`, idEmpresa));
       enqueueSnackbar(`Encuesta programada para ${r.data.invitados} personas.${r.data.aviso ? ` ${r.data.aviso}` : ""}`, {
         variant: r.data.aviso ? "warning" : "success",
@@ -258,7 +278,7 @@ export default function Lanzar({ id, idEmpresa, inicio }) {
       </Tarjeta>
 
       <Tarjeta titulo="2 · ¿Cuándo?">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className={`grid gap-3 ${multiples ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
           <label>
             <span className="text-[13px] font-semibold text-slate-600">Abre</span>
             <input
@@ -278,6 +298,7 @@ export default function Lanzar({ id, idEmpresa, inicio }) {
               onChange={(e) => setF((v) => ({ ...v, cierra_el: e.target.value }))}
             />
           </label>
+          {multiples ? null : (
           <label>
             <span className="text-[13px] font-semibold text-slate-600">Recordatorio</span>
             <select
@@ -293,7 +314,40 @@ export default function Lanzar({ id, idEmpresa, inicio }) {
               ))}
             </select>
           </label>
+          )}
         </div>
+        {multiples ? (
+          <fieldset className="mt-4 min-w-0">
+            <legend className="text-[13px] font-semibold text-slate-600">Recordatorios (hasta 3, solo a quien no ha contestado)</legend>
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {DIAS_RECORDATORIO.map((d) => {
+                const activo = f.recordatorios.includes(d);
+                const lleno = !activo && f.recordatorios.length >= 3;
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    aria-pressed={activo}
+                    aria-label={textoDiasAntes(d)}
+                    disabled={lleno}
+                    onClick={() => setF((v) => ({ ...v, recordatorios: alternarRecordatorio(v.recordatorios, d) }))}
+                    className={`min-h-11 rounded-full border px-3.5 text-[13.5px] disabled:opacity-40 ${
+                      activo ? "border-brand bg-blue-50 font-semibold text-blue-900" : "border-slate-300 text-slate-700"
+                    }`}
+                  >
+                    {textoCortoDias(d)}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[13px] text-slate-500" aria-live="polite">
+              {proximos.length
+                ? `Saldrán: ${proximos.map((x) => x.fecha.split("-").reverse().slice(0, 2).join("/")).join(", ")} (por los canales elegidos).`
+                : "Sin recordatorios."}
+              {fuera.length ? ` ${fuera.map(textoDiasAntes).join(", ")}: cae el día que abre o antes, no se manda.` : ""}
+            </p>
+          </fieldset>
+        ) : null}
       </Tarjeta>
 
       <Tarjeta titulo="3 · ¿Por dónde les llega?">
@@ -306,12 +360,25 @@ export default function Lanzar({ id, idEmpresa, inicio }) {
           />
           <Canal
             titulo="Correo"
-            detalle="Invitación y recordatorio, sin liga personal."
+            detalle="Invitación y recordatorios, sin liga personal."
             activo={f.canales.correo}
             alCambiar={(v) => setF((x) => ({ ...x, canales: { ...x.canales, correo: v } }))}
           />
-          <Canal titulo="WhatsApp" detalle="Liga personal, sin contraseña." activo={false} pendiente alCambiar={() => {}} />
-          <Canal titulo="Reloj checador" detalle="Al checar salida: «¿contestas en 5 min?»" activo={false} pendiente alCambiar={() => {}} />
+          <Canal
+            titulo="WhatsApp"
+            detalle="Invitación y recordatorios con su liga personal. Se contesta solo en la liga; nada se guarda en el chat."
+            nota={wa.disponible ? wa.texto : null}
+            activo={wa.disponible && Boolean(f.canales.whatsapp)}
+            pendiente={!wa.disponible}
+            alCambiar={(v) => setF((x) => ({ ...x, canales: { ...x.canales, whatsapp: v } }))}
+          />
+          <Canal
+            titulo="Al checar salida (app del empleado)"
+            detalle={nom ? "Solo para encuestas de clima." : "Pregunta de un toque «¿Cómo te fue hoy?», anónima y opcional. El reloj compartido no cambia."}
+            activo={multiples && !nom && Boolean(f.canales.reloj)}
+            pendiente={!multiples || nom}
+            alCambiar={(v) => setF((x) => ({ ...x, canales: { ...x.canales, reloj: v } }))}
+          />
         </div>
       </Tarjeta>
 

@@ -35,6 +35,7 @@ import {
   vsAnterior,
 } from "@/lib/clima/modelo.mjs";
 import { Boton, Cargando, ChipEstado, Tarjeta, Vacio, errorDe, get, ruta } from "./ui";
+import PulsoDiarioTarjeta from "./PulsoDiarioTarjeta";
 import PlanAccion from "./PlanAccion";
 
 const TARJETA = "min-w-0 rounded-[18px] border border-slate-200 bg-white";
@@ -620,6 +621,7 @@ export default function Tablero({ idEmpresa, extra = null }) {
                 alCambiar={() => mutate()}
               />
               <Comentarios comentarios={r.comentarios} />
+              <PulsoDiarioTarjeta pulso={r.pulsoDiario} />
               <Evolucion evolucion={data.evolucion} cl={cl} cierra={r.campania.cierra_el} />
               {extra ? extra({ resultado: r, plan: data.plan, alCambiar: () => mutate() }) : null}
             </aside>
