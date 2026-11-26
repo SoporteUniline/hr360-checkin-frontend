@@ -9,6 +9,7 @@ import { FichaEmpleadoProvider } from "@/components/empleado/FichaEmpleado";
 import GuardaModulo from "@/components/modulos/GuardaModulo";
 import GuardaPermiso from "@/components/permisos/GuardaPermiso";
 import SesionPanel from "@/components/auth/SesionPanel";
+import { nombreCookieSesion } from "@/lib/demo-base-path.mjs";
 import CuerpoDesbloqueado from "@/components/auth/CuerpoDesbloqueado";
 // (24/12/2026) Créditos de Adamia AI: aviso «sin créditos» con «Recargar» para cualquier pantalla con IA.
 import AvisoSinCreditos from "@/components/ia/AvisoSinCreditos";
@@ -24,7 +25,7 @@ const getSubscriptionStatus = cache(async (userId, idEmpresa) => {
 
 export default async function LayoutPanel({ children }) {
   const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
+  const token = cookieStore.get(nombreCookieSesion)?.value;
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") || "";
 

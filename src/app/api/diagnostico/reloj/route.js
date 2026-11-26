@@ -1,11 +1,12 @@
 import { jwtVerify } from "jose";
+import { nombreCookieSesion } from "@/lib/demo-base-path.mjs";
 
 export const dynamic = "force-dynamic";
 
 const LIMITE = 64 * 1024;
 
 function tokenDe(request) {
-  const cookie = request.cookies?.get?.("token")?.value;
+  const cookie = request.cookies?.get?.(nombreCookieSesion)?.value;
   if (cookie) return cookie;
   const auth = request.headers.get("authorization") || "";
   return auth.startsWith("Bearer ") ? auth.slice(7) : null;

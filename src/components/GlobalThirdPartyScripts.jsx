@@ -5,6 +5,7 @@ import Script from "next/script";
 import { usePathname } from "next/navigation";
 import { isNativeClient } from "@/lib/native-app";
 import { leerConsentimiento, EVENTO_COOKIES } from "@/lib/legal/cookies";
+import { demoBasePath } from "@/lib/demo-base-path.mjs";
 
 export default function GlobalThirdPartyScripts() {
   const pathname = usePathname();
@@ -13,14 +14,14 @@ export default function GlobalThirdPartyScripts() {
   useEffect(() => {
     // En iOS/Android nativo se omite Meta Pixel para cumplir App Tracking Transparency (ATT).
     // En web, solo con el consentimiento de cookies de publicidad.
-    if (isNativeClient()) return undefined;
+    if (demoBasePath || isNativeClient()) return undefined;
     const revisar = () => setAllowMetaPixel(leerConsentimiento() === "aceptadas");
     revisar();
     window.addEventListener(EVENTO_COOKIES, revisar);
     return () => window.removeEventListener(EVENTO_COOKIES, revisar);
   }, []);
 
-  if (pathname?.startsWith("/firmar/") || pathname?.startsWith("/reclutamiento-demo/")) {
+  if (demoBasePath || pathname?.startsWith("/firmar/") || pathname?.startsWith("/reclutamiento-demo/")) {
     return null;
   }
 

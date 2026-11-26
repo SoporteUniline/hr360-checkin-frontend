@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 import { destinoSeguro, urlLogin } from "@/lib/destinoLogin.mjs";
 import { RUTA_NEUTRA, rutaMisEncuestas } from "@/lib/clima/pendientes.mjs";
+import { demoBasePath, nombreCookieSesion, rutaDeInstancia } from "@/lib/demo-base-path.mjs";
 
 //Prueba CI/CD
 
@@ -28,8 +29,9 @@ const nativeOnlyPublicRoutes = [
 ];
 
 export async function middleware(request) {
-  const token = request.cookies.get("token")?.value;
+  const token = request.cookies.get(nombreCookieSesion)?.value;
   const pathname = request.nextUrl.pathname;
+  const redirigir = (ruta) => NextResponse.redirect(new URL(rutaDeInstancia(ruta), request.url));
   const userAgent = request.headers.get("user-agent") || "";
   const isNativeApp = userAgent.includes("AdamiaAppNative");
   if (!isNativeApp && nativeOnlyPublicRoutes.some(path => pathname === path || pathname.startsWith(path + "/"))) {
@@ -54,11 +56,11 @@ export async function middleware(request) {
       );
 
     if (isBlocked) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return redirigir("/login");
     }
 
     if (pathname.startsWith("/panel/mi-suscripcion")) {
-      return NextResponse.redirect(new URL("/panel", request.url));
+      return redirigir("/panel");
     }
   }
 
@@ -69,7 +71,7 @@ export async function middleware(request) {
       (path) => pathname.startsWith(path),
     );
     if (protectedRoutes) {
-      return NextResponse.redirect(new URL(urlLogin(rutaActual), request.url));
+      return redirigir(urlLogin(rutaActual));
     }
     return NextResponse.next();
   }
@@ -85,13 +87,13 @@ export async function middleware(request) {
       const siguiente = pathname === "/login" ? destinoSeguro(request.nextUrl.searchParams.get("next")) : null;
       const redirectTo =
         siguiente || defaultRedirects[tipoUsuario] || (isNativeApp ? "/panel" : "/");
-      return NextResponse.redirect(new URL(redirectTo, request.url));
+      return redirigir(redirectTo);
     }
 
     // «Mis encuestas» (liga del correo de Clima): la app del empleado o el panel de RH y dueño.
     if (pathname === RUTA_NEUTRA || pathname === `${RUTA_NEUTRA}/`) {
       const destino = rutaMisEncuestas(tipoUsuario) || defaultRedirects[tipoUsuario] || "/";
-      return NextResponse.redirect(new URL(destino, request.url));
+      return redirigir(destino);
     }
 
     const allowedPaths = accessRules[tipoUsuario] || [];
@@ -100,7 +102,7 @@ export async function middleware(request) {
     if (!isAllowed) {
       const redirectTo =
         defaultRedirects[tipoUsuario] || (isNativeApp ? "/panel" : "/");
-      return NextResponse.redirect(new URL(redirectTo, request.url));
+      return redirigir(redirectTo);
     }
 
     const response = NextResponse.next();
@@ -110,8 +112,8 @@ export async function middleware(request) {
     response.headers.set('Cache-Control', 'private, no-store');
     return response;
   } catch (err) {
-    const response = NextResponse.redirect(new URL(urlLogin(rutaActual), request.url));
-    response.cookies.delete("token");
+    const response = redirigir(urlLogin(rutaActual));
+    response.cookies.set(nombreCookieSesion, "", { path: demoBasePath || "/", maxAge: 0 });
     return response;
   }
 }

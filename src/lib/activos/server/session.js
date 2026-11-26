@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { nombreCookieSesion } from "@/lib/demo-base-path.mjs";
 import { ActivosError, ensure, id } from "./validation.mjs";
 import { activosPool } from "./database";
 import { employeeName, normalize } from "@/lib/solicitudes-equipo/model.mjs";
@@ -40,9 +41,9 @@ export function errorResponse(error) {
   );
 }
 export async function getScope(request, self = false) {
-  const token = (await cookies()).get("token")?.value;
+  const token = (await cookies()).get(nombreCookieSesion)?.value;
   ensure(token, "Inicia sesión para continuar.", 401);
-  const base = process.env.NEXT_PUBLIC_RUTA_BACKEND;
+  const base = process.env.ADAMIA_DEMO_INTERNAL_API || process.env.NEXT_PUBLIC_RUTA_BACKEND;
   ensure(base, "El servicio de identidad no está configurado.", 503);
   const api = async (path) => {
     let response;

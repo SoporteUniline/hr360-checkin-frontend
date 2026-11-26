@@ -5,6 +5,7 @@ import Cookies from "js-cookie";
 import axios, { setAuthToken, ensureOfflineCache } from "@/lib/axios"; // ← USAR TU INSTANCE
 import { SnackbarProvider } from "notistack";
 import { useRouter } from "next/navigation";
+import { demoBasePath } from "@/lib/demo-base-path.mjs";
 import { avisarCierreDeSesion } from "@/lib/passkeys/api";
 
 const AuthContext = createContext({
@@ -78,10 +79,16 @@ export function AuthProvider({ children }) {
   const logout = (destino) => {
     const previousToken = Cookies.get('token');
     // (25/11/2026) El servidor cierra ESTA sesión (el token deja de servir aunque alguien lo hubiera copiado).
-    void avisarCierreDeSesion(previousToken);
+    if (demoBasePath) {
+      void fetch(`${demoBasePath}/salir`, { method: "POST", keepalive: true }).catch(() => {});
+    } else {
+      void avisarCierreDeSesion(previousToken);
+    }
     void ensureOfflineCache().then(cache => cache?.clearSession(previousToken)).catch(() => {});
-    import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=4')
-      .then(store => store.clearConfig()).catch(() => {});
+    if (!demoBasePath) {
+      import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=4')
+        .then(store => store.clearConfig()).catch(() => {});
+    }
     Cookies.remove("token");
     setAuthToken(null);
     setIsLoggedIn(false);

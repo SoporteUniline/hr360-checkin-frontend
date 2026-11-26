@@ -7,6 +7,7 @@ import {
   normalize,
 } from "@/lib/solicitudes-equipo/model.mjs";
 import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
+import { rutaDeInstancia } from "@/lib/demo-base-path.mjs";
 
 export const blueButton = "bg-[#2563EB] text-white hover:bg-[#1d4ed8]";
 export const selectClass =
@@ -14,7 +15,7 @@ export const selectClass =
 
 export async function teamFetcher(key, options) {
   const url = Array.isArray(key) ? key[0] : key;
-  const response = await fetch(url, {
+  const response = await fetch(rutaDeInstancia(url), {
     credentials: "same-origin",
     cache: "no-store",
     ...options,

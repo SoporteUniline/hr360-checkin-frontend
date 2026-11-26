@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { nombreCookieSesion } from "@/lib/demo-base-path.mjs";
 import {
   canReview,
   employeeName,
@@ -23,13 +24,13 @@ const pick = (object, keys) =>
       .map((key) => [key, object[key]]),
   );
 export async function session() {
-  const token = (await cookies()).get("token")?.value;
+  const token = (await cookies()).get(nombreCookieSesion)?.value;
   if (!token)
     throw new TeamError(
       "Inicia sesión para consultar las solicitudes de tu equipo.",
       401,
     );
-  const base = process.env.NEXT_PUBLIC_RUTA_BACKEND;
+  const base = process.env.ADAMIA_DEMO_INTERNAL_API || process.env.NEXT_PUBLIC_RUTA_BACKEND;
   if (!base)
     throw new TeamError("El servicio de solicitudes no está configurado.", 503);
   const api = async (path, options = {}) => {

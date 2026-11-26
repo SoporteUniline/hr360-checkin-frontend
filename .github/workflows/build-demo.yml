@@ -1,0 +1,39 @@
+name: Build Adamia Demo Dev
+
+on:
+  push:
+    branches: [dev]
+    paths: [.github/workflows/build-demo.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compilar el panel de demo
+        run: |
+          docker build -t adamia-demo-build \
+            --build-arg ADAMIA_DEMO_INSTANCE=true \
+            --build-arg ADAMIA_DEMO_BASE_PATH=/demo/visita \
+            --build-arg NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx \
+            --build-arg NEXT_PUBLIC_RUTA_BACKEND=https://dev.adamia.com.mx/demo/visita/backend .
+      - name: Extraer el servidor precompilado
+        run: |
+          contenedor=$(docker create adamia-demo-build)
+          trap 'docker rm "$contenedor" >/dev/null' EXIT
+          mkdir -p demo-standalone
+          docker cp "$contenedor:/app/." demo-standalone/
+          test -f demo-standalone/server.js
+          test -d demo-standalone/.next/static
+          tar --exclude='./.env*' -czf adamia-demo-dev.tar.gz -C demo-standalone .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: adamia-demo-dev
+          path: adamia-demo-dev.tar.gz
+          if-no-files-found: error
