@@ -103,6 +103,9 @@ jobs:
       - name: Asistencias y Monitor — refresco sin recargar (claves, SSE, ediciones abiertas)
         run: node --test scripts/test-refresco-asistencias.mjs
 
+      - name: Clima — canales, recordatorios, vista del jefe y «¿Cómo te fue hoy?»
+        run: node --test scripts/test-clima-canales.mjs
+
       - name: Créditos de Adamia AI — saldo, recargas y panel del administrador
         run: node --test scripts/test-creditos-ia.mjs
 
