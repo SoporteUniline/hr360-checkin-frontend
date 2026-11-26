@@ -136,6 +136,9 @@ jobs:
       - name: Plantillas de WhatsApp — reglas de Meta, vista previa y catálogo (panel del administrador)
         run: node --test scripts/test-plantillas-whatsapp.mjs
 
+      - name: Integraciones — llaves de API por empresa (panel del dueño) y documentación /desarrolladores
+        run: node --test scripts/test-integraciones.mjs
+
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación
   # ─────────────────────────────────────────────
