@@ -4,6 +4,7 @@
 // consumo del mes por función e historial de movimientos. Nunca muestra costo ni margen (el servidor tampoco los manda).
 // El saldo se acredita solo cuando Stripe confirma el pago (webhook); al volver del pago la pantalla espera esa confirmación.
 // En la app nativa no se ofrece recargar (las compras se hacen desde el navegador, como «Mi suscripción»).
+// (25/12/2026) Con el cobro apagado (cobro_activo del servidor) el aviso dice «Gratis por ahora…» (lib/ia/creditos.avisoSaldo).
 import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { useSearchParams } from "next/navigation";
@@ -175,7 +176,7 @@ export default function CreditosIA() {
             <p className="text-[12.5px] font-semibold uppercase tracking-wide text-slate-500">Saldo disponible</p>
             <p className={`mt-1 text-4xl font-extrabold tracking-tight tabular-nums ${data.sin_creditos ? "text-red-700" : "text-slate-900"}`} data-saldo>{mxn(data.saldo_mxn)} <span className="text-base font-bold text-slate-500">MXN</span></p>
             {data.ultima_recarga_mxn > 0 ? <p className="mt-1 text-[12.5px] text-slate-500">Última recarga: {mxn(data.ultima_recarga_mxn)}</p> : null}
-            <p className="mt-2 text-[12.5px] text-slate-600">Cada consulta a Adamia AI en el panel descuenta su precio. El agente de WhatsApp no usa estos créditos: va en tus paquetes de entrevistas.</p>
+            <p className="mt-2 text-[12.5px] text-slate-600">{data.cobro_activo ? "Cada consulta a Adamia AI en el panel descuenta su precio." : "Cuando se active el cobro, cada consulta a Adamia AI en el panel descontará su precio de este saldo."} El agente de WhatsApp no usa estos créditos: va en tus paquetes de entrevistas.</p>
           </section>
           <Paquetes paquetes={data.paquetes} idEmpresa={empresa.idEmpresa} nativa={nativa} />
           <div className="grid gap-4 lg:grid-cols-2">
