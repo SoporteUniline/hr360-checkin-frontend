@@ -15,7 +15,7 @@ import { useEmpresaNomina, SelectorEmpresa } from "@/components/nomina/comun";
 import { useGuardiaSalida } from "@/components/cambios/CambiosPendientes";
 import {
   API, DISENOS, RUTA_REGLAS, TIPOS, borradorDe, codigoError, cuerpoGuardar, hayCambios, insertarVariable, mensajeError, textosCambiados,
-  variablesDesconocidas,
+  variablesDesconocidas, htmlEnModo,
 } from "@/lib/avisos/avisos.mjs";
 import { cn } from "@/lib/utils";
 import { useSesionAvisos } from "./useAvisos";
@@ -290,6 +290,11 @@ function VistaPrevia({ tipo, actual, guardada, data, idEmpresa }) {
   const ids = useId();
   const [pestana, setPestana] = useState("correo");
   const [previa, setPrevia] = useState({ estado: "cargando" });
+  // El correo trae estilos de modo oscuro: dentro del iframe seguían el modo del equipo de quien edita y se veía negro
+  // aunque el diseño fuera «Sencillo». Por defecto se muestra como en un correo claro; «Oscuro» enseña cómo lo ven
+  // quienes tienen el modo oscuro en su celular.
+  const [modo, setModo] = useState("light");
+  const html = useMemo(() => htmlEnModo(previa.html, modo), [previa.html, modo]);
   // Sin personalizar y sin cambios: se ve el correo de ADAMIA (el que hoy sale). Con cambios: el borrador.
   const sistema = !guardada?.personalizada && !textosCambiados(actual, guardada);
   const cuerpo = JSON.stringify(sistema ? { tipo, sistema: true } : { tipo, ...actual });
@@ -324,7 +329,16 @@ function VistaPrevia({ tipo, actual, guardada, data, idEmpresa }) {
           {previa.html ? (
             <>
               <p className="text-[13px] text-slate-700"><b>Asunto:</b> {previa.subject}</p>
-              <iframe title="Vista previa del correo" sandbox="" srcDoc={previa.html} data-vista-correo className={cn("h-[560px] w-full rounded-xl border border-slate-200 bg-white transition-opacity", previa.estado === "cargando" && "opacity-60")} />
+              <div role="radiogroup" aria-label="Modo de la vista previa" className="flex items-center gap-1.5 self-start rounded-lg bg-slate-100 p-1">
+                {[["light", "Claro"], ["dark", "Modo oscuro"]].map(([clave, etiqueta]) => (
+                  <button key={clave} type="button" role="radio" aria-checked={modo === clave} onClick={() => setModo(clave)}
+                    className={cn("min-h-11 rounded-md px-3 text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand", modo === clave ? "bg-white font-bold text-blue-800 shadow-sm" : "font-semibold text-slate-700")}>
+                    {etiqueta}
+                  </button>
+                ))}
+              </div>
+              <iframe title="Vista previa del correo" sandbox="" srcDoc={html} data-vista-correo data-modo={modo} className={cn("h-[560px] w-full rounded-xl border border-slate-200 transition-opacity", modo === "dark" ? "bg-slate-900" : "bg-white", previa.estado === "cargando" && "opacity-60")} />
+              {modo === "dark" ? <p className="text-[12.5px] text-slate-600">Así lo ven quienes tienen el modo oscuro activado en su celular o correo.</p> : null}
             </>
           ) : previa.estado === "cargando" ? (
             <p role="status" className="flex min-h-40 items-center justify-center gap-2 text-sm text-slate-600"><Loader2 aria-hidden="true" className="size-4 animate-spin" />Armando la vista previa…</p>

@@ -160,3 +160,13 @@ export function variablesDesconocidas(texto, variables) {
 
 export const mensajeError = (e, porDefecto = "No se pudo completar. Intenta de nuevo.") => e?.response?.data?.error || porDefecto;
 export const codigoError = (e) => e?.response?.data?.codigo || null;
+
+// El iframe hereda el modo oscuro del equipo de quien edita (prefers-color-scheme), y el correo trae estilos para ese
+// modo. Para la vista previa se fija el modo elegido: «light» apaga esas reglas y «dark» las aplica siempre.
+export function htmlEnModo(html, modo) {
+  if (!html) return html;
+  const media = modo === "dark" ? "@media all" : "@media not all";
+  return String(html)
+    .replace(/@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/gi, media)
+    .replace(/(<meta\s+name=["'](?:supported-color-schemes|color-scheme)["']\s+content=["'])[^"']*(["'])/gi, `$1${modo}$2`);
+}
