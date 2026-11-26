@@ -63,6 +63,9 @@ import {
   LayoutGrid,
   Activity,
   PartyPopper,
+  Target,
+  Grid3x3,
+  MessageSquareHeart,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -89,6 +92,9 @@ const ICONOS_EVALUACION = {
   campanas: ClipboardList,
   plantillas: LayoutTemplate,
   "mis-pendientes": PenLine,
+  objetivos: Target,
+  calibracion: Grid3x3,
+  reconocimientos: MessageSquareHeart,
   configuracion: Settings2,
 };
 const dashboardItems = [

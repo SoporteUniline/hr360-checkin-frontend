@@ -2,7 +2,7 @@
 
 // Contestar en el celular: una pregunta por pantalla, avance, botones grandes y progreso guardado en el teléfono.
 // La misma pantalla sirve para la app del empleado, la liga personal (WhatsApp) y la vista previa del editor.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   AVISO_PRIVACIDAD_CLIMA,
   ESCALA,
@@ -35,7 +35,8 @@ function Opcion({ activa, children, onClick, compacta = false }) {
   return (
     <button
       type="button"
-      aria-pressed={activa}
+      role="radio"
+      aria-checked={activa}
       onClick={onClick}
       className={`w-full rounded-2xl border-2 px-4 text-left text-[18px] font-semibold leading-snug transition-colors ${
         compacta ? "min-h-14 text-center" : "min-h-16 py-3"
@@ -115,12 +116,27 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState(null);
   const [listo, setListo] = useState(false);
+  // «Guardado en este teléfono»: se muestra al retomar y después de cada respuesta (26/11/2026, experiencia móvil).
+  const [guardado, setGuardado] = useState(null); // null | "retomado" | "guardado"
+  const titulo = useRef(null);
+  const primera = useRef(true);
   useEffect(() => {
     if (!llave) return;
     const previo = leer(llave);
     setR(previo);
-    if (Object.keys(previo).length && encuesta.tipo !== "nom035") setI(primeroSinResponder(pasosEncuesta(encuesta, previo), previo));
+    if (Object.keys(previo).length) {
+      setGuardado("retomado");
+      if (encuesta.tipo !== "nom035") setI(primeroSinResponder(pasosEncuesta(encuesta, previo), previo));
+    }
   }, [llave, encuesta]);
+  // Al cambiar de pregunta el foco va al texto de la pregunta (lectores de pantalla y teclado empiezan ahí).
+  useEffect(() => {
+    if (primera.current) {
+      primera.current = false;
+      return;
+    }
+    titulo.current?.focus({ preventScroll: false });
+  }, [i]);
   const pasos = useMemo(() => pasosEncuesta(encuesta, r), [encuesta, r]);
   const paso = pasos[Math.min(i, pasos.length - 1)];
   const ultimo = i >= pasos.length - 1;
@@ -129,7 +145,10 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
   const elegir = (valor, avanzar = true) => {
     const nuevo = { ...r, [paso.id]: valor };
     setR(nuevo);
-    if (llave) escribir(llave, nuevo);
+    if (llave) {
+      escribir(llave, nuevo);
+      setGuardado("guardado");
+    }
     if (avanzar && !ultimo) setTimeout(() => setI((x) => Math.min(x + 1, pasosEncuesta(encuesta, nuevo).length - 1)), 180);
   };
   const enviar = async () => {
@@ -193,8 +212,9 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
   return (
     <div className={`flex flex-col px-5 pt-4 ${pantallaCompleta ? "flex-1 pb-0" : "min-h-[70vh] pb-4"}`}>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[15px] font-semibold text-slate-600">
+        <p className="text-[15px] font-semibold text-slate-600" aria-live="polite">
           Pregunta {i + 1} de {pasos.length}
+          <span className="sr-only">, {pct} % contestado</span>
         </p>
         <span
           className={`rounded-full px-3 py-1 text-[14px] font-bold ${
@@ -214,14 +234,23 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
       >
         <div className="h-full rounded-full bg-brand transition-all" style={{ width: `${pct}%` }} />
       </div>
+      {llave ? (
+        <p className="mt-1.5 text-[13px] text-slate-500" data-progreso-guardado>
+          {guardado === "retomado"
+            ? "Seguimos donde te quedaste. Tu avance se guarda solo en este teléfono."
+            : guardado === "guardado"
+            ? "✓ Avance guardado en este teléfono (no en el servidor)."
+            : "Tu avance se guarda solo en este teléfono, puedes salir y volver."}
+        </p>
+      ) : null}
       <p className="mt-6 text-[13.5px] font-bold uppercase tracking-wide text-slate-500">{paso.seccion}</p>
       {paso.encabezado ? <p className="mt-2 text-[18px] leading-relaxed text-slate-700">{paso.encabezado}</p> : null}
-      <h2 className="mt-2 text-[27px] font-extrabold leading-tight text-slate-900" id="pregunta-actual">
+      <h2 ref={titulo} tabIndex={-1} className="mt-2 text-[27px] font-extrabold leading-tight text-slate-900 outline-none" id="pregunta-actual">
         {paso.pregunta?.texto ?? paso.texto}
       </h2>
       {paso.ayuda ? <p className="mt-2 text-[16px] text-slate-500">{paso.ayuda}</p> : null}
       {paso.tipo === "escala" ? <p className="mt-2 text-[16px] text-slate-500">Qué tan de acuerdo estás</p> : null}
-      <div className="mt-5 space-y-3" role="group" aria-labelledby="pregunta-actual">
+      <div className="mt-5 space-y-3" role={paso.tipo === "abierta" ? "group" : "radiogroup"} aria-labelledby="pregunta-actual">
         <Respuesta paso={paso} valor={r[paso.id]} alElegir={elegir} />
       </div>
       <p className="mt-6 text-[15px] leading-relaxed text-slate-500">
@@ -270,7 +299,18 @@ export default function Contestar({ encuesta, vistaPrevia = false, alEnviar, tok
         )}
       </div>
       {ultimo && !completa ? (
-        <p className="mt-2 text-center text-[15px] text-slate-500">Te faltan preguntas por contestar: usa «Anterior» para revisarlas.</p>
+        <div className="mt-2 text-center">
+          <p className="text-[15px] text-slate-500">
+            Te {pasos.filter((p) => !respondido(p, r)).length === 1 ? "falta 1 pregunta" : `faltan ${pasos.filter((p) => !respondido(p, r)).length} preguntas`}.
+          </p>
+          <button
+            type="button"
+            onClick={() => setI(primeroSinResponder(pasos, r))}
+            className="mt-1 inline-flex min-h-11 items-center rounded-xl px-4 text-[16px] font-bold text-brand"
+          >
+            Ir a la que falta
+          </button>
+        </div>
       ) : null}
     </div>
   );

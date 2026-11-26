@@ -20,6 +20,12 @@ import {
 import { ResponseView } from "./ResponseView";
 import { Results, ResultDetail } from "./ResultViews";
 import { SettingsView } from "./SettingsView";
+// (22/12/2026) Talento: objetivos, 1:1, feedback, calibración y bono, y «Mi equipo» del gerente.
+import { ObjetivosView } from "./talento/ObjetivosView";
+import { UnoAUnoView } from "./talento/UnoAUnoView";
+import { FeedbackView } from "./talento/FeedbackView";
+import { CalibracionView } from "./talento/CalibracionView";
+import { EquipoTalento } from "./talento/EquipoTalento";
 import {
   SCOPE_DE_RUTA,
   esRH,
@@ -116,7 +122,17 @@ export default function EvaluationModule({ segments = [] }) {
         <Campaigns />
       );
   else if (view === "mis-pendientes") page = <Assignments />;
-  else if (view === "equipo") page = <Team />;
+  else if (view === "equipo")
+    page = (
+      <>
+        {capabilities.profile === "manager" && <EquipoTalento />}
+        <Team />
+      </>
+    );
+  else if (view === "objetivos") page = <ObjetivosView />;
+  else if (view === "uno-a-uno") page = <UnoAUnoView />;
+  else if (view === "reconocimientos") page = <FeedbackView />;
+  else if (view === "calibracion") page = <CalibracionView />;
   else if (view === "responder" && id) page = <ResponseView id={id} />;
   else if (view === "resultados" && id && third)
     page = <ResultDetail campaignId={id} subjectId={third} />;

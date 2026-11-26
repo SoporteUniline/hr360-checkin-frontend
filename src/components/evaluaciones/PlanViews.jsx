@@ -19,7 +19,7 @@ import {
 import { dateText } from "@/lib/evaluaciones/model.mjs";
 // Planes de una persona en una campaña; se ven dentro del resultado de la persona (desde la campaña o
 // desde «Mis resultados»).
-export function PlanList({ campaignId, subjectId }) {
+export function PlanList({ campaignId, subjectId, borrador = null }) {
   const { api, perform, busy, actor } = useEvaluations();
   const [page, setPage] = useState(1),
     [status, setStatus] = useState(""),
@@ -33,6 +33,20 @@ export function PlanList({ campaignId, subjectId }) {
     pageSize: 25,
   });
   const canManage = ["hr", "manager"].includes(actor.role);
+  // (26/11/2026) Acción sugerida por Adamia AI: abre el formulario de plan nuevo ya llenado (la persona lo guarda).
+  useEffect(() => {
+    if (!borrador || !canManage) return;
+    setMode("create");
+    setEditing({
+      title: "",
+      successMeasure: "",
+      campaignId: campaignId || "",
+      subjectId: subjectId || "",
+      ownerId: subjectId || "",
+      dueOn: "",
+      ...borrador,
+    });
+  }, [borrador, canManage, campaignId, subjectId]);
   const open = async (id, nextMode) => {
     const p = await perform(() => api.get(`/plans/${id}`).then((r) => r.data));
     if (p) {

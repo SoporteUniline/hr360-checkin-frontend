@@ -6,6 +6,9 @@
 //   /panel/clima/encuestas/editor/<id>     Editar una plantilla de la empresa
 //   /panel/clima/encuestas/lanzar/<id>     Destinatarios, fechas y canales de una encuesta
 //   /panel/clima/nom035          Resultados NOM-035, Guía I confidencial y obligaciones
+//   /panel/clima/nom035/expediente  Expediente para inspección por centro de trabajo (26/11/2026)
+//   /panel/clima/nom035/buzon       Buzón confidencial de quejas y denuncias (26/11/2026)
+//   /panel/clima/analitica       Cortes, mapa de calor e impulsores del compromiso (26/11/2026)
 import Link from "next/link";
 import useSWR from "swr";
 import { HeartHandshake } from "lucide-react";
@@ -16,7 +19,10 @@ import Tablero from "./Tablero";
 import Encuestas from "./Encuestas";
 import Editor from "./Editor";
 import Lanzar from "./Lanzar";
-import Nom035 from "./Nom035";
+import Nom035Seccion from "./Nom035Seccion";
+import Analitica from "./Analitica";
+import RiesgoRotacion from "./RiesgoRotacion";
+import CicloVida from "./CicloVida";
 import { RevisionIa } from "./IaEncuesta";
 import { iaNom035, iaTablero } from "./IaResultados";
 
@@ -34,6 +40,12 @@ const PESTANAS = [
     subtitulo: "Plantillas profesionales gratis, tus encuestas y su avance.",
   },
   {
+    clave: "analitica",
+    href: "/panel/clima/analitica",
+    texto: "Analítica",
+    subtitulo: "Cortes por antigüedad, puesto y sucursal, mapa de calor y qué mueve el compromiso.",
+  },
+  {
     clave: "nom035",
     href: "/panel/clima/nom035",
     texto: "NOM-035",
@@ -46,7 +58,8 @@ function vistaDe(segmentos) {
   if (a === "encuestas" && b === "editor" && c) return { pestana: "encuestas", vista: "editor", id: Number(c) };
   if (a === "encuestas" && b === "lanzar" && c) return { pestana: "encuestas", vista: "lanzar", id: Number(c) };
   if (a === "encuestas") return { pestana: "encuestas", vista: "encuestas" };
-  if (a === "nom035") return { pestana: "nom035", vista: "nom035" };
+  if (a === "nom035") return { pestana: "nom035", vista: "nom035", sub: ["expediente", "buzon"].includes(b) ? b : "resultados" };
+  if (a === "analitica") return { pestana: "analitica", vista: "analitica" };
   return { pestana: "resultados", vista: "resultados" };
 }
 
@@ -66,11 +79,23 @@ function Contenido({ v, idEmpresa }) {
   }
   if (!inicio.data) return <Cargando />;
   const props = { idEmpresa, inicio: inicio.data };
-  if (v.vista === "encuestas") return <Encuestas {...props} />;
+  if (v.vista === "encuestas")
+    return (
+      <div className="space-y-4">
+        <Encuestas {...props} />
+        <CicloVida idEmpresa={idEmpresa} />
+      </div>
+    );
   if (v.vista === "editor") return <Editor key={v.id} id={v.id} {...props} revision={RevisionIa} />;
   if (v.vista === "lanzar") return <Lanzar key={v.id} id={v.id} {...props} />;
-  if (v.vista === "nom035") return <Nom035 {...props} extra={iaNom035(idEmpresa)} />;
-  return <Tablero {...props} extra={iaTablero(idEmpresa)} />;
+  if (v.vista === "nom035") return <Nom035Seccion sub={v.sub} {...props} extra={iaNom035(idEmpresa)} />;
+  if (v.vista === "analitica") return <Analitica idEmpresa={idEmpresa} />;
+  return (
+    <div className="space-y-4">
+      <Tablero {...props} extra={iaTablero(idEmpresa)} />
+      <RiesgoRotacion idEmpresa={idEmpresa} />
+    </div>
+  );
 }
 
 export default function ModuloClima({ segmentos = [] }) {

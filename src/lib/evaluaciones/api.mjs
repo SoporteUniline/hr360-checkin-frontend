@@ -139,5 +139,13 @@ export function createEvaluationApi(http, company) {
     );
     return { blob, filename: `evaluaciones-${kind}.csv` };
   }
-  return { get, all, mutate, exportCsv };
+  // (26/11/2026) PDF de marca (persona o campaña): descarga autenticada como archivo.
+  async function download(path, filename) {
+    const blob = await request("GET", path, undefined, { responseType: "blob" });
+    return { blob, filename };
+  }
+  // (22/12/2026) Talento (objetivos, 1:1, feedback, calibración, bono): manda el cuerpo tal cual (su control de cambios va
+  // en `revision`, no en `version`) y devuelve la respuesta completa ({ data, warning, notice, summary… }).
+  const send = (method, path, body) => request(method, path, body);
+  return { get, all, mutate, exportCsv, download, send };
 }

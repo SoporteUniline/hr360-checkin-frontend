@@ -88,7 +88,7 @@ async function pantallaCompletaLegible(pg, nombre, enApp = true) {
       };
     });
     const h2 = document.querySelector("#pregunta-actual");
-    const opcion = document.querySelector('[role="group"] button');
+    const opcion = document.querySelector('[role="radiogroup"] button, [role="group"] button');
     return {
       visibles,
       pregunta: h2 ? parseFloat(getComputedStyle(h2).fontSize) : 0,
@@ -330,18 +330,18 @@ try {
   assert.equal(await ana.getByText(/grupos de 5 o más/).count(), 0, "clima ya no promete grupos de 5 o más");
   await sinDesborde(ana, "390-contestar");
   await pantallaCompletaLegible(ana, "390-contestar");
-  await ana.getByRole("button", { name: "9", exact: true }).click();
+  await ana.getByRole("radio", { name: "9", exact: true }).click();
   await ana.getByText("Pregunta 2 de 6").waitFor();
   await captura(ana, "390-contestar");
-  await ana.getByRole("button", { name: "De acuerdo", exact: true }).click();
+  await ana.getByRole("radio", { name: "De acuerdo", exact: true }).click();
   await ana.getByText("Pregunta 3 de 6").waitFor();
   await ana.reload({ waitUntil: "domcontentloaded" });
   await ana.getByText("Pregunta 3 de 6").waitFor({ timeout: 30000 }); // retoma donde iba (guardado en el teléfono)
-  await ana.getByRole("button", { name: "Totalmente de acuerdo" }).click();
+  await ana.getByRole("radio", { name: "Totalmente de acuerdo" }).click();
   await ana.getByText("Pregunta 4 de 6").waitFor();
-  await ana.getByRole("button", { name: "Sí", exact: true }).click();
+  await ana.getByRole("radio", { name: "Sí", exact: true }).click();
   await ana.getByText("Pregunta 5 de 6").waitFor();
-  await ana.getByRole("button", { name: "Tarde", exact: true }).click();
+  await ana.getByRole("radio", { name: "Tarde", exact: true }).click();
   await ana.getByText("Pregunta 6 de 6").waitFor();
   await ana.getByLabel("Tu respuesta").fill("Que los horarios se publiquen antes.");
   await ana.getByRole("button", { name: "Enviar respuestas" }).click();
@@ -366,18 +366,18 @@ try {
   await captura(ana, "390-nom035-inicio");
   await ana.getByRole("button", { name: "Empezar" }).click();
   await ana.getByText("Confidencial", { exact: true }).waitFor();
-  await ana.getByRole("button", { name: "Sí", exact: true }).click();
+  await ana.getByRole("radio", { name: "Sí", exact: true }).click();
   await ana.getByText(/Pregunta 2 de \d+/).waitFor();
   // Resto de la Guía I «No», filtros: atiende clientes «Sí», es jefe «No»; reactivos «Casi siempre».
   const enviar = ana.getByRole("button", { name: "Enviar respuestas" });
   for (let i = 0; i < 40 && !((await enviar.isVisible()) && (await enviar.isEnabled())); i++) {
     const t = await ana.locator("#pregunta-actual").innerText();
-    const grupo = ana.getByRole("group");
+    const grupo = ana.getByRole("radiogroup");
     const boton = /brindar servicio a clientes/.test(t)
-      ? grupo.getByRole("button", { name: "Sí", exact: true })
+      ? grupo.getByRole("radio", { name: "Sí", exact: true })
       : /jefe de otros/.test(t)
-      ? grupo.getByRole("button", { name: "No", exact: true })
-      : grupo.getByRole("button").nth(1);
+      ? grupo.getByRole("radio", { name: "No", exact: true })
+      : grupo.getByRole("radio").nth(1);
     await boton.click();
     await dormir(260);
   }

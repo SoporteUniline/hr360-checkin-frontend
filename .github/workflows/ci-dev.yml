@@ -103,8 +103,14 @@ jobs:
       - name: Asistencias — horas extra con la jornada diaria (misma regla que el servidor)
         run: node --test scripts/test-extra-del-dia.mjs
 
+      - name: Evaluación del desempeño — tablero, IA, evidencia y PDF (desemp1)
+        run: node --test scripts/test-evaluaciones-tablero.mjs scripts/test-evaluaciones-api.mjs
+
       - name: Asistencias y Monitor — refresco sin recargar (claves, SSE, ediciones abiertas)
         run: node --test scripts/test-refresco-asistencias.mjs
+
+      - name: Clima — canales, recordatorios, vista del jefe y «¿Cómo te fue hoy?»
+        run: node --test scripts/test-clima-canales.mjs
 
       - name: Créditos de Adamia AI — saldo, recargas y panel del administrador
         run: node --test scripts/test-creditos-ia.mjs
@@ -114,6 +120,12 @@ jobs:
 
       - name: Avisos y felicitaciones — campana, WhatsApp y plantillas de correo
         run: node --test scripts/test-avisos.mjs
+
+      - name: Desempeño — objetivos, 1:1, feedback, calibración 9-box y bono (pantallas)
+        run: node --test scripts/test-evaluaciones-talento.mjs
+
+      - name: Clima — NOM-035 lista para inspección, buzón, analítica, riesgo de rotación y ciclo de vida
+        run: node --test scripts/test-clima-inspeccion.mjs
 
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación

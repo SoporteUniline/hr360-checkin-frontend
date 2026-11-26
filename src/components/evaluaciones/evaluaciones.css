@@ -903,3 +903,216 @@ details.ev-panel > summary {
   border-bottom: 1px solid var(--ev-border);
   margin: -8px 0 20px;
 }
+/* (26/11/2026, desemp1) Plantillas base, tablero, IA, evidencia y aviso de privacidad. Texto ≥ 13px; botones ≥ 44px. */
+.ev-base-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.ev-base-card {
+  border: 1px solid var(--ev-border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.ev-base-card p,
+.ev-behaviors li,
+.ev-chip-list li {
+  font-size: 13px;
+}
+.ev-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.ev-chip-list li {
+  background: #f1f5f9;
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.ev-behaviors {
+  margin: 0;
+  padding-left: 18px;
+  color: #334155;
+  line-height: 1.5;
+}
+.ev-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.ev-kpi {
+  background: #f8fafc;
+  border: 1px solid var(--ev-border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.ev-kpi strong {
+  font-size: 22px;
+  font-weight: 650;
+}
+.ev-kpi span {
+  font-size: 13px;
+  color: var(--ev-muted);
+}
+.ev-bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(80px, 1.3fr) 44px;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  padding: 4px 0;
+}
+.ev-bar-row small {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+  font-size: 13px;
+}
+.ev-bar-label {
+  overflow-wrap: anywhere;
+}
+.ev-bar-track {
+  height: 10px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.ev-bar-fill {
+  display: block;
+  height: 100%;
+}
+.ev-fill-red { background: #e0566b; }
+.ev-fill-amber { background: #e3a23b; }
+.ev-fill-green { background: #2fa866; }
+.ev-fill-gray { background: #cbd5e1; }
+.ev-heat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ev-heat-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.4fr) repeat(var(--cols), minmax(0, 1fr));
+  gap: 4px;
+  font-size: 13px;
+}
+.ev-heat-head span {
+  font-weight: 600;
+  color: var(--ev-muted);
+  overflow-wrap: anywhere;
+}
+.ev-heat-cell {
+  border-radius: 8px;
+  padding: 8px;
+  text-align: center;
+  font-weight: 600;
+}
+.ev-heat-red { background: #fde8eb; color: #9f2236; }
+.ev-heat-amber { background: #fdf3e1; color: #8a520c; }
+.ev-heat-green { background: #e6f6ed; color: #146c3f; }
+.ev-heat-gray { background: #f1f5f9; color: #64748b; }
+.ev-heat-area {
+  display: none;
+}
+.ev-ai-box {
+  border: 1px dashed #c7d2fe;
+  background: #f8faff;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.ev-ai-box h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ev-ai-answer {
+  background: #fff;
+  border: 1px solid var(--ev-border);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ev-ai-answer ul {
+  margin: 0;
+  padding-left: 18px;
+}
+.ev-ai-answer small,
+.ev-evidence small,
+.ev-module .ev-evidence p,
+.ev-privacy p {
+  font-size: 13px;
+}
+.ev-privacy-line {
+  font-size: 13px;
+  margin: -8px 0 16px;
+}
+.ev-module .ev-base-card .ev-actions button,
+.ev-module .ev-ai-box button,
+.ev-module .ev-ai-answer button,
+.ev-module .ev-privacy button,
+.ev-privacy-line .ev-link {
+  min-height: 44px;
+}
+@media (max-width: 760px) {
+  .ev-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ev-kpi strong {
+    font-size: 19px;
+  }
+  /* Mapa de calor en tarjetas: cada competencia con sus áreas en renglones (sin scroll horizontal). */
+  .ev-heat-head {
+    display: none;
+  }
+  .ev-heat-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    border: 1px solid var(--ev-border);
+    border-radius: 10px;
+    padding: 8px;
+  }
+  .ev-heat-row > span[role="rowheader"] {
+    grid-column: 1 / -1;
+    font-weight: 600;
+  }
+  .ev-heat-area {
+    display: block;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 13px;
+  }
+}
+.ev-module .ev-heat-cell small,
+.ev-module .ev-ai-box label,
+.ev-module .ev-ai-box .ev-field > span,
+.ev-module .ev-ai-box .ev-field small {
+  font-size: 13px;
+}
+.ev-module .ev-base-card button,
+.ev-module .ev-ai-box button,
+.ev-module .ev-ai-answer button,
+.ev-module .ev-privacy button,
+.ev-module .ev-evidence button {
+  font-size: 13px;
+}
+@media (max-width: 760px) {
+  /* Título y acciones del panel (CSV, PDF) en dos renglones si no caben. */
+  .ev-panel-head {
+    flex-wrap: wrap;
+  }
+}

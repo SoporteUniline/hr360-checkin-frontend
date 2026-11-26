@@ -16,6 +16,9 @@ import { RUTA_EMPLEADO, RUTA_PANEL, rutaEncuesta } from "@/lib/clima/pendientes.
 import { BASE, Cargando, Vacio, codigoDe, errorDe, get } from "./ui";
 import { LLAVE_MIS_ENCUESTAS } from "./AvisoEncuestas";
 import Contestar from "./Contestar";
+import EquipoClima, { ListaEquipo } from "./EquipoClima";
+import MisAcciones from "./MisAcciones";
+import PoliticaAcuse from "./PoliticaAcuse";
 
 const AVISO_ANONIMA = `Tu opinión cuenta. ${AVISO_PRIVACIDAD_CLIMA}`;
 
@@ -29,7 +32,7 @@ function AvisoCambio() {
   );
 }
 
-function Lista({ base, enPanel }) {
+function Lista({ base, enPanel, empresa }) {
   const { dataUser } = useAuth();
   const { data, error } = useSWR(LLAVE_MIS_ENCUESTAS, get, {
     shouldRetryOnError: false,
@@ -81,6 +84,11 @@ function Lista({ base, enPanel }) {
       {hechas.length ? (
         <p className="text-[13px] text-slate-500">Ya contestaste: {hechas.map((e) => e.nombre).join(", ")}. ¡Gracias!</p>
       ) : null}
+      {/* Jefes: resultados de su equipo (encuestas cerradas). Responsables: sus acciones. No aparecen si no aplica. */}
+      <ListaEquipo base={base} empresa={empresa} />
+      <MisAcciones empresa={empresa} />
+      {/* NOM-035 (26/11/2026): la política de la empresa para leer y acusar de leído (solo la app del empleado). */}
+      {enPanel ? null : <PoliticaAcuse />}
     </div>
   );
 }
@@ -148,10 +156,17 @@ function Encuesta({ id, empresa, base }) {
   );
 }
 
-// base: RUTA_EMPLEADO (app del empleado) o RUTA_PANEL (panel de RH o dueño).
-export default function MisEncuestas({ id, empresa = null, base = RUTA_EMPLEADO }) {
+// base: RUTA_EMPLEADO (app del empleado) o RUTA_PANEL (panel de RH o dueño). equipo: id de una medición para la vista
+// del jefe (…/equipo/<id>).
+export default function MisEncuestas({ id, empresa = null, base = RUTA_EMPLEADO, equipo = null }) {
   const enPanel = base === RUTA_PANEL;
-  const contenido = id ? <Encuesta id={id} empresa={empresa} base={base} /> : <Lista base={base} enPanel={enPanel} />;
+  const contenido = equipo ? (
+    <EquipoClima id={equipo} base={base} empresa={empresa} />
+  ) : id ? (
+    <Encuesta id={id} empresa={empresa} base={base} />
+  ) : (
+    <Lista base={base} enPanel={enPanel} empresa={empresa} />
+  );
   if (!enPanel) return contenido;
   return (
     <div className="mx-auto w-full max-w-[1280px] space-y-4 p-1">
