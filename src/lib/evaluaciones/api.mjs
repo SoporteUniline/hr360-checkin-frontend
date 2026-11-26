@@ -139,5 +139,10 @@ export function createEvaluationApi(http, company) {
     );
     return { blob, filename: `evaluaciones-${kind}.csv` };
   }
-  return { get, all, mutate, exportCsv };
+  // (26/11/2026) PDF de marca (persona o campaña): descarga autenticada como archivo.
+  async function download(path, filename) {
+    const blob = await request("GET", path, undefined, { responseType: "blob" });
+    return { blob, filename };
+  }
+  return { get, all, mutate, exportCsv, download };
 }
