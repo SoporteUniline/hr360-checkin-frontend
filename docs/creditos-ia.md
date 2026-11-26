@@ -25,10 +25,35 @@ Ejemplo: costo $1 USD, tipo de cambio $20 → **$40 MXN + IVA**. Una pregunta t�
   tipo de cambio con aviso si tiene más de 30 días e historial; margen global con ejemplo en vivo; por empresa margen propio,
   movimientos con el cuadre del libro y «Regalar» (regalo/ajuste/reembolso con motivo y clave de idempotencia); paquetes.
 
+## Crédito de bienvenida y encendido del cobro (24/12/2026)
+
+- **Administrador — sección «Crédito de bienvenida»** en `/dashboard/creditos-ia` (regla del dueño: «todos con solo 1 dólar
+  de crédito gratis»): monto en US$ (0 a 50; 0 = apagado para nuevas), conversión del día con el TC registrado
+  («US$1.00 × $18.4567 = $18.46 MXN»), empresas pendientes y total, cuántas ya lo recibieron, y «Dar crédito de bienvenida a
+  todas (N)» → diálogo con el resumen (empresas, a cada una, TC con fecha, total y lista) → «Confirmar y abonar $X». El cuerpo
+  enviado es exactamente lo que vio (`{ confirmar, usd, tipo_cambio, empresas, total_mxn }`); si algo cambió el servidor
+  responde 409 y se muestra el mensaje. Sin TC registrado el botón queda deshabilitado con el motivo. Las empresas nuevas lo
+  reciben solas al darse de alta (backend).
+- **Modelos y precios:** línea «Modelos: panel … · WhatsApp … · precios revisados dd/mm/aaaa» y aviso ámbar si algún modelo
+  no tiene precio propio en la tabla del backend.
+- **Sin créditos desde cualquier pantalla** (`src/components/ia/AvisoSinCreditos.jsx`, montado en `src/app/panel/layout.jsx`):
+  `src/lib/axios.js` detecta el 402 `IA_SIN_CREDITOS` de cualquier petición (Clima, plantillas, desempeño, sugerencias de
+  WhatsApp…) y muestra un diálogo «Te quedaste sin créditos de Adamia AI» con el mensaje del servidor, «Ahora no» y
+  **«Recargar créditos»**. No se repite mientras está abierto, no sale en la propia pantalla de créditos y Adamia AI (Ley) lo
+  desactiva con `{ avisoSinCreditos: false }` porque ya lo muestra dentro de la conversación. El aviso de **saldo bajo** ya
+  existía (indicador ámbar «Saldo bajo · Recargar» y aviso en la pantalla de créditos, más correo al dueño).
+- **OXXO / SPEI:** al volver de Stripe con un pago diferido que venció o se rechazó (estado `fallida`): «Tu pago (folio IA-n)
+  no se completó… No se cobró ni se acreditó nada; puedes recargar de nuevo» y deja de esperar. Mientras espera, el mensaje
+  aclara que OXXO o transferencia pueden tardar.
+
 ## Lógica y pruebas
 
-- `src/lib/ia/creditos.mjs`: formato, avisos, regreso de Stripe, vista previa de la fórmula y validación de formularios.
+- `src/lib/ia/creditos.mjs`: formato, avisos, regreso de Stripe, vista previa de la fórmula y validación de formularios;
+  aviso global sin créditos, monto y resumen del crédito de bienvenida.
 - `scripts/test-creditos-ia.mjs` (CI: paso «Créditos de Adamia AI»).
+- `scripts/test-creditos-bienvenida.mjs` (CI: paso «Créditos de Adamia AI — crédito de bienvenida, aviso sin créditos y pago
+  OXXO/SPEI fallido»).
 - `scripts/verify-creditos-ia.mjs`: navegador real con API simulada a 1440 y 390 px (pantalla de créditos, recarga con
-  Stripe interceptado, regreso, indicador y 402, panel del administrador y regalo). Uso:
+  Stripe interceptado, regreso, indicador y 402, aviso global sin créditos desde Clima, OXXO fallido, panel del
+  administrador, regalo y crédito de bienvenida con confirmación). Uso:
   `NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build && node scripts/verify-creditos-ia.mjs`.

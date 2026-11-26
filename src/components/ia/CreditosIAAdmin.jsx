@@ -11,8 +11,8 @@ import axios from "@/lib/axios";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  claveFormulario, etiquetaTipo, margenDesdePorcentaje, mesesRecientes, montoMovimiento, mxn, nombreMes, porcentaje, precioEjemplo, tcValido, usd,
-  validarMovimiento,
+  bienvenidaUsdDesdeTexto, claveFormulario, cuerpoBienvenida, etiquetaTipo, margenDesdePorcentaje, mesesRecientes, montoMovimiento, mxn, nombreMes, porcentaje,
+  precioEjemplo, resumenBienvenida, tcTexto, tcValido, usd, validarMovimiento,
 } from "@/lib/ia/creditos.mjs";
 
 const get = (url) => axios.get(url).then((r) => r.data);
@@ -131,6 +131,101 @@ function Paquetes({ paquetes, alGuardar }) {
         <label className="block w-40 text-[12.5px] font-semibold text-slate-700">Nuevo paquete (MXN)<input inputMode="decimal" value={nuevo} onChange={(e) => setNuevo(e.target.value)} placeholder="2000" className={`${campo} mt-1`} /></label>
         <button type="submit" className={botonSec} disabled={ocupado === "nuevo" || !nuevo}><Plus className="size-4" /> Agregar</button>
       </form>
+    </section>
+  );
+}
+
+// (24/12/2026) Crédito de bienvenida: «todos con solo 1 dólar». Monto en dólares (se convierte con el TC registrado), vista
+// previa de cuántas empresas faltan y total, y «Dar a todas» con confirmación. El servidor rechaza (409) si algo cambió desde
+// la vista previa y abona una sola vez por empresa. Las empresas nuevas lo reciben solas al darse de alta.
+function DialogoBienvenida({ vista, alCerrar, alTerminar }) {
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState("");
+  const r = resumenBienvenida(vista);
+  const confirmar = async () => {
+    setEnviando(true); setError("");
+    try {
+      const { data } = await axios.post("/checador/ia/admin/bienvenida/todas", cuerpoBienvenida(vista));
+      await alTerminar(data);
+    } catch (err) { setError(errorDe(err, "No se pudo completar.")); } finally { setEnviando(false); }
+  };
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o && !enviando) alCerrar(); }}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Dar crédito de bienvenida a todas</DialogTitle>
+          <DialogDescription>Revisa el resumen. Cada empresa lo recibe una sola vez y lo ve en su historial.</DialogDescription>
+        </DialogHeader>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5 text-[13.5px]" data-resumen-bienvenida>
+          <dt className="text-slate-500">Empresas</dt><dd className="text-right font-semibold tabular-nums">{vista.pendientes}</dd>
+          <dt className="text-slate-500">A cada una</dt><dd className="text-right tabular-nums">{r.conversion}</dd>
+          <dt className="text-slate-500">Tipo de cambio</dt><dd className="text-right tabular-nums">{tcTexto(vista.tipo_cambio.usd_mxn)} · {fechaCorta(vista.tipo_cambio.registrado_en)}</dd>
+          <dt className="font-semibold text-slate-700">Total</dt><dd className="text-right text-lg font-extrabold tabular-nums">{mxn(vista.total_mxn)} MXN</dd>
+        </dl>
+        {vista.lista?.length ? (
+          <details className="text-[12.5px] text-slate-600">
+            <summary className="cursor-pointer font-semibold text-slate-700">Ver empresas{vista.pendientes > vista.lista.length ? ` (primeras ${vista.lista.length})` : ""}</summary>
+            <ul className="mt-1 max-h-40 overflow-y-auto">{vista.lista.map((e) => <li key={e.id_empresa} className="break-words py-0.5">#{e.id_empresa} · {e.empresa}</li>)}</ul>
+          </details>
+        ) : null}
+        {error ? <p role="alert" className="text-[13px] text-red-700">{error}</p> : null}
+        <DialogFooter>
+          <button type="button" className={botonSec} disabled={enviando} onClick={alCerrar}>Cancelar</button>
+          <button type="button" className={boton} disabled={enviando} onClick={confirmar}>{enviando ? <Loader2 className="size-4 animate-spin" /> : <Gift className="size-4" />} Confirmar y abonar {mxn(vista.total_mxn)}</button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Bienvenida({ alAbonar }) {
+  const { enqueueSnackbar } = useSnackbar();
+  const { data: vista, error, mutate } = useSWR("/checador/ia/admin/bienvenida", get, { shouldRetryOnError: false });
+  const [usd, setUsd] = useState(null);
+  const [guardando, setGuardando] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
+  const [ultimo, setUltimo] = useState(null);
+  if (error) {
+    return <section aria-labelledby="titulo-bienvenida" className={caja}><h2 id="titulo-bienvenida" className="flex items-center gap-2 text-[15px] font-bold text-slate-900"><Gift className="size-4 text-brand" /> Crédito de bienvenida</h2>
+      <p role="alert" className="mt-2 text-[13px] text-amber-800">{errorDe(error, "No se pudo cargar.")}</p></section>;
+  }
+  if (!vista) return null;
+  const valor = usd ?? String(vista.usd);
+  const r = resumenBienvenida(vista);
+  const guardarMonto = async (e) => {
+    e.preventDefault();
+    const n = bienvenidaUsdDesdeTexto(valor);
+    if (n == null) return enqueueSnackbar("El crédito de bienvenida va de US$0 (apagado) a US$50, con hasta 2 decimales.", { variant: "error" });
+    setGuardando(true);
+    try { await axios.put("/checador/ia/admin/bienvenida", { usd: n }); enqueueSnackbar(n === 0 ? "Crédito de bienvenida apagado para empresas nuevas." : `Crédito de bienvenida: US$${n.toFixed(2)}.`, { variant: "success" }); setUsd(null); await mutate(); }
+    catch (err) { enqueueSnackbar(errorDe(err, "No se pudo guardar."), { variant: "error" }); } finally { setGuardando(false); }
+    return undefined;
+  };
+  const alTerminar = async (data) => {
+    setConfirmando(false); setUltimo(data);
+    enqueueSnackbar(`Listo: ${data.acreditadas} ${data.acreditadas === 1 ? "empresa recibió" : "empresas recibieron"} ${mxn(data.monto_mxn)} (total ${mxn(data.total_mxn)}).`, { variant: "success" });
+    await mutate(); await alAbonar();
+  };
+  return (
+    <section aria-labelledby="titulo-bienvenida" className={caja} data-bienvenida>
+      <h2 id="titulo-bienvenida" className="flex items-center gap-2 text-[15px] font-bold text-slate-900"><Gift className="size-4 text-brand" /> Crédito de bienvenida</h2>
+      <p className="mt-0.5 text-[12.5px] text-slate-500">Saldo de regalo para cada empresa, una sola vez. Se convierte a pesos con el tipo de cambio registrado. Las empresas nuevas lo reciben al darse de alta.</p>
+      <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+        <form onSubmit={guardarMonto} className="flex flex-wrap items-end gap-2">
+          <label className="block w-36 text-[12.5px] font-semibold text-slate-700">Monto (US$)<input inputMode="decimal" value={valor} onChange={(e) => setUsd(e.target.value)} className={`${campo} mt-1`} /></label>
+          <button type="submit" disabled={guardando || valor === String(vista.usd)} className={botonSec}>{guardando ? <Loader2 className="size-4 animate-spin" /> : null} Guardar monto</button>
+          <p className="w-full text-[12px] text-slate-500">{r.conversion ? `Hoy: ${r.conversion}` : "Sin tipo de cambio registrado."} · Ya lo recibieron {vista.ya_recibieron} ({mxn(vista.ya_recibieron_mxn)})</p>
+        </form>
+        <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-[13px] font-semibold text-slate-800">{vista.pendientes} {vista.pendientes === 1 ? "empresa pendiente" : "empresas pendientes"}{vista.listo ? ` · total ${mxn(vista.total_mxn)} MXN` : ""}</p>
+          <p className={`mt-0.5 text-[12.5px] ${vista.listo ? "text-slate-600" : "text-amber-800"}`} role={vista.listo ? undefined : "status"}>{r.texto}</p>
+          <button type="button" className={`${boton} mt-2 w-full sm:w-auto`} disabled={!vista.listo || valor !== String(vista.usd)} onClick={() => setConfirmando(true)}>
+            <Gift className="size-4" /> Dar crédito de bienvenida a todas{vista.listo ? ` (${vista.pendientes})` : ""}
+          </button>
+          {ultimo ? <p role="status" className="mt-2 text-[12.5px] text-emerald-800">Última corrida: {ultimo.acreditadas} acreditadas · {ultimo.ya_tenian} ya lo tenían{ultimo.errores?.length ? ` · ${ultimo.errores.length} con error (reintenta)` : ""} · total {mxn(ultimo.total_mxn)}.</p> : null}
+        </div>
+      </div>
+      {confirmando ? <DialogoBienvenida vista={vista} alCerrar={() => setConfirmando(false)} alTerminar={alTerminar} /> : null}
     </section>
   );
 }
@@ -306,6 +401,8 @@ export default function CreditosIAAdmin() {
             <Kpi titulo="No cubierto" valor={mxn(t.no_cubierto_mxn)} nota="lo absorbe ADAMIA" tono={t.no_cubierto_mxn > 0 ? "text-amber-700" : "text-slate-900"} />
             <Kpi titulo={data.cobro_activo ? "Compras" : "Se habría cobrado"} valor={mxn(data.cobro_activo ? t.compras_mxn : t.precio_sin_cobro_mxn)} nota={data.cobro_activo ? "recargas del mes" : "con el cobro apagado"} />
           </div>
+          {data.modelos?.aviso ? <p role="alert" className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-[13px] text-amber-800"><TriangleAlert className="mt-0.5 size-4 shrink-0" />{data.modelos.aviso}</p> : null}
+          {data.modelos ? <p className="text-[12px] text-slate-500" data-modelos>Modelos: {data.modelos.lista.map((m) => `${m.uso === "panel" ? "panel" : "WhatsApp"} ${m.modelo}`).join(" · ")} · precios revisados {fechaCorta(data.modelos.precios_revisados)}</p> : null}
           <div className="grid gap-4 lg:grid-cols-3">
             <div className="lg:col-span-2"><TipoCambio tc={data.tipo_cambio} alGuardar={refrescar} /></div>
             <Margen key={data.margen_global} margen={data.margen_global} tc={data.tipo_cambio.usd_mxn} alGuardar={refrescar} />
@@ -324,6 +421,7 @@ export default function CreditosIAAdmin() {
               <button type="submit" className={botonSec} disabled={!otra}><Gift className="size-4" /> Regalar</button>
             </form>
           </section>
+          <Bienvenida alAbonar={refrescar} />
           <Paquetes paquetes={data.paquetes} alGuardar={refrescar} />
         </>
       ) : null}

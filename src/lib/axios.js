@@ -3,6 +3,7 @@ import Cookies from "js-cookie";
 import { fetchSeguro } from "./fetchSeguro.mjs";
 import { esSesionCerrada, RUTA_LOGIN_SESION_CERRADA } from "./passkeys/modelo.mjs";
 import { alResponderAxios } from "./asistencia/refrescoAsistencias";
+import { debeAvisarSinCreditos, EVENTO_SIN_CREDITOS, MENSAJE_SIN_CREDITOS } from "./ia/creditos.mjs";
 
 let offlineReady;
 export function ensureOfflineCache() {
@@ -28,7 +29,17 @@ function agregarTokenAlBackend(config) {
 // contraseña): 401 SESION_REVOCADA / SESION_EXPIRADA → se borra el token y se va al login con aviso. Los demás 401 y los
 // 503 (servidor caído) siguen como antes. Ver docs/passkeys-sesiones.md.
 let saliendo = false;
+// (24/12/2026) Sin créditos de Adamia AI (402 IA_SIN_CREDITOS) en cualquier pantalla con IA: se avisa una vez con
+// «Recargar créditos» (components/ia/AvisoSinCreditos). El error sigue su camino: cada pantalla muestra además su mensaje.
+function avisarSinCreditos(error) {
+  try {
+    if (typeof window !== "undefined" && debeAvisarSinCreditos(error, window.location.pathname)) {
+      window.dispatchEvent(new CustomEvent(EVENTO_SIN_CREDITOS, { detail: { mensaje: error.response.data?.error || MENSAJE_SIN_CREDITOS } }));
+    }
+  } catch { /* el aviso nunca rompe la respuesta */ }
+}
 function alCerrarseLaSesion(error) {
+  avisarSinCreditos(error);
   const r = error?.response;
   if (typeof window !== "undefined" && !saliendo && esSesionCerrada(r?.status, r?.data)) {
     Cookies.remove("token");
