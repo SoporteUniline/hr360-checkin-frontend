@@ -58,11 +58,54 @@ export function mensajeRegreso({ compra, folio, simulada }, estadoServidor) {
   if (compra !== "ok") return null;
   if (estadoServidor === "pagada") return { tono: "exito", texto: `¡Listo! Tu recarga (folio IA-${folio}) ya está en tu saldo.${simulada ? " (Compra de prueba: no se cobró nada.)" : ""}` };
   if (estadoServidor === "revisar" || estadoServidor === "error") return { tono: "alerta", texto: `Tu pago (folio IA-${folio}) quedó en revisión. Escríbenos y lo resolvemos.` };
-  return { tono: "info", texto: `Estamos confirmando tu pago con el banco (folio IA-${folio}). Tu saldo se actualiza en cuanto llegue.` };
+  // (24/12/2026) Pago diferido (OXXO / transferencia) que venció o se rechazó: Stripe avisa con async_payment_failed.
+  if (estadoServidor === "fallida") return { tono: "alerta", texto: `Tu pago (folio IA-${folio}) no se completó: la ficha de OXXO o la transferencia venció o fue rechazada. No se cobró ni se acreditó nada; puedes recargar de nuevo.` };
+  return { tono: "info", texto: `Estamos confirmando tu pago con el banco (folio IA-${folio}). Tu saldo se actualiza en cuanto llegue. Si pagas en OXXO o por transferencia, puede tardar hasta que se refleje tu pago.` };
 }
 
 // Mientras el pago no se confirma (webhook), la pantalla vuelve a preguntar unas veces.
-export const debeEsperarConfirmacion = (regreso, estadoServidor) => regreso?.compra === "ok" && !["pagada", "revisar", "error"].includes(estadoServidor);
+export const debeEsperarConfirmacion = (regreso, estadoServidor) => regreso?.compra === "ok" && !["pagada", "revisar", "error", "fallida"].includes(estadoServidor);
+
+// (24/12/2026) Sin créditos (402 IA_SIN_CREDITOS) desde CUALQUIER pantalla con IA (Ley, Clima, plantillas, desempeño,
+// sugerencias de WhatsApp…): lib/axios avisa con este evento y components/ia/AvisoSinCreditos muestra «Recargar créditos».
+// Una pantalla que ya lo muestra en su lugar (Adamia AI) manda { avisoSinCreditos: false } en la petición.
+export const EVENTO_SIN_CREDITOS = "adamia:sin-creditos";
+export const esSinCreditos = (status, data) => Number(status) === 402 && data?.codigo === "IA_SIN_CREDITOS";
+export function debeAvisarSinCreditos(error, rutaActual = "") {
+  const r = error?.response;
+  if (!esSinCreditos(r?.status, r?.data)) return false;
+  if (error?.config?.avisoSinCreditos === false) return false;
+  return !String(rutaActual).startsWith(RUTA_CREDITOS);
+}
+
+// ---------------------------------------------------------------- Crédito de bienvenida (panel del administrador)
+// Monto en dólares: 0 (apagado) a 50, hasta 2 decimales (misma regla que el servidor, services/ia/cobro.js). null = inválido.
+export function bienvenidaUsdDesdeTexto(texto) {
+  const limpio = String(texto ?? "").replace(/[$\s]|US|USD/gi, "");
+  if (limpio === "") return null;
+  const n = Number(limpio);
+  if (!Number.isFinite(n) || n < 0 || n > 50) return null;
+  if (Math.abs(Math.round(n * 100) - n * 100) > 1e-6) return null;
+  return Math.round(n * 100) / 100;
+}
+
+const FORMATO_TC = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", minimumFractionDigits: 2, maximumFractionDigits: 4 });
+export const tcTexto = (v) => FORMATO_TC.format(Number(v) || 0);
+
+// Resumen que el administrador confirma antes de abonar a todas las empresas pendientes.
+export function resumenBienvenida(v) {
+  if (!v?.disponible) return null;
+  const empresas = `${v.pendientes} ${v.pendientes === 1 ? "empresa" : "empresas"}`;
+  const conversion = v.tipo_cambio ? `US$${Number(v.usd).toFixed(2)} × ${tcTexto(v.tipo_cambio.usd_mxn)} = ${mxn(v.monto_mxn)} MXN` : null;
+  return {
+    empresas,
+    conversion,
+    texto: v.listo ? `Se abonarán ${mxn(v.monto_mxn)} MXN (${conversion}) a ${empresas}: total ${mxn(v.total_mxn)} MXN. Una sola vez por empresa.` : v.motivo,
+  };
+}
+
+// Cuerpo exacto de la confirmación: el servidor lo compara con su propia vista previa (si algo cambió, responde 409).
+export const cuerpoBienvenida = (v) => ({ confirmar: true, usd: v.usd, tipo_cambio: v.tipo_cambio?.usd_mxn, empresas: v.pendientes, total_mxn: v.total_mxn });
 
 // Vista previa del precio en el panel del administrador (misma fórmula, techo al centavo).
 export function precioEjemplo({ costoUsd, tipoCambio, margen }) {

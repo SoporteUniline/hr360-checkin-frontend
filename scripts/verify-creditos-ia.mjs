@@ -57,6 +57,8 @@ const resumenAdmin = {
   tipo_cambio: { usd_mxn: 20, fuente: "admin", registrado_en: "2026-10-16 15:00:00", dias: 40, aviso: "El tipo de cambio tiene 40 días. Actualízalo.",
     historial: [{ id: 2, usd_mxn: 20, fecha_referencia: "2026-10-16", fuente: "DOF", registrado_por: "Admin ADAMIA", creado_en: "2026-10-16 15:00:00" }] },
   margen_global: 0.5,
+  modelos: { lista: [{ uso: "panel", modelo: "gemini-2.5-flash", con_precio: true }, { uso: "whatsapp", modelo: "gemini-3.6-flash", con_precio: true }],
+    precios_revisados: "2026-11-26", fuente: "https://ai.google.dev/gemini-api/docs/pricing", aviso: null },
   paquetes: [{ id: 1, monto_mxn: 200, activo: true, orden: 1 }, { id: 2, monto_mxn: 500, activo: true, orden: 2 }, { id: 3, monto_mxn: 1000, activo: true, orden: 3 }],
   empresas: [
     { id_empresa: 10, empresa: "Uniline", usos: 152, costo_usd: 0.6512, costo_usd_whatsapp: 0.31, costo_mxn_cobrado: 6.82, cobrado_mxn: 13.52, ganancia_mxn: 6.7, no_cubierto_mxn: 0,
@@ -66,6 +68,12 @@ const resumenAdmin = {
   ],
   totales: { costo_usd: 0.7192, costo_usd_whatsapp: 0.31, costo_mxn_cobrado: 8.18, cobrado_mxn: 16.62, ganancia_mxn: 8.44, no_cubierto_mxn: 0.04, precio_sin_cobro_mxn: 0, compras_mxn: 500 },
 };
+
+// (24/12/2026) Crédito de bienvenida: 37 empresas pendientes a US$1 × $18.4567 = $18.46 → $683.02.
+const vistaBienvenida = { ok: true, disponible: true, usd: 1, actualizado_por: "migración 20261224", actualizado_en: "2026-12-24 10:00:00",
+  tipo_cambio: { usd_mxn: 18.4567, registrado_en: "2026-12-23 15:00:00" }, monto_mxn: 18.46, pendientes: 37, total_mxn: 683.02,
+  lista: [{ id_empresa: 10, empresa: "Uniline" }, { id_empresa: 11, empresa: "Distribuidora del Pacífico con un nombre comercial largo" }],
+  ya_recibieron: 0, ya_recibieron_mxn: 0, listo: true, motivo: null };
 
 async function contexto(browser, { tipo, ancho, alto, creditos = creditosBase, preguntar = null, compraTras = null }) {
   const ctx = await browser.newContext({ viewport: { width: ancho, height: alto }, deviceScaleFactor: 2, locale: "es-MX", timezoneId: "America/Mexico_City",
@@ -103,6 +111,15 @@ async function contexto(browser, { tipo, ancho, alto, creditos = creditosBase, p
     if (p === "/checador/ia/estado") return ok(estadoIa(creditos));
     if (p === "/checador/ia/lft/preguntar") return preguntar ? ok(...preguntar) : ok({ ok: true, id_conversacion: 1, respuesta: "16 días (Art. 76 LFT).", articulos: [] });
     if (p === "/checador/ia/admin/creditos") return ok(resumenAdmin);
+    if (p === "/checador/ia/admin/bienvenida") return req.method() === "PUT" ? ok({ ok: true, usd: cuerpo?.usd }) : ok(vistaBienvenida);
+    if (p === "/checador/ia/admin/bienvenida/todas") return ok({ ok: true, acreditadas: 37, ya_tenian: 0, errores: [], total_mxn: 683.02, monto_mxn: 18.46, usd: 1, tipo_cambio: 18.4567 });
+    // Clima · «Créala con Adamia AI» sin créditos: el 402 dispara el aviso global con «Recargar créditos».
+    if (p === "/checador/clima/ia/estado") return ok(estadoIa(creditos));
+    if (p === "/checador/clima/ia/crear") return ok({ ok: false, error: "Sin créditos de Adamia AI. Recarga para seguir usando la IA.", codigo: "IA_SIN_CREDITOS" }, 402);
+    if (p === "/checador/clima/campanias") return ok({ ok: true, campanias: [] });
+    if (p === "/checador/clima/plantillas") return ok({ ok: true, plantillas: [] });
+    if (p === "/checador/clima/ciclo-vida") return ok({ ok: true, ciclos: [], diasParaContestar: 7 });
+    if (p === "/checador/clima/inicio") return ok({ ok: true, catalogo: [], empresa: { activos: 12, guias: [], muestraGuiaIII: false }, canales: {} });
     if (/^\/checador\/ia\/admin\/creditos\/\d+\/movimientos$/.test(p)) {
       if (req.method() === "POST") return ok({ ok: true, duplicado: false, id_movimiento: 99, saldo_mxn: 584.2 }, 201);
       return ok({ ok: true, cuadre: { cuadra: true, suma: 8420, saldo: 8420, movimientos: 4 }, movimientos: movimientos.map((m) => ({ ...m, funcion: null, motivo: m.concepto, referencia: `x:${m.id}`, no_cubierto_mxn: 0, creado_por: "Sistema" })) });
@@ -197,6 +214,43 @@ try {
       assert.match(await alerta.innerText(), /Sin créditos de Adamia AI\. Recarga para seguir usando la IA\.\s*Recargar créditos/);
       assert.equal(await alerta.getByRole("link", { name: "Recargar créditos" }).getAttribute("href"), "/panel/creditos-ia");
       await foto(page, `${ancho}-indicador-sin-creditos`, false);
+      assert.equal(await page.locator("[data-aviso-sin-creditos]").count(), 0, "Adamia AI ya lo muestra en su lugar: sin aviso doble");
+      assert.deepEqual(errores, []);
+    }
+
+    // ───── 3b) Sin créditos desde OTRA pantalla con IA (Clima): aviso global con «Recargar créditos» ─────
+    {
+      const sin = { ...creditosBase, saldo_mxn: 0, saldo_bajo: true, sin_creditos: true };
+      const { page, errores } = await contexto(browser, { tipo: "Recruiter", ancho, alto, creditos: sin });
+      await page.goto(base + "/panel/clima/encuestas", { waitUntil: "domcontentloaded" });
+      const caja = page.getByRole("region", { name: "Créala con Adamia AI" });
+      await caja.waitFor({ timeout: 30000 });
+      await caja.locator("[data-indicador-creditos]").waitFor();
+      await caja.getByRole("button", { name: "¿Por qué se va la gente?" }).click();
+      await caja.getByRole("button", { name: "Armar encuesta" }).click();
+      const aviso = page.getByRole("dialog", { name: "Te quedaste sin créditos de Adamia AI" });
+      await aviso.waitFor({ timeout: 15000 });
+      assert.match(await aviso.innerText(), /Sin créditos de Adamia AI\. Recarga para seguir usando la IA\./);
+      const recargar = aviso.getByRole("link", { name: "Recargar créditos" });
+      assert.equal(await recargar.getAttribute("href"), "/panel/creditos-ia");
+      await dormir(400); // termina la animación de entrada (zoom 95 %) antes de medir
+      // La X de cerrar es la del Dialog compartido (components/ui/dialog.jsx, fuera de este cambio): se revisan los botones propios.
+      if (ancho < 500) assert.deepEqual((await pequenos(aviso)).filter((x) => x.t !== "Close"), [], "táctiles ≥ 44 px en el aviso");
+      assert.ok(await sinDesborde(page), `sin desborde lateral a ${ancho}`);
+      await foto(page, `${ancho}-aviso-sin-creditos-clima`, false);
+      await recargar.click();
+      await page.waitForURL("**/panel/creditos-ia", { timeout: 30000 });
+      await page.getByRole("heading", { name: "Créditos de Adamia AI" }).waitFor({ timeout: 30000 });
+      assert.deepEqual(errores, [], `sin errores de JS (aviso sin créditos ${ancho})`);
+    }
+
+    // ───── 3c) Regreso de Stripe con pago OXXO/SPEI que venció (async_payment_failed) ─────
+    {
+      const fallida = { ...creditosBase, compra: { folio: 7, estado: "fallida" } };
+      const { page, errores } = await contexto(browser, { tipo: "Recruiter", ancho, alto, creditos: fallida });
+      await page.goto(base + "/panel/creditos-ia?compra=ok&folio=7", { waitUntil: "domcontentloaded" });
+      await page.getByText("Tu pago (folio IA-7) no se completó").waitFor({ timeout: 30000 });
+      await foto(page, `${ancho}-regreso-oxxo-fallido`, false);
       assert.deepEqual(errores, []);
     }
 
@@ -237,11 +291,36 @@ try {
       assert.ok(p, "se envió el regalo a la empresa 10");
       assert.deepEqual({ ...p.cuerpo, clave: undefined }, { tipo: "regalo", monto_mxn: 500, motivo: "Créditos de arranque", clave: undefined });
       assert.match(p.cuerpo.clave, /^[\w-]{8,80}$/, "clave de idempotencia");
+
+      // Crédito de bienvenida: vista previa → confirmación con el resumen → cuerpo exacto.
+      const bien = page.locator("[data-bienvenida]");
+      await bien.scrollIntoViewIfNeeded();
+      const tb = (await bien.innerText()).replace(/\s/g, " ");
+      assert.match(tb, /37 empresas pendientes · total \$683\.02 MXN/);
+      assert.match(tb, /Hoy: US\$1\.00 × \$18\.4567 = \$18\.46 MXN/);
+      assert.ok(await sinDesborde(page), `bienvenida sin desborde a ${ancho}`);
+      if (ancho < 500) assert.deepEqual(await pequenos(bien), [], "táctiles ≥ 44 px en bienvenida");
+      await foto(page, `${ancho}-admin-bienvenida`, false);
+      await bien.getByRole("button", { name: "Dar crédito de bienvenida a todas (37)" }).click();
+      const conf = page.getByRole("dialog", { name: "Dar crédito de bienvenida a todas" });
+      await conf.waitFor();
+      const tc = (await conf.locator("[data-resumen-bienvenida]").innerText()).replace(/\s/g, " ");
+      assert.match(tc, /Empresas 37/);
+      assert.match(tc, /Total \$683\.02 MXN/);
+      assert.equal(pedidos.filter((x) => x.ruta === "/checador/ia/admin/bienvenida/todas").length, 0, "nada se abona sin confirmar");
+      await foto(page, `${ancho}-admin-bienvenida-confirmar`, false);
+      await conf.getByRole("button", { name: /Confirmar y abonar \$683\.02/ }).click();
+      await conf.waitFor({ state: "detached" });
+      const pb = pedidos.find((x) => x.metodo === "POST" && x.ruta === "/checador/ia/admin/bienvenida/todas");
+      assert.deepEqual(pb.cuerpo, { confirmar: true, usd: 1, tipo_cambio: 18.4567, empresas: 37, total_mxn: 683.02 }, "lo que vio el administrador");
+      await bien.getByText(/Última corrida: 37 acreditadas/).waitFor();
+      assert.match(await page.locator("[data-modelos]").innerText(), /WhatsApp gemini-3\.6-flash · precios revisados 26\/11\/2026/);
       assert.deepEqual(errores, [], `sin errores de JS (admin ${ancho})`);
     }
   }
 
   exito = true;
+  console.log("OK · aviso global sin créditos (Clima) con «Recargar créditos» y sin aviso doble en Adamia AI · OXXO/SPEI fallido al volver · crédito de bienvenida (vista previa 37 empresas, confirmación, cuerpo exacto) · modelos y fecha de precios");
   console.log("OK · créditos del dueño (saldo, aviso 20 %, paquetes + IVA, consumo, historial; sin costo ni margen) · recarga → Stripe interceptado con solo empresa y paquete · regreso: confirmando → ¡Listo! · indicador «Saldo de Adamia AI: $X MXN» y 402 con «Recargar créditos» · admin (KPIs, aviso TC 40 días, fórmula $1 → $40, regalo con motivo y clave) · 1440 y 390 sin desborde · táctiles ≥ 44 px · sin errores de JS");
 } finally {
   await browser.close();
