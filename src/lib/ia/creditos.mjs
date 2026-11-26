@@ -7,6 +7,10 @@ const FORMATO_USD = new Intl.NumberFormat("en-US", { style: "currency", currency
 
 export const RUTA_CREDITOS = "/panel/creditos-ia";
 export const MENSAJE_SIN_CREDITOS = "Sin créditos de Adamia AI. Recarga para seguir usando la IA.";
+// (25/12/2026) Mientras el administrador no encienda el cobro (interruptor del panel), no se hace pensar que se cobra.
+export const MENSAJE_COBRO_GRATIS = "Gratis por ahora: el cobro de Adamia AI aún no está activo";
+// Solo con el dato explícito del servidor (cobro_activo === false): si falta, no se promete que es gratis.
+export const cobroGratis = (creditos) => Boolean(creditos?.disponible) && creditos.cobro_activo === false;
 
 export const mxn = (v) => FORMATO_MXN.format(Number(v) || 0);
 export const usd = (v) => FORMATO_USD.format(Number(v) || 0);
@@ -15,12 +19,14 @@ export const porcentaje = (m) => `${Math.round((Number(m) || 0) * 1000) / 10} %`
 // Texto del indicador (reemplaza «Uso de Adamia AI este mes: … USD»). null = no hay créditos (sin la migración).
 export function textoIndicador(creditos) {
   if (!creditos?.disponible) return null;
+  if (cobroGratis(creditos)) return MENSAJE_COBRO_GRATIS;
   return `Saldo de Adamia AI: ${mxn(creditos.saldo_mxn)} MXN`;
 }
 
-// Tono del saldo para el indicador y la pantalla: sin (rojo), bajo (ámbar) o normal.
+// Tono del saldo para el indicador y la pantalla: gratis (cobro apagado), sin (rojo), bajo (ámbar) o normal.
 export function tonoSaldo(creditos) {
   if (!creditos?.disponible) return "normal";
+  if (cobroGratis(creditos)) return "gratis";
   if (creditos.sin_creditos) return "sin";
   if (creditos.saldo_bajo) return "bajo";
   return "normal";
@@ -28,11 +34,9 @@ export function tonoSaldo(creditos) {
 
 export function avisoSaldo(creditos) {
   const tono = tonoSaldo(creditos);
+  if (tono === "gratis") return { tono: "info", texto: `${MENSAJE_COBRO_GRATIS}. Tus consultas no descuentan saldo; aquí ves cuánto costaría cada una.` };
   if (tono === "sin") return { tono, texto: MENSAJE_SIN_CREDITOS };
   if (tono === "bajo") return { tono, texto: "Tu saldo bajó del 20 % de tu última recarga. Recarga para no quedarte sin Adamia AI." };
-  if (creditos?.disponible && !creditos.cobro_activo) {
-    return { tono: "info", texto: "Por ahora Adamia AI no descuenta créditos: ves tu saldo y cuánto costaría cada consulta." };
-  }
   return null;
 }
 
@@ -162,3 +166,28 @@ export const nombreMes = (aaaamm) => {
 // Clave única por formulario abierto (idempotencia del regalo/ajuste ante doble clic o reintento).
 export const claveFormulario = () =>
   (globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`).replace(/[^\w-]/g, "");
+
+// ---------------------------------------------------------------- Interruptor del cobro (panel del administrador, 25/12/2026)
+// La autoridad es el servidor (services/ia/interruptorCobro.js): IA_COBRO_CREDITOS=false lo apaga siempre, =true lo enciende,
+// sin la variable manda el panel. Aquí solo se presenta el estado y se arma la confirmación.
+export const CONFIRMACION_ENCENDER = "ENCENDER";
+export function estadoCobro(e) {
+  if (!e) return null;
+  const forzado = e.fuente === "variable";
+  return { etiqueta: e.efectivo ? "Encendido" : "Apagado", tono: e.efectivo ? "encendido" : "apagado", forzado, nota: forzado ? (e.nota_variable ?? null) : null };
+}
+export const confirmacionEncender = (texto) => String(texto ?? "").trim().toUpperCase() === CONFIRMACION_ENCENDER;
+const motivoLimpio = (m) => String(m ?? "").trim().slice(0, 300);
+export function puedeConfirmarCobro({ activo, confirmar, motivo, bloqueado = false }) {
+  if (motivoLimpio(motivo).length < 5) return false;
+  if (!activo) return true;
+  return !bloqueado && confirmacionEncender(confirmar);
+}
+// Cuerpo exacto del PUT /checador/ia/admin/cobro.
+export function cuerpoCobro({ activo, confirmar, motivo }) {
+  return activo ? { activo: true, confirmar: confirmacionEncender(confirmar) ? CONFIRMACION_ENCENDER : String(confirmar ?? "").trim(), motivo: motivoLimpio(motivo) }
+    : { activo: false, motivo: motivoLimpio(motivo) };
+}
+const ORDEN_NIVEL = { bloquea: 0, advierte: 1, recordatorio: 2 };
+export const advertenciasOrdenadas = (lista) => [...(lista ?? [])].sort((a, b) => (ORDEN_NIVEL[a.nivel] ?? 3) - (ORDEN_NIVEL[b.nivel] ?? 3));
+export const descripcionCambioCobro = (h) => [h.a ? "Encendió" : "Apagó", h.por, h.motivo].filter(Boolean).join(" · ");

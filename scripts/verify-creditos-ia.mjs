@@ -5,6 +5,10 @@
 //   - Indicador en Adamia AI: «Saldo de Adamia AI: $X MXN» (ya no «Uso … USD»); sin créditos, el 402 muestra «Recargar créditos».
 //   - Administrador: KPIs (costo, cobrado, ganancia), aviso de tipo de cambio de más de 30 días, ejemplo de la fórmula
 //     ($1 USD × $20 → $40.00), tabla/tarjetas por empresa y regalo con motivo (body exacto, con clave de idempotencia).
+//   - (25/12/2026) Interruptor del cobro: tarjeta «Cobro de Adamia AI» (Apagado/Encendido), diálogo con advertencias que
+//     exige motivo y escribir ENCENDER (cuerpo exacto del PUT), historial; nota cuando la variable del servidor lo fuerza;
+//     sin tipo de cambio no se puede confirmar (409). Cliente con el cobro apagado: «Gratis por ahora…» en la pantalla de
+//     créditos y en el pie de Adamia AI (en vez de «Saldo de Adamia AI: $0.00 MXN · Ver créditos»).
 //   - Sin desplazamiento lateral, objetivos táctiles ≥ 44 px en celular y sin errores de JavaScript.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build && node scripts/verify-creditos-ia.mjs
 // CAPTURAS=<carpeta> guarda capturas (deviceScaleFactor 2).
@@ -75,7 +79,19 @@ const vistaBienvenida = { ok: true, disponible: true, usd: 1, actualizado_por: "
   lista: [{ id_empresa: 10, empresa: "Uniline" }, { id_empresa: 11, empresa: "Distribuidora del Pacífico con un nombre comercial largo" }],
   ya_recibieron: 0, ya_recibieron_mxn: 0, listo: true, motivo: null };
 
-async function contexto(browser, { tipo, ancho, alto, creditos = creditosBase, preguntar = null, compraTras = null }) {
+// (25/12/2026) Estado del interruptor que devuelve GET /admin/cobro (el PUT lo cambia dentro de cada contexto).
+const ADVERTENCIAS_COBRO = [
+  { codigo: "BIENVENIDA_PENDIENTE", nivel: "advierte", pendientes: 37, texto: "37 empresas aún no reciben su crédito de bienvenida: sin saldo, la IA se les bloqueará al encender. Dalo antes en «Crédito de bienvenida»." },
+  { codigo: "STRIPE_EVENTOS_ASYNC", nivel: "recordatorio", texto: "Revisa en Stripe (Developers → Webhooks) que el endpoint escuche checkout.session.async_payment_succeeded y async_payment_failed (pagos OXXO/SPEI). Desde aquí no se puede comprobar." },
+];
+const cobroApagado = { ok: true, migracion: true, panel: false, variable: null, efectivo: false, fuente: "panel", nota_variable: null, cambio: null, historial: [],
+  cache_segundos: 30, advertencias: ADVERTENCIAS_COBRO, puede_encender: true, confirmacion: "ENCENDER" };
+const cobroEncendido = { ...cobroApagado, panel: true, efectivo: true, advertencias: [],
+  cambio: { por: "Admin ADAMIA (#100)", en: "2026-12-25T16:00:00.000Z", motivo: "Arranque del cobro", de: false, a: true },
+  historial: [{ id: 1, de: false, a: true, por: "Admin ADAMIA (#100)", motivo: "Arranque del cobro", en: "2026-12-25T16:00:00.000Z" }] };
+
+async function contexto(browser, { tipo, ancho, alto, creditos = creditosBase, preguntar = null, compraTras = null, cobro = cobroEncendido, putCobro = null }) {
+  const estadoCobroMock = structuredClone(cobro);
   const ctx = await browser.newContext({ viewport: { width: ancho, height: alto }, deviceScaleFactor: 2, locale: "es-MX", timezoneId: "America/Mexico_City",
     hasTouch: ancho < 500, isMobile: ancho < 500 });
   await ctx.addCookies([{ name: "token", value: token(tipo), url: base }]);
@@ -110,7 +126,18 @@ async function contexto(browser, { tipo, ancho, alto, creditos = creditosBase, p
     if (p === "/checador/ia/creditos/recargar") return ok({ ok: true, url: "https://checkout.stripe.com/c/pay/cs_test_verify", id_compra: 5, simulada: false });
     if (p === "/checador/ia/estado") return ok(estadoIa(creditos));
     if (p === "/checador/ia/lft/preguntar") return preguntar ? ok(...preguntar) : ok({ ok: true, id_conversacion: 1, respuesta: "16 días (Art. 76 LFT).", articulos: [] });
-    if (p === "/checador/ia/admin/creditos") return ok(resumenAdmin);
+    if (p === "/checador/ia/admin/creditos") return ok({ ...resumenAdmin, cobro_activo: estadoCobroMock.efectivo });
+    if (p === "/checador/ia/admin/cobro") {
+      if (req.method() !== "PUT") return ok(estadoCobroMock);
+      if (putCobro) return ok(...putCobro);
+      const h = { id: estadoCobroMock.historial.length + 1, de: estadoCobroMock.panel, a: cuerpo.activo, por: "Admin ADAMIA (#-1)", motivo: cuerpo.motivo, en: "2026-12-25T18:30:00.000Z" };
+      estadoCobroMock.panel = cuerpo.activo;
+      if (estadoCobroMock.fuente === "panel") estadoCobroMock.efectivo = cuerpo.activo;
+      estadoCobroMock.historial = [h, ...estadoCobroMock.historial];
+      estadoCobroMock.cambio = { por: h.por, en: h.en, motivo: h.motivo, de: h.de, a: h.a };
+      estadoCobroMock.advertencias = cuerpo.activo ? [] : ADVERTENCIAS_COBRO;
+      return ok({ ok: true, sin_cambio: false, panel: estadoCobroMock.panel, efectivo: estadoCobroMock.efectivo, fuente: estadoCobroMock.fuente, nota_variable: estadoCobroMock.nota_variable });
+    }
     if (p === "/checador/ia/admin/bienvenida") return req.method() === "PUT" ? ok({ ok: true, usd: cuerpo?.usd }) : ok(vistaBienvenida);
     if (p === "/checador/ia/admin/bienvenida/todas") return ok({ ok: true, acreditadas: 37, ya_tenian: 0, errores: [], total_mxn: 683.02, monto_mxn: 18.46, usd: 1, tipo_cambio: 18.4567 });
     // Clima · «Créala con Adamia AI» sin créditos: el 402 dispara el aviso global con «Recargar créditos».
@@ -259,7 +286,8 @@ try {
       const { page, pedidos, errores } = await contexto(browser, { tipo: "Admin", ancho, alto });
       await page.goto(base + "/dashboard/creditos-ia", { waitUntil: "domcontentloaded" });
       await page.getByRole("heading", { name: "Créditos de Adamia AI" }).waitFor({ timeout: 30000 });
-      await page.getByText("Cobro por créditos ENCENDIDO").waitFor();
+      await page.locator('[data-cobro-interruptor="encendido"]').waitFor();
+      assert.equal(await page.locator("[data-estado-cobro]").innerText().then((t) => t.trim()), "Encendido");
       const raiz = page.locator("div.mx-auto.max-w-6xl");
       const texto = await raiz.innerText();
       assert.match(texto, /Costo de IA\s*\$0\.7192/);
@@ -317,9 +345,127 @@ try {
       assert.match(await page.locator("[data-modelos]").innerText(), /WhatsApp gemini-3\.6-flash · precios revisados 26\/11\/2026/);
       assert.deepEqual(errores, [], `sin errores de JS (admin ${ancho})`);
     }
+
+    // ───── 5) Interruptor del cobro: encender desde el panel con advertencias, motivo y ENCENDER ─────
+    {
+      const { page, pedidos, errores } = await contexto(browser, { tipo: "Admin", ancho, alto, cobro: cobroApagado });
+      await page.goto(base + "/dashboard/creditos-ia", { waitUntil: "domcontentloaded" });
+      const tarjeta = page.locator('[data-cobro-interruptor="apagado"]');
+      await tarjeta.waitFor({ timeout: 30000 });
+      const tt = (await tarjeta.innerText()).replace(/\s/g, " ");
+      assert.match(tt, /Cobro de Adamia AI/);
+      assert.match(tt, /Apagado/);
+      assert.match(tt, /Gratis por ahora: el cobro de Adamia AI aún no está activo/, "dice qué ve el cliente");
+      assert.match(tt, /hasta 30 s/, "aviso de multi-instancia");
+      const caja = await tarjeta.boundingBox();
+      const kpi = await page.getByText("Costo de IA", { exact: true }).boundingBox();
+      assert.ok(caja.y < kpi.y, "la tarjeta va arriba de los indicadores");
+      assert.match(await page.getByText("Se habría cobrado", { exact: true }).innerText(), /Se habría cobrado/, "KPI coherente con apagado");
+      assert.ok(await sinDesborde(page), `sin desborde lateral a ${ancho}`);
+      if (ancho < 500) assert.deepEqual(await pequenos(tarjeta), [], "táctiles ≥ 44 px en la tarjeta");
+      await foto(page, `${ancho}-cobro-apagado`, false);
+      await tarjeta.getByRole("button", { name: "Encender cobro" }).click();
+      const dlg = page.getByRole("dialog", { name: "Encender el cobro de Adamia AI" });
+      await dlg.waitFor();
+      const adv = dlg.locator("[data-advertencias-cobro] li");
+      assert.equal(await adv.count(), 2);
+      assert.match(await adv.nth(0).innerText(), /Atención: 37 empresas aún no reciben su crédito de bienvenida/);
+      assert.match(await adv.nth(1).innerText(), /Recordatorio: .*async_payment_succeeded/);
+      const confirmar = dlg.getByRole("button", { name: "Encender el cobro" });
+      assert.equal(await confirmar.isDisabled(), true, "sin motivo ni ENCENDER no se puede");
+      await dlg.getByLabel(/Motivo/).fill("Arranque del cobro aprobado por el dueño");
+      await dlg.getByLabel("Escribe ENCENDER para confirmar").fill("ENCENDE");
+      assert.equal(await confirmar.isDisabled(), true, "ENCENDE no basta");
+      await dlg.getByLabel("Escribe ENCENDER para confirmar").fill("encender");
+      assert.equal(await confirmar.isDisabled(), false);
+      await dormir(300);
+      if (ancho < 500) assert.deepEqual((await pequenos(dlg)).filter((x) => x.t !== "Close"), [], "táctiles ≥ 44 px en el diálogo");
+      await foto(page, `${ancho}-cobro-confirmar`, false);
+      assert.equal(pedidos.filter((x) => x.metodo === "PUT" && x.ruta === "/checador/ia/admin/cobro").length, 0, "nada cambia sin confirmar");
+      await confirmar.click();
+      await dlg.waitFor({ state: "detached" });
+      const put = pedidos.find((x) => x.metodo === "PUT" && x.ruta === "/checador/ia/admin/cobro");
+      assert.deepEqual(put.cuerpo, { activo: true, confirmar: "ENCENDER", motivo: "Arranque del cobro aprobado por el dueño" }, "cuerpo exacto");
+      await page.locator('[data-cobro-interruptor="encendido"]').waitFor();
+      assert.match(await page.locator("[data-ultimo-cambio]").innerText(), /Admin ADAMIA \(#-1\) · «Arranque del cobro aprobado por el dueño»/);
+      await page.getByText("Compras", { exact: true }).waitFor({ timeout: 10000 }); // el resumen se refrescó con el cobro encendido
+      await page.getByText(/Historial de cambios \(1\)/).click();
+      assert.match(await page.locator("[data-historial-cobro]").innerText(), /Encendió · Admin ADAMIA \(#-1\) · Arranque del cobro aprobado por el dueño/);
+      await foto(page, `${ancho}-cobro-encendido`, false);
+      // Apagar: con motivo y sin ENCENDER.
+      await page.getByRole("button", { name: "Apagar cobro" }).click();
+      const dlgA = page.getByRole("dialog", { name: "Apagar el cobro de Adamia AI" });
+      await dlgA.waitFor();
+      assert.equal(await dlgA.getByLabel("Escribe ENCENDER para confirmar").count(), 0, "apagar no pide ENCENDER");
+      await dlgA.getByLabel(/Motivo/).fill("Pausa por revisión de precios");
+      await dlgA.getByRole("button", { name: "Apagar el cobro" }).click();
+      await dlgA.waitFor({ state: "detached" });
+      await page.locator('[data-cobro-interruptor="apagado"]').waitFor();
+      const puts = pedidos.filter((x) => x.metodo === "PUT" && x.ruta === "/checador/ia/admin/cobro");
+      assert.deepEqual(puts[1].cuerpo, { activo: false, motivo: "Pausa por revisión de precios" });
+      assert.deepEqual(errores, [], `sin errores de JS (interruptor ${ancho})`);
+    }
+
+    // ───── 5b) La variable del servidor lo fuerza apagado; sin tipo de cambio no se puede confirmar (409) ─────
+    {
+      const forzado = { ...cobroEncendido, efectivo: false, fuente: "variable", variable: "apagado",
+        nota_variable: "La variable del servidor IA_COBRO_CREDITOS lo fuerza APAGADO (freno de emergencia): el panel no lo enciende mientras exista." };
+      const { page, errores } = await contexto(browser, { tipo: "Admin", ancho, alto, cobro: forzado });
+      await page.goto(base + "/dashboard/creditos-ia", { waitUntil: "domcontentloaded" });
+      await page.locator('[data-cobro-interruptor="apagado"]').waitFor({ timeout: 30000 });
+      assert.match(await page.locator("[data-nota-variable]").innerText(), /IA_COBRO_CREDITOS lo fuerza APAGADO/);
+      assert.match(await page.locator('[data-cobro-interruptor]').innerText(), /En el panel: encendido/);
+      await foto(page, `${ancho}-cobro-forzado-variable`, false);
+      assert.deepEqual(errores, []);
+    }
+    {
+      const sinTc = { ...cobroApagado, puede_encender: false,
+        advertencias: [{ codigo: "SIN_TIPO_CAMBIO", nivel: "bloquea", texto: "No hay tipo de cambio registrado: regístralo antes de encender (si no, se cobraría con $20.00 de omisión)." }, ...ADVERTENCIAS_COBRO] };
+      const { page, pedidos, errores } = await contexto(browser, { tipo: "Admin", ancho, alto, cobro: sinTc });
+      await page.goto(base + "/dashboard/creditos-ia", { waitUntil: "domcontentloaded" });
+      await page.locator('[data-cobro-interruptor="apagado"]').getByRole("button", { name: "Encender cobro" }).click({ timeout: 30000 });
+      const dlg = page.getByRole("dialog", { name: "Encender el cobro de Adamia AI" });
+      await dlg.waitFor();
+      assert.match(await dlg.locator('[data-nivel="bloquea"]').innerText(), /Bloquea: No hay tipo de cambio registrado/);
+      assert.equal(await dlg.locator("[data-advertencias-cobro] li").first().getAttribute("data-nivel"), "bloquea", "la que bloquea va primero");
+      await dlg.getByLabel(/Motivo/).fill("Intento sin tipo de cambio");
+      assert.equal(await dlg.getByLabel("Escribe ENCENDER para confirmar").isDisabled(), true);
+      assert.equal(await dlg.getByRole("button", { name: "Encender el cobro" }).isDisabled(), true);
+      await foto(page, `${ancho}-cobro-sin-tc`, false);
+      assert.equal(pedidos.filter((x) => x.metodo === "PUT").length, 0);
+      assert.deepEqual(errores, []);
+    }
+
+    // ───── 6) Cliente con el cobro apagado: «Gratis por ahora» en créditos y en el pie de Adamia AI ─────
+    {
+      const gratis = { ...creditosBase, cobro_activo: false, saldo_mxn: 0, ultima_recarga_mxn: 0, saldo_bajo: false, sin_creditos: false, movimientos: [] };
+      const { page, errores } = await contexto(browser, { tipo: "Recruiter", ancho, alto, creditos: gratis });
+      await page.goto(base + "/panel/creditos-ia", { waitUntil: "domcontentloaded" });
+      await page.getByRole("heading", { name: "Créditos de Adamia AI" }).waitFor({ timeout: 30000 });
+      await page.locator("[data-saldo]").waitFor();
+      const texto = await page.locator("div.mx-auto.max-w-4xl").innerText();
+      assert.match(texto, /Gratis por ahora: el cobro de Adamia AI aún no está activo\. Tus consultas no descuentan saldo/);
+      assert.match(texto, /Cuando se active el cobro, cada consulta/);
+      assert.match(texto, /Lo que habría costado cada función/);
+      assert.ok(!/Cada consulta a Adamia AI en el panel descuenta su precio/.test(texto), "no hace pensar que ya se cobra");
+      assert.ok(await sinDesborde(page), `sin desborde lateral a ${ancho}`);
+      await foto(page, `${ancho}-cliente-gratis`, false);
+      await page.getByRole("button", { name: "Adamia AI", exact: true }).click();
+      const hoja = page.getByRole("dialog", { name: "Adamia AI" });
+      const ind = hoja.locator("[data-indicador-creditos]");
+      await ind.waitFor();
+      assert.equal(await ind.getAttribute("data-indicador-creditos"), "gratis");
+      const ti = (await ind.innerText()).replace(/\s/g, " ");
+      assert.match(ti, /^Gratis por ahora: el cobro de Adamia AI aún no está activo/);
+      assert.ok(!/Saldo de Adamia AI/.test(ti), "ya no «Saldo de Adamia AI: $0.00 MXN»");
+      if (ancho < 500) assert.deepEqual(await pequenos(ind), [], "táctiles ≥ 44 px en el pie");
+      await foto(page, `${ancho}-cliente-gratis-pie`, false);
+      assert.deepEqual(errores, [], `sin errores de JS (cliente gratis ${ancho})`);
+    }
   }
 
   exito = true;
+  console.log("OK · interruptor del cobro: tarjeta arriba (Apagado/Encendido), advertencias ordenadas, motivo + ENCENDER, cuerpo exacto del PUT, historial y apagar sin ENCENDER · nota de la variable del servidor · sin TC no se confirma · cliente «Gratis por ahora» en créditos y en el pie de Adamia AI");
   console.log("OK · aviso global sin créditos (Clima) con «Recargar créditos» y sin aviso doble en Adamia AI · OXXO/SPEI fallido al volver · crédito de bienvenida (vista previa 37 empresas, confirmación, cuerpo exacto) · modelos y fecha de precios");
   console.log("OK · créditos del dueño (saldo, aviso 20 %, paquetes + IVA, consumo, historial; sin costo ni margen) · recarga → Stripe interceptado con solo empresa y paquete · regreso: confirmando → ¡Listo! · indicador «Saldo de Adamia AI: $X MXN» y 402 con «Recargar créditos» · admin (KPIs, aviso TC 40 días, fórmula $1 → $40, regalo con motivo y clave) · 1440 y 390 sin desborde · táctiles ≥ 44 px · sin errores de JS");
 } finally {
