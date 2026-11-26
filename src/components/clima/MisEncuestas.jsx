@@ -16,6 +16,7 @@ import { RUTA_EMPLEADO, RUTA_PANEL, rutaEncuesta } from "@/lib/clima/pendientes.
 import { BASE, Cargando, Vacio, codigoDe, errorDe, get } from "./ui";
 import { LLAVE_MIS_ENCUESTAS } from "./AvisoEncuestas";
 import Contestar from "./Contestar";
+import PoliticaAcuse from "./PoliticaAcuse";
 
 const AVISO_ANONIMA = `Tu opinión cuenta. ${AVISO_PRIVACIDAD_CLIMA}`;
 
@@ -81,6 +82,8 @@ function Lista({ base, enPanel }) {
       {hechas.length ? (
         <p className="text-[13px] text-slate-500">Ya contestaste: {hechas.map((e) => e.nombre).join(", ")}. ¡Gracias!</p>
       ) : null}
+      {/* NOM-035 (26/11/2026): la política de la empresa para leer y acusar de leído (solo la app del empleado). */}
+      {enPanel ? null : <PoliticaAcuse />}
     </div>
   );
 }
