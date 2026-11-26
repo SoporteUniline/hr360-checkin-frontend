@@ -124,6 +124,9 @@ jobs:
       - name: Desempeño — objetivos, 1:1, feedback, calibración 9-box y bono (pantallas)
         run: node --test scripts/test-evaluaciones-talento.mjs
 
+      - name: Clima — NOM-035 lista para inspección, buzón, analítica, riesgo de rotación y ciclo de vida
+        run: node --test scripts/test-clima-inspeccion.mjs
+
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación
   # ─────────────────────────────────────────────

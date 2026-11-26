@@ -17,6 +17,7 @@ const COLOR_CATEGORIA = {
   Retención: "bg-emerald-100 text-emerald-800",
   Liderazgo: "bg-amber-100 text-amber-900",
   Pulso: "bg-violet-100 text-violet-800",
+  "Ciclo de vida": "bg-teal-100 text-teal-800",
 };
 
 function TarjetaPlantilla({ t, guias, alUsar, ocupado }) {

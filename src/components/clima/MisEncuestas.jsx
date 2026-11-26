@@ -18,6 +18,7 @@ import { LLAVE_MIS_ENCUESTAS } from "./AvisoEncuestas";
 import Contestar from "./Contestar";
 import EquipoClima, { ListaEquipo } from "./EquipoClima";
 import MisAcciones from "./MisAcciones";
+import PoliticaAcuse from "./PoliticaAcuse";
 
 const AVISO_ANONIMA = `Tu opinión cuenta. ${AVISO_PRIVACIDAD_CLIMA}`;
 
@@ -86,6 +87,8 @@ function Lista({ base, enPanel, empresa }) {
       {/* Jefes: resultados de su equipo (encuestas cerradas). Responsables: sus acciones. No aparecen si no aplica. */}
       <ListaEquipo base={base} empresa={empresa} />
       <MisAcciones empresa={empresa} />
+      {/* NOM-035 (26/11/2026): la política de la empresa para leer y acusar de leído (solo la app del empleado). */}
+      {enPanel ? null : <PoliticaAcuse />}
     </div>
   );
 }
