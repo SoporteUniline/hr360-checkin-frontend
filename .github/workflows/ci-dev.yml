@@ -112,6 +112,9 @@ jobs:
       - name: Avisos y felicitaciones — campana, WhatsApp y plantillas de correo
         run: node --test scripts/test-avisos.mjs
 
+      - name: Clima — NOM-035 lista para inspección, buzón, analítica, riesgo de rotación y ciclo de vida
+        run: node --test scripts/test-clima-inspeccion.mjs
+
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación
   # ─────────────────────────────────────────────
