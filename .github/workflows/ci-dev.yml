@@ -112,6 +112,9 @@ jobs:
       - name: Avisos y felicitaciones — campana, WhatsApp y plantillas de correo
         run: node --test scripts/test-avisos.mjs
 
+      - name: Desempeño — objetivos, 1:1, feedback, calibración 9-box y bono (pantallas)
+        run: node --test scripts/test-evaluaciones-talento.mjs
+
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación
   # ─────────────────────────────────────────────

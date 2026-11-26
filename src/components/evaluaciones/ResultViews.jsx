@@ -20,6 +20,7 @@ import {
   ExportButton,
 } from "./ui";
 import { PlanList } from "./PlanViews";
+import { ObjetivosSeccion } from "./talento/ObjetivosView";
 import {
   PERSPECTIVES,
   dateText,
@@ -285,6 +286,8 @@ export function ResultDetail({ campaignId, subjectId }) {
                 />
               </QueryState>
             </Panel>
+            {/* (22/12/2026) Objetivos del periodo como sección de la evaluación (docs/evaluaciones/talento.md). */}
+            <ObjetivosSeccion campaignId={campaignId} subjectId={subjectId} />
           </div>
           <Modal
             open={!!action}
