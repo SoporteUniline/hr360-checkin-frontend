@@ -74,7 +74,7 @@ const RUTAS_PROPIAS = [
   ["/panel/dashboard", LIBRE], ["/panel/cuenta", LIBRE], ["/panel/seguridad", LIBRE], ["/panel/creditos-ia", LIBRE],
   ["/panel/mis-encuestas", LIBRE],
   ["/panel/usuarios-con-acceso", DUENO], ["/panel/mi-suscripcion", DUENO], ["/panel/modulos", DUENO],
-  ["/panel/cotizaciones", DUENO], ["/panel/mensajes-sistema", DUENO],
+  ["/panel/cotizaciones", DUENO], ["/panel/mensajes-sistema", DUENO], ["/panel/integraciones", DUENO],
   ["/panel/monitor", "asistencias"], ["/panel/registro-asistencia", "asistencias"], ["/panel/horas-extra", "asistencias"],
   ["/panel/registro-de-entradas-y-salidas", "asistencias"], ["/seleccionar-reloj", "asistencias"], ["/panel/incidencias", "asistencias"],
   ["/panel/reporte-horas", "asistencias"], ["/panel/reportes-personalizados", "asistencias"], ["/panel/turnos", "asistencias"],

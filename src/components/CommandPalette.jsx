@@ -35,6 +35,7 @@ import {
   Store,
   BellRing,
   ShieldCheck,
+  Plug,
   CreditCard,
   Landmark,
   Monitor,
@@ -363,6 +364,13 @@ const ALL_NAV_ITEMS = [
     rol: "Recruiter",
     section: "Ajustes",
     icon: ShieldCheck,
+  },
+  {
+    title: "Integraciones (API)",
+    url: "/panel/integraciones",
+    rol: "Recruiter",
+    section: "Ajustes",
+    icon: Plug,
   },
   {
     title: "Mi suscripción",
