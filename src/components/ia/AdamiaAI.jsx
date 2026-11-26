@@ -117,7 +117,7 @@ function Chat({ idEmpresa, estado, alCambiar }) {
     setError(""); setSinCreditos(false); setTexto(""); setEnviando(true);
     setMensajes((m) => [...m, { rol: "usuario", texto: p }]);
     try {
-      const { data } = await axios.post("/checador/ia/lft/preguntar", { empresa: idEmpresa, pregunta: p, id_conversacion: idConversacion }, { timeout: 60000 });
+      const { data } = await axios.post("/checador/ia/lft/preguntar", { empresa: idEmpresa, pregunta: p, id_conversacion: idConversacion }, { timeout: 60000, avisoSinCreditos: false });
       setIdConversacion(data.id_conversacion);
       setMensajes((m) => [...m, { rol: "asistente", texto: data.respuesta, articulos: data.articulos }]);
       alCambiar();

@@ -57,7 +57,7 @@ function Paquetes({ paquetes, idEmpresa, nativa }) {
   return (
     <section aria-labelledby="titulo-recargar" className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
       <h2 id="titulo-recargar" className="flex items-center gap-2 text-[15px] font-bold text-slate-900"><CreditCard className="size-4 text-brand" /> Recargar</h2>
-      <p className="mt-0.5 text-[12.5px] text-slate-500">Se acredita el monto del paquete; el IVA se cobra aparte. Pagas con tarjeta en Stripe.</p>
+      <p className="mt-0.5 text-[12.5px] text-slate-500">Se acredita el monto del paquete; el IVA se cobra aparte. Pagas en Stripe (tarjeta u otros medios que ofrezca, como OXXO o transferencia).</p>
       {nativa ? (
         <p className="mt-3 rounded-lg bg-slate-50 p-3 text-[13px] text-slate-600">Las recargas se hacen desde el navegador en adamia.com.mx, con la misma cuenta.</p>
       ) : paquetes.length === 0 ? (

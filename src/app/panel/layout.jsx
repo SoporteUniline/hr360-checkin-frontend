@@ -10,6 +10,8 @@ import GuardaModulo from "@/components/modulos/GuardaModulo";
 import GuardaPermiso from "@/components/permisos/GuardaPermiso";
 import SesionPanel from "@/components/auth/SesionPanel";
 import CuerpoDesbloqueado from "@/components/auth/CuerpoDesbloqueado";
+// (24/12/2026) Créditos de Adamia AI: aviso «sin créditos» con «Recargar» para cualquier pantalla con IA.
+import AvisoSinCreditos from "@/components/ia/AvisoSinCreditos";
 
 // Rutas del panel que siempre se muestran aunque no haya suscripción activa
 // (25/11/2026) Seguridad: cerrar sesiones o quitar un dispositivo debe poderse siempre, con o sin plan.
@@ -55,6 +57,7 @@ export default async function LayoutPanel({ children }) {
     <SidebarProvider>
       <SesionPanel />
       <CuerpoDesbloqueado />
+      <AvisoSinCreditos />
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
