@@ -1,10 +1,33 @@
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
+
+const require = createRequire(import.meta.url);
+const demoBasePath = process.env.ADAMIA_DEMO_INSTANCE === "true"
+  ? process.env.ADAMIA_DEMO_BASE_PATH || ""
+  : "";
+if (demoBasePath && !/^\/demo\/[a-z0-9-]+$/.test(demoBasePath)) {
+  throw new Error("La ruta base de la instancia demo debe tener el formato /demo/<visita>.");
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  ...(demoBasePath ? {
+    basePath: demoBasePath,
+    env: { NEXT_PUBLIC_ADAMIA_DEMO_BASE_PATH: demoBasePath },
+    webpack(config) {
+      config.resolve.alias["js-cookie$"] = fileURLToPath(new URL("./src/lib/demo-cookies.js", import.meta.url));
+      config.resolve.alias["js-cookie-original$"] = require.resolve("js-cookie");
+      return config;
+    },
+  } : {}),
+  ...(process.env.ADAMIA_DEMO_INSTANCE === "true" && process.env.ADAMIA_DEMO_DIST_DIR
+    ? { distDir: process.env.ADAMIA_DEMO_DIST_DIR }
+    : {}),
   // El proxy de dev reserva /api/* para el backend anterior. Este alias llega
   // a Next y conserva los handlers y su autenticación en src/app/api.
   async rewrites() {
-    return [
+    const internas = [
       {
         source: "/internal/offline-clock/sync",
         destination: "/api/offline-clock/sync",
@@ -24,6 +47,12 @@ const nextConfig = {
         destination: "/api/solicitudes-equipo/:path*",
       },
     ];
+    if (!demoBasePath) return internas;
+    return {
+      beforeFiles: [{ source: "/demo", destination: "/demo/entrar" }],
+      afterFiles: internas,
+      fallback: [],
+    };
   },
   images: {
     remotePatterns: [

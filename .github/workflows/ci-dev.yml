@@ -118,6 +118,9 @@ jobs:
       - name: Créditos de Adamia AI — crédito de bienvenida, aviso sin créditos y pago OXXO/SPEI fallido
         run: node --test scripts/test-creditos-bienvenida.mjs
 
+      - name: Créditos de Adamia AI — interruptor del cobro en el panel y «Gratis por ahora» al cliente
+        run: node --test scripts/test-cobro-interruptor.mjs
+
       - name: Passkeys (Face ID / huella) y sesiones revocables — lógica
         run: node --test scripts/test-passkeys.mjs
 

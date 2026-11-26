@@ -1,13 +1,14 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 import { fetchSeguro } from "./fetchSeguro.mjs";
+import { demoBasePath, rutaDeInstancia } from "./demo-base-path.mjs";
 import { esSesionCerrada, RUTA_LOGIN_SESION_CERRADA } from "./passkeys/modelo.mjs";
 import { alResponderAxios } from "./asistencia/refrescoAsistencias";
 import { debeAvisarSinCreditos, EVENTO_SIN_CREDITOS, MENSAJE_SIN_CREDITOS } from "./ia/creditos.mjs";
 
 let offlineReady;
 export function ensureOfflineCache() {
-  if (typeof window === 'undefined') return Promise.resolve();
+  if (typeof window === 'undefined' || demoBasePath) return Promise.resolve();
   if (!offlineReady) offlineReady = import(/* webpackIgnore: true */ '/offline-clock/app-cache.mjs?v=5')
     .catch(() => { offlineReady = null; });
   return offlineReady;
@@ -46,7 +47,7 @@ function alCerrarseLaSesion(error) {
     delete instance.defaults.headers.common.Authorization;
     if (!window.location.pathname.startsWith("/login")) {
       saliendo = true;
-      window.location.assign(RUTA_LOGIN_SESION_CERRADA);
+      window.location.assign(rutaDeInstancia(RUTA_LOGIN_SESION_CERRADA));
     }
   }
   return Promise.reject(error);

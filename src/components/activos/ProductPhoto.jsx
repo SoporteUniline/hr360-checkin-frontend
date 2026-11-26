@@ -3,9 +3,10 @@ import { useState } from "react";
 import { ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useActivos } from "./ActivosProvider";
+import { rutaDeInstancia } from "@/lib/demo-base-path.mjs";
 export function photoUrl(product, companyId) {
   return product?.photoVersion
-    ? `/internal/control-activos/fotos/${product.id}?empresa=${companyId}&v=${product.photoVersion}`
+    ? rutaDeInstancia(`/internal/control-activos/fotos/${product.id}?empresa=${companyId}&v=${product.photoVersion}`)
     : "";
 }
 export function ProductPhoto({ product, className = "h-12 w-12" }) {

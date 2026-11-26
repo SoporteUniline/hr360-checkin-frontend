@@ -7,6 +7,7 @@ import DiagnosticoReloj from "@/components/DiagnosticoReloj";
 import { useNativeBackButton } from "@/hooks/Capacitor/useNativeBackButton";
 import RetireOfflineWorker from '@/components/RetireOfflineWorker';
 import { CambiosPendientesProvider } from '@/components/cambios/CambiosPendientes';
+import { demoBasePath } from '@/lib/demo-base-path.mjs';
 import OfertaPasskey from '@/components/seguridad/OfertaPasskey';
 
 export function ClientProviders({ children }) {
@@ -15,8 +16,8 @@ export function ClientProviders({ children }) {
   return (
     <AuthProvider>
       {/* Antes de la precarga facial para medirla desde el inicio. */}
-      <DiagnosticoReloj />
-      <RetireOfflineWorker />
+      {!demoBasePath && <DiagnosticoReloj />}
+      {!demoBasePath && <RetireOfflineWorker />}
       <FaceApiPreloader />
       {/* Guardia común de «cambios sin guardar»: cubre el panel, el menú lateral y el buscador. */}
       <CambiosPendientesProvider>

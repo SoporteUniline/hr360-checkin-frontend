@@ -1,5 +1,6 @@
 import axios from "@/lib/axios";
 import Cookies from "js-cookie";
+import { rutaDeInstancia } from "./demo-base-path.mjs";
 
 /**
  * Cliente API: Gestión Documental
@@ -263,7 +264,7 @@ export const iaApi = {
     ].join("\n");
 
     const requestIa = async (message) => {
-      const response = await fetch("/api/bot", {
+      const response = await fetch(rutaDeInstancia("/api/bot"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

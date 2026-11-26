@@ -1,4 +1,4 @@
-# Créditos de Adamia AI (frontend) · 25/11/2026
+# Créditos de Adamia AI (frontend) · 25/11/2026 · interruptor del cobro 25/12/2026
 
 Cobro de Adamia AI con créditos prepagados en pesos (opción B aprobada por el dueño). La autoridad es el backend:
 `docs/creditos-ia.md` del repo del backend (fórmula, libro mayor, Stripe, interruptor y paso a paso para encenderlo).
@@ -46,6 +46,25 @@ Ejemplo: costo $1 USD, tipo de cambio $20 → **$40 MXN + IVA**. Una pregunta t�
   no se completó… No se cobró ni se acreditó nada; puedes recargar de nuevo» y deja de esperar. Mientras espera, el mensaje
   aclara que OXXO o transferencia pueden tardar.
 
+## Interruptor del cobro (25/12/2026)
+
+El dueño enciende y apaga el cobro **desde el panel**; ya no depende de que alguien ponga `IA_COBRO_CREDITOS` en el servidor
+(backend `docs/creditos-ia.md` → «Interruptor del cobro»: la variable `false` sigue siendo el freno de emergencia y `true`
+lo fuerza encendido; sin ella manda el panel).
+
+- **Administrador — tarjeta «Cobro de Adamia AI»** arriba de `/dashboard/creditos-ia` (`src/components/ia/CobroInterruptor.jsx`,
+  `GET|PUT /checador/ia/admin/cobro`): estado **efectivo** (Encendido / Apagado), qué ve el cliente, nota ámbar si la variable
+  del servidor lo está forzando («En el panel: …»), último cambio (cuándo, quién, motivo), historial y aviso de que con varias
+  instancias tarda hasta 30 s. «Encender cobro» abre un diálogo con las **advertencias del servidor** ordenadas (Bloquea → Atención
+  → Recordatorio: sin tipo de cambio no deja confirmar; empresas sin crédito de bienvenida; webhook de Stripe), **motivo**
+  obligatorio y escribir **ENCENDER**. El cuerpo enviado es `{ activo: true, confirmar: "ENCENDER", motivo }`. «Apagar cobro»
+  pide solo el motivo (`{ activo: false, motivo }`). Si el servidor responde 400/409 se muestra el mensaje y sus advertencias.
+- **Cliente** (dueño/RH): con `cobro_activo === false` (dato del servidor en `GET /checador/ia/creditos` y en `creditos` de
+  `/estado`) el indicador del pie de Adamia AI y de Clima dice **«Gratis por ahora: el cobro de Adamia AI aún no está activo»
+  · Ver créditos** en lugar de «Saldo de Adamia AI: $0.00 MXN · Ver créditos», y la pantalla de créditos muestra ese aviso
+  (sin el de saldo bajo) y «Cuando se active el cobro, cada consulta… descontará su precio». Si el dato falta no se promete
+  que es gratis.
+
 ## Lógica y pruebas
 
 - `src/lib/ia/creditos.mjs`: formato, avisos, regreso de Stripe, vista previa de la fórmula y validación de formularios;
@@ -53,7 +72,10 @@ Ejemplo: costo $1 USD, tipo de cambio $20 → **$40 MXN + IVA**. Una pregunta t�
 - `scripts/test-creditos-ia.mjs` (CI: paso «Créditos de Adamia AI»).
 - `scripts/test-creditos-bienvenida.mjs` (CI: paso «Créditos de Adamia AI — crédito de bienvenida, aviso sin créditos y pago
   OXXO/SPEI fallido»).
+- `scripts/test-cobro-interruptor.mjs` (CI: paso «Créditos de Adamia AI — interruptor del cobro en el panel y «Gratis por
+  ahora» al cliente»): texto gratis, estado y nota de la variable, confirmación ENCENDER, cuerpo del PUT, orden de advertencias.
 - `scripts/verify-creditos-ia.mjs`: navegador real con API simulada a 1440 y 390 px (pantalla de créditos, recarga con
   Stripe interceptado, regreso, indicador y 402, aviso global sin créditos desde Clima, OXXO fallido, panel del
-  administrador, regalo y crédito de bienvenida con confirmación). Uso:
+  administrador, regalo y crédito de bienvenida con confirmación; interruptor del cobro: encender con advertencias, motivo y
+  ENCENDER, apagar, nota de la variable, sin TC no se confirma; cliente «Gratis por ahora» en créditos y en el pie). Uso:
   `NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build && node scripts/verify-creditos-ia.mjs`.

@@ -3,12 +3,14 @@
 // Créditos de Adamia AI (25/11/2026) · panel del administrador de ADAMIA: por empresa y mes el costo (USD, y el del agente de
 // WhatsApp aparte), lo cobrado en pesos y la ganancia; tipo de cambio (aviso si tiene más de 30 días), margen global y por
 // empresa, regalos/ajustes con motivo y paquetes de recarga. El servidor valida todo (solo tipo_usuario Admin).
+// (25/12/2026) Arriba, la tarjeta «Cobro de Adamia AI» (CobroInterruptor.jsx) para encender/apagar el cobro.
 import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";
 import { Coins, Gift, ListOrdered, Loader2, Percent, Plus, TriangleAlert } from "lucide-react";
 import axios from "@/lib/axios";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import CobroInterruptor from "./CobroInterruptor";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   bienvenidaUsdDesdeTexto, claveFormulario, cuerpoBienvenida, etiquetaTipo, margenDesdePorcentaje, mesesRecientes, montoMovimiento, mxn, nombreMes, porcentaje,
@@ -390,10 +392,8 @@ export default function CreditosIAAdmin() {
       {error ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errorDe(error, "No se pudo cargar.")}</p> : null}
       {data ? (
         <>
-          <p role="status" className={`rounded-xl border p-3 text-[13px] ${data.cobro_activo ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-blue-200 bg-blue-50 text-blue-800"}`}>
-            {data.cobro_activo ? "Cobro por créditos ENCENDIDO: el uso del panel descuenta saldo y sin saldo se bloquea."
-              : "Cobro por créditos APAGADO (IA_COBRO_CREDITOS): se mide todo y se muestra el saldo, pero no se descuenta ni se bloquea."}
-          </p>
+          {/* (25/12/2026) Interruptor del cobro: el dueño lo enciende/apaga aquí (antes solo con IA_COBRO_CREDITOS en el servidor). */}
+          <CobroInterruptor alCambiar={refrescar} />
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
             <Kpi titulo="Costo de IA" valor={usd(t.costo_usd)} nota={`WhatsApp ${usd(t.costo_usd_whatsapp)}`} />
             <Kpi titulo="Cobrado" valor={mxn(t.cobrado_mxn)} nota="sin IVA" />

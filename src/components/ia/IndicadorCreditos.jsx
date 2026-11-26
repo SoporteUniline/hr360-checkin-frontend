@@ -2,10 +2,13 @@
 
 // Créditos de Adamia AI (25/11/2026): indicador «Saldo de Adamia AI: $X MXN» con enlace a recargar. Reemplaza al de
 // «Uso de Adamia AI este mes: … USD» (el cliente nunca ve costo ni margen). Sin la migración de créditos no se muestra.
+// (25/12/2026) Con el cobro apagado en el panel del administrador dice «Gratis por ahora: el cobro de Adamia AI aún no está
+// activo» en vez del saldo, para no hacer pensar que se cobra.
 import Link from "next/link";
 import { RUTA_CREDITOS, textoIndicador, tonoSaldo } from "@/lib/ia/creditos.mjs";
 
 const TONO = {
+  gratis: "text-emerald-700",
   sin: "text-red-700",
   bajo: "text-amber-700",
   normal: "text-slate-500",
@@ -20,7 +23,7 @@ export default function IndicadorCreditos({ creditos, className = "" }) {
       <span className="font-semibold">{texto}</span>
       {tono === "sin" ? <span>· Sin créditos</span> : tono === "bajo" ? <span>· Saldo bajo</span> : null}
       <Link href={RUTA_CREDITOS} className="inline-flex min-h-11 items-center font-semibold text-brand sm:min-h-8 underline-offset-2 hover:underline">
-        {tono === "normal" ? "Ver créditos" : "Recargar"}
+        {tono === "normal" || tono === "gratis" ? "Ver créditos" : "Recargar"}
       </Link>
     </p>
   );

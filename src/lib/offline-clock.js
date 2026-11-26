@@ -1,5 +1,6 @@
 import axios, { ensureOfflineCache } from './axios';
 import Cookies from 'js-cookie';
+import { demoBasePath, rutaDeInstancia } from './demo-base-path.mjs';
 import { motivoPendiente, errorDelServidor, textoChecada, preguntaRepetida } from './reloj/motivoPendiente.mjs';
 
 // Candado de 5 min: el servidor no registró una checada repetida. Se devuelve la pregunta
@@ -120,7 +121,7 @@ async function registerLocalFace(payload, context, profile, original = null) {
 }
 
 export async function installOfflineWorker() {
-  if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !window.isSecureContext) return null;
+  if (typeof window === 'undefined' || demoBasePath || !('serviceWorker' in navigator) || !window.isSecureContext) return null;
   if (!registrationLoading) registrationLoading = (async () => {
     const registration = await navigator.serviceWorker.register('/offline-clock-sw.js', { scope: '/', type: 'module' });
     // A previously prepared clock must still start when Wi-Fi is connected
@@ -176,7 +177,7 @@ export async function initializeClock({ company, employee = null, slug = null })
         warmed.add(key);
         void Promise.allSettled([
           axios.get(`/empresas/slug/${profile.slug}`),
-          fetch(`/api/empresas/check-subscription/${company}`),
+          fetch(rutaDeInstancia(`/api/empresas/check-subscription/${company}`)),
           axios.get(`/checador/reloj/registros-del-dia?id_empresa=${company}`),
         ]);
         void installOfflineWorker().then(registration => registration?.active?.postMessage({ type: 'WARM_COMPANY', slug: profile.slug, company: Number(company) })).catch(() => {});
