@@ -41,11 +41,11 @@ function MapaCalor({ mapa }) {
       <table className="w-full min-w-[640px] border-separate border-spacing-1 text-[13px]">
         <thead>
           <tr>
-            <th scope="col" className="sticky left-0 z-10 bg-white px-2 py-1 text-left font-semibold text-slate-600">
+            <th style={{ fontSize: 13 }} scope="col" className="sticky left-0 z-10 bg-white px-2 py-1 text-left font-semibold text-slate-600">
               Grupo
             </th>
             {mapa.dimensiones.map((d) => (
-              <th key={d.clave} scope="col" className="px-1 py-1 text-center font-semibold text-slate-600">
+              <th style={{ fontSize: 13 }} key={d.clave} scope="col" className="px-1 py-1 text-center font-semibold text-slate-600">
                 {d.nombre}
               </th>
             ))}
@@ -53,7 +53,7 @@ function MapaCalor({ mapa }) {
         </thead>
         <tbody>
           <tr>
-            <th scope="row" className="sticky left-0 z-10 bg-white px-2 py-1 text-left font-bold text-slate-900">
+            <th style={{ fontSize: 13 }} scope="row" className="sticky left-0 z-10 bg-white px-2 py-1 text-left font-bold text-slate-900">
               Toda la empresa
             </th>
             {mapa.dimensiones.map((d) => {
@@ -67,7 +67,7 @@ function MapaCalor({ mapa }) {
           </tr>
           {mapa.filas.map((f) => (
             <tr key={f.clave}>
-              <th scope="row" className="sticky left-0 z-10 bg-white px-2 py-1 text-left font-semibold text-slate-800">
+              <th style={{ fontSize: 13 }} scope="row" className="sticky left-0 z-10 bg-white px-2 py-1 text-left font-semibold text-slate-800">
                 {f.nombre}
                 <span className="block text-[13px] font-normal text-slate-500">{f.n} resp.</span>
               </th>
@@ -150,7 +150,7 @@ export default function Analitica({ idEmpresa }) {
     }
   };
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-clima2="analitica">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <label className="block min-w-0 max-w-md flex-1">
           <span className="mb-1 block text-[13px] font-semibold text-slate-700">Medición</span>

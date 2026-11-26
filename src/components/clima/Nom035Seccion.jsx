@@ -18,7 +18,7 @@ export default function Nom035Seccion({ sub = "resultados", idEmpresa, inicio, e
   const empresa = useEmpresaNomina();
   const nombre = empresa.empresas.find((e) => e.id === Number(idEmpresa))?.nombre ?? null;
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-clima2="nom035">
       <nav aria-label="Vistas de NOM-035" className="flex gap-2 overflow-x-auto pb-1">
         {VISTAS.map((v) => (
           <Link

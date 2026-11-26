@@ -80,7 +80,7 @@ export default function BuzonPublico({ clave }) {
     }
   };
   return (
-    <main className="mx-auto flex min-h-dvh max-w-xl flex-col bg-white">
+    <main className="mx-auto flex min-h-dvh max-w-xl flex-col bg-white" data-clima2="buzon-publico">
       <header className="flex items-center gap-2 border-b border-slate-200 px-4 py-3">
         <span className="size-7 rounded-lg bg-gradient-to-br from-brand to-brand-accent" aria-hidden="true" />
         <span className="text-sm font-bold tracking-[0.12em] text-slate-900">ADAMIA</span>

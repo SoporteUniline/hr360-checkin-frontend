@@ -40,7 +40,7 @@ function Lista({ x }) {
       <ul className="divide-y divide-slate-100">
         {x.lista.map((i) => (
           <li key={i.clave} className="flex flex-wrap items-start gap-x-3 gap-y-1 py-2.5">
-            <span className="w-24 shrink-0 text-[13px] font-bold text-slate-500">{i.numeral}</span>
+            <span className="w-full shrink-0 text-[13px] font-bold text-slate-500 sm:w-24">{i.numeral}</span>
             <span className="min-w-0 flex-1">
               <span className="block text-[14px] font-semibold text-slate-900">{i.titulo}</span>
               <span className="block text-[13px] text-slate-600">{i.detalle}</span>
