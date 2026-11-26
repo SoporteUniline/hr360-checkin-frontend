@@ -99,3 +99,16 @@ test("plantillas: insertar variable en el cursor, cambios pendientes y variables
   const vars = ["nombre", "edad", "años", "área", "empresa", "jefe"];
   assert.deepEqual(A.variablesDesconocidas("Hola {nombre} de {area} y {sueldo} {sueldo}", vars), ["sueldo"]);
 });
+
+test("vista previa del correo: el modo elegido manda, no el modo oscuro del equipo de quien edita", () => {
+  const html = '<meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"><style>.a{color:#000} @media (prefers-color-scheme: dark) { .fondo{background:#0b1120 !important} }</style>';
+  const claro = A.htmlEnModo(html, "light");
+  assert.ok(!/prefers-color-scheme/.test(claro));
+  assert.match(claro, /@media not all \{ \.fondo/);
+  assert.match(claro, /name="color-scheme" content="light"/);
+  assert.match(claro, /name="supported-color-schemes" content="light"/);
+  const oscuro = A.htmlEnModo(html, "dark");
+  assert.match(oscuro, /@media all \{ \.fondo/);
+  assert.match(oscuro, /name="color-scheme" content="dark"/);
+  assert.equal(A.htmlEnModo(undefined, "light"), undefined);
+});
