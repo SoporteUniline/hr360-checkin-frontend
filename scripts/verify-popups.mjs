@@ -154,6 +154,10 @@ try {
   }
   await page.evaluate(() => document.activeElement?.blur());
   await capturar(page, "escritorio-1440");
+  // Un clic afuera (en el fondo oscuro) ya no lo cierra: solo su botón «Cerrar» o Escape.
+  await page.mouse.click(5, 5);
+  await dormir(300);
+  assert.equal(await page.locator(".pv-dialogo").count(), 1, "un clic afuera no cierra el pop-up");
   await page.keyboard.press("Escape");
   await dialogo.waitFor({ state: "detached" });
   await dormir(300);
