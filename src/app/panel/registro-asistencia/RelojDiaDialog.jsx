@@ -22,7 +22,7 @@ import {
   CONCEPTOS, TOLERANCIA_MIN, aHHMM, aMin, agregarComida, pausaComidaTras, quitarComida, agregarRegistro, autorizaValor, claseEstado, conAutoriza,
   cuerpoPut, desdeApi, diaFila, durTexto, editado, errores as validar, erroresPorRenglon, estadoFila, etiquetaQuitar,
   fechaTxt, hora12Txt, horarioMin, horarioNormal, minDeCampo, ordenar, origenTexto, puedeComida, quitarORestaurar,
-  resumen, resumenServidor, separarExtra, vivos, esMotivoOtro, textoMotivoOtro, motivoOtro, MAX_TEXTO_OTRO, extraTodoEnJornada,
+  resumen, resumenServidor, separarExtra, separarExtraAntes, vivos, esMotivoOtro, textoMotivoOtro, motivoOtro, MAX_TEXTO_OTRO, extraTodoEnJornada,
 } from "@/lib/asistencia/relojDia.mjs";
 import { minutosNoTrabajados, normalizarTipo } from "@/lib/asistencia/tiposGoce.mjs";
 import { cuerpoPermisoDia, faltaPar, nombreTipo, parDesdePermiso, parVacio } from "@/lib/asistencia/quePasoMotivo.mjs";
@@ -213,7 +213,7 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   // Sin motivo no hay permiso (retardo / salida antes como siempre): permiso_dia null.
   const cuerpoPermiso = cuerpoPermisoDia(permiso, tipoPermiso, motivosPermiso);
   const calc = resumen(lista, horario, { tolerancia: Number(horario?.tolerancia_min ?? TOLERANCIA_MIN), estadoDia: estadoSin,
-    permiso: cuerpoPermiso ? { alcance: normalizarTipo(tipoPermiso).alcance } : null });
+    permiso: cuerpoPermiso ? { alcance: normalizarTipo(tipoPermiso).alcance } : null, extraDia: data?.extra_dia ?? null });
   // permiso_dia viaja solo si hay permiso o si había uno guardado (null = quitarlo): así el cuerpo de siempre no cambia.
   const llevaPermiso = Boolean(cuerpoPermiso) || Boolean(permisoGuardado);
   const cambioPermiso = permiso !== undefined
@@ -238,7 +238,7 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   // Sin cambios se muestra lo que calculó el servidor; al editar, el cálculo en vivo (misma regla).
   const delServidor = !hayCambios ? resumenServidor(data?.resumen) : null;
   const vista = delServidor ?? { trabajadas: calc.trabajadas, comida: calc.comida, abierto: calc.abierto, hayRegs: calc.hayRegs,
-    extraAutorizada: calc.extraMin - calc.extraNoAut - (calc.extraPorAutorizar - calc.sinSeparar), extraPorAutorizar: calc.extraPorAutorizar,
+    extraAutorizada: calc.extraAutorizada, extraPorAutorizar: calc.extraPorAutorizar,
     estado: calc.estado };
   // Si la migración de la base de datos aún no corre, el reloj se ve pero no se puede corregir.
   const soloLectura = data?.migracion === false;
@@ -440,6 +440,12 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                 <div className="flex flex-wrap gap-2">
                   <button type="button" onClick={() => cambiar((p) => agregarRegistro(p, horario))} className={cn(BOTON, "max-sm:flex-1 max-sm:justify-center")}><Plus className="h-4 w-4" aria-hidden />Agregar registro</button>
                   {puedeComida(lista) ? <button type="button" onClick={() => cambiar((p) => agregarComida(p, horario))} className={cn(BOTON, "max-sm:flex-1 max-sm:justify-center")}><Plus className="h-4 w-4" aria-hidden />Comida</button> : null}
+                  {calc.sinSepararAntes > 0 ? (
+                    <button type="button" onClick={() => cambiar((p) => separarExtraAntes(p, horario))}
+                      className={cn(BOTON, "border-violet-300 text-violet-700 hover:bg-violet-50 max-sm:h-auto max-sm:min-h-11 max-sm:w-full max-sm:justify-center max-sm:whitespace-normal")}>
+                      <Scissors className="h-4 w-4 shrink-0" aria-hidden />Separar {durTexto(calc.sinSepararAntes)} antes de las {hora12Txt(aHHMM(h.pe))} como hora extra
+                    </button>
+                  ) : null}
                   {calc.sinSeparar > 0 ? (
                     <button type="button" onClick={() => cambiar((p) => separarExtra(p, horario))}
                       className={cn(BOTON, "border-violet-300 text-violet-700 hover:bg-violet-50 max-sm:h-auto max-sm:min-h-11 max-sm:w-full max-sm:justify-center max-sm:whitespace-normal")}>

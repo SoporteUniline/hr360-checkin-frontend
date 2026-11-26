@@ -54,7 +54,8 @@ export default function AsistenciaRow({
 
   const resumenViejo = calcularResumenJornada(registro);
   const minutosTrabajados = registro.minutos_trabajados ?? resumenViejo.minutosTrabajados;
-  const { minutosProgramados } = resumenViejo;
+  // «de 8 h»: la jornada del día que calculó el servidor (la misma contra la que cuenta las horas extra).
+  const minutosProgramados = registro.minutos_programados !== undefined ? registro.minutos_programados : resumenViejo.minutosProgramados;
   const minutosComida = registro.minutos_comida ?? minutosDescanso(registro);
   const esDescanso = /descanso/i.test(registro.tipo_registro_nombre ?? "");
   const sinChecadas = !registro.entrada && !registro.salida;

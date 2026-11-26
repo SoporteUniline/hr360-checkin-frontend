@@ -71,7 +71,7 @@ const TABS = [
   { key: "extra", label: "H. extra", dotClass: "bg-brand-accent" },
 ];
 
-// Mismo cálculo que escritorio: tiempo después de la salida del horario.
+// Mismo cálculo que escritorio: lo que manda el servidor (regla diaria: trabajado del día − su jornada).
 const infoExtra = (r) => estadoHorasExtra(r, r.zona_horaria || DB_TZ);
 const tieneExtra = (r) => infoExtra(r).estado !== "sin";
 
