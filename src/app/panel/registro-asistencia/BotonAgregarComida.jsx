@@ -4,6 +4,8 @@
 // (POST /checador/asistencias/:id/comida), conserva la checada real y el registro queda «Editado».
 // La comida queda guardada como comida manual: con `comida` (la manual del día) el mismo formulario cambia sus horas
 // (PUT …/comida/:idMovimiento) y QuitarComida la quita (DELETE), que regresa el tramo como estaba.
+// (27/11/2026) Agregar, cambiar o quitar la comida es corregir checadas a mano: las tres piden «Motivo de la corrección»
+// (5 a 500 letras; sin él el servidor responde 422) y queda en el historial.
 
 import { useState } from "react";
 import { refrescarAsistencias } from "@/lib/asistencia/refrescoAsistencias";
@@ -11,6 +13,19 @@ import { useSnackbar } from "notistack";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import axios from "@/lib/axios";
 import { horaAMinutos, minutosAHora } from "@/lib/fechaHora.mjs";
+import CampoMotivo from "@/components/asistencia/CampoMotivo";
+import { SUGERENCIAS, camposMotivo, errorMotivo, errorMotivoServidor } from "@/lib/asistencia/motivoCorreccion.mjs";
+
+// Para la comida: «Olvidó checar» primero (es lo más común) y «Error de captura» para quitarla.
+const SUGERENCIAS_COMIDA = SUGERENCIAS.filter((s) => ["Olvidó checar", "Falla del reloj", "Error de captura"].includes(s));
+
+// Estado del motivo de un formulario: valor, error y su cambio (el error se recalcula al escribir después del primero).
+function useMotivo() {
+  const [valor, setValor] = useState("");
+  const [error, setError] = useState("");
+  return { valor, error, setError, limpiar: () => { setValor(""); setError(""); },
+    cambiar: (t) => { setValor(t); if (error) setError(errorMotivo(t)); } };
+}
 
 const detener = (e) => e.stopPropagation();
 
@@ -36,6 +51,7 @@ export default function BotonAgregarComida({ registro, aBaseDeDatos, fechaBase, 
   const [salida, setSalida] = useState(sugerida[0]);
   const [regreso, setRegreso] = useState(sugerida[1]);
   const [guardando, setGuardando] = useState(false);
+  const motivo = useMotivo();
 
   const etiqueta = (
     <span className="inline-flex items-center gap-1">⚠ No marcó salida a comer</span>
@@ -50,16 +66,21 @@ export default function BotonAgregarComida({ registro, aBaseDeDatos, fechaBase, 
       enqueueSnackbar("El regreso de comida debe ser después de la salida a comer.", { variant: "warning" });
       return;
     }
+    const falta = errorMotivo(motivo.valor);
+    if (falta) { motivo.setError(falta); return; }
     setGuardando(true);
     try {
-      const cuerpo = { salida_comida: aBaseDeDatos(fechaBase, salida), regreso_comida: aBaseDeDatos(fechaBase, regreso) };
+      const cuerpo = { salida_comida: aBaseDeDatos(fechaBase, salida), regreso_comida: aBaseDeDatos(fechaBase, regreso), ...camposMotivo(motivo.valor) };
       if (editar) await axios.put(`/checador/asistencias/${registro.id}/comida/${comida.id_movimiento}`, cuerpo);
       else await axios.post(`/checador/asistencias/${registro.id}/comida`, cuerpo);
       enqueueSnackbar(editar ? `Comida cambiada: ${salida}–${regreso}.` : `Comida agregada: ${salida}–${regreso}. Su checada original se conserva.`,
         { variant: "success" });
       setAbierto(false);
+      motivo.limpiar();
       await refrescar(onGuardado);
     } catch (error) {
+      const faltaMotivo = errorMotivoServidor(error);
+      if (faltaMotivo) { motivo.setError(faltaMotivo); return; }
       enqueueSnackbar(error?.response?.data?.message || "No se pudo agregar la comida.", { variant: "error" });
     } finally {
       setGuardando(false);
@@ -103,6 +124,8 @@ export default function BotonAgregarComida({ registro, aBaseDeDatos, fechaBase, 
               className="mt-1 block w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm text-slate-800" />
           </label>
         </div>
+        <CampoMotivo className="mt-3" valor={motivo.valor} onCambio={motivo.cambiar} error={motivo.error} disabled={guardando}
+          sugerencias={SUGERENCIAS_COMIDA} nombre={`${registro.nombre ?? ""} ${registro.apellido_paterno ?? ""}`.trim()} />
         <p className="mt-2 text-[11px] text-slate-400">La checada del reloj se conserva y el registro queda «Editado».</p>
         <div className="mt-3 flex justify-end gap-2">
           <button type="button" onClick={() => setAbierto(false)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-600">
@@ -123,14 +146,21 @@ export function QuitarComida({ registro, comida, onGuardado }) {
   const { enqueueSnackbar } = useSnackbar();
   const [abierto, setAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const motivo = useMotivo();
   const quitar = async () => {
+    const falta = errorMotivo(motivo.valor);
+    if (falta) { motivo.setError(falta); return; }
     setGuardando(true);
     try {
-      await axios.delete(`/checador/asistencias/${registro.id}/comida/${comida.id_movimiento}`);
+      // DELETE con cuerpo (axios: `data`): el motivo de quitarla.
+      await axios.delete(`/checador/asistencias/${registro.id}/comida/${comida.id_movimiento}`, { data: camposMotivo(motivo.valor) });
       enqueueSnackbar("Comida quitada: su día vuelve a como lo checó el reloj.", { variant: "success" });
       setAbierto(false);
+      motivo.limpiar();
       await refrescar(onGuardado);
     } catch (error) {
+      const faltaMotivo = errorMotivoServidor(error);
+      if (faltaMotivo) { motivo.setError(faltaMotivo); return; }
       enqueueSnackbar(error?.response?.data?.message || "No se pudo quitar la comida.", { variant: "error" });
     } finally {
       setGuardando(false);
@@ -144,9 +174,11 @@ export function QuitarComida({ registro, comida, onGuardado }) {
           Quitar
         </button>
       </PopoverTrigger>
-      <PopoverContent className="z-[60] w-64 border border-slate-200 bg-white p-4 shadow-xl" data-no-row-click onClick={detener}>
+      <PopoverContent className="z-[60] w-72 border border-slate-200 bg-white p-4 shadow-xl" data-no-row-click onClick={detener}>
         <p className="text-sm font-semibold text-slate-900">¿Quitar la comida?</p>
         <p className="mt-1 text-xs text-slate-500">Su día vuelve a quedar como lo checó el reloj. Queda en el historial.</p>
+        <CampoMotivo className="mt-3" valor={motivo.valor} onCambio={motivo.cambiar} error={motivo.error} disabled={guardando}
+          sugerencias={SUGERENCIAS_COMIDA} nombre={`${registro.nombre ?? ""} ${registro.apellido_paterno ?? ""}`.trim()} />
         <div className="mt-3 flex justify-end gap-2">
           <button type="button" onClick={() => setAbierto(false)} className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold
             text-slate-600">

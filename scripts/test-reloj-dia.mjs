@@ -234,15 +234,16 @@ test("Salir en medio turno 12:00–1:00 parte el renglón que cubre ese rango", 
   assert.deepEqual(CAMPOS_HORA.medio.map(([, e]) => e), ["Salió a las", "Regresó a las"]);
 });
 
-test("motivo de corrección «Otro»: viaja como «otro: <texto>», al menos 3 letras, 34 como máximo", () => {
+test("motivo de corrección «Otro»: viaja como «otro: <texto>», al menos 5 letras (27/11/2026; antes 3), 34 como máximo", () => {
   assert.equal(motivoOtro("Junta en planta"), "otro: Junta en planta");
   assert.equal(motivoOtro("x".repeat(50)).length, 40);
   assert.equal(esMotivoOtro("otro: algo") && esMotivoOtro("otro") && !esMotivoOtro("otros"), true);
   assert.equal(textoMotivoOtro("otro: Junta"), "Junta");
-  assert.equal(errorMotivoOtro("otro: ab"), "Escribe el motivo (al menos 3 letras).");
+  assert.equal(errorMotivoOtro("otro: ab"), "Escribe el motivo (al menos 5 letras).");
+  assert.equal(errorMotivoOtro("otro: casa"), "Escribe el motivo (al menos 5 letras).", "4 letras ya no alcanzan");
   assert.equal(errorMotivoOtro("otro: Junta"), "");
   const r = { ...nuevoRenglon(540, 600, "jornada", "otro: "), k: "x" };
-  assert.equal(errorDe(r, [r]), "Escribe el motivo (al menos 3 letras).");
+  assert.equal(errorDe(r, [r]), "Escribe el motivo (al menos 5 letras).");
   const ok = { ...r, motivo: "otro:  Junta en planta " };
   assert.equal(errorDe(ok, [ok]), "");
   assert.equal(cuerpoPut([ok], { fecha: F, zona: Z }).registros[0].motivo, "otro: Junta en planta");

@@ -7,7 +7,7 @@ pantallas: [/panel/registro-asistencia]
 palabras: [masivo, varios, selección, marcar como, cargar horario normal, falla del reloj, evento, corregir varios, acciones masivas]
 orden: 70
 actualizado: 2026-11-27
-fuentes: [src/app/panel/registro-asistencia/AccionesMasivas.jsx, src/app/panel/registro-asistencia/AsistenciaRow.jsx, src/lib/asistencia/relojDia.mjs]
+fuentes: [src/components/asistencia/CampoMotivo.jsx, src/lib/asistencia/motivoCorreccion.mjs, src/app/panel/registro-asistencia/AccionesMasivas.jsx, src/app/panel/registro-asistencia/AsistenciaRow.jsx, src/lib/asistencia/relojDia.mjs]
 ---
 
 ## Para qué sirve
@@ -26,7 +26,7 @@ Recursos Humanos y el dueño, con permiso de edición de asistencias.
 ## Antes de empezar
 
 - Abre **Control de tiempo → Asistencias**, elige el día o el periodo y filtra a las personas que quieras.
-- Ten listo el **motivo**: es obligatorio.
+- Ten listo el **motivo**: es obligatorio (de 5 a 500 letras) y es uno solo para todas las filas elegidas.
 
 ## Cómo elegir las filas
 
@@ -41,7 +41,7 @@ Sirve para personas **sin checadas**.
 
 1. Con las filas elegidas toca **Marcar como…**.
 2. En **Estado** elige el tipo (por ejemplo **Día de descanso** o **Inasistencia**).
-3. Escribe el **Motivo (obligatorio)**, por ejemplo «Cambio de descanso autorizado».
+3. Escribe el **Motivo (obligatorio)**, por ejemplo «Cambio de descanso autorizado», o toca una sugerencia.
 4. Revisa el resumen: «Se aplica a N de M seleccionadas · se omiten X». Debajo verás a quién se omite y por qué.
 5. Toca **Aplicar a N**.
 
@@ -52,7 +52,7 @@ Sirve para personas **sin checadas**.
 Sirve para quienes **no checaron** o **no tienen salida**.
 
 1. Con las filas elegidas toca **Cargar horario normal…**.
-2. Escribe el **Motivo (obligatorio)**, por ejemplo «Falla del reloj».
+2. Escribe el **Motivo (obligatorio)** o toca la sugerencia **Falla del reloj**.
 3. Revisa el resumen de a quién se aplica.
 4. Toca **Aplicar a N**.
 
@@ -77,7 +77,7 @@ Sí: igual que una por una, cada inasistencia injustificada crea su acta en borr
 
 - **…el servidor omite algunas filas:** verás «Aplicado a N · se omitieron X. Queda en el historial con tu nombre y el motivo.».
 - **…alguna fila es de otra empresa a la que no tienes acceso:** no se aplica ninguna y verás el error.
-- **…no escribes motivo:** el botón **Aplicar** no se activa.
+- **…no escribes motivo:** al tocar **Aplicar** no se cambia nada y junto al campo verás «Escribe el motivo de la corrección.». Si es muy corto: «El motivo debe tener al menos 5 letras.».
 - **…algún día está en una nómina autorizada:** ese día no se puede cambiar.
 
 ## Relacionado

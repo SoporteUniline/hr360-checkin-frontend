@@ -138,7 +138,7 @@ function Renglon({ r, n, error, motivos, autorizadores, nocturno, horario, h, on
             onCambio={(v) => onCambio({ motivo: v === "otro" ? (otro ? r.motivo : motivoOtro("")) : v, motivoElegido: true })}
             vacio={pideMotivo ? "Elige el motivo…" : "Sin motivo"} opciones={opcionesCorreccion(motivos, valorMotivo)} />
           {otro ? (
-            <input aria-label="Escribe el motivo de la corrección" placeholder="Escribe el motivo (al menos 3 letras)" maxLength={MAX_TEXTO_OTRO}
+            <input aria-label="Escribe el motivo de la corrección" placeholder="Escribe el motivo (al menos 5 letras)" maxLength={MAX_TEXTO_OTRO}
               value={textoMotivoOtro(r.motivo)} onChange={(e) => onCambio({ motivo: motivoOtro(e.target.value), motivoElegido: true })}
               className={CAMPO} />
           ) : null}

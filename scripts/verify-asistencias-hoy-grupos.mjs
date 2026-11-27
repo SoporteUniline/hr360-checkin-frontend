@@ -206,13 +206,20 @@ try {
   // 2) Edición en fila dentro de un grupo: Estado / Motivo de Juan («Requieren atención»).
   await elegir(page.getByLabel("Motivo de Juan Pérez"), { label: "Otro…" });
   await filaDe("Juan Pérez").getByLabel("Escribe el motivo").fill("Cita médica con comprobante");
+  // (27/11/2026) Sin «Motivo de la corrección» no se guarda (error junto al campo).
+  await filaDe("Juan Pérez").getByRole("button", { name: "OK" }).click();
+  await filaDe("Juan Pérez").locator("[data-error-motivo]").waitFor({ timeout: 5000 });
+  assert.equal(pet.estado.length, 0, "sin motivo no hay PUT");
+  await filaDe("Juan Pérez").getByLabel(/Motivo de la corrección/).fill("Avisó con comprobante médico");
   await filaDe("Juan Pérez").getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 1, "PUT estado-dia");
-  assert.deepEqual(pet.estado[0], { id: 503, cuerpo: { id_tipo_permiso: 2, id_motivo: 6, motivo_permiso: "Cita médica con comprobante", goce: "sin" } });
+  assert.deepEqual(pet.estado[0], { id: 503, cuerpo: { id_tipo_permiso: 2, id_motivo: 6, motivo_permiso: "Cita médica con comprobante", goce: "sin",
+    motivo_correccion: "Avisó con comprobante médico", pantalla: "estado_dia" } });
   await elegir(page.getByLabel("Qué pasó de Armando González"), "5");
+  await filaDe("Armando González").getByRole("button", { name: "Error de captura" }).click();
   await filaDe("Armando González").getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 2, "PUT estado-dia descanso");
-  assert.deepEqual(pet.estado[1], { id: 502, cuerpo: { id_tipo_permiso: 5 } });
+  assert.deepEqual(pet.estado[1], { id: 502, cuerpo: { id_tipo_permiso: 5, motivo_correccion: "Error de captura", pantalla: "estado_dia" } });
 
   // 3) El reloj desde una fila de «Ya salieron»: cambiar la entrada exige motivo y guarda.
   await page.getByRole("button", { name: "Abrir el reloj de Rosa Díaz" }).click();

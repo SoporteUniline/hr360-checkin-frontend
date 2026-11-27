@@ -1,7 +1,8 @@
 "use client";
 
 // Barra de Asistencias al elegir filas: «Marcar como…» (solo a quien no tiene checadas vivas) y «Cargar horario
-// normal…» (a quien no checó o no tiene salida). Motivo obligatorio; muestra cuántos aplican y cuántos se omiten.
+// normal…» (a quien no checó o no tiene salida). Motivo obligatorio (27/11/2026: 5 a 500 letras, uno para todas las filas,
+// con sugerencias y el error junto al campo; lib/asistencia/motivoCorreccion.mjs); muestra cuántos aplican y cuántos se omiten.
 // POST /checador/asistencias/masivo/estado-dia y /masivo/horario-normal. Las horas se corrigen en el reloj de cada fila.
 import { useMemo, useState } from "react";
 import { useSnackbar } from "notistack";
@@ -9,6 +10,8 @@ import axios from "@/lib/axios";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { planMasivo, tiposEstadoDia } from "@/lib/asistencia/relojDia.mjs";
 import { avisosRespuesta } from "@/lib/actasEstatus.mjs";
+import CampoMotivo from "@/components/asistencia/CampoMotivo";
+import { errorMotivo, errorMotivoServidor, limpiarMotivo } from "@/lib/asistencia/motivoCorreccion.mjs";
 
 const CAMPO = "h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-[14px] text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 max-sm:h-11 max-sm:text-base";
 const nombre = (r) => `${r.nombre ?? ""} ${r.apellido_paterno ?? ""}`.trim();
@@ -19,20 +22,25 @@ export default function AccionesMasivas({ filas, tiposPermiso, onLimpiar, onGuar
   const [idTipo, setIdTipo] = useState("");
   const [motivo, setMotivo] = useState("");
   const [aplicando, setAplicando] = useState(false);
+  const [errorM, setErrorM] = useState("");
   const tipos = useMemo(() => tiposEstadoDia(tiposPermiso), [tiposPermiso]);
   const plan = useMemo(() => (accion ? planMasivo(filas, accion) : null), [accion, filas]);
   if (!filas.length && !accion) return null;
 
-  const abrir = (a) => { setAccion(a); setIdTipo(""); setMotivo(""); };
-  const bloqueado = aplicando || !plan?.aplican.length || !motivo.trim() || (accion === "estado" && !idTipo);
+  const abrir = (a) => { setAccion(a); setIdTipo(""); setMotivo(""); setErrorM(""); };
+  // Sin motivo el botón sigue activo: al tocarlo se dice qué falta junto al campo.
+  const bloqueado = aplicando || !plan?.aplican.length || (accion === "estado" && !idTipo);
+  const cambiarMotivo = (t) => { setMotivo(t); if (errorM) setErrorM(errorMotivo(t)); };
   const aplicar = async () => {
     if (bloqueado) return;
+    const falta = errorMotivo(motivo);
+    if (falta) { setErrorM(falta); return; }
     setAplicando(true);
     try {
       const ids = plan.aplican.map((f) => f.id);
       const res = accion === "estado"
-        ? await axios.post("/checador/asistencias/masivo/estado-dia", { ids, id_tipo_permiso: Number(idTipo), motivo: motivo.trim() })
-        : await axios.post("/checador/asistencias/masivo/horario-normal", { ids, motivo: motivo.trim() });
+        ? await axios.post("/checador/asistencias/masivo/estado-dia", { ids, id_tipo_permiso: Number(idTipo), motivo: limpiarMotivo(motivo) })
+        : await axios.post("/checador/asistencias/masivo/horario-normal", { ids, motivo: limpiarMotivo(motivo) });
       const aplicados = res.data?.aplicados ?? ids.length;
       const omitidos = Array.isArray(res.data?.omitidos) ? res.data.omitidos : [];
       enqueueSnackbar(`Aplicado a ${aplicados}${omitidos.length ? ` · se omitieron ${omitidos.length}` : ""}. Queda en el historial con tu nombre y el motivo.`,
@@ -43,6 +51,8 @@ export default function AccionesMasivas({ filas, tiposPermiso, onLimpiar, onGuar
       setAccion(null);
       onLimpiar?.();
     } catch (e) {
+      const faltaMotivo = errorMotivoServidor(e);
+      if (faltaMotivo) { setErrorM(faltaMotivo); return; }
       enqueueSnackbar(e?.response?.data?.error || e?.response?.data?.message || "No se pudo aplicar a las filas elegidas.", { variant: "error" });
     } finally {
       setAplicando(false);
@@ -81,10 +91,9 @@ export default function AccionesMasivas({ filas, tiposPermiso, onLimpiar, onGuar
               </select>
             </label>
           ) : null}
-          <label className="flex flex-col gap-1.5 text-[13px] font-semibold text-slate-600">Motivo (obligatorio)
-            <input aria-label="Motivo (obligatorio)" className={CAMPO} value={motivo} maxLength={200} onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ej. falla del reloj, evento, cita médica…" />
-          </label>
+          <CampoMotivo etiqueta="Motivo" valor={motivo} onCambio={cambiarMotivo} error={errorM} disabled={aplicando}
+            placeholder="Ej. falla del reloj, evento, cita médica…" />
+          <p className="-mt-1 text-[12px] text-slate-500">El mismo motivo queda en el historial de cada fila.</p>
           <div data-masivo-resumen className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-[13px] text-slate-700">
             <p>Se aplica a <b>{plan?.aplican.length ?? 0}</b> de {n} {n === 1 ? "seleccionada" : "seleccionadas"}{plan?.omitidos.length ? ` · se omiten ${plan.omitidos.length}` : ""}.</p>
             {plan?.omitidos.length ? (
