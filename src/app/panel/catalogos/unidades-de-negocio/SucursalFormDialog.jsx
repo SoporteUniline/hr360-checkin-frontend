@@ -18,6 +18,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Building2, Camera } from "lucide-react";
 // Lumo fase B1 (25/11/2026): ubicación en el mapa para la sucursal más cercana del agente de WhatsApp.
 import UbicacionSucursal from "@/components/whatsapp/UbicacionSucursal";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 
 export default function SucursalFormDialog({
   open,
@@ -77,12 +78,17 @@ export default function SucursalFormDialog({
     }
   }, [editSuc, open, id_empresa_defecto]);
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setLogotipo(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
+  // (27/11/2026) El logo se ajusta al elegirlo (1200 px, < 900 KB) en JPEG, o PNG si tiene transparencia —nunca WebP,
+  // por si termina en un PDF de jsPDF— (lib/imagenes/aWeb.mjs, uso «logo»).
+  const { preparando, preparar } = usePrepararFoto("logo");
+  const handleFileChange = async (e) => {
+    const elegido = e.target.files[0];
+    e.target.value = "";
+    if (!elegido) return;
+    const foto = await preparar(elegido);
+    if (foto.error) { enqueueSnackbar(foto.error, { variant: "error" }); return; }
+    setLogotipo(foto.archivo);
+    setPreviewUrl(URL.createObjectURL(foto.archivo));
   };
 
   const handleInputChange = (e) => {
@@ -174,6 +180,7 @@ export default function SucursalFormDialog({
                   type="file"
                   accept="image/*"
                   className="hidden"
+                  disabled={preparando}
                   onChange={handleFileChange}
                 />
               </label>
@@ -183,8 +190,8 @@ export default function SucursalFormDialog({
               <DialogTitle className="text-lg font-bold text-gray-900 leading-tight truncate">
                 {editSuc ? "Editar Unidad" : "Nueva Unidad de Negocio"}
               </DialogTitle>
-              <DialogDescription className="text-[11px] mt-1">
-                Datos de identificación y contacto.
+              <DialogDescription className="text-[11px] mt-1" role={preparando ? "status" : undefined}>
+                {preparando ? TEXTO_PREPARANDO : "Datos de identificación y contacto."}
               </DialogDescription>
             </div>
           </div>

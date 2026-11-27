@@ -4,6 +4,14 @@ import { ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useActivos } from "./ActivosProvider";
 import { rutaDeInstancia } from "@/lib/demo-base-path.mjs";
+import { ErrorFoto, prepararFoto } from "@/lib/imagenes/aWeb.mjs";
+
+const aDataUrl = (blob) => new Promise((resolve, reject) => {
+  const lector = new FileReader();
+  lector.onload = () => resolve(String(lector.result));
+  lector.onerror = () => reject(new Error("No se pudo leer la imagen."));
+  lector.readAsDataURL(blob);
+});
 export function photoUrl(product, companyId) {
   return product?.photoVersion
     ? rutaDeInstancia(`/internal/control-activos/fotos/${product.id}?empresa=${companyId}&v=${product.photoVersion}`)
@@ -39,34 +47,20 @@ export function PhotoField({ form, onChange, onBusy }) {
     if (!file) return;
     setError("");
     onBusy(true);
-    let bitmap;
     try {
-      if (
-        !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-        file.size > 10 * 1024 * 1024
-      )
-        throw new Error(
-          "Selecciona una imagen JPG, PNG o WebP de hasta 10 MB."
-        );
-      bitmap = await createImageBitmap(file);
-      const scale = Math.min(1, 1000 / bitmap.width, 1000 / bitmap.height);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-      canvas
-        .getContext("2d")
-        .drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-      let data = canvas.toDataURL("image/webp", 0.82);
-      if (data.length > 690000) data = canvas.toDataURL("image/webp", 0.6);
+      // (27/11/2026) La conversión única de fotos (lib/imagenes/aWeb.mjs, uso «activo»): enderezada, 1000 px, WebP
+      // (JPEG en Safari) y < 500 KB para que el data URL quepa en el JSON. El servidor la vuelve a optimizar (sharp).
+      const foto = await prepararFoto(file, "activo");
+      const data = await aDataUrl(foto.archivo);
       if (data.length > 690000)
         throw new Error(
           "La imagen sigue siendo muy grande. Elige una fotografía más sencilla."
         );
       onChange(data);
     } catch (e) {
+      if (!(e instanceof ErrorFoto)) console.error("[activos] foto", e);
       setError(e.message || "No se pudo abrir la imagen.");
     } finally {
-      bitmap?.close();
       onBusy(false);
     }
   }
@@ -90,7 +84,7 @@ export function PhotoField({ form, onChange, onBusy }) {
             <span className="mb-2 block">Seleccionar fotografía</span>
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/*"
               disabled={!state.catalogReady}
               onChange={choose}
               className="max-w-full text-sm"
@@ -98,7 +92,7 @@ export function PhotoField({ form, onChange, onBusy }) {
           </label>
           <p className="text-xs text-slate-500">
             {state.catalogReady
-              ? "JPG, PNG o WebP. Se optimiza al guardar."
+              ? "Cualquier foto (JPG, PNG, WebP o HEIC). Se optimiza sola."
               : "Fotografías pendientes de activación."}
           </p>
           {src && (

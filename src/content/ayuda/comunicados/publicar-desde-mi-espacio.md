@@ -28,7 +28,7 @@ Para compartir algo con tus compañeros en el muro: una foto del convivio, una f
 1. En la barra de abajo toca **Muro** y luego **Publicar**.
 2. Si quieres, escribe un **Título (opcional)**.
 3. En **¿Qué quieres compartir?** escribe tu mensaje (hasta 5,000 caracteres).
-4. Toca **Agregar fotos** para subir fotos de tu celular: hasta 10, en JPG, PNG o WebP, de hasta 8 MB cada una. Para quitar una, toca el bote de basura sobre ella.
+4. Toca **Agregar fotos** para subir fotos de tu celular: hasta 10. Se ajustan solas para que carguen rápido (verás «Preparando foto…» un momento). Para quitar una, toca el bote de basura sobre ella.
 5. Si quieres un video, pega el enlace de YouTube en **Video de YouTube (opcional)**. Verás la vista previa.
 6. Toca **Enviar a revisión**.
 
@@ -68,6 +68,8 @@ Las personas que tienes a cargo en ADAMIA: de quienes eres jefe inmediato o a qu
 - **…sale «Escribe algo para publicar».** El mensaje está vacío: escribe algo en **¿Qué quieres compartir?**.
 - **…sale «Pega un enlace de YouTube (youtube.com o youtu.be)».** El enlace del video no es de YouTube o está incompleto.
 - **…sale «Hasta 10 fotos por publicación».** Quita algunas fotos antes de enviar.
+- **…sale «Esta foto está en formato HEIC; en el iPhone ve a Ajustes › Cámara › Formatos › Más compatible, o elige otra».** Tu navegador no puede abrir fotos HEIC del iPhone. Cambia ese ajuste en el iPhone o elige otra foto.
+- **…sale «El archivo pesa demasiado para subirlo. Prueba con uno más ligero.».** El servidor no aceptó un archivo tan grande. Elige uno más ligero (las fotos ya se ajustan solas; esto pasa sobre todo con PDFs grandes o con muchas fotos a la vez).
 - **…ya tengo 5 publicaciones esperando aprobación.** No puedes mandar otra hasta que Recursos Humanos revise alguna.
 - **…mi publicación dice «No se publicó».** Recursos Humanos la rechazó; el motivo aparece debajo. Puedes corregirla y enviarla de nuevo.
 

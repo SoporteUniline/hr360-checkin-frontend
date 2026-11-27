@@ -10,6 +10,7 @@ import Cookies from "js-cookie";
 import { useSnackbar } from "notistack";
 import { mutate } from "swr";
 import axiosInstance from "@/lib/axios";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 
 export default function ImageUpload({ user }) {
   const token = Cookies.get("token");
@@ -17,14 +18,17 @@ export default function ImageUpload({ user }) {
   const { enqueueSnackbar } = useSnackbar();
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  // (27/11/2026) La foto se convierte a WebP (1024 px, < 900 KB) al elegirla y la vista previa es la convertida.
+  const { preparando, preparar } = usePrepararFoto("perfil");
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const imageURL = URL.createObjectURL(file);
-      setImagePreview(imageURL);
-      setSelectedFile(file);
-    }
+  const handleImageChange = async (e) => {
+    const elegido = e.target.files[0];
+    e.target.value = "";
+    if (!elegido) return;
+    const foto = await preparar(elegido);
+    if (foto.error) { enqueueSnackbar(foto.error, { variant: "error" }); return; }
+    setImagePreview(URL.createObjectURL(foto.archivo));
+    setSelectedFile(foto.archivo);
   };
 
   const removeImage = () => {
@@ -112,11 +116,12 @@ export default function ImageUpload({ user }) {
           </div>
         ) : (
           <Label className="cursor-pointer">
-            <span className="text-sm text-blue-600">Cambiar imagen</span>
+            <span className="text-sm text-blue-600" role={preparando ? "status" : undefined}>{preparando ? TEXTO_PREPARANDO : "Cambiar imagen"}</span>
             <Input
               type="file"
               accept="image/*"
               className="hidden"
+              disabled={preparando}
               onChange={handleImageChange}
             />
           </Label>

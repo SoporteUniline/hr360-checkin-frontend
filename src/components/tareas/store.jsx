@@ -9,13 +9,15 @@ import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import { aChecklistApi, aProyectoApi, aRespuestasApi, aTareaApi, deChecklistApi, dePersonaApi, deProyectoApi, deTareaApi } from "@/lib/tareas/api.mjs";
 import { comprimirImagen } from "@/lib/tareas/imagen.mjs";
+import { mensajeRechazoPorPeso } from "@/lib/errorSubida.mjs";
 
 const BASE = "/checador/tareas";
 const Contexto = createContext(null);
 const get = (url) => axios.get(url).then((r) => r.data);
-export const errorDe = (e, porDefecto = "No se pudo completar. Intenta de nuevo.") => e?.response?.data?.error || porDefecto;
+// ErrorFoto (la foto no se pudo preparar: HEIC en Chrome, archivo roto) trae su propio mensaje para la persona.
+export const errorDe = (e, porDefecto = "No se pudo completar. Intenta de nuevo.") => (e?.name === "ErrorFoto" ? e.message : null) || mensajeRechazoPorPeso(e) || e?.response?.data?.error || porDefecto;
 const hoyMx = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
-const archivo = (blob, nombre = "foto.jpg") => { const fd = new FormData(); fd.append("foto", blob, nombre); return fd; };
+const archivo = (blob) => { const fd = new FormData(); fd.append("foto", blob, blob.name || "foto.webp"); return fd; };
 const multipart = { headers: { "Content-Type": "multipart/form-data" } };
 
 function usePanel(idEmpresa) {
@@ -80,7 +82,8 @@ export function TareasProvider({ modo = "panel", idEmpresa = null, children }) {
     subirArchivoEnvio: async (idEnvio, blob, { esFirma = false } = {}) => {
       try {
         const fd = new FormData();
-        fd.append("archivo", esFirma ? blob : await comprimirImagen(blob), esFirma ? "firma.png" : "foto.jpg");
+        const foto = esFirma ? blob : await comprimirImagen(blob);
+        fd.append("archivo", foto, esFirma ? "firma.png" : foto.name || "foto.webp");
         const r = await axios.post(`${BASE}/envios/${idEnvio}/archivo`, fd, multipart);
         return r.data.key;
       } catch (e) {
