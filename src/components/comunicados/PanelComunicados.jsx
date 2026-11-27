@@ -1,20 +1,22 @@
 "use client";
-// Comunicados (maqueta «Main», aprobada 27/11/2026): resumen, filtros y la lista de lo publicado con su lectura.
+// Comunicados › Administrar (maqueta «Main», aprobada 27/11/2026): resumen, filtros y la lista de lo publicado con su
+// lectura. Desde el 27/11/2026 la primera pestaña de Comunicados es el muro (MuroPanel.jsx) y esta tabla es «Administrar».
 // Los posts de empleados que esperan aprobación salen en «Por aprobar» con Aprobar / Rechazar.
 // Backend: GET /checador/comunicados, POST /:id/aprobar, POST /:id/rechazar.
 // Escritorio: tabla de 6 columnas; teléfono: una tarjeta por comunicado (sin scroll horizontal).
 import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { Megaphone, Pin, Plus, Search, ShieldCheck, Sparkles } from "lucide-react";
+import { Megaphone, Pin, Plus, Search } from "lucide-react";
 import axios from "@/lib/axios";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { SelectorEmpresa } from "@/components/nomina/comun";
 import { Ventana } from "@/components/avisos/Ventana";
 import {
-  API, FILTROS_PANEL, LIMITES, RUTA_AUTOMATICOS, RUTA_MODERACION, RUTA_NUEVO, errorDe, etiquetaEstado, fechaRelativa, filtrarLocal,
+  API, FILTROS_PANEL, LIMITES, RUTA_NUEVO, errorDe, etiquetaEstado, fechaRelativa, filtrarLocal,
   rutaSeguimiento, tarjetasResumen, textoCanales, textoLectura, textoPara, textoTipo, urlListado,
 } from "@/lib/comunicados/comunicados.mjs";
+import PestanasComunicados from "./PestanasComunicados";
 import { AvisoError, Insignia, Mensaje, botonPrimario, botonSecundario, entrada, get, opcionesSwr, tarjeta, useZona, useEmpresa, usePuedeEditar } from "./comun";
 
 const POR_PAGINA = 20;
@@ -106,10 +108,9 @@ export default function PanelComunicados() {
     <div className="mx-auto w-full max-w-6xl space-y-5 p-1" data-pantalla="comunicados">
       <EncabezadoPagina icono={Megaphone} titulo="Comunicados" />
       <p className="-mt-3 text-[13px] text-slate-600">Publica una vez y llega por la app, correo, notificación y aviso en el panel.</p>
+      <PestanasComunicados />
       <div className="flex flex-wrap items-center justify-end gap-2">
         <SelectorEmpresa {...empresa} />
-        <Link href={RUTA_MODERACION} className={botonSecundario}><ShieldCheck className="size-4" aria-hidden="true" />Moderar el muro</Link>
-        <Link href={RUTA_AUTOMATICOS} className={botonSecundario}><Sparkles className="size-4" aria-hidden="true" />Automáticos</Link>
         {editar ? <Link href={RUTA_NUEVO} data-accion="nuevo" className={botonPrimario}><Plus className="size-4" aria-hidden="true" />Nuevo comunicado</Link> : null}
       </div>
 

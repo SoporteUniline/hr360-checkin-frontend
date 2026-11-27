@@ -38,6 +38,7 @@ import {
   BarChart3,
   FileBarChart2,
   LayoutDashboard,
+  Newspaper,
   FileText,
   CalendarDays,
   CalendarCheck2,
@@ -237,7 +238,15 @@ const dashboardItems = [
     icon: LayoutGrid,
   },
   {
-    // «Resumen» y no «Inicio»: la primera pantalla de RH es el Monitor.
+    // (27/11/2026, pedido del dueño) El muro tipo Facebook del Centro de comunicados: primera entrada del menú y
+    // primera pantalla después de entrar (src/lib/inicioPanel.mjs). Se oculta sin el módulo o sin permiso de verlo.
+    title: "Muro",
+    url: "/panel/muro",
+    rol: "Recruiter",
+    icon: Newspaper,
+  },
+  {
+    // «Resumen» y no «Inicio»: sin el muro, la primera pantalla de RH es el Monitor.
     title: "Resumen",
     url: "/panel/dashboard",
     rol: "Recruiter",
@@ -565,7 +574,8 @@ const menuGroups = [
     group: "COMUNICADOS",
     groupIcon: Megaphone,
     items: [
-      { title: "Comunicados", url: "/panel/comunicados", matchPrefix: true, rol: "Recruiter", icon: Megaphone },
+      // El muro es la entrada «Muro» de arriba del menú (y la primera pestaña de Comunicados).
+      { title: "Administrar", url: "/panel/comunicados/administrar", matchPrefix: true, rol: "Recruiter", icon: Megaphone },
       { title: "Automáticos", url: "/panel/comunicados/automaticos", rol: "Recruiter", icon: Sparkles },
       { title: "Moderar el muro", url: "/panel/comunicados/moderacion", rol: "Recruiter", icon: ShieldAlert },
     ],

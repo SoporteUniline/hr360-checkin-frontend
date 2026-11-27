@@ -5,11 +5,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { ChevronLeft, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import axios from "@/lib/axios";
 import { SelectorEmpresa } from "@/components/nomina/comun";
 import { RUTA_PLANTILLAS } from "@/lib/avisos/avisos.mjs";
-import { API, AUDIENCIAS_AUTO, REGLAS_AUTO, RUTA_PANEL, cuandoAuto, errorDe, horaHH, normalizarConfig, publicacionesDelDia, reglasAuto, textoManana } from "@/lib/comunicados/comunicados.mjs";
+import { API, AUDIENCIAS_AUTO, REGLAS_AUTO, cuandoAuto, errorDe, horaHH, normalizarConfig, publicacionesDelDia, reglasAuto, textoManana } from "@/lib/comunicados/comunicados.mjs";
+import PestanasComunicados from "./PestanasComunicados";
 import { AvisoError, Interruptor, Mensaje, TextoPlano, botonPrimario, conEmpresa, entrada, get, opcionesSwr, tarjeta, useEmpresa, usePuedeEditar } from "./comun";
 
 const HORAS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:00`);
@@ -46,7 +47,7 @@ export default function Automaticos() {
   const hoy = publicacionesDelDia(previa.data?.hoy);
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 p-1" data-pantalla="automaticos">
-      <Link href={RUTA_PANEL} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-slate-600 hover:text-slate-900"><ChevronLeft className="size-4" aria-hidden="true" />Comunicados</Link>
+      <PestanasComunicados />
       <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-extrabold tracking-tight text-slate-900"><Sparkles className="size-6 text-[#2563EB]" aria-hidden="true" />Comunicados automáticos</h1>

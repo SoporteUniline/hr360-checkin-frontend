@@ -192,7 +192,9 @@ async function contexto(viewport, vistaGuardada = null) {
   });
   return { ctx, page };
 }
-async function abrirMonitor(page, ruta = "/panel") {
+// (27/11/2026) /panel ya no lleva al Monitor sino al muro (src/lib/inicioPanel.mjs; lo revisa verify-comunicados): se
+// entra directo al Monitor.
+async function abrirMonitor(page, ruta = "/panel/monitor") {
   await page.goto(base + ruta, { waitUntil: "domcontentloaded" });
   await page.waitForURL(/\/panel\/monitor$/, { timeout: 30000 });
   const vista = page.getByRole("region", { name: "Asistencia de hoy" });
@@ -779,7 +781,7 @@ try {
   assert.deepEqual(errores, []);
   exito = true;
   console.log(
-    "OK Monitor: /panel → Monitor, menú, 7 contadores con pie y alerta roja, contador = filtro (otra vez lo quita), " +
+    "OK Monitor: /panel/monitor, menú, 7 contadores con pie y alerta roja, contador = filtro (otra vez lo quita), " +
       "Tabla por defecto (encabezados de columna, 6 grupos con su número, horario, entrada → salida, una frase y a lo más un chip, " +
       "jornada con barra, texto ≥ 13 px, renglón entero → reloj del día con clic y teclado), búsqueda y área, " +
       "Reloj checador (escritorio y celular 44 px) → reloj de la empresa, Asistencias en Registros › Tabla sin «En vivo», ?vista=envivo → Monitor, " +
