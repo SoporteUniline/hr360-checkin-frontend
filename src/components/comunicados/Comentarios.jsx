@@ -111,7 +111,7 @@ function Comentario({ c, raiz, tz, megusta, puede, alResponder, alReportar, alBo
 
 export default function Comentarios({ id, permite = true, tz, alCambiarTotal }) {
   const llave = (i, previa) => (i === 0 ? `${API_MI}/${encodeURIComponent(id)}/comentarios` : previa?.siguiente ? `${API_MI}/${encodeURIComponent(id)}/comentarios?cursor=${encodeURIComponent(previa.siguiente)}` : null);
-  const { data, error, isLoading, size, setSize, mutate } = useSWRInfinite(llave, get, { revalidateOnFocus: false, revalidateFirstPage: false, shouldRetryOnError: false });
+  const { data, error, isLoading, size, setSize, mutate } = useSWRInfinite(llave, get, { revalidateOnMount: true, revalidateAll: true, revalidateOnFocus: false, shouldRetryOnError: false });
   const megusta = useMeGusta(urlMeGusta);
   const [respondiendo, setRespondiendo] = useState(null);
   const [reportando, setReportando] = useState(null);

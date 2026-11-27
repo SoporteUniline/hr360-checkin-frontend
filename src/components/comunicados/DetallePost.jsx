@@ -4,7 +4,7 @@
 // nombre, fecha, hora, IP y dispositivo). Backend: GET /mi/:id, POST /mi/:id/confirmar, POST /mi/:id/me-gusta.
 import { useState } from "react";
 import Link from "next/link";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { Capacitor } from "@capacitor/core";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import axios from "@/lib/axios";
@@ -48,6 +48,7 @@ function Confirmar({ it, tz, alConfirmar }) {
 export default function DetallePost({ id }) {
   const tz = useZona();
   const { data, error, isLoading, mutate } = useSWR(`${API_MI}/${encodeURIComponent(id)}`, get, { revalidateOnFocus: false, shouldRetryOnError: false });
+  const { mutate: mutarGlobal } = useSWRConfig();
   const megusta = useMeGusta(urlMeGusta);
   const [delta, setDelta] = useState(0);
   const base = principal(data);
@@ -61,7 +62,11 @@ export default function DetallePost({ id }) {
         <>
           <Publicacion it={it} tz={tz} completo alMeGusta={megusta.alternar} ocupado={megusta.ocupado(it.id)} />
           {megusta.error ? <p role="alert" className="text-[13px] text-red-700">{megusta.error}</p> : null}
-          <Confirmar it={it} tz={tz} alConfirmar={(en) => mutate({ ...data, comunicado: { ...base, confirmado_en: en, requiere_confirmar: false } }, { revalidate: false })} />
+          <Confirmar it={it} tz={tz} alConfirmar={async (en) => {
+            await mutate({ ...data, comunicado: { ...base, confirmado_en: en, requiere_confirmar: false } }, { revalidate: false });
+            // El aviso emergente y la franja «por confirmar» del muro ya no deben salir: se piden de nuevo.
+            mutarGlobal((k) => typeof k === "string" && (k.startsWith(`${API_MI}/popup`) || k.includes(`${API_MI}/muro`)));
+          }} />
           <Comentarios id={it.id} permite={it.permite_comentarios !== false} tz={tz} alCambiarTotal={(n) => setDelta((d) => d + n)} />
         </>
       ) : null}
