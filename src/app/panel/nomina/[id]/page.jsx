@@ -15,6 +15,7 @@ import { Chip, Kpi, descargar, mensajeError } from "@/components/nomina/comun";
 import EditorRecibo from "@/components/nomina/EditorRecibo";
 import { EncabezadoDetalle } from "@/components/nomina/ModuloNomina";
 import AsistenciaRecibo from "@/components/nomina/AsistenciaRecibo";
+import AvisoSueldosPorRevisar from "@/components/nomina/AvisoSueldosPorRevisar";
 import EditarDiaAsistencia from "@/app/panel/registro-asistencia/EditarDiaAsistencia";
 import { ENVIOS, ESTADOS, acciones, dinero, fechaCorta, horas } from "@/lib/nomina/nomina.mjs";
 
@@ -78,6 +79,8 @@ export default function DetalleNomina() {
       {periodo.estado === "cancelado" && periodo.motivo_cancelacion ? (
         <p className="rounded-xl bg-red-50 p-3 text-sm text-red-800">Cancelada por {periodo.cancelado_por_nombre ?? "—"}: {periodo.motivo_cancelacion}</p>
       ) : null}
+      {/* (27/11/2026) Ver la nómina se puede; autorizarla no, mientras haya sueldos por revisar. */}
+      <AvisoSueldosPorRevisar personas={data.sueldos_por_revisar ?? []} accion="autorizar" />
       {periodo.estado === "por_autorizar" && !puedeAutorizar ? (
         <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Enviada al dueño de la cuenta para su autorización.</p>
       ) : null}
@@ -105,7 +108,7 @@ export default function DetalleNomina() {
         {a.recalcular ? <Button variant="outline" size="sm" disabled={ocupado} onClick={() => accion("calcular", {}, "Nómina recalculada con la asistencia actual.")}>Recalcular</Button> : null}
         {a.enviar ? <Button size="sm" disabled={ocupado || negativos > 0} onClick={() => setConfirmar("enviar")}>Enviar a autorizar</Button> : null}
         {a.regresar ? <Button variant="outline" size="sm" disabled={ocupado} onClick={() => accion("regresar", {}, "Regresó a borrador.")}>Regresar a borrador</Button> : null}
-        {a.autorizar ? <Button size="sm" disabled={ocupado} onClick={() => setConfirmar("autorizar")}>Autorizar y enviar recibos</Button> : null}
+        {a.autorizar ? <Button size="sm" disabled={ocupado || (data.sueldos_por_revisar ?? []).length > 0} onClick={() => setConfirmar("autorizar")}>Autorizar y enviar recibos</Button> : null}
         {a.reenviar && recibos.some((r) => ["error", null].includes(r.envio_estado)) ? <Button variant="outline" size="sm" onClick={() => accion("reenviar", {}, "Reintentando los envíos.")}>Reintentar envíos</Button> : null}
         <Button variant="outline" size="sm" onClick={() => descargar(axios, `/checador/nomina/periodos/${id}/excel`, `nomina-${periodo.fecha_inicio}.xlsx`).catch(() => enqueueSnackbar("No se pudo descargar el Excel.", { variant: "error" }))}>Excel de pagos</Button>
         {a.cancelar ? <Button variant="outline" size="sm" className="border-red-200 text-red-700 hover:bg-red-50" onClick={() => setConfirmar("cancelar")}>Cancelar nómina</Button> : null}

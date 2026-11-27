@@ -1,18 +1,18 @@
 ---
-titulo: Contratos laborales — registrar, renovar y dar seguimiento a vencimientos
-resumen: Registra el contrato de cada persona con su tipo, vigencia, sueldo, jornada y prestaciones; renuévalo, cambia su estatus y entérate cuáles están por vencer.
+titulo: Contratos laborales — el contrato de cada persona, su sueldo, su texto y sus firmas
+resumen: Registra el contrato de cada persona, revisa su sueldo y su texto, fírmalo y mándalo a firmar al celular, cambia el sueldo con un convenio, renuévalo o termínalo.
 modulo: documentos
 audiencia: [rh, dueno]
-pantallas: [/panel/contratos]
-palabras: [contratos, contrato laboral, vigencia, por vencer, vencido, renovar, duplicar, indefinido, temporal, periodo de prueba, estatus, terminar contrato]
+pantallas: [/panel/contratos, /panel/contratos/[id], /panel/contratos/revisar-sueldos]
+palabras: [contratos, contrato laboral, vigencia, por vencer, vencido, renovar, convenio, cambiar sueldo, firmar contrato, mandar a firmar, revisar sueldos, sueldo del contrato, contrato vigente, indefinido, temporal, periodo de prueba, terminar contrato]
 orden: 60
 actualizado: 2026-11-27
-fuentes: [src/app/panel/contratos/page.jsx, src/app/panel/contratos/ContratosTable.jsx, src/app/panel/contratos/ContratoDialog.jsx, src/lib/calculosLftApi.js, src/app/panel/contratos/CambiarEstatusContrato.jsx, src/app/panel/contratos/ContratoViewDialog.jsx, src/components/avisos/CampanaAvisos.jsx]
+fuentes: [src/app/panel/contratos/page.jsx, src/app/panel/contratos/ContratosTable.jsx, src/app/panel/contratos/ContratoDialog.jsx, src/app/panel/contratos/CambiarEstatusContrato.jsx, src/app/panel/contratos/[id]/DetalleContrato.jsx, src/app/panel/contratos/[id]/DialogosContrato.jsx, src/app/panel/contratos/revisar-sueldos/page.jsx, src/lib/contratos/detalleContrato.mjs, src/components/avisos/CampanaAvisos.jsx]
 ---
 
 ## Para qué sirve
 
-**Contratos** lleva el control de los contratos laborales: qué tipo de contrato tiene cada persona, cuándo vence, en qué condiciones (sueldo, jornada, prestaciones) y en qué estatus está. Te avisa cuáles están **por vencer** para que decidas a tiempo si renuevas.
+**Contratos** guarda el contrato de cada persona: tipo, vigencia, sueldo, jornada, prestaciones, el texto que se firma y quién lo firmó. **El sueldo del contrato vigente es el que usan la nómina, los finiquitos, los aguinaldos y los documentos.** Si alguien no tiene contrato vigente, se usa el sueldo de su ficha, marcado «sin contrato vigente».
 
 Lo encuentras en **Gestión de personal → Contratos**.
 
@@ -24,82 +24,102 @@ Recursos Humanos y el dueño.
 
 ## Antes de empezar
 
-La persona debe estar registrada como empleado.
+La persona debe estar registrada como empleado. Para mandar el contrato a firmar, su ficha debe tener **CURP**, **RFC** y **domicilio**, y la unidad de negocio los datos del empleador (razón social, RFC, domicilio y representante).
 
-## Lo que ves en la pantalla
+## Cómo abrir un contrato
 
-- **Total contratos**, **Activos**, **Por vencer (30d)** y **Vencidos**.
-- `Exportar` descarga la lista en Excel.
-- En la tabla, la **Vigencia** te marca «VENCE HOY», «VENCIDO» o «Sin fecha de término» (en los indefinidos).
-- Filtros en los encabezados: folio, empleado, puesto, tipo y estatus.
+1. En la lista toca el **folio** o el **nombre** de la persona.
+2. Se abre la vista del contrato. Arriba ves la persona, el folio, el tipo, el **estado**, la **vigencia** (con el aviso «Vence en N días» si está por vencer) y cómo va la **firma**.
+3. Debajo están las tarjetas **Sueldo**, **Jornada**, **Prestaciones**, **Historial** y **El documento** con el estado de las dos firmas.
+
+El botón **Más** de cada fila tiene Editar datos, Cambiar estatus, Renovar y Eliminar.
+
+![Vista de un contrato con su sueldo, jornada, prestaciones, historial y documento](/ayuda/capturas/documentos/contrato-detalle.webp "La vista del contrato")
+
+En el celular ves lo mismo en una columna y, abajo, la acción principal, **Ver el documento** y **Más acciones**.
+
+![Vista de un contrato en el celular](/ayuda/capturas/documentos/contrato-detalle-celular.webp "El contrato en el celular")
 
 ## Cómo registrar un contrato
 
 1. Toca `Nuevo contrato`.
-2. **Información básica:** Empresa, **Empleado** (búscalo por nombre), Puesto y Departamento (se llenan con los de su ficha), Elaborado por y Jefe inmediato.
-3. **Tipo y vigencia:** elige el **Tipo de Contrato** y las fechas.
-4. **Compensación:** Salario Base, Periodicidad de Pago (Semanal, Quincenal o Mensual) y Moneda.
-5. **Jornada laboral:** Tipo de Jornada (Diurna, Nocturna, Mixta o Reducida), Horas Semanales, Entrada, Salida y horario de comida.
-6. **Prestaciones:** Días de Vacaciones, Días de Aguinaldo, Prima Vacacional (%) y Prestaciones Superiores (por ejemplo, vales de despensa o seguro de gastos médicos). En un contrato nuevo, **Días de Vacaciones** se llena solo con los días de ley (art. 76) según la antigüedad de la persona al inicio del contrato: 12 el primer año, 14 el segundo, 16 el tercero, 18 el cuarto, 20 el quinto, 22 del sexto al décimo y 2 más cada 5 años. Debajo del campo verás «Por ley (art. 76): N días en el año N de servicio». Puedes dar más días, no menos; si pones menos, verás «Son menos días de los que pide la ley.».
-7. **Ubicación y modalidad:** Presencial, Remoto o Híbrido, y Lugar de Trabajo. Agrega **Notas** si hay acuerdos especiales.
-8. Toca `Guardar`. Verás «Contrato creado correctamente.»
+2. **Información básica:** Empresa, **Empleado**, Puesto y Departamento, Elaborado por y Jefe inmediato.
+3. **Tipo y vigencia:** el **Tipo de Contrato** y las fechas.
+4. **Compensación:** Salario Base y Periodicidad de Pago (el sueldo es por periodo: por quincena si es quincenal).
+5. **Jornada laboral**, **Prestaciones** (los días de vacaciones se proponen con los de ley, art. 76) y **Ubicación y modalidad**.
+6. En **Notas** de un contrato por tiempo u obra determinado escribe la causa o la obra: es lo que dice el texto del contrato.
+7. Toca `Guardar`. Verás «Contrato creado correctamente.»
 
 ![Ventana Nuevo contrato](/ayuda/capturas/documentos/nuevo-contrato.webp "Registra un nuevo contrato para un empleado")
 
-### Tipos de contrato
+> **Importante:** cada persona tiene **un solo contrato vigente**. Si creas o activas otro, el anterior se termina solo (no se borra) y queda en su historial.
 
-| Tipo | ¿Pide fecha de fin? |
-| --- | --- |
-| Indefinido | No |
-| Temporal | Sí |
-| Obra Determinada | Sí |
-| Capacitación Inicial | Sí |
-| Periodo de Prueba | Sí |
-| Prestación de Servicios | No |
+## Cómo firmar el contrato
 
-> **Importante:** La ley pide al menos 15 días de aguinaldo y 25 % de prima vacacional. Estos datos del contrato son los que usan los finiquitos y los aguinaldos de esa persona.
+1. Abre el contrato y revisa **El documento**. Si dice «Faltan datos para poder firmarlo», complétalos en la ficha.
+2. Toca `Firmar como empresa` y luego `Firmar contrato`. Queda registrado quién firmó, la fecha y desde qué equipo.
+3. Toca `Mandar a firmar` y luego `Generar enlace de firma`. ADAMIA arma el PDF del contrato y te da el enlace.
+4. Toca `Copiar enlace` y mándaselo a la persona por WhatsApp o correo. Lo abre en su celular, lee el contrato y firma con su dedo; se toma una foto como evidencia. Ve [Firmar desde el celular](/ayuda/documentos/firmar-desde-el-celular).
+5. Cuando las dos partes firman, el encabezado dice «Firmado por las dos partes» y `Descargar PDF` baja el contrato firmado.
 
-## Cómo renovar un contrato
+> **Importante:** desde que se manda a firmar o firma la empresa, **el texto del contrato queda fijo**. Si después cambias la plantilla, este contrato no cambia. Por eso «Editar datos» ya no está disponible: usa un convenio o una renovación.
 
-1. En la fila del contrato que vence, toca **Duplicar**.
-2. Se abre un contrato nuevo con salario, horarios, prestaciones y modalidad **copiados**.
-3. Elige otra vez el **Tipo de contrato** (no se copia). La **fecha de inicio** sugerida es el día siguiente al fin del anterior. La **fecha de fin** déjala vacía o pon una nueva.
-4. Toca `Guardar`.
+## Cómo cambiar el sueldo (convenio)
 
-## Cómo cambiar el estatus
+1. Abre el contrato vigente y toca `Cambiar sueldo (convenio)`.
+2. Escribe el **Sueldo nuevo**, la **Periodicidad del pago**, la **Fecha en que aplica** (hoy o antes) y, si quieres, el **Motivo**.
+3. Toca `Guardar convenio`. Verás el sueldo nuevo en la tarjeta **Sueldo** y en el **Historial** («Convenio: sueldo antes → después», con fecha y quién).
 
-1. Toca **Cambiar estatus** en la fila.
-2. Elige el **Nuevo estatus**: Activo, Suspendido, Terminado o Cancelado.
-3. Si es **Terminado** o **Cancelado**, escribe el **Motivo** (obligatorio).
-4. Toca `Guardar cambio`.
+Desde ese momento la nómina, los finiquitos y los aguinaldos usan el sueldo nuevo. Editar el sueldo de un contrato vigente directamente no se permite: «El sueldo de un contrato vigente se cambia con «Cambiar sueldo (convenio)», para que quede su historial.»
 
-## Cómo ver e imprimir un contrato
+## Cómo revisar sueldos
 
-Toca **Ver detalles** para ver el contrato en solo lectura (vigencia, compensación, jornada y prestaciones) y `Imprimir contrato` para obtener el PDF con espacio para las firmas del trabajador y del representante de la empresa.
+Si el sueldo de la ficha de alguien no coincide con el de su contrato vigente, **la nómina de esa persona no se puede crear ni autorizar** hasta que decidas cuál es el correcto. Nunca se cambia un sueldo sin que lo decidas.
+
+1. Toca `Revisar sueldos` en Contratos (o en el aviso de la nómina).
+2. En cada persona ves el sueldo **En la ficha** y **En el contrato**.
+3. Elige `Usar el del contrato` (la ficha toma el sueldo del contrato) o `Actualizar el contrato con convenio al de la ficha` (se registra un convenio con tu nombre y la fecha de hoy).
+4. Toca `Confirmar`.
+
+![Revisar sueldos: la ficha y el contrato con sueldos distintos](/ayuda/capturas/documentos/revisar-sueldos.webp "Elige cuál sueldo es el correcto")
+
+En la misma pantalla aparecen las personas con **más de un contrato vigente** (de antes): elige cuál se queda y toca `Conservar este y terminar los demás`. No se borra ninguno.
+
+## Cómo renovar o terminar un contrato
+
+1. **Renovar:** toca `Renovar`, elige el tipo, la fecha de inicio (se propone el día siguiente al fin), la de fin y el sueldo, y toca `Crear renovación`. Se abre el contrato nuevo; el anterior queda terminado y ligado («Renovación de…»).
+2. **Terminar:** toca `Terminar contrato`, escribe el **Motivo** y la **Fecha de terminación**, y toca `Terminar contrato`. Para pagarle a la persona, haz su [finiquito](/ayuda/nomina/finiquitos-y-liquidaciones).
 
 ## Preguntas frecuentes
 
+### ¿Qué sueldo usa la nómina?
+
+El del contrato vigente. Si la persona no tiene, el de su ficha, y el recibo lo marca «sin contrato vigente». Ve [Cómo calcula ADAMIA la nómina](/ayuda/nomina/como-se-calcula-la-nomina).
+
+### ¿De dónde sale el texto del contrato?
+
+De tu plantilla de contrato para ese tipo o, si no tienes, de la plantilla base de ADAMIA. Ve [Plantillas de documentos](/ayuda/documentos/plantillas-de-documentos).
+
 ### ¿Me avisa cuando un contrato va a vencer?
 
-Sí. En la pantalla ves **Por vencer (30d)** y, además, la **campana** de la barra superior te avisa de los contratos que vencen en los próximos 7 días, con el botón `Ver contrato`. Ve [Avisos: cumpleaños, aniversarios y fin de contrato](/ayuda/avisos/campana-de-avisos).
-
-### ¿Dar de baja a la persona termina su contrato?
-
-No. Son dos movimientos distintos: cambia el estatus del contrato a **Terminado** con su motivo.
+Sí: en la lista (**Por vencer (30d)**), en el encabezado del contrato («Vence en N días») y en la **campana**. Ve [Avisos: cumpleaños, aniversarios y fin de contrato](/ayuda/avisos/campana-de-avisos).
 
 ### ¿Puedo eliminar un contrato?
 
-Sí, con **Eliminar** y confirmando en **¿Eliminar contrato?**. No se puede deshacer; si el contrato existió, es mejor cambiar su estatus a **Cancelado** o **Terminado**.
+Solo si nadie lo ha firmado ni se mandó a firmar. Si ya existió, termínalo o cancélalo.
 
 ## Qué pasa si…
 
+- **…faltan datos para firmar:** verás «Faltan datos para el contrato: CURP, RFC…». Complétalos en la ficha.
+- **…edito un contrato ya enviado a firmar:** verás que su texto ya no cambia; usa un convenio o una renovación.
+- **…la fecha del convenio es futura:** verás «La fecha efectiva no puede ser futura». Regístralo el día que aplique.
 - **…la fecha de fin es anterior al inicio:** verás «La fecha de fin no puede ser anterior a la fecha de inicio.»
 - **…el tipo pide fecha de fin y no la pongo:** verás «La fecha de fin es obligatoria para este tipo.»
-- **…el salario no es válido:** verás «Ingresa un salario base válido.»
-- **…falta algo:** aparece **Corrige los siguientes puntos** con la lista de lo que hay que arreglar.
 
 ## Relacionado
 
-- [Cómo dar de baja o reactivar a un empleado](/ayuda/empleados/baja-y-reactivacion)
-- [Avisos: cumpleaños, aniversarios y fin de contrato](/ayuda/avisos/campana-de-avisos)
 - [Plantillas de documentos](/ayuda/documentos/plantillas-de-documentos)
+- [Mandar a firmar](/ayuda/documentos/mandar-a-firmar)
+- [Cómo calcula ADAMIA la nómina](/ayuda/nomina/como-se-calcula-la-nomina)
+- [La ficha del empleado](/ayuda/empleados/ficha-del-empleado)
+- [Cómo dar de baja o reactivar a un empleado](/ayuda/empleados/baja-y-reactivacion)

@@ -40,6 +40,8 @@ export default function ContratoDialog({
   setOpen,
   editItem,
   seedItem,
+  // (27/11/2026) Alta desde la ficha sin contrato vigente: { id_empresa, id_empleado, salario_base, periodicidad_pago }.
+  inicial = null,
   idEmpresa,
   onSaved,
   empresas = [],
@@ -236,10 +238,11 @@ export default function ContratoDialog({
           editItem?.tipo_jornada || editItem?.tipoJornada || "diurna",
         horas_semanales:
           editItem?.horas_semanales ?? editItem?.horasSemanales ?? 40,
-        hora_entrada: editItem?.hora_entrada || "09:00",
-        hora_salida: editItem?.hora_salida || "18:00",
-        hora_comida_inicio: editItem?.hora_comida_inicio || "14:00",
-        hora_comida_fin: editItem?.hora_comida_fin || "15:00",
+        // (27/11/2026) Antes se perdía el horario guardado al editar (se ponía 09:00–18:00): se lee de «horario».
+        hora_entrada: editItem?.hora_entrada || editItem?.horario?.match(/(\d{1,2}:\d{2})/g)?.[0] || "09:00",
+        hora_salida: editItem?.hora_salida || editItem?.horario?.match(/(\d{1,2}:\d{2})/g)?.[1] || "18:00",
+        hora_comida_inicio: editItem?.hora_comida_inicio || editItem?.horario?.match(/(\d{1,2}:\d{2})/g)?.[2] || "14:00",
+        hora_comida_fin: editItem?.hora_comida_fin || editItem?.horario?.match(/(\d{1,2}:\d{2})/g)?.[3] || "15:00",
         puesto: editItem?.puesto || "",
         departamento: editItem?.departamento || "",
         modalidad_trabajo:
@@ -302,23 +305,22 @@ export default function ContratoDialog({
           c?.prima_vacacional ?? c?.primaVacacionalPorcentaje ?? 25,
         prestaciones_superiores:
           c?.prestaciones_superiores ?? c?.prestacionesSuperiores ?? "",
-        notas: `RENOVACIÓN del contrato ${
-          c?.folio || c?.id
-        }\nContrato anterior: ${(c?.fecha_inicio || c?.fechaInicio) ?? ""} - ${
-          (c?.fecha_fin || c?.fechaFin) ?? "Indefinido"
-        }\n\n${c?.notas || ""}`,
+        // (27/11/2026) Las notas son la «causa u obra» del texto del contrato: se copian tal cual. La renovación queda
+        // en el historial (contrato_anterior_id), no en las notas.
+        notas: c?.notas || "",
         jefe_inmediato_id: String(c?.jefe_inmediato_id || ""),
         lugar_trabajo: c?.lugar_trabajo || "",
       }));
     } else {
-      setEmpleadoId("");
+      setEmpleadoId(inicial?.id_empleado ? String(inicial.id_empleado) : "");
+      if (inicial?.id_empresa) setEmpresaSeleccionada(String(inicial.id_empresa));
       setForm((f) => ({
         ...f,
         tipo_contrato: "",
         fecha_inicio: "",
         fecha_fin: "",
-        salario_base: "",
-        periodicidad_pago: "",
+        salario_base: inicial?.salario_base ?? "",
+        periodicidad_pago: inicial?.periodicidad_pago ?? "",
         moneda: "MXN",
         tipo_jornada: "diurna",
         horas_semanales: 40,
@@ -339,7 +341,7 @@ export default function ContratoDialog({
         lugar_trabajo: "",
       }));
     }
-  }, [open, isEdit, seedItem, isDuplicate, editItem]);
+  }, [open, isEdit, seedItem, isDuplicate, editItem, inicial]);
 
   // Sincronizar textos visibles de empleado/jefe
   useEffect(() => {
@@ -1053,6 +1055,10 @@ export default function ContratoDialog({
               </div>
               <div className="md:col-span-2 space-y-2">
                 <Label>Notas</Label>
+                <p className="text-xs text-gray-600">
+                  En un contrato por tiempo u obra determinado escribe aquí la causa o la obra: es lo que dice el texto
+                  del contrato.
+                </p>
                 <Textarea
                   placeholder="Información adicional o acuerdos especiales…"
                   value={form.notas}

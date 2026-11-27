@@ -334,7 +334,9 @@ async function rutas(ctx, usuario) {
     if (p === "/checador/nomina/periodos" && m === "POST") return ok({ ok: true, id: 5 }, 201);
     if ((r = /^\/checador\/nomina\/periodos\/(\d+)$/.exec(p))) {
       const per = PERIODOS.find((x) => x.id === Number(r[1]));
-      return ok({ ok: true, periodo: per, recibos: recibos(per.fecha_inicio, reciboEnvios[per.id]), puede_autorizar: puedeAutorizar });
+      return ok({ ok: true, periodo: per, recibos: recibos(per.fecha_inicio, reciboEnvios[per.id]), puede_autorizar: puedeAutorizar,
+        // (27/11/2026) «Revisar sueldos»: la ficha de alguien no coincide con su contrato vigente → no se autoriza.
+        sueldos_por_revisar: conSueldosPorRevisar ? [{ id_empleado: 18, nombre: "Frida Serrano Gil", folio: "CT-0041", sueldo_ficha: 4500, periodo_ficha: "Quincenal", contrato_en_periodo_ficha: 4800 }] : [] });
     }
     if (/^\/checador\/nomina\/periodos\/\d+\/\w+$/.test(p)) return ok({ ok: true });
     if (p === "/checador/nomina/conceptos" && m === "GET") return ok({ ok: true, conceptos: CONCEPTOS, para_todos_disponible: true });
@@ -468,7 +470,17 @@ async function abrir(ctx, ruta, esperar) {
 }
 
 // ——— Escenas ———
+let conSueldosPorRevisar = false;
 const ESCENAS = {
+  async nominaSueldosPorRevisar(b) {
+    puedeAutorizar = true;
+    conSueldosPorRevisar = true;
+    const ctx = await contexto(b, { ...RH, nombre: "Roberto Méndez", correo: "roberto@uniline.mx" });
+    const page = await abrir(ctx, "/panel/nomina/4", (pg) => pg.locator("[data-aviso='sueldos-por-revisar']"));
+    await guardar(page, "nomina", "nomina-sueldos-por-revisar", { clip: await areaDe(page, page.locator("[data-aviso='sueldos-por-revisar']"), 24) });
+    conSueldosPorRevisar = false;
+    await ctx.close();
+  },
   async nominaLista(b) {
     puedeAutorizar = false;
     const ctx = await contexto(b, RH);

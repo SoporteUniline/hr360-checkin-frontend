@@ -4,10 +4,10 @@ resumen: De dónde sale cada número del recibo. Días pagados, sueldo, horas ex
 modulo: nomina
 audiencia: [rh, dueno]
 pantallas: [/panel/nomina]
-palabras: [cálculo, calculo, días pagados, sueldo, horas extra, dobles, triples, prima dominical, festivo, descanso trabajado, faltas, retardos, permiso con goce, sin goce, transferencia, efectivo, mixto]
+palabras: [cálculo, calculo, días pagados, sueldo, sueldo del contrato, revisar sueldos, sin contrato vigente, horas extra, dobles, triples, prima dominical, festivo, descanso trabajado, faltas, retardos, permiso con goce, sin goce, transferencia, efectivo, mixto]
 orden: 20
 actualizado: 2026-11-27
-fuentes: [src/components/nomina/AsistenciaRecibo.jsx, src/components/nomina/EditorRecibo.jsx, src/lib/nomina/nomina.mjs]
+fuentes: [src/components/nomina/AsistenciaRecibo.jsx, src/components/nomina/EditorRecibo.jsx, src/lib/nomina/nomina.mjs, src/components/nomina/AvisoSueldosPorRevisar.jsx, src/app/panel/nomina/[id]/page.jsx]
 ---
 
 ## Para qué sirve
@@ -22,7 +22,11 @@ Recursos Humanos y el dueño de la cuenta. Para el empleado, el recibo en PDF mu
 
 ## Antes de empezar
 
-El cálculo usa lo que hay en la ficha del empleado (pestaña **Datos de nómina**: periodo de pago, sueldo, medio de pago y, si es mixto, cuánto va por transferencia; además sus horas por día) y lo que hay en **Asistencias** (horario, checadas, faltas, permisos, festivos y horas extra autorizadas).
+El cálculo usa el **sueldo del contrato vigente** de cada persona; si no tiene contrato vigente, el de su ficha (y el recibo lo marca «sin contrato vigente»). De la ficha usa también el periodo de pago (con él entra a la nómina), el medio de pago y, si es mixto, cuánto va por transferencia, y sus horas por día. De **Asistencias** usa el horario, las checadas, faltas, permisos, festivos y horas extra autorizadas.
+
+> **Importante:** si el sueldo de la ficha de alguien no coincide con el de su contrato vigente, la nómina **no se puede crear ni autorizar** hasta que decidas cuál es el correcto en **Revisar sueldos**. Puedes ver la nómina mientras tanto. Ve [Contratos laborales](/ayuda/documentos/contratos#como-revisar-sueldos).
+
+![Aviso de sueldos por revisar en la nómina](/ayuda/capturas/nomina/nomina-sueldos-por-revisar.webp "La nómina no se autoriza con sueldos por revisar")
 
 ## Cómo calcula ADAMIA cada recibo
 
@@ -57,7 +61,7 @@ ADAMIA revisa cada día del periodo, solo dentro de las fechas en que la persona
 
 ### Paso 2. El sueldo
 
-Depende del periodo de pago de la ficha:
+El sueldo es el del contrato vigente, expresado en el periodo de pago de la ficha (por ejemplo, un contrato de $10,500.00 al mes en una ficha quincenal da $5,250.00 por quincena). La fórmula depende del periodo de pago:
 
 | Periodo de pago | Fórmula |
 | --- | --- |
@@ -139,6 +143,10 @@ Solo se pagan las autorizadas en Asistencias. Autorízalas y presiona **Recalcul
 ### ¿Los retardos le quitan dinero?
 
 No del sueldo. Solo pueden dejar en $0 un bono condicionado a puntualidad.
+
+### ¿Qué hago si el sueldo cambió después de calcular?
+
+Si el sueldo de alguien cambió (por un convenio o al revisar sueldos) después de calcular, al autorizar verás que hay que recalcular. Regresa la nómina a borrador, presiona **Recalcular** y vuelve a enviarla.
 
 ### ¿Puedo cambiar un importe que calculó ADAMIA?
 
