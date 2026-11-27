@@ -13,6 +13,8 @@ import { nombreCookieSesion } from "@/lib/demo-base-path.mjs";
 import CuerpoDesbloqueado from "@/components/auth/CuerpoDesbloqueado";
 // (24/12/2026) Créditos de Adamia AI: aviso «sin créditos» con «Recargar» para cualquier pantalla con IA.
 import AvisoSinCreditos from "@/components/ia/AvisoSinCreditos";
+// (27/11/2026) Centro de comunicados: aviso emergente pendiente del usuario del panel (si está ligado a un empleado).
+import AvisoEmergente from "@/components/comunicados/AvisoEmergente";
 
 // Rutas del panel que siempre se muestran aunque no haya suscripción activa
 // (25/11/2026) Seguridad: cerrar sesiones o quitar un dispositivo debe poderse siempre, con o sin plan.
@@ -59,6 +61,7 @@ export default async function LayoutPanel({ children }) {
       <SesionPanel />
       <CuerpoDesbloqueado />
       <AvisoSinCreditos />
+      <AvisoEmergente modo="panel" />
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />

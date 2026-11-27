@@ -243,7 +243,9 @@ try {
   const barra = pe.getByRole("navigation", { name: "Navegación del colaborador" });
   await barra.getByRole("link", { name: "Mi espacio" }).waitFor({ timeout: 30000 });
   assert.equal(await barra.getByRole("link", { name: "Tareas" }).count(), 0, "Tareas apagado: fuera de la barra");
-  assert.equal(await barra.getByRole("link").count(), 4);
+  // Inicio, Muro (Centro de comunicados, activo), Asistencia, Solicitudes y Mi espacio.
+  assert.equal(await barra.getByRole("link", { name: "Muro" }).count(), 1, "Comunicados activo: «Muro» en la barra");
+  assert.equal(await barra.getByRole("link").count(), 5);
   await pe.getByText("Mi firma y PIN").waitFor();
   assert.equal(await pe.getByText("Mis recibos de pago").count(), 0, "Nómina apagada: sin recibos");
   assert.equal(await pe.getByText("Mis préstamos").count(), 0);

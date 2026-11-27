@@ -5,9 +5,9 @@ import { CLAVES, BASE, OPCIONALES, modulo, modulosDeRuta } from "../src/lib/modu
 import { clavesActivas, rutaPermitida, moduloFaltante, itemPermitido, filtrarGrupos, seccionesModulos, reclutamientoHabilitado, textoContratar } from "../src/lib/modulos/menu.mjs";
 
 test("catálogo: mismas claves que el backend (services/modulosCatalogo.js)", () => {
-  assert.deepEqual(CLAVES, ["asistencias", "empleados", "nomina", "vacaciones", "permisos", "evaluaciones", "reclutamiento", "tareas", "activos", "documentos", "turnos_extra", "induccion"]);
+  assert.deepEqual(CLAVES, ["asistencias", "empleados", "nomina", "vacaciones", "permisos", "evaluaciones", "reclutamiento", "tareas", "activos", "documentos", "turnos_extra", "induccion", "comunicados"]);
   assert.deepEqual(BASE, ["asistencias", "empleados"]);
-  assert.equal(OPCIONALES.length, 10);
+  assert.equal(OPCIONALES.length, 11);
   assert.equal(modulo("nomina").nombre, "Nómina");
   assert.equal(modulo("inventado"), null);
 });
@@ -26,6 +26,7 @@ test("cada opción del menú queda en su módulo (lo que no aparece es base)", (
     "/panel/activos": ["activos"], "/empleado/panel/mis-recursos": ["activos"],
     "/panel/gestion-documental/plantillas": ["documentos"], "/panel/turnos-extra": ["turnos_extra"],
     "/panel/nuevos-ingresos/12": ["induccion"], "/panel/plantillas-induccion": ["induccion"], "/empleado/panel/bienvenida": ["induccion"],
+    "/panel/comunicados/12": ["comunicados"], "/panel/comunicados/moderacion": ["comunicados"], "/empleado/panel/muro/3": ["comunicados"],
   };
   for (const [url, claves] of Object.entries(esperado)) assert.deepEqual(modulosDeRuta(url), claves, url);
   for (const url of ["/panel/turnos", "/panel/horas-extra", "/panel/registro-asistencia", "/panel/incidencias", "/panel/reporte-horas",
