@@ -1,6 +1,10 @@
 "use client";
 
 import styles from "./finiquitos-theme.module.css";
+import {
+  AVISO_VERSION_ANTERIOR,
+  resumenFiniquito,
+} from "@/lib/calculos/calculosLft.mjs";
 
 export const money = (value) =>
   Number(value || 0).toLocaleString("es-MX", {
@@ -9,102 +13,111 @@ export const money = (value) =>
     minimumFractionDigits: 2,
   });
 
+// (27/11/2026) Conceptos, fórmulas y notas tal como los calculó el servidor (motor LFT). El PDF usa la misma fuente
+// (renglonesPdfFiniquito), así que pantalla y documento muestran lo mismo. Un finiquito guardado con la versión
+// anterior se muestra con sus importes guardados y el aviso.
 export default function FiniquitoResumen({ data, showDetails = true }) {
-  const conceptos = [
-    ["Salario pendiente", "monto_salario_pendiente"],
-    ["Aguinaldo proporcional", "monto_aguinaldo_proporcional"],
-    ["Vacaciones pendientes", "monto_vacaciones_no_gozadas"],
-    ["Prima vacacional", "monto_prima_vacacional"],
-  ];
-  const extras = [
-    ["Prima de antigüedad", "monto_prima_antiguedad"],
-    ["Indemnización", "monto_indemnizacion_constitucional"],
-    ["Salarios vencidos", "monto_salarios_vencidos"],
-  ];
-  const detalles = [
-    [
-      "Salario diario",
-      data?.salario_diario != null ? money(data.salario_diario) : null,
-    ],
-    ["Días trabajados", data?.dias_trabajados],
-    ["Años trabajados", data?.años_trabajados],
-    ["Días del periodo", data?.dias_transcurridos_año_bruto],
-    ["Días no trabajados", data?.dias_no_trabajados],
-    ["Días efectivos del periodo", data?.dias_transcurridos_año_neto],
-    ["Días de salario pendientes", data?.dias_salario_pendiente],
-    ["Días de aguinaldo proporcional", data?.dias_aguinaldo_proporcional],
-    ["Vacaciones de años anteriores", data?.dias_vacaciones_años_anteriores],
-    [
-      "Vacaciones proporcionales del año",
-      data?.dias_vacaciones_año_actual_proporcional_bruto,
-    ],
-    ["Vacaciones ya gozadas", data?.dias_vacaciones_año_actual_ya_gozadas],
-    [
-      "Vacaciones pendientes del año",
-      data?.dias_vacaciones_año_actual_pendientes,
-    ],
-    ["Días de vacaciones a pagar", data?.dias_vacaciones_totales],
-    [
-      "Prima vacacional",
-      data?.prima_vacacional_porcentaje != null
-        ? `${data.prima_vacacional_porcentaje}%`
-        : null,
-    ],
-    ...(data?.es_liquidacion
-      ? [
-          [
-            "Tope de prima de antigüedad",
-            data?.tope_prima_antiguedad != null
-              ? money(data.tope_prima_antiguedad)
-              : null,
-          ],
-          ["Días de indemnización", data?.dias_indemnizacion_total],
-          ["Días de salarios vencidos", data?.dias_salarios_vencidos],
-        ]
-      : []),
-  ].filter(([, value]) => value != null);
+  const r = resumenFiniquito(data);
+  const finiquito = r ? r.filas.filter((f) => f.grupo === "finiquito") : [];
+  const extras = r ? r.filas.filter((f) => f.grupo !== "finiquito") : [];
+
   const rows = (items) =>
-    items.map(([label, key]) => (
-      <div className={styles.amountRow} key={key}>
-        <dt>{label}</dt>
-        <dd>{data ? money(data[key]) : "—"}</dd>
+    items.map((f) => (
+      <div
+        className={`${styles.amountRow} ${f.aplica ? "" : styles.conceptOff}`}
+        key={f.clave}
+        data-concepto={f.clave}
+      >
+        <dt>
+          {f.concepto}
+          {f.formula && f.aplica && (
+            <span className={styles.conceptFormula}>{f.formula}</span>
+          )}
+          {f.nota && (showDetails || !f.aplica) && (
+            <span className={styles.conceptNote}>{f.nota}</span>
+          )}
+        </dt>
+        <dd>{money(f.monto)}</dd>
       </div>
     ));
 
+  if (!r) {
+    return (
+      <div className={styles.breakdown}>
+        <div className={styles.summaryTotal}>
+          <span>
+            Total a pagar <small>MXN bruto</small>
+          </span>
+          <strong>—</strong>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.breakdown}>
+      {r.versionAnterior && (
+        <p role="note" className={styles.versionNotice}>
+          {AVISO_VERSION_ANTERIOR}
+        </p>
+      )}
       <dl>
-        {rows(conceptos)}
-        {data?.es_liquidacion && (
+        {rows(finiquito)}
+        {extras.length > 0 && (
           <>
             <div className={styles.subtotalRow}>
               <dt>Subtotal finiquito</dt>
-              <dd>{money(data.subtotal_finiquito)}</dd>
+              <dd>{money(r.subtotalFiniquito)}</dd>
             </div>
             {rows(extras)}
             <div className={styles.subtotalRow}>
-              <dt>Subtotal liquidación</dt>
-              <dd>{money(data.subtotal_liquidacion)}</dd>
+              <dt>
+                {r.esLiquidacion
+                  ? "Subtotal indemnización"
+                  : "Subtotal adicional"}
+              </dt>
+              <dd>{money(r.subtotalIndemnizacion)}</dd>
             </div>
           </>
         )}
       </dl>
       <div className={styles.summaryTotal}>
         <span>
-          Total a pagar <small>MXN</small>
+          Total a pagar <small>MXN bruto</small>
         </span>
-        <strong>{data ? money(data.total_pagar) : "—"}</strong>
+        <strong data-total>{money(r.total)}</strong>
       </div>
-      {data && showDetails && (
+      <p className={styles.grossNote}>{r.notaBruto}</p>
+      {r.avisos.map((a) => (
+        <p key={a} role="note" className={styles.warnNotice}>
+          {a}
+        </p>
+      ))}
+      {showDetails && !r.versionAnterior && (
         <details className={styles.disclosure}>
           <summary>Ver detalle del cálculo</summary>
           <dl className={styles.detailList}>
-            {detalles.map(([label, value]) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd>{value}</dd>
-              </div>
-            ))}
+            {[
+              ["Tipo de terminación", r.tipo],
+              ["Salario diario", r.salario.diario != null ? money(r.salario.diario) : null],
+              ["De dónde sale el salario", r.salario.origen],
+              ["Antigüedad", r.antiguedad],
+              ["Salario diario integrado (SDI)", r.salario.formulaSdi],
+              [
+                "Tope de la prima de antigüedad",
+                r.tope
+                  ? `${money(r.tope.monto)} (2 × salario mínimo ${r.tope.zona} ${r.tope.anio}${r.tope.porConfirmar ? ", cifra por confirmar contra el DOF" : ""})`
+                  : null,
+              ],
+              ["¿Por qué este tope?", r.tope?.explicacion],
+            ]
+              .filter(([, v]) => v)
+              .map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
+              ))}
           </dl>
         </details>
       )}

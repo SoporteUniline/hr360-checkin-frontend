@@ -69,6 +69,8 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
+import { calculosLftApi } from "@/lib/calculosLftApi";
+import { diasVacacionesPeriodo } from "@/lib/calculos/calculosLft.mjs";
 
 export default function VacacionesPorPeriodoPage() {
   const { dataUser } = useAuth();
@@ -230,6 +232,19 @@ export default function VacacionesPorPeriodoPage() {
   const [busquedaEmp, setBusquedaEmp] = useState("");
   // Reglas de Vacaciones por ley para calcular días según años
   const [vacLey, setVacLey] = useState([]); // [{anios, dias, ...}]
+  // (27/11/2026) Tabla de la LFT (art. 76, 2023) que manda el servidor: si la regla de la empresa falta o da menos,
+  // se proponen los días de ley, igual que al cargar periodos automáticamente.
+  const [tablaLey, setTablaLey] = useState([]);
+  useEffect(() => {
+    let vivo = true;
+    calculosLftApi
+      .vacacionesLey({})
+      .then((r) => vivo && setTablaLey(Array.isArray(r?.tabla) ? r.tabla : []))
+      .catch(() => {});
+    return () => {
+      vivo = false;
+    };
+  }, []);
   const [warningLey, setWarningLey] = useState(""); // mensaje si no existe la regla
 
   const fetchRows = async () => {
@@ -415,30 +430,23 @@ export default function VacacionesPorPeriodoPage() {
       .add(anioPeriodo, "year")
       .format("YYYY-MM-DD");
 
-    // Buscar los días correspondientes según Vacaciones por ley.
-    const regla = vacLey.find((r) => Number(r.anios) === Number(anioPeriodo));
+    // Días: el mayor entre la LFT y la regla de la empresa (la del mayor año que no pase de su antigüedad).
+    const propuesta = diasVacacionesPeriodo(anioPeriodo, vacLey, tablaLey);
 
     setForm((f) => ({
       ...f,
       fecha_inicio: fechaInicioCalculada,
       fecha_fin: fechaFinCalculada,
       anios: String(anioPeriodo),
-      dias: regla ? String(regla.total_dias ?? regla.dias) : f.dias,
+      dias: propuesta.dias ? String(propuesta.dias) : f.dias,
     }));
 
-    if (vacLey.length === 0) {
-      setWarningLey(
-        'No hay reglas configuradas en "Vacaciones por ley" para esta empresa. Captura los días manualmente.',
-      );
-      return;
-    }
-
     setWarningLey(
-      regla
-        ? ""
+      propuesta.dias
+        ? propuesta.aviso
         : `No existe una regla en "Vacaciones por ley" para ${aniosCumplidos} año(s). Captura los días manualmente.`,
     );
-  }, [form.id_empleado, empleados, vacLey, editRow]);
+  }, [form.id_empleado, empleados, vacLey, tablaLey, editRow]);
 
   const proceedSave = async () => {
     const payload = {
@@ -1002,19 +1010,19 @@ export default function VacacionesPorPeriodoPage() {
                     const nextAnios = e.target.value;
                     // Si el usuario cambia manualmente, intenta mapear días por ley
                     // Busca esta parte en tu JSX y asegúrate que esté así:
-                    const regla = (vacLey || []).find(
-                      (r) => Number(r.anios) === Number(nextAnios), // Forzar comparación numérica
+                    const propuesta = diasVacacionesPeriodo(
+                      nextAnios,
+                      vacLey || [],
+                      tablaLey,
                     );
                     setForm((f) => ({
                       ...f,
                       anios: nextAnios,
-                      dias: regla
-                        ? String(regla.total_dias ?? regla.dias)
-                        : f.dias,
+                      dias: propuesta.dias ? String(propuesta.dias) : f.dias,
                     }));
                     setWarningLey(
-                      regla
-                        ? ""
+                      propuesta.dias
+                        ? propuesta.aviso
                         : nextAnios
                         ? `No existe una regla en "Vacaciones por ley" para ${nextAnios} año(s).`
                         : "",

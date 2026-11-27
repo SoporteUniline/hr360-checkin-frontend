@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { aguinaldosApi } from "@/lib/aguinaldosApi";
 import dayjs from "dayjs";
+import { NOTA_BRUTO, formulaAguinaldo } from "@/lib/calculos/calculosLft.mjs";
 import { jsPDF } from "jspdf";
 import { useAuth } from "@/context/AuthContext";
 import useSWR from "swr";
@@ -572,8 +573,15 @@ export default function AguinaldoViewDialog({
       ["Dias aguinaldo (ley)", Number(ag.dias_aguinaldo_ley || 0).toFixed(2)],
       ["Dias aguinaldo calculado", Number(ag.dias_aguinaldo_calculado || 0).toFixed(2)],
       ["Tipo", ag.es_proporcional ? "Proporcional" : "Completo"],
-      ["Monto aguinaldo", money(ag.monto_aguinaldo)],
+      ["Monto aguinaldo (bruto)", money(ag.monto_aguinaldo)],
     ]);
+
+    // (27/11/2026) Fórmula del servidor (motor LFT), la misma de la pantalla y de la calculadora pública.
+    drawWrappedSectionText({
+      sectionName: "Formula",
+      textValue: [formulaAguinaldo(ag), ag.explicacion || null, NOTA_BRUTO].filter(Boolean).join("\n"),
+      emptyFallback: NOTA_BRUTO,
+    });
 
     drawWrappedSectionText({
       sectionName: "Observaciones",
@@ -1228,11 +1236,21 @@ export default function AguinaldoViewDialog({
                                 </span>
                               )}
                             </td>
-                            <td className="p-1.5 sm:p-2 font-bold whitespace-nowrap">
-                              $
-                              {parseFloat(ag.monto_aguinaldo).toLocaleString(
-                                "es-MX",
-                                { minimumFractionDigits: 2 },
+                            <td className="p-1.5 sm:p-2 font-bold">
+                              <span className="whitespace-nowrap">
+                                $
+                                {parseFloat(ag.monto_aguinaldo).toLocaleString(
+                                  "es-MX",
+                                  { minimumFractionDigits: 2 },
+                                )}
+                              </span>
+                              <span className="block text-[10px] sm:text-[11px] font-normal text-gray-500 min-w-[180px]">
+                                {formulaAguinaldo(ag)}
+                              </span>
+                              {ag.calculado_version_anterior && (
+                                <span className="block text-[10px] font-normal text-amber-700">
+                                  Versión anterior: se muestra como se guardó
+                                </span>
                               )}
                             </td>
                             <td className="p-1.5 sm:p-2 whitespace-nowrap">
@@ -1279,6 +1297,7 @@ export default function AguinaldoViewDialog({
                       </tbody>
                     </table>
                   </div>
+                  <p className="mt-2 text-[11px] text-gray-500">{NOTA_BRUTO}</p>
                 </div>
               </div>
             </div>

@@ -137,7 +137,7 @@ Revisa el rango de fechas, la búsqueda, los filtros de columna y la vista guard
 
 ### ¿Qué significa el «Sí» en Editado?
 
-Que el día se corrigió. Tócalo para ver el historial: qué cambió (antes → después), quién lo hizo, cuándo y el motivo. Lo que marcó el reloj nunca se borra.
+Que el día se corrigió. Tócalo para ver el historial: qué cambió (antes → después), quién lo hizo, cuándo, desde qué pantalla y el motivo. Toda corrección hecha a mano pide motivo. Lo que marcó el reloj nunca se borra.
 
 ### ¿Dónde quedó «Control de horas extra»?
 

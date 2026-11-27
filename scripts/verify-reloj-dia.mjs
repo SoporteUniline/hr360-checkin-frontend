@@ -172,6 +172,12 @@ async function simular(page) {
         // Sofía: la migración aún no corre en su base → el reloj se ve en solo lectura.
         migracion: idA !== 506 });
     }
+    // (27/11/2026) Historial con motivo y pantalla de origen (migración 20261230 del backend).
+    if (p.endsWith("/checador/asistencias/501/cambios")) {
+      return json({ disponible: true, cambios: [{ campo: "checada", valor_antes: "09:18–16:08 jornada", valor_despues: "09:05–16:08 jornada · Olvidó checar",
+        origen: "reloj", pantalla: "reloj_dia", motivo: "Olvidó checar", nombre_usuario: "Laura Méndez", tipo_usuario: "Recruiter",
+        creado_en: "2026-11-24 10:15:00.000000" }] });
+    }
     m = /\/checador\/asistencias\/(\d+)\/estado-dia$/.exec(p);
     if (m && req.method() === "PUT") {
       pet.estado.push({ id: Number(m[1]), cuerpo: cuerpo() });
@@ -250,6 +256,10 @@ try {
   const siEditado = filaDe("Alondra Munguía").getByRole("button", { name: "Editado: Sí, ver qué cambió" });
   await siEditado.click();
   await page.getByText(/Se corrigió 1 checada del reloj/).waitFor({ timeout: 10000 });
+  // El historial dice el motivo y desde qué pantalla se corrigió.
+  const historial = page.getByLabel("Historial de cambios");
+  await historial.waitFor({ timeout: 10000 });
+  assert.match(await historial.innerText(), /Laura Méndez · 24\/11 10:15 · Reloj del día[\s\S]*Motivo: Olvidó checar/);
   await page.keyboard.press("Escape");
   assert.equal((await filaDe("Pedro Salas").getByLabel("Sin editar").innerText()).trim(), "No");
   assert.match(await filaDe("Sofía Ramos").innerText(), /Domingo[\s\S]*Prima dominical 25% \(art\. 71\)/);
@@ -276,13 +286,26 @@ try {
   await elegir(motivoJuan, { label: "Otro…" });
   assert.equal(await filaDe("Juan Pérez").getByRole("button", { name: "OK" }).isDisabled(), true);
   await filaDe("Juan Pérez").getByLabel("Escribe el motivo").fill("Cita médica con comprobante");
+  // (27/11/2026) «Las checadas tienen que pedir motivo»: sin «Motivo de la corrección» no se manda nada y el error sale junto al campo.
+  await filaDe("Juan Pérez").getByRole("button", { name: "OK" }).click();
+  await filaDe("Juan Pérez").locator("[data-error-motivo]").waitFor({ timeout: 5000 });
+  assert.equal(await filaDe("Juan Pérez").locator("[data-error-motivo]").innerText(), "Escribe el motivo de la corrección.");
+  await filaDe("Juan Pérez").getByLabel(/Motivo de la corrección/).fill("Ab");
+  await filaDe("Juan Pérez").getByRole("button", { name: "OK" }).click();
+  assert.equal(await filaDe("Juan Pérez").locator("[data-error-motivo]").innerText(), "El motivo debe tener al menos 5 letras.");
+  assert.equal(pet.estado.length, 0, "sin motivo válido no hay PUT");
+  await filaDe("Juan Pérez").getByLabel(/Motivo de la corrección/).fill("Avisó con comprobante médico");
+  assert.equal(await filaDe("Juan Pérez").locator("[data-error-motivo]").count(), 0, "el error se quita al escribir uno válido");
   await filaDe("Juan Pérez").getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 1, "PUT estado-dia");
-  assert.deepEqual(pet.estado[0], { id: 503, cuerpo: { id_tipo_permiso: 2, id_motivo: 6, motivo_permiso: "Cita médica con comprobante", goce: "sin" } });
+  assert.deepEqual(pet.estado[0], { id: 503, cuerpo: { id_tipo_permiso: 2, id_motivo: 6, motivo_permiso: "Cita médica con comprobante", goce: "sin",
+    motivo_correccion: "Avisó con comprobante médico", pantalla: "estado_dia" } });
   await elegir(page.getByLabel("Qué pasó de Armando González"), "5");
+  // Sugerencia rápida: llena el motivo con un clic.
+  await filaDe("Armando González").getByRole("button", { name: "Error de captura" }).click();
   await filaDe("Armando González").getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 2, "PUT estado-dia descanso");
-  assert.deepEqual(pet.estado[1], { id: 502, cuerpo: { id_tipo_permiso: 5 } });
+  assert.deepEqual(pet.estado[1], { id: 502, cuerpo: { id_tipo_permiso: 5, motivo_correccion: "Error de captura", pantalla: "estado_dia" } });
 
   // 4) «Asistencia» abre el reloj vacío; «Cargar su horario normal»; 400 del servidor por renglón; luego guarda.
   await elegir(page.getByLabel("Qué pasó de Armando González"), "__asistencia");
@@ -487,7 +510,7 @@ try {
   } });
 
   // Tomás (9:00–4:00 sin comida, una checada): Entrada tarde 11:00 ajusta la entrada; Salir en medio turno 12:00–1:00
-  // parte el renglón; el motivo «Otro» pide al menos 3 letras y viaja como «otro: <texto>».
+  // parte el renglón; el motivo «Otro» pide al menos 5 letras (27/11/2026; antes 3) y viaja como «otro: <texto>».
   await page.getByRole("button", { name: "Abrir el reloj de Tomás Ruiz" }).click();
   const dT = page.getByRole("dialog", { name: /Tomás Ruiz/ });
   const permT = dT.locator("[data-permiso-dia]");
@@ -527,8 +550,8 @@ try {
   await elegir(rT1.getByLabel("Motivo"), "otro");
   const textoOtro = rT1.getByLabel("Escribe el motivo de la corrección");
   assert.equal(await textoOtro.getAttribute("maxlength"), "34");
-  await textoOtro.fill("ab");
-  assert.equal(await rT1.getByRole("alert").innerText(), "Escribe el motivo (al menos 3 letras).");
+  await textoOtro.fill("casa");
+  assert.equal(await rT1.getByRole("alert").innerText(), "Escribe el motivo (al menos 5 letras).");
   assert.equal(await dT.getByRole("button", { name: "Guardar" }).isDisabled(), true);
   await textoOtro.fill("Junta con el cliente");
   assert.equal(await rT1.getByRole("alert").count(), 0);
@@ -556,12 +579,20 @@ try {
   // «No fue comida» (marcó «Salir a comer» por error): la franja se va y el PUT pide quitar la marca de ese tramo.
   await comidaReloj.getByRole("button", { name: "No fue comida" }).click();
   await comidaReloj.waitFor({ state: "detached", timeout: 5000 });
+  // (27/11/2026, toda corrección que cambia horas pide motivo) «No fue comida» cambia las horas trabajadas: el tramo pide
+  // motivo y sin él no se guarda (mismo texto que el 422 del servidor).
+  const tramoComida = dlgFrida.locator('[data-renglon="1"]');
+  assert.equal(await tramoComida.getByRole("alert").innerText(), "Para quitar la comida elige el motivo.");
+  assert.equal(await dlgFrida.getByRole("button", { name: "Guardar" }).isDisabled(), true, "sin motivo no se guarda");
+  await elegir(tramoComida.getByLabel("Motivo"), "captura");
+  assert.equal(await tramoComida.getByRole("alert").count(), 0);
   const antesNoComida = pet.reloj.length;
   await dlgFrida.getByRole("button", { name: "Guardar" }).click();
   for (let i = 0; i < 50 && pet.reloj.length === antesNoComida; i++) await dormir(100);
   const putFrida = pet.reloj.at(-1);
   assert.equal(putFrida.id, 510);
   assert.deepEqual(putFrida.cuerpo.registros.find((x) => x.id === 7801).quitar_comida, true);
+  assert.equal(putFrida.cuerpo.registros.find((x) => x.id === 7801).motivo, "captura", "el PUT lleva el motivo");
   assert.equal("quitar_comida" in putFrida.cuerpo.registros.find((x) => x.id === 7802), false);
   // Guardar cierra el reloj solo (no se pulsa Escape: con cambios a medio guardar abriría «¿Salir sin guardar?»).
   await dlgFrida.waitFor({ state: "detached", timeout: 10000 });
@@ -574,7 +605,13 @@ try {
   assert.match(await dm.locator("[data-masivo-resumen]").innerText(), /Se aplica a 1 de 2 seleccionadas · se omiten 1[\s\S]*Alondra Munguía: tiene checadas/);
   assert.equal(await dm.getByRole("button", { name: "Aplicar a 1" }).isDisabled(), true);
   await dm.getByLabel("Estado para los seleccionados").selectOption("2");
-  assert.equal(await dm.getByRole("button", { name: "Aplicar a 1" }).isDisabled(), true, "motivo obligatorio");
+  // (27/11/2026) Motivo obligatorio de 5 a 500 letras: al aplicar sin él, el error sale junto al campo y no se manda nada.
+  await dm.getByRole("button", { name: "Aplicar a 1" }).click();
+  assert.equal(await dm.locator("[data-error-motivo]").innerText(), "Escribe el motivo de la corrección.");
+  await dm.getByLabel("Motivo (obligatorio)").fill("Falt");
+  await dm.getByRole("button", { name: "Aplicar a 1" }).click();
+  assert.equal(await dm.locator("[data-error-motivo]").innerText(), "El motivo debe tener al menos 5 letras.");
+  assert.equal(pet.masivo.length, 0, "sin motivo válido no se aplica");
   await dm.getByLabel("Motivo (obligatorio)").fill("No se presentó");
   await dm.getByRole("button", { name: "Aplicar a 1" }).click();
   await esperar(() => pet.masivo.length === 1, "POST masivo estado");
@@ -585,6 +622,9 @@ try {
   await page.getByRole("button", { name: "Cargar horario normal…" }).click();
   const dh = page.getByRole("dialog", { name: "Cargar horario normal" });
   assert.match(await dh.locator("[data-masivo-resumen]").innerText(), /Se aplica a 1 de 2 seleccionadas · se omiten 1/);
+  // Sugerencia rápida y luego se completa a mano: un mismo motivo para todas las filas.
+  await dh.getByRole("button", { name: "Falla del reloj" }).click();
+  assert.equal(await dh.getByLabel("Motivo (obligatorio)").inputValue(), "Falla del reloj");
   await dh.getByLabel("Motivo (obligatorio)").fill("Falla del reloj de la entrada");
   await dh.getByRole("button", { name: "Aplicar a 1" }).click();
   await esperar(() => pet.masivo.length === 2, "POST masivo horario");

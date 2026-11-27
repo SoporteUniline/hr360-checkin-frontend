@@ -770,3 +770,63 @@
   color: #047857;
   background: #ecfdf5;
 }
+
+/* (27/11/2026) Cálculos LFT: fórmula de cada concepto, notas, aviso de versión anterior y casilla de los 20 días. */
+.amountRow dt {
+  min-width: 0;
+}
+.conceptFormula {
+  display: block;
+  margin-top: 3px;
+  color: #475569;
+  font-size: 11px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+.conceptNote {
+  display: block;
+  margin-top: 3px;
+  color: #64748b;
+  font-size: 10.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.conceptOff dd {
+  color: #94a3b8;
+}
+.grossNote,
+.versionNotice,
+.warnNotice {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+.grossNote {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e5eaf2;
+}
+.versionNotice,
+.warnNotice {
+  background: #fffbeb;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+.checkField {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+  cursor: pointer;
+}
+.checkField input {
+  width: 18px;
+  height: 18px;
+  accent-color: #2563eb;
+}

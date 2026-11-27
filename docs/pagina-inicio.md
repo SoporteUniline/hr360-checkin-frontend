@@ -47,3 +47,65 @@ Esta sesión no pudo abrir el DOF ni el sitio de la Cámara de Diputados (red re
 donde coinciden varias fuentes (despachos y medios especializados, listados en cada artículo) y se cita el documento
 oficial. ❓ PENDIENTE: que un abogado laboral revise los cinco artículos antes de llevarlos a producción, y
 actualizarlos cuando la STPS publique las disposiciones del registro electrónico.
+
+## Versión 3 (27/11/2026): lo nuevo — reclutador con IA en WhatsApp, clima con IA, tablero y muro
+
+Pedido del dueño: «actualiza la página con lo único que tenemos: agente de AI que responde por WhatsApp las
+solicitudes de empleo… lo de AI clima, todo el Dashboard, el muro; actualiza siempre la página principal».
+
+**Regla (desde el 27/11/2026): cada módulo o función nueva que llegue a producción se agrega a la página principal
+(mosaico, lista de módulos y, si es destacada, sección propia) en el mismo PR o el siguiente.** La lista vive en
+`src/lib/sitio/modulos.js` (una sola fuente para la portada y `/funcionalidades`); lo que aún no está en producción no se
+anuncia (hoy: Inducción digital).
+
+Orden: portada → **Tu reclutador con IA en WhatsApp** (`#reclutador-ia`) → mosaico → **Clima laboral con IA**
+(`#clima-ia`, franja gris) → **Todo tu equipo en un tablero** (`#tablero`) → **El muro de tu empresa** (`#muro`) → lo de
+antes.
+
+| Archivo | Qué tiene |
+|---|---|
+| `SeccionReclutadorIA.jsx` | Teléfono de la candidata con un chat dibujado como WhatsApp (encabezado con «en línea» / «escribiendo…», fondo con dibujos, burbujas verdes y blancas, hora, palomitas que pasan a azul, botones de respuesta rápida y respuesta citada) y la bandeja de RH que se llena al mismo tiempo (Califica, puntajes, cita confirmada, «1 candidato necesita atención»). Ícono genérico, nunca el logotipo de WhatsApp. |
+| `SeccionClimaIA.jsx` | Participación (anillo), favorabilidad por dimensión, nivel NOM-035 y «Plan de acción sugerido» de Adamia AI: cada sugerencia pasa a «✓ Ya está en el plan». |
+| `SeccionTablero.jsx` | Monitor (tarjetas y llegadas en vivo), horas extra por autorizar, permisos pendientes y Adamia AI con la LFT (arts. 74 y 75). |
+| `SeccionMuro.jsx` | Muro del panel (portada, publicación con fotos, «Me gusta» que sube, comentarios) y «Confirmar de leído» en el celular; el avance pasa de 30 a 31 de 42. |
+| `novedades.mjs` | Guion y datos de ejemplo (personas, empresa y cifras ficticias). |
+| `guion.mjs` + `useGuion.js` | Reloj de pasos de cada escena (lógica pura probada en `scripts/test-guion-landing.mjs`). |
+| `ControlEscena.jsx`, `Cifra.jsx` | Botón real Pausar / Reanudar / Ver de nuevo y números que cuentan. |
+| `novedades.css` | Estilos `.lh .nv-*`. |
+
+Cómo se mueven: el HTML del servidor trae cada escena en su **estado final** (sin JS, buscadores y «reducir movimiento»
+lo ven completo). Al hidratar, lo que está fuera de la vista vuelve al inicio y arranca al entrar en pantalla
+(IntersectionObserver); fuera de vista o con la pestaña oculta se pausa. Cada escena da 3 vueltas con 9–10 s de pausa
+y se queda en el final; el botón permite pausarla (WCAG 2.2.2). Todo el espacio está reservado (lo que aún no ocurre
+tiene opacidad o escala 0): sin saltos de diseño. Las maquetas son `aria-hidden` con un párrafo `sr-only` que cuenta lo
+mismo. El carrusel de la portada (elemento LCP) no cambió.
+
+De dónde sale cada texto del chat (código del backend `modules/recruitment/services/whatsapp/`):
+- Aviso de privacidad con «Acepto / Leer aviso / No acepto» antes de cualquier otra cosa (`lumo/consentimiento.js`).
+- Datos de la vacante y la duda «¿Dan uniforme?» desde la vacante y la base de conocimiento aprobada (`conocimiento.js`).
+- Pregunta de filtro con botones Sí/No (`[[FILTRO]]`, wa2); calificación y puntajes los pone el servidor
+  (`severidad.js`); etiquetas de `src/lib/whatsapp/entrevista.mjs`.
+- Las 3 sucursales más cercanas como botones (`buscar_sucursal_cercana`, B1).
+- Horarios como botones con el formato real «jue 3 dic 9:00 am» (`agendaReglas.tituloHorario`); confirmación,
+  recordatorio (dentro de 24 h: texto con «Confirmo / Necesito cambiar») y «¡Gracias por confirmar!» con los textos de
+  `mensajes.js`.
+- «Requiere atención» cuando alguien pide hablar con una persona y «Tomar control» / «Abrir chat» en la bandeja.
+
+Condiciones que dependen de la configuración de cada empresa o del servidor (no se prometen como automáticas):
+sucursal más cercana (requiere `MAPBOX_TOKEN` y sucursales ubicadas), agenda y recordatorios (agenda activa por
+vacante; fuera de 24 h, plantilla de Meta aprobada).
+
+También en esta versión:
+- Mosaico: tarjetas Reclutador IA, Clima laboral y Muro; las flechas llevan a la guía del Centro de ayuda.
+- Lista «Todos los módulos»: sale de `modulos.js` (`modulosPortada()`, armado en el servidor para no mandar los textos
+  largos al navegador); grupo nuevo «Talento y cultura»; Monitor, Nómina, Tareas, Adamia AI y Centro de ayuda; enlace
+  «Entra al Centro de ayuda». La cifra del título y la diapositiva «N herramientas» salen del mismo total.
+- `detalles.js`: se quitó el bloque «Sin señal, también.» y la pregunta de internet que habían quedado del checador
+  sin conexión.
+- Nombres de ejemplo ficticios en toda la portada (se cambió «Luis Pérez» por «Raúl Pérez»).
+- `verify-landing.mjs`: secciones nuevas, chat hasta el último mensaje, pausa real, reducir movimiento, enlaces sin
+  404, 390 px y capturas (`CAPTURAS=`). La prueba de robots «no indexar» se omite (con aviso) cuando el build es de
+  producción. Corre en `ci-dev.yml`.
+
+❓ PENDIENTE (dueño): el muro/comunicados y el Centro de ayuda están en `dev` pero no en `main` al 27/11/2026; esta
+versión de la portada debe pasar a producción junto con ellos (y el backend de comunicados), no antes.

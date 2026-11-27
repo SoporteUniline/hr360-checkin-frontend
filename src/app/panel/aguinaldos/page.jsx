@@ -47,6 +47,7 @@ import {
   Trash2,
 } from "lucide-react";
 import dayjs from "dayjs";
+import { NOTA_BRUTO, corteAguinaldoPorOmision, formulaAguinaldo } from "@/lib/calculos/calculosLft.mjs";
 import { jsPDF } from "jspdf";
 import AguinaldoViewDialog from "./AguinaldoViewDialog";
 import CambiarEstadoDialog from "./CambiarEstadoDialog";
@@ -278,7 +279,10 @@ export default function PageAguinaldos() {
   }, [headerFilterMeta, page, limit]);
 
   // ---------------- Calculadora Masiva ----------------
-  const [fechaCorte, setFechaCorte] = useState(dayjs().format("YYYY-MM-DD"));
+  // (27/11/2026) Aguinaldo anual: corte al 31 de diciembre (con un corte anterior se paga proporcional, art. 87).
+  const [fechaCorte, setFechaCorte] = useState(
+    corteAguinaldoPorOmision(dayjs().format("YYYY-MM-DD")),
+  );
   const [añoFiscalCalculo, setAñoFiscalCalculo] = useState(
     dayjs().year().toString(),
   );
@@ -297,7 +301,7 @@ export default function PageAguinaldos() {
     useState(null);
 
   const resetFormulario = () => {
-    setFechaCorte(dayjs().format("YYYY-MM-DD"));
+    setFechaCorte(corteAguinaldoPorOmision(dayjs().format("YYYY-MM-DD")));
     setAñoFiscalCalculo(dayjs().year().toString());
     setObservaciones("");
     setEmpleadosSeleccionados([]);
@@ -1110,8 +1114,15 @@ export default function PageAguinaldos() {
         Number(emp.dias_aguinaldo_calculado || 0).toFixed(2),
       ],
       ["Tipo", emp.es_proporcional ? "Proporcional" : "Completo"],
-      ["Monto aguinaldo", money(emp.monto_aguinaldo)],
+      ["Monto aguinaldo (bruto)", money(emp.monto_aguinaldo)],
     ]);
+
+    // (27/11/2026) Fórmula del servidor (motor LFT), la misma de la pantalla y de la calculadora pública.
+    drawWrappedSectionText({
+      sectionName: "Formula",
+      textValue: [formulaAguinaldo(emp), emp.explicacion || null, NOTA_BRUTO].filter(Boolean).join("\n"),
+      emptyFallback: NOTA_BRUTO,
+    });
 
     drawWrappedSectionText({
       sectionName: "Observaciones",
@@ -1927,7 +1938,7 @@ export default function PageAguinaldos() {
                       value={unidadCalculo}
                       onChange={(value) => {
                         setUnidadCalculo(value);
-                        setFechaCorte(dayjs().format("YYYY-MM-DD"));
+                        setFechaCorte(corteAguinaldoPorOmision(dayjs().format("YYYY-MM-DD")));
                         setAñoFiscalCalculo(dayjs().year().toString());
                         setObservaciones("");
                       }}
@@ -1962,8 +1973,9 @@ export default function PageAguinaldos() {
                     }}
                   />
                   <small className="text-muted-foreground">
-                    Fecha hasta la cual se calculará el aguinaldo (el año fiscal
-                    se actualiza automáticamente)
+                    Para el aguinaldo anual deja el 31 de diciembre. Con una
+                    fecha anterior se paga proporcional a los días trabajados
+                    hasta esa fecha (art. 87). El año fiscal se actualiza solo.
                   </small>
                 </div>
                 <div className="space-y-2">
@@ -2365,6 +2377,12 @@ export default function PageAguinaldos() {
                                 "es-MX",
                                 { minimumFractionDigits: 2 },
                               )}
+                              <span
+                                className="block min-w-[200px] text-[11px] font-normal text-gray-500"
+                                data-formula
+                              >
+                                {formulaAguinaldo(emp)}
+                              </span>
                             </td>
                             <td className="p-2">
                               <Select
@@ -2408,6 +2426,14 @@ export default function PageAguinaldos() {
                     </tbody>
                   </table>
                 </div>
+                <p className="text-xs text-gray-500">{NOTA_BRUTO}</p>
+                {Array.isArray(resultadoCalculo.errores) &&
+                  resultadoCalculo.errores.length > 0 && (
+                    <p role="alert" className="text-xs text-amber-700">
+                      No se calcularon {resultadoCalculo.errores.length}{" "}
+                      empleado(s): {resultadoCalculo.errores[0].error}
+                    </p>
+                  )}
 
                 {/* Botones de acción */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

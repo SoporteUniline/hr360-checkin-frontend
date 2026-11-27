@@ -41,6 +41,7 @@ import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { useSearchParams } from "next/navigation";
+import { inicioPeriodoAguinaldo, incluye20Dias } from "@/lib/calculos/calculosLft.mjs";
 
 // Página de Panel para "Finiquitos y liquidaciones"
 // - Relación:
@@ -251,8 +252,9 @@ export default function PageFiniquitosLiquidaciones() {
   // ---------------- Calculadora ----------------
   const [idEmpleado, setIdEmpleado] = useState("");
   const [fechaBaja, setFechaBaja] = useState(dayjs().format("YYYY-MM-DD"));
-  const [tipoCalculo, setTipoCalculo] = useState("finiquito");
   const [tipoTerminacion, setTipoTerminacion] = useState("Renuncia Voluntaria");
+  // (27/11/2026) Finiquito o liquidación ya no se elige a mano: sale del tipo de terminación (motor LFT del servidor).
+  const tipoCalculo = incluye20Dias(tipoTerminacion) ? "liquidacion" : "finiquito";
   const [salarioDiario, setSalarioDiario] = useState("");
   const [diasSalarioPendiente, setDiasSalarioPendiente] = useState("0");
   const [diasNoTrabajados, setDiasNoTrabajados] = useState("0");
@@ -264,7 +266,9 @@ export default function PageFiniquitosLiquidaciones() {
   const [diasVacYaGozadas, setDiasVacYaGozadas] = useState("0");
   const [primaVacacional, setPrimaVacacional] = useState("25");
   const [diasAguinaldo, setDiasAguinaldo] = useState("15");
-  const [diasSalariosVencidos, setDiasSalariosVencidos] = useState("0");
+  const [zonaSalarioMinimo, setZonaSalarioMinimo] = useState("general");
+  const [incluir20Dias, setIncluir20Dias] = useState(true);
+  const [gratificacion, setGratificacion] = useState("0");
 
   const [motivoBaja, setMotivoBaja] = useState("");
 
@@ -292,7 +296,6 @@ export default function PageFiniquitosLiquidaciones() {
   const resetFormulario = () => {
     setIdEmpleado("");
     setFechaBaja(dayjs().format("YYYY-MM-DD"));
-    setTipoCalculo("finiquito");
     setTipoTerminacion("Renuncia Voluntaria");
     setSalarioDiario("");
     setDiasSalarioPendiente("0");
@@ -302,7 +305,9 @@ export default function PageFiniquitosLiquidaciones() {
     setDiasVacYaGozadas("0");
     setPrimaVacacional("25");
     setDiasAguinaldo("15");
-    setDiasSalariosVencidos("0");
+    setZonaSalarioMinimo("general");
+    setIncluir20Dias(true);
+    setGratificacion("0");
     setMotivoBaja("");
 
     setResultado(null);
@@ -313,50 +318,40 @@ export default function PageFiniquitosLiquidaciones() {
     setOpenEmpSug(false);
   };
 
+  // Salario del empleado (contrato activo o ficha de nómina, calculado en el servidor) y prestaciones a la fecha de baja.
   const cargarEmpleadoEnFormulario = useCallback(
-    async (emp) => {
+    async (emp, fecha = fechaBaja) => {
       setEmpleadoInfo(emp);
       setSalarioDiario(Number(emp.salario_diario || 0).toFixed(2));
-
-      // Obtener datos de vacaciones (pendientes + ley año actual) y días no trabajados
-      // - Relación: tabla `asistencias` campo `asistencia` donde = 0 o NULL
+      if (emp.aguinaldo_dias) setDiasAguinaldo(String(emp.aguinaldo_dias));
+      if (emp.prima_vacacional_porcentaje)
+        setPrimaVacacional(String(emp.prima_vacacional_porcentaje));
       try {
-        const fechaIngreso = new Date(emp.fecha_ingreso);
-        const fechaBajaDate = new Date(fechaBaja);
-        const diasTrabajados = Math.floor(
-          (fechaBajaDate - fechaIngreso) / (1000 * 60 * 60 * 24)
-        );
-        const añosTrabajados = diasTrabajados / 365.25;
-        const añosCompletos = Math.floor(añosTrabajados);
-
-        // Obtener días no trabajados desde la tabla asistencias
-        // - Relación: endpoint `/api/checador/finiquitos/empleado/:idEmpleado/dias-no-trabajados`
-        // - Cuenta registros donde asistencia = 0 o NULL en el rango de fechas
+        // Faltas del periodo del aguinaldo (del 1 de enero o del ingreso a la baja), para descontar si RH lo decide.
         try {
           const datosDiasNoTrab = await finiquitosApi.obtenerDiasNoTrabajados({
             idEmpleado: emp.id_empleado,
-            fechaIngreso: emp.fecha_ingreso,
-            fechaBaja: fechaBaja,
+            fechaIngreso: inicioPeriodoAguinaldo(emp.fecha_ingreso, fecha),
+            fechaBaja: fecha,
           });
           setDiasNoTrabajados(String(datosDiasNoTrab?.dias_no_trabajados ?? 0));
         } catch (e) {
           console.error("Error al obtener días no trabajados:", e);
           setDiasNoTrabajados("0");
         }
-
-        // Obtener datos de vacaciones
-        // - Relación: endpoint `/api/checador/finiquitos/empleado/:idEmpleado/vacaciones-datos`
-        // - El cálculo proporcional de días ley se hace en el backend al calcular el finiquito
-        // - Considera los días adicionales si se pasa del año (función calcularDiasDesdeUltimoAniversario)
+        // Saldo real de vacaciones (cargados − tomados) y días de ley del año de servicio en curso.
         const datosVac = await finiquitosApi.obtenerVacacionesDatos({
           idEmpleado: emp.id_empleado,
           empresa: emp.id_empresa,
-          aniosCompletos: añosCompletos,
+          fechaBaja: fecha,
         });
         setDiasVacAnteriores(String(datosVac?.diasPendientes ?? 0));
-        // Guardar el valor base de días ley según la ley (12, 14, etc.)
-        // El cálculo proporcional se hace en el backend considerando días transcurridos desde último aniversario
+        setDiasVacYaGozadas(String(datosVac?.diasGozadosAdelantados ?? 0));
         setDiasVacLeyActual(String(datosVac?.diasLeyAñoActual ?? 12));
+        if (datosVac?.primaVacacional)
+          setPrimaVacacional(String(datosVac.primaVacacional));
+        if (datosVac?.diasAguinaldo)
+          setDiasAguinaldo(String(datosVac.diasAguinaldo));
       } catch (e) {
         console.error("Error al cargar datos del empleado:", e);
         setDiasVacAnteriores("0");
@@ -366,6 +361,17 @@ export default function PageFiniquitosLiquidaciones() {
     },
     [fechaBaja]
   );
+
+  // Al cambiar la fecha de baja cambian el año de servicio en curso, el periodo del aguinaldo y el saldo: se vuelven a
+  // precargar (salvo al editar un finiquito guardado, que conserva sus datos).
+  const fechaBajaPrevia = useRef(fechaBaja);
+  useEffect(() => {
+    if (fechaBajaPrevia.current === fechaBaja) return;
+    fechaBajaPrevia.current = fechaBaja;
+    if (!empleadoInfo?.id_empleado || editingFiniquitoId) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fechaBaja || "")) return;
+    cargarEmpleadoEnFormulario(empleadoInfo, fechaBaja);
+  }, [fechaBaja, empleadoInfo, editingFiniquitoId, cargarEmpleadoEnFormulario]);
 
   const onPickEmpleado = useCallback(
     async (emp) => {
@@ -385,6 +391,9 @@ export default function PageFiniquitosLiquidaciones() {
         departamento: emp.departamento,
         periodicidad_pago: emp.periodicidad_pago,
         salario_diario: emp.salario_diario,
+        salario_texto: emp.salario_texto,
+        aguinaldo_dias: emp.aguinaldo_dias,
+        prima_vacacional_porcentaje: emp.prima_vacacional_porcentaje,
         id_empresa: emp.id_empresa,
       });
       setOpenEmpSug(false);
@@ -437,9 +446,6 @@ export default function PageFiniquitosLiquidaciones() {
         // Ir directamente a la calculadora
         setTab("calculadora");
 
-        // Es finiquito por defecto
-        setTipoCalculo("finiquito");
-
         // Precargar el motivo escrito durante la baja
         if (motivoBajaParam) {
           setMotivoBaja(motivoBajaParam);
@@ -474,13 +480,14 @@ export default function PageFiniquitosLiquidaciones() {
     diasVacYaGozadas,
     primaVacacional,
     diasAguinaldo,
-    diasSalariosVencidos,
+    zonaSalarioMinimo,
+    incluir20Dias,
+    gratificacion,
     motivoBaja,
   };
   const changeField = (name, value) => {
     const setters = {
       fechaBaja: setFechaBaja,
-      tipoCalculo: setTipoCalculo,
       tipoTerminacion: setTipoTerminacion,
       salarioDiario: setSalarioDiario,
       diasSalarioPendiente: setDiasSalarioPendiente,
@@ -490,7 +497,9 @@ export default function PageFiniquitosLiquidaciones() {
       diasVacYaGozadas: setDiasVacYaGozadas,
       primaVacacional: setPrimaVacacional,
       diasAguinaldo: setDiasAguinaldo,
-      diasSalariosVencidos: setDiasSalariosVencidos,
+      zonaSalarioMinimo: setZonaSalarioMinimo,
+      incluir20Dias: setIncluir20Dias,
+      gratificacion: setGratificacion,
       motivoBaja: setMotivoBaja,
     };
     setters[name]?.(value);
@@ -506,6 +515,24 @@ export default function PageFiniquitosLiquidaciones() {
       );
     });
   };
+  // Entradas del motor LFT (las mismas al calcular y al guardar: el servidor recalcula con ellas).
+  const entradasCalculo = () => ({
+    id_empleado: parseInt(idEmpleado),
+    fecha_baja: fechaBaja,
+    tipo_terminacion: tipoTerminacion,
+    salario_diario_manual: Number(salarioDiario),
+    dias_salario_pendiente: parseFloat(diasSalarioPendiente || "0"),
+    dias_no_trabajados: parseFloat(diasNoTrabajados || "0"),
+    dias_vacaciones_años_anteriores: parseFloat(diasVacAnteriores || "0"),
+    dias_vacaciones_ley_año_actual: parseFloat(diasVacLeyActual || "0"),
+    dias_vacaciones_año_actual_ya_gozadas: parseFloat(diasVacYaGozadas || "0"),
+    prima_vacacional_porcentaje_manual: parseFloat(primaVacacional || "25"),
+    dias_aguinaldo_manual: parseFloat(diasAguinaldo || "15"),
+    zona_salario_minimo: zonaSalarioMinimo,
+    incluir_20_dias: incluye20Dias(tipoTerminacion) ? !!incluir20Dias : false,
+    gratificacion_adicional: parseFloat(gratificacion || "0"),
+  });
+
   const calcular = async () => {
     if (loading || employeeLoading) return;
     setAlertError(true);
@@ -545,7 +572,7 @@ export default function PageFiniquitosLiquidaciones() {
       diasVacYaGozadas,
       primaVacacional,
       diasAguinaldo,
-      diasSalariosVencidos,
+      gratificacion,
     ];
     if (
       days.some((value) => !Number.isFinite(Number(value)) || Number(value) < 0)
@@ -556,23 +583,7 @@ export default function PageFiniquitosLiquidaciones() {
       return;
     }
 
-    const payload = {
-      id_empleado: parseInt(idEmpleado),
-      fecha_baja: fechaBaja,
-      tipo_calculo: tipoCalculo,
-      tipo_terminacion: tipoTerminacion,
-      salario_diario_manual: sd,
-      dias_salario_pendiente: parseFloat(diasSalarioPendiente || "0"),
-      dias_no_trabajados: parseFloat(diasNoTrabajados || "0"),
-      dias_vacaciones_años_anteriores: parseFloat(diasVacAnteriores || "0"),
-      dias_vacaciones_ley_año_actual: parseFloat(diasVacLeyActual || "12"),
-      dias_vacaciones_año_actual_ya_gozadas: parseFloat(
-        diasVacYaGozadas || "0"
-      ),
-      prima_vacacional_porcentaje_manual: parseFloat(primaVacacional || "25"),
-      dias_aguinaldo_manual: parseFloat(diasAguinaldo || "15"),
-      dias_salarios_vencidos: parseFloat(diasSalariosVencidos || "0"),
-    };
+    const payload = entradasCalculo();
     setLoading(true);
     try {
       const res = await finiquitosApi.calcular(payload);
@@ -599,42 +610,17 @@ export default function PageFiniquitosLiquidaciones() {
     }
 
     if (!resultado) return;
+    // Con un cálculo vigente se mandan las ENTRADAS y el servidor recalcula el importe; un finiquito de la versión
+    // anterior abierto en Editar (sin recalcular) se guarda tal como está.
+    const { calculo, ...columnas } = resultado;
     const payload = {
-      ...resultado,
+      ...columnas,
       id_empleado: parseInt(idEmpleado || resultado.id_empleado || 0),
       id_empresa: parseInt(idEmpresaCalculo || resultado.id_empresa || 0),
       fecha_baja: fechaBaja,
-      tipo_terminacion: tipoTerminacion,
-      es_liquidacion: tipoCalculo === "liquidacion",
-      salario_diario: parseFloat(
-        salarioDiario || resultado.salario_diario || 0
-      ),
-      dias_salario_pendiente: parseFloat(
-        diasSalarioPendiente || resultado.dias_salario_pendiente || 0
-      ),
-      dias_no_trabajados: parseFloat(
-        diasNoTrabajados || resultado.dias_no_trabajados || 0
-      ),
-      dias_vacaciones_años_anteriores: parseFloat(
-        diasVacAnteriores || resultado.dias_vacaciones_años_anteriores || 0
-      ),
-      dias_vacaciones_ley_año_actual: parseFloat(
-        diasVacLeyActual || resultado.dias_vacaciones_ley_año_actual || 12
-      ),
-      dias_vacaciones_año_actual_ya_gozadas: parseFloat(
-        diasVacYaGozadas || resultado.dias_vacaciones_año_actual_ya_gozadas || 0
-      ),
-      prima_vacacional_porcentaje: parseFloat(
-        primaVacacional || resultado.prima_vacacional_porcentaje || 25
-      ),
-      dias_aguinaldo: parseFloat(
-        diasAguinaldo || resultado.dias_aguinaldo || 15
-      ),
-      dias_salarios_vencidos: parseFloat(
-        diasSalariosVencidos || resultado.dias_salarios_vencidos || 0
-      ),
       motivo_baja: motivoBaja,
       calculado_por: dataUser?.correo || dataUser?.email || "",
+      ...(calculo ? { entradas: entradasCalculo() } : {}),
     };
     setLoading(true);
     try {
@@ -677,8 +663,11 @@ export default function PageFiniquitosLiquidaciones() {
       // Montar datos en formulario
       setIdEmpleado(String(det.id_empleado));
       setFechaBaja(det.fecha_baja || dayjs().format("YYYY-MM-DD"));
-      setTipoCalculo(det.es_liquidacion ? "liquidacion" : "finiquito");
       setTipoTerminacion(det.tipo_terminacion || "Renuncia Voluntaria");
+      const entradas = det.calculo?.entradas || {};
+      setZonaSalarioMinimo(entradas.zona_salario_minimo || det.zona_salario_minimo || "general");
+      setIncluir20Dias(entradas.incluir_20_dias ?? (det.incluir_20_dias == null ? true : !!Number(det.incluir_20_dias)));
+      setGratificacion(String(entradas.gratificacion_adicional ?? det.gratificacion_adicional ?? 0));
       setSalarioDiario(String(det.salario_diario || ""));
       setDiasSalarioPendiente(String(det.dias_salario_pendiente || "0"));
       setDiasNoTrabajados(String(det.dias_no_trabajados || "0"));
@@ -689,7 +678,6 @@ export default function PageFiniquitosLiquidaciones() {
       );
       setPrimaVacacional(String(det.prima_vacacional_porcentaje || "25"));
       setDiasAguinaldo(String(det.dias_aguinaldo || "15"));
-      setDiasSalariosVencidos(String(det.dias_salarios_vencidos || "0"));
       setMotivoBaja(det.motivo_baja || "");
       const unidadByEmpresa = unidadOptions.find(
         (unidad) => Number(unidad.id_empresa) === Number(det.id_empresa)
@@ -901,6 +889,14 @@ export default function PageFiniquitosLiquidaciones() {
                           <span className={`${styles.tag} ${tipoClass}`}>
                             {tipoBadge}
                           </span>
+                          {!f.version_calculo && (
+                            <span
+                              className="ml-1 block text-[11px] text-amber-700"
+                              title="Calculado con la versión anterior del cálculo; se muestra tal como se guardó."
+                            >
+                              Versión anterior
+                            </span>
+                          )}
                         </td>
                         <td className="px-3 py-2 font-bold">
                           $
@@ -1051,6 +1047,10 @@ export default function PageFiniquitosLiquidaciones() {
             if (!o) setViewRow(null);
           }}
           id={viewRow?.id_finiquito || viewRow?.id}
+          onRecalcular={(det) => {
+            setViewRow(null);
+            editarFiniquito(det);
+          }}
         />
       )}
 

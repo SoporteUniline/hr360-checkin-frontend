@@ -1,11 +1,12 @@
 import LandingHome from "@/components/landing/home/LandingHome";
 import AdamiaChatWidget from "@/components/landing/AdamiaChatWidget";
+import { modulosPortada } from "@/lib/sitio/modulos";
 
 // El asistente comercial va fuera de .lh para que los estilos de la página y los del chat no se mezclen.
 export default function LandingHomePage() {
   return (
     <>
-      <LandingHome />
+      <LandingHome modulos={modulosPortada()} />
       <AdamiaChatWidget />
     </>
   );

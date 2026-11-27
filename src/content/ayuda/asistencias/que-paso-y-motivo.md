@@ -4,10 +4,10 @@ resumen: Cuando alguien no checó, eliges «Qué pasó» (inasistencia, vacacion
 modulo: asistencias
 audiencia: [rh, dueno]
 pantallas: [/panel/registro-asistencia]
-palabras: [qué pasó, motivo, falta, inasistencia, injustificada, justificada, incapacidad, folio imss, vacaciones, descanso, goce de sueldo, acta administrativa, sin checar]
+palabras: [qué pasó, motivo, motivo de la corrección, falta, inasistencia, injustificada, justificada, incapacidad, folio imss, vacaciones, descanso, goce de sueldo, acta administrativa, sin checar]
 orden: 30
 actualizado: 2026-11-27
-fuentes: [src/app/panel/registro-asistencia/CeldaEstadoDia.jsx, src/components/asistencia/QuePasoMotivo.jsx, src/lib/asistencia/quePasoMotivo.mjs, src/lib/asistencia/tiposGoce.mjs, src/app/panel/registro-asistencia/RelojDiaDialog.jsx]
+fuentes: [src/components/asistencia/CampoMotivo.jsx, src/lib/asistencia/motivoCorreccion.mjs, src/app/panel/registro-asistencia/CeldaEstadoDia.jsx, src/components/asistencia/QuePasoMotivo.jsx, src/lib/asistencia/quePasoMotivo.mjs, src/lib/asistencia/tiposGoce.mjs, src/app/panel/registro-asistencia/RelojDiaDialog.jsx]
 ---
 
 ## Para qué sirve
@@ -35,8 +35,9 @@ Recursos Humanos y el dueño, con permiso de edición de asistencias.
 2. En **Motivo**:
    - Si **no** justificó la falta, déjalo en **Injustificada**.
    - Si sí la justificó, elige el motivo (por ejemplo **Visita al médico**). Si eliges **Otro…**, escribe el motivo.
-3. Revisa el **goce** que aparece junto al botón OK: viene del motivo. Si el motivo lo permite, puedes cambiarlo entre **Con goce** y **Sin goce**; si tiene candado 🔒, lo fija el catálogo.
-4. Toca **OK** (o presiona Enter).
+3. Escribe el **Motivo de la corrección (obligatorio)** o toca una sugerencia. Es aparte del **Motivo** del paso 2: aquel dice si la falta se justifica y cómo se paga; este dice por qué la registras o la cambias (por ejemplo «No se presentó ni avisó»). Debe tener de 5 a 500 letras.
+4. Revisa el **goce** que aparece junto al botón OK: viene del motivo. Si el motivo lo permite, puedes cambiarlo entre **Con goce** y **Sin goce**; si tiene candado 🔒, lo fija el catálogo.
+5. Toca **OK** (o presiona Enter).
 
 Verás un aviso como «Armando González: Inasistencia · Visita al médico. Queda en el historial con tu nombre.».
 
@@ -51,9 +52,10 @@ Verás un aviso como «Armando González: Inasistencia · Visita al médico. Que
    - **Incapacidad IMSS** 🔒: la empresa no paga el día; el IMSS da el subsidio.
    - **Día de descanso** 🔒: con goce de salario íntegro (art. 69).
 2. Si es una incapacidad, escribe el **Folio IMSS (obligatorio)**.
-3. Toca **OK**.
+3. Escribe el **Motivo de la corrección (obligatorio)**.
+4. Toca **OK**.
 
-Los días de ley no llevan motivo.
+Los días de ley no llevan **Motivo** de permiso, pero sí el motivo de la corrección, como todo cambio.
 
 ## Cómo marcar que sí vino (o que llegó tarde con permiso)
 
@@ -61,7 +63,7 @@ Si en **Estado** eliges **Asistencia**, **Entrada tarde**, **Salida temprano** o
 
 ## Cómo hacerlo desde el reloj del día
 
-Si abres el reloj de alguien sin checadas, arriba a la derecha verás **Qué pasó** y **Motivo**. Funcionan igual: elige Inasistencia (con o sin motivo) o el día de ley y confirma. Si eliges Asistencia, pon sus horas abajo («Pon sus horas abajo, en las checadas.»).
+Si abres el reloj de alguien sin checadas, arriba a la derecha verás **Qué pasó** y **Motivo**. Funcionan igual: elige Inasistencia (con o sin motivo) o el día de ley, escribe el motivo de la corrección y confirma. Si eliges Asistencia, pon sus horas abajo («Pon sus horas abajo, en las checadas.»).
 
 ![Reloj del día sin checadas con los campos Qué pasó y Motivo arriba a la derecha](/ayuda/capturas/asistencias/reloj-del-dia-sin-checadas.webp "Sin checadas, el reloj ofrece Qué pasó y Motivo, o cargar sus horas")
 
@@ -100,6 +102,7 @@ Va sin goce y también baja la parte proporcional del descanso semanal (art. 72 
 - **…la persona sí checó:** las columnas Estado y Motivo se ven como texto (no se pueden cambiar). Corrige el día en su reloj.
 - **…eliges Incapacidad y no escribes el folio:** el botón OK no se activa («Escribe el folio de la incapacidad.»).
 - **…eliges «Otro…» y no escribes nada:** verás «Escribe el motivo.».
+- **…tocas OK sin el motivo de la corrección:** no se guarda y junto al campo verás «Escribe el motivo de la corrección.» (o «El motivo debe tener al menos 5 letras.»).
 - **…el día ya está en una nómina autorizada:** no se guarda; el dueño debe cancelar esa nómina para corregir.
 - **…no se puede crear el acta** (la persona no tiene jefe ni quién autorice sus permisos): el día se guarda y el sistema te avisa.
 

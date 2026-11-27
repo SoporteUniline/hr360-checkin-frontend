@@ -2,12 +2,20 @@ import { useState } from "react";
 import axios from "@/lib/axios";
 import { useSnackbar } from "notistack";
 import dayjs from "dayjs"; // Importa dayjs para formatear las fechas/horas
+import { camposMotivo, errorMotivo, errorMotivoServidor } from "@/lib/asistencia/motivoCorreccion.mjs";
 
 export default function useEntradaSalida(mutateTable) {
   const { enqueueSnackbar } = useSnackbar();
   const [editingMovimientoId, setEditingMovimientoId] = useState(null);
   const [editingMovimientoData, setEditingMovimientoData] = useState({});
   const [isSavingMovimiento, setIsSavingMovimiento] = useState(false);
+  // (27/11/2026) «Las checadas tienen que pedir motivo»: el motivo de la corrección y su error (junto al campo).
+  const [motivoMovimiento, setMotivoMovimiento] = useState("");
+  const [errorMotivoMovimiento, setErrorMotivoMovimiento] = useState("");
+  const cambiarMotivoMovimiento = (texto) => {
+    setMotivoMovimiento(texto);
+    if (errorMotivoMovimiento) setErrorMotivoMovimiento(errorMotivo(texto));
+  };
 
   /**
    * Inicia el modo de edición para un movimiento específico.
@@ -15,6 +23,8 @@ export default function useEntradaSalida(mutateTable) {
    */
   const handleEditMovimientoClick = (movimiento) => {
     setEditingMovimientoId(movimiento.id);
+    setMotivoMovimiento("");
+    setErrorMotivoMovimiento("");
     // Solo nos interesan las versiones corregidas y las originales para mostrar
     // y permitir edición. Asumimos que 'entrada' y 'salida' son las originales,
     // y 'entrada_corregida'/'salida_corregida' son las que se pueden modificar.
@@ -38,6 +48,8 @@ export default function useEntradaSalida(mutateTable) {
   const handleCancelMovimientoEdit = () => {
     setEditingMovimientoId(null);
     setEditingMovimientoData({});
+    setMotivoMovimiento("");
+    setErrorMotivoMovimiento("");
   };
 
   /**
@@ -56,6 +68,12 @@ export default function useEntradaSalida(mutateTable) {
    * Guarda los cambios del movimiento corregido en el backend.
    */
   const handleSaveMovimientoClick = async () => {
+    // Sin motivo no se guarda (el servidor también responde 422).
+    const falta = errorMotivo(motivoMovimiento);
+    if (falta) {
+      setErrorMotivoMovimiento(falta);
+      return;
+    }
     setIsSavingMovimiento(true);
 
     const dataToSend = {
@@ -76,6 +94,7 @@ export default function useEntradaSalida(mutateTable) {
               "YYYY-MM-DD HH:mm:ss",
             )
           : null,
+      ...camposMotivo(motivoMovimiento),
     };
 
     // Asegúrate de que al menos un campo corregido se envíe
@@ -107,8 +126,15 @@ export default function useEntradaSalida(mutateTable) {
       });
       setEditingMovimientoId(null);
       setEditingMovimientoData({});
+      setMotivoMovimiento("");
+      setErrorMotivoMovimiento("");
       mutateTable(); // Revalida los datos de la tabla de movimientos/asistencias
     } catch (error) {
+      const faltaMotivo = errorMotivoServidor(error);
+      if (faltaMotivo) {
+        setErrorMotivoMovimiento(faltaMotivo);
+        return;
+      }
       console.error("❌ Error al actualizar movimiento de checador:", error);
       enqueueSnackbar(
         `Error al actualizar movimiento: ${
@@ -131,5 +157,8 @@ export default function useEntradaSalida(mutateTable) {
     handleCancelMovimientoEdit,
     handleMovimientoFieldChange,
     handleSaveMovimientoClick,
+    motivoMovimiento,
+    errorMotivoMovimiento,
+    cambiarMotivoMovimiento,
   };
 }

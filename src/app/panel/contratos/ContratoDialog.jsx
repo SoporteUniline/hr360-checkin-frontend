@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import dayjs from "dayjs";
 import {
   Dialog,
@@ -26,6 +26,7 @@ import { useSnackbar } from "notistack";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/context/AuthContext";
 import { contratosApi } from "@/lib/contratosApi";
+import { calculosLftApi } from "@/lib/calculosLftApi";
 import styles from "./contratos-theme.module.css";
 import { Combobox } from "@/components/Combobox";
 import { Copy, FileText, Pencil, Plus, Save } from "lucide-react";
@@ -77,7 +78,7 @@ export default function ContratoDialog({
     puesto: "",
     departamento: "",
     modalidad_trabajo: "presencial",
-    dias_vacaciones: 6,
+    dias_vacaciones: 12,
     aguinaldo_dias: 15,
     prima_vacacional: 25,
     prestaciones_superiores: "",
@@ -95,6 +96,36 @@ export default function ContratoDialog({
       setEmpresaSeleccionada(String(empresas[0].id_empresa));
     }
   }, [open, empresas]);
+
+  // (27/11/2026) Días de vacaciones de ley (art. 76, tabla 2023) según la antigüedad del empleado al inicio del
+  // contrato; los calcula el servidor (motor LFT). En un contrato nuevo se proponen mientras RH no cambie el campo.
+  const [vacacionesLey, setVacacionesLey] = useState(null);
+  const vacacionesEditadas = useRef(false);
+  const ingresoEmpleado = empleados.find((e) => e.id === String(empleadoId))?.fecha_ingreso || null;
+  useEffect(() => {
+    if (!open) {
+      vacacionesEditadas.current = false;
+      return undefined;
+    }
+    const fecha = form.fecha_inicio;
+    if (!fecha) {
+      setVacacionesLey(null);
+      return undefined;
+    }
+    const desde = ingresoEmpleado && String(ingresoEmpleado).slice(0, 10) <= fecha ? String(ingresoEmpleado).slice(0, 10) : fecha;
+    let vivo = true;
+    calculosLftApi
+      .vacacionesLey({ fechaIngreso: desde, fecha })
+      .then((r) => {
+        if (!vivo || !r?.dias) return;
+        setVacacionesLey({ dias: r.dias, anio: r.anio_servicio });
+        if (!isEdit && !vacacionesEditadas.current) setForm((f) => ({ ...f, dias_vacaciones: r.dias }));
+      })
+      .catch(() => vivo && setVacacionesLey(null));
+    return () => {
+      vivo = false;
+    };
+  }, [open, form.fecha_inicio, ingresoEmpleado, isEdit]);
 
   // Cargar empleados al abrir
   useEffect(() => {
@@ -117,6 +148,7 @@ export default function ContratoDialog({
           puesto: e.puesto || "",
           departamento: e.departamento || "",
           id_puesto: e.id_puesto || null,
+          fecha_ingreso: e.fecha_ingreso || null,
         }));
         setEmpleados(mapped);
       } catch {
@@ -215,7 +247,7 @@ export default function ContratoDialog({
           editItem?.modalidadTrabajo ||
           "presencial",
         dias_vacaciones:
-          editItem?.dias_vacaciones ?? editItem?.diasVacaciones ?? 6,
+          editItem?.dias_vacaciones ?? editItem?.diasVacaciones ?? 12,
         aguinaldo_dias:
           editItem?.aguinaldo_dias ?? editItem?.aguinaldoDias ?? 15,
         prima_vacacional:
@@ -264,7 +296,7 @@ export default function ContratoDialog({
         departamento: c?.departamento || "",
         modalidad_trabajo:
           c?.modalidad_trabajo || c?.modalidadTrabajo || "presencial",
-        dias_vacaciones: c?.dias_vacaciones ?? c?.diasVacaciones ?? 6,
+        dias_vacaciones: c?.dias_vacaciones ?? c?.diasVacaciones ?? 12,
         aguinaldo_dias: c?.aguinaldo_dias ?? c?.aguinaldoDias ?? 15,
         prima_vacacional:
           c?.prima_vacacional ?? c?.primaVacacionalPorcentaje ?? 25,
@@ -297,7 +329,7 @@ export default function ContratoDialog({
         puesto: "",
         departamento: "",
         modalidad_trabajo: "presencial",
-        dias_vacaciones: 6,
+        dias_vacaciones: 12,
         aguinaldo_dias: 15,
         prima_vacacional: 25,
         prestaciones_superiores: "",
@@ -380,7 +412,7 @@ export default function ContratoDialog({
       horario: `Entrada: ${form.hora_entrada} | Salida: ${form.hora_salida} | Comida: ${form.hora_comida_inicio} - ${form.hora_comida_fin}`,
       puesto: form.puesto || null,
       departamento: form.departamento || null,
-      dias_vacaciones: Number(form.dias_vacaciones || 6),
+      dias_vacaciones: Number(form.dias_vacaciones || vacacionesLey?.dias || 12),
       aguinaldo_dias: Number(form.aguinaldo_dias || 15),
       prima_vacacional: Number(form.prima_vacacional || 25),
       prestaciones_superiores: form.prestaciones_superiores || null,
@@ -897,15 +929,27 @@ export default function ContratoDialog({
                   <Label>Días de Vacaciones</Label>
                   <Input
                     type="number"
-                    min="6"
+                    min={vacacionesLey?.dias || 12}
                     value={form.dias_vacaciones}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      vacacionesEditadas.current = true;
                       setForm((f) => ({
                         ...f,
                         dias_vacaciones: e.target.value,
-                      }))
-                    }
+                      }));
+                    }}
                   />
+                  <small className="block text-xs text-gray-500">
+                    {vacacionesLey
+                      ? `Por ley (art. 76): ${vacacionesLey.dias} días en el año ${vacacionesLey.anio} de servicio. Puedes dar más, no menos.`
+                      : "Por ley (art. 76): 12 días el primer año, 14 el segundo, 16 el tercero…"}
+                  </small>
+                  {vacacionesLey &&
+                    Number(form.dias_vacaciones) < vacacionesLey.dias && (
+                      <small className="block text-xs text-amber-700">
+                        Son menos días de los que pide la ley.
+                      </small>
+                    )}
                 </div>
                 <div className="space-y-2">
                   <Label>Días de Aguinaldo</Label>

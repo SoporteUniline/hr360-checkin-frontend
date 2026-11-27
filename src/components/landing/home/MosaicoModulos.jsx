@@ -38,14 +38,14 @@ export default function MosaicoModulos() {
         <div className="txt reveal mz-encabezado">
           <span className="eyebrow">Módulos</span>
           <h2 id="mz-titulo">Todo el día de tu equipo, en una sola plataforma.</h2>
-          <p>Del checador a la nómina, con IA que conoce la Ley Federal del Trabajo. Activa solo lo que tu empresa necesita.</p>
+          <p>Del checador a la nómina, del reclutamiento al clima laboral, con IA que conoce la Ley Federal del Trabajo. Activa solo lo que tu empresa necesita.</p>
         </div>
         <div className="mz-grid">
           <article className="mz-m mz-g4 mz-principal reveal">
             <Cabecera nombre="Nómina" sub="nómina" etiqueta="Recibos firmados">
               Calcula con las checadas reales, aplica bonos, descuentos y préstamos, y cada quien firma su recibo desde su celular.
             </Cabecera>
-            <Flecha href="/contacto" nombre="Nómina" />
+            <Flecha href="/ayuda/nomina" nombre="Nómina" />
             <div className="mz-mini flota" style={{ "--ft": "6.4s", "--fd": "-1.2s" }} aria-hidden="true">
               <div className="mz-fila"><span>Total a pagar</span><b className="mz-grande">$284,350.00</b></div>
               <div className="mz-fila"><span>Periodo</span><b>Quincena 1–15 nov</b></div>
@@ -71,6 +71,39 @@ export default function MosaicoModulos() {
           </article>
 
           <article className="mz-m mz-g2 reveal">
+            <Cabecera nombre="Reclutador IA" sub="reclutamiento">Contesta a tus candidatos por WhatsApp, los filtra y les agenda la entrevista.</Cabecera>
+            <Flecha href="/ayuda/reclutamiento/agente-de-whatsapp" nombre="el Reclutador IA" />
+            <div className="mz-mini flota" style={{ "--ft": "6.6s", "--fd": "-2.2s" }} aria-hidden="true">
+              <div className="mz-wa-b">¿Tienes disponibilidad para trabajar fines de semana?</div>
+              <div className="mz-wa-bts"><span>Sí</span><span>No</span></div>
+              <div className="mz-fila"><span>Daniela Ortiz</span><span className="mz-chip mz-verde">Califica</span></div>
+              <div className="mz-fila"><span>Entrevista</span><b>jue 3 dic · 9:00 a. m.</b></div>
+            </div>
+          </article>
+
+          <article className="mz-m mz-g2 reveal" style={{ "--d": ".05s" }}>
+            <Cabecera nombre="Clima laboral" sub="clima">Encuestas anónimas, NOM-035 y un plan de acción que te sugiere Adamia AI.</Cabecera>
+            <Flecha href="/ayuda/clima" nombre="Clima laboral" />
+            <div className="mz-mini flota" style={{ "--ft": "7.3s", "--fd": "-0.9s" }} aria-hidden="true">
+              <div className="mz-fila"><span>Participación</span><Contador hasta={86} sufijo="%" /></div>
+              <BarraLlena valor={0.86} />
+              <div className="mz-fila"><span>NOM-035</span><b>Riesgo medio</b></div>
+              <div className="mz-nota">✦ Adamia AI sugiere 3 acciones</div>
+            </div>
+          </article>
+
+          <article className="mz-m mz-g2 reveal" style={{ "--d": ".1s" }}>
+            <Cabecera nombre="Muro" sub="comunicados">Avisos, fotos y eventos para tu equipo. Sabes quién ya confirmó de leído.</Cabecera>
+            <Flecha href="/ayuda/comunicados" nombre="el Muro" />
+            <div className="mz-mini flota" style={{ "--ft": "6.2s", "--fd": "-3.6s" }} aria-hidden="true">
+              <div className="mz-fila"><b>Reglamento interior</b><span className="mz-chip">Confirmar</span></div>
+              <div className="mz-fila"><span>Confirmaron</span><b><Contador hasta={31} /> de 42</b></div>
+              <BarraLlena valor={31 / 42} />
+              <div className="mz-fila"><span>♥ 48 · 6 comentarios</span><span>Toda la empresa</span></div>
+            </div>
+          </article>
+
+          <article className="mz-m mz-g2 reveal">
             <Cabecera nombre="Checador" sub="check">Rostro y GPS desde el celular o una tableta en la sucursal.</Cabecera>
             <Flecha href="/funcionalidades/reloj-checador" nombre="el Checador" />
             <div className="mz-mini flota" style={{ "--ft": "7.1s", "--fd": "-0.4s" }} aria-hidden="true">
@@ -83,7 +116,7 @@ export default function MosaicoModulos() {
 
           <article className="mz-m mz-g2 reveal" style={{ "--d": ".05s" }}>
             <Cabecera nombre="Tareas y checklists" sub="tasks">Checklists que se califican solos, con foto y firma. Cumplimiento listo para bonos.</Cabecera>
-            <Flecha href="/contacto" nombre="Tareas y checklists" />
+            <Flecha href="/ayuda/tareas" nombre="Tareas y checklists" />
             <div className="mz-mini flota" style={{ "--ft": "6s", "--fd": "-4.2s" }} aria-hidden="true">
               <div className="mz-fila"><b>Apertura de sucursal</b><span className="mz-chip">Hoy</span></div>
               <div className="mz-chips"><span className="mz-chip">8 preguntas</span><span className="mz-chip">Foto</span><span className="mz-chip">Firma</span></div>
@@ -103,8 +136,8 @@ export default function MosaicoModulos() {
           </article>
 
           <article className="mz-m mz-g6 mz-ia reveal">
-            <Cabecera nombre="Adamia AI" sub="ai">Pregúntale lo que necesites de la Ley Federal del Trabajo. Responde con el texto oficial y te dice el artículo.</Cabecera>
-            <Flecha href="/contacto" nombre="Adamia AI" />
+            <Cabecera nombre="Adamia AI" sub="ai">Pregúntale de la Ley Federal del Trabajo o de cómo usar ADAMIA. Responde con el texto oficial y te dice el artículo o la guía.</Cabecera>
+            <Flecha href="/ayuda/adamia-ai" nombre="Adamia AI" />
             <div className="mz-chat flota" style={{ "--ft": "7.6s", "--fd": "-1.8s" }}>
               <div className="mz-burbuja mz-yo">¿Cuántos días de vacaciones le tocan a alguien con 3 años?</div>
               <div className="mz-burbuja mz-ai"><EscrituraIA partes={RESPUESTA_IA}><span className="mz-cita">Art. 76 LFT</span></EscrituraIA></div>
