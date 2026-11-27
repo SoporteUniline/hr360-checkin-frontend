@@ -43,6 +43,10 @@
 .lh .btn-primary svg { transition: transform .2s var(--ease); } .lh .btn-primary:hover svg { transform: translateX(4px); }
 .lh .btn-line { background: #fff; color: var(--ink); border-color: #c9cde0; }
 .lh .btn-line:hover { border-color: var(--blue); color: var(--blue); }
+/* Encabezado (27/11/2026): «Iniciar sesión» con fondo azul y «Contratar» con contorno azul; sin «Probar demo». */
+.lh .btn-line-azul { background: #fff; color: var(--blue); border-color: var(--blue); }
+.lh .btn-line-azul:hover { background: var(--blue); color: #fff; }
+.lh .top-actions .btn.login { color: #fff; padding: 12px 20px; }
 .lh .tags { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font: 600 1.02rem/1.3 var(--f); color: var(--violet); padding: 0; margin: 0; list-style: none; }
 .lh .tags li + li::before { content: "·"; color: #b7aef7; margin-right: 10px; display: inline-block; text-decoration: none; }
 .lh .tags li { transition: color .3s ease; } .lh .tags li.on { color: var(--ink); text-decoration: underline 3px var(--violet); text-underline-offset: 6px; }
@@ -67,7 +71,7 @@
 .lh .nav a[aria-current="page"] { color: var(--blue); }
 .lh .menu-btn { display: none; width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid #c9cde0; background: #fff; color: var(--ink); font-size: 1.2rem; cursor: pointer; }
 .lh .menu-movil { display: none; }
-@media (max-width: 1100px) { .lh .top .wrap { gap: 18px; } .lh .nav { gap: 16px; } .lh .nav a { font-size: .9rem; } .lh .top-actions .contratar { display: none; } }
+@media (max-width: 1100px) { .lh .top .wrap { gap: 18px; } .lh .nav { gap: 16px; } .lh .nav a { font-size: .9rem; } }
 @media (max-width: 980px) {
   .lh .menu-btn { display: inline-grid; place-items: center; }
   .lh .menu-movil { display: grid; border-top: 1px solid var(--line); background: #fff; padding: 8px max(20px, env(safe-area-inset-left, 0px)) 16px; }
@@ -464,7 +468,8 @@
   .lh .paper { left: -10px; }
 }
 @media (max-width: 600px) {
-  .lh .top-actions .login { display: none; }
+  .lh .top-actions .contratar { display: none; }
+  .lh .top-actions .btn.login { padding: 10px 14px; font-size: .9rem; }
   .lh .brand span { font-size: 1.1rem; } .lh .brand img { height: 24px; }
   .lh .hero .wrap { padding-block: 46px 20px; }
   .lh .ctas .btn { flex: 1 1 100%; }
