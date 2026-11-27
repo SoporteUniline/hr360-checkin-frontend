@@ -3,11 +3,12 @@
 // Piezas comunes de Clima y NOM-035: llamadas al API, botones, tarjetas, semáforo y estados.
 import axios from "@/lib/axios";
 import { NIVELES, ESTADOS } from "@/lib/clima/modelo.mjs";
+import { mensajeRechazoPorPeso } from "@/lib/errorSubida.mjs";
 
 export const BASE = "/checador/clima";
 export const get = (url) => axios.get(url).then((r) => r.data);
 export const ruta = (path, idEmpresa) => `${BASE}${path}${path.includes("?") ? "&" : "?"}empresa=${idEmpresa}`;
-export const errorDe = (e, porDefecto = "No se pudo completar. Intenta de nuevo.") => e?.response?.data?.error || porDefecto;
+export const errorDe = (e, porDefecto = "No se pudo completar. Intenta de nuevo.") => mensajeRechazoPorPeso(e) || e?.response?.data?.error || porDefecto;
 export const codigoDe = (e) => e?.response?.data?.codigo || null;
 
 const BOTON = [

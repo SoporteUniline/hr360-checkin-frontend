@@ -21,7 +21,7 @@ Recursos Humanos y el dueño de la cuenta, con permiso de editar en Comunicados.
 
 ## Antes de empezar
 
-- Ten lista la imagen: JPG, PNG o WebP de hasta 8 MB. Se ve mejor si es horizontal, unas tres veces más ancha que alta.
+- Ten lista la imagen. Sirve cualquier foto (JPG, PNG, WebP o HEIC del iPhone): al elegirla se ajusta sola —se endereza, se reduce y se guarda en formato WebP— para que cargue rápido. Mientras tanto verás «Preparando foto…» y la vista previa ya es la foto ajustada. Se ve mejor si es horizontal, unas tres veces más ancha que alta.
 - Si manejas varias empresas, elige arriba la **Empresa**: cada empresa tiene su propia portada.
 
 ## Cómo poner o cambiar la portada
@@ -68,7 +68,9 @@ No. Solo se fijan publicaciones ya publicadas.
 ## Qué pasa si…
 
 - **…sale «El enlace debe empezar con https://».** El enlace debe ser seguro: empieza con «https://».
-- **…sale «La portada debe ser JPG, PNG o WebP» o «La portada puede pesar hasta 8 MB».** Cambia el formato o reduce la imagen.
+- **…sale «Esta foto está en formato HEIC; en el iPhone ve a Ajustes › Cámara › Formatos › Más compatible, o elige otra».** Tu navegador no puede abrir fotos HEIC del iPhone. Cambia ese ajuste en el iPhone o elige otra foto.
+- **…sale «Elige una foto (JPG, PNG, WebP o HEIC).» o «No se pudo abrir esta foto. Elige otra o toma una nueva.».** El archivo no es una foto o está dañado: elige otra.
+- **…sale «El archivo pesa demasiado para subirlo. Prueba con uno más ligero.».** El servidor no aceptó un archivo tan grande. Elige uno más ligero (las fotos ya se ajustan solas; esto pasa sobre todo con PDFs grandes o con muchas fotos a la vez).
 - **…sale «Ya hay 3 publicaciones fijadas. Quita una antes de fijar otra.»** Desfija una de las que están arriba.
 - **…no veo «Cambiar portada» ni el menú ⋯.** Tu acceso a Comunicados es de solo consulta.
 

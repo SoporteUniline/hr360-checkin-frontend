@@ -11,12 +11,16 @@ import { CheckCircle2, FileText, Loader2, Upload } from "lucide-react";
 import PreguntasGrandes from "../../vacante/[slug]/PreguntasGrandes";
 import { enfocarPrimerError } from "../../vacante/[slug]/Postular";
 import { camposAPreguntas, camposArchivo, mensajeFormulario, revisarEnvio, valoresIniciales } from "@/lib/whatsapp/formularioEntrevista.mjs";
+import { MENSAJE_ARCHIVO_PESADO } from "@/lib/errorSubida.mjs";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 
 const backend = () => String(process.env.NEXT_PUBLIC_RUTA_BACKEND ?? "").replace(/\/$/, "");
 const ruta = (token) => `${backend()}/reclutamiento/formulario/${encodeURIComponent(token)}`;
 
 async function leer(respuesta) {
   const datos = await respuesta.json().catch(() => ({}));
+  // 413 de nginx en HTML (no llegó al backend): mensaje claro (lib/errorSubida.mjs).
+  if (respuesta.status === 413 && !datos?.error) throw Object.assign(new Error(MENSAJE_ARCHIVO_PESADO), { codigo: "ARCHIVO_GRANDE" });
   if (!respuesta.ok) throw Object.assign(new Error(datos?.error || "error"), { codigo: datos?.codigo, campos: datos?.campos });
   return datos;
 }
@@ -30,6 +34,15 @@ export default function FormularioEntrevista({ token }) {
   const [enviando, setEnviando] = useState(false);
   const [enviado, setEnviado] = useState(false);
   const [avisoGeneral, setAvisoGeneral] = useState("");
+  // (27/11/2026) Un documento que es FOTO se convierte a WebP (2400 px, se lee la letra; < 900 KB) al elegirlo.
+  const { preparando, preparar } = usePrepararFoto("documento");
+  const elegirArchivo = async (id, elegido) => {
+    setErrores(({ [id]: _quitado, ...resto }) => resto);
+    if (!elegido || !elegido.type.startsWith("image/")) { setArchivos((a) => ({ ...a, [id]: elegido })); return; }
+    const foto = await preparar(elegido);
+    if (foto.error) { setArchivos((a) => ({ ...a, [id]: null })); setErrores((x) => ({ ...x, [id]: foto.error })); return; }
+    setArchivos((a) => ({ ...a, [id]: foto.archivo }));
+  };
 
   useEffect(() => {
     let vivo = true;
@@ -131,8 +144,8 @@ export default function FormularioEntrevista({ token }) {
                   <label className="bt2-btn secundario ancho bt2-archivo">
                     <Upload aria-hidden="true" />
                     <span>{elegido ? elegido.name : "Elegir archivo (PDF, Word o foto, hasta 10 MB)"}</span>
-                    <input id={id} type="file" className="sr-only" accept=".pdf,.doc,.docx,image/jpeg,image/png,image/webp" aria-labelledby={`${id}-t`} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined}
-                      onChange={(e) => { const f = e.target.files?.[0] ?? null; setArchivos((a) => ({ ...a, [c.id]: f })); setErrores(({ [c.id]: _quitado, ...resto }) => resto); }} />
+                    <input id={id} type="file" className="sr-only" accept=".pdf,.doc,.docx,image/*" disabled={preparando} aria-labelledby={`${id}-t`} aria-invalid={error ? true : undefined} aria-describedby={error ? `${id}-error` : undefined}
+                      onChange={(e) => { elegirArchivo(c.id, e.target.files?.[0] ?? null); e.target.value = ""; }} />
                   </label>
                   {error ? <p id={`${id}-error`} className="bt2-error">{error}</p> : null}
                 </div>
@@ -140,8 +153,9 @@ export default function FormularioEntrevista({ token }) {
             })}
           </section>
         ) : null}
+        {preparando ? <p role="status" className="bt2-ayuda" data-preparando-foto>{TEXTO_PREPARANDO}</p> : null}
         {avisoGeneral ? <p role="alert" className="bt2-aviso-error">{avisoGeneral}</p> : null}
-        <button type="submit" disabled={enviando} className="bt2-btn verde ancho">
+        <button type="submit" disabled={enviando || preparando} className="bt2-btn verde ancho">
           {enviando ? <Loader2 className="girar" aria-hidden="true" /> : null}{enviado ? "Guardar cambios" : "Enviar respuestas"}
         </button>
         <p className="bt2-ayuda">Tus datos se usan solo para este proceso de reclutamiento. <Link className="bt2-enlace-alto" href="/aviso-privacidad">Aviso de privacidad</Link></p>

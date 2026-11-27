@@ -78,7 +78,9 @@ Abre tu misma liga. Arriba verás «Recursos Humanos te pide corregir:» con el 
 
 ## Qué pasa si…
 
-- **…el archivo pesa más de 10 MB:** verás «El archivo pesa más de 10 MB. Toma la foto otra vez o sube un PDF más ligero.»
+- **…el PDF pesa más de 10 MB:** verás «El archivo pesa más de 10 MB. Toma la foto otra vez o sube un PDF más ligero.» Las fotos se ajustan solas al tomarlas (verás «Preparando foto…»).
+- **…la foto está en HEIC (iPhone) y el navegador no la abre:** verás «Esta foto está en formato HEIC; en el iPhone ve a Ajustes › Cámara › Formatos › Más compatible, o elige otra.»
+- **…sale «El archivo pesa demasiado para subirlo. Prueba con uno más ligero.»:** el servidor no aceptó un archivo tan grande; sube un PDF más ligero o toma la foto.
 - **…me falta un lado de la INE:** verás «Falta el otro lado».
 - **…pierdo la señal:** verás «Sin conexión. Revisa tu internet e intenta de nuevo; lo que ya guardaste no se pierde.»
 - **…la liga ya venció:** verás «Esta liga ya venció». Pide a Recursos Humanos que te mande una nueva.

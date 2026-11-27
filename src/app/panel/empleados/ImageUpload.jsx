@@ -19,8 +19,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { CALIDAD_WEBP, nombreConvertido } from "@/lib/imagenes/aWeb.mjs";
+import { soportaWebp } from "@/lib/imagenes/lienzo.mjs";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 
-// Recorta el pixelCrop del imageSrc y lo devuelve como File
+// Recorta el pixelCrop del imageSrc y lo devuelve como File (27/11/2026: WebP 0.82; JPEG si el navegador no codifica WebP).
+// La foto del empleado es solo para verla (ficha, credencial): el rostro del checador se registra aparte con la cámara.
 async function getCroppedFile(imageSrc, pixelCrop, fileName) {
   const img = await new Promise((resolve) => {
     const i = new Image();
@@ -47,11 +51,12 @@ async function getCroppedFile(imageSrc, pixelCrop, fileName) {
     canvas.height,
   );
 
-  return new Promise((resolve) => {
+  const mime = (await soportaWebp()) ? "image/webp" : "image/jpeg";
+  return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => resolve(new File([blob], fileName, { type: "image/jpeg" })),
-      "image/jpeg",
-      0.8,
+      (blob) => (blob ? resolve(new File([blob], nombreConvertido(fileName, blob.type || mime), { type: blob.type || mime })) : reject(new Error("No se pudo recortar la foto."))),
+      mime,
+      mime === "image/webp" ? CALIDAD_WEBP : 0.8,
     );
   });
 }
@@ -73,26 +78,34 @@ export default function ImageUpload({
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  // La foto elegida se abre y endereza primero (HEIC que el navegador no abre: aviso claro) y el recorte sale de ella.
+  const { preparando, preparar } = usePrepararFoto("publicacion");
+  const [errorFoto, setErrorFoto] = useState("");
 
   const onCropComplete = useCallback((_, pixels) => {
     setCroppedAreaPixels(pixels);
   }, []);
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     if (soloLectura) return;
-    const file = e.target.files[0];
-    if (!file) return;
+    const elegido = e.target.files[0];
+    if (!elegido) return;
     e.target.value = ""; // permite volver a seleccionar el mismo archivo
-    const url = URL.createObjectURL(file);
+    setErrorFoto("");
+    const foto = await preparar(elegido);
+    if (foto.error) { setErrorFoto(foto.error); return; }
+    const url = URL.createObjectURL(foto.archivo);
     setCropSrc(url);
-    setCropFileName(file.name);
+    setCropFileName(elegido.name || "foto");
     setCrop({ x: 0, y: 0 });
     setZoom(1);
   };
 
   const handleConfirmarRecorte = async () => {
     if (!croppedAreaPixels) return;
-    const file = await getCroppedFile(cropSrc, croppedAreaPixels, cropFileName);
+    let file;
+    try { file = await getCroppedFile(cropSrc, croppedAreaPixels, cropFileName); }
+    catch (e) { setErrorFoto(e.message); return; }
     const previewUrl = URL.createObjectURL(file);
     setImagePreview(previewUrl);
     setSelectedFile(file);
@@ -160,8 +173,11 @@ export default function ImageUpload({
         type="file"
         accept="image/*"
         className="hidden"
+        disabled={preparando}
         onChange={handleImageChange}
       />
+      {preparando ? <p role="status" className="mt-1 text-[13px] text-slate-600">{TEXTO_PREPARANDO}</p> : null}
+      {errorFoto ? <p role="alert" className="mt-1 max-w-48 text-[13px] text-red-700">{errorFoto}</p> : null}
 
       {/* Modal de recorte */}
       <Dialog open={!!cropSrc} onOpenChange={(open) => { if (!open) handleCancelarRecorte(); }}>

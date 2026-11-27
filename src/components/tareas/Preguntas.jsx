@@ -8,6 +8,7 @@ import { AlignLeft, Calendar, CalendarClock, Camera, CheckSquare, CircleDot, Has
 import FirmaGrande from "@/components/firma/FirmaGrande";
 import { FotoSegura } from "./comun";
 import { esCalificable, puntajePregunta } from "@/lib/tareas/preguntas.mjs";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 
 export const ICONOS = { si_no: CheckSquare, opcion: CircleDot, multiple: ListChecks, numero: Hash, foto: ImageIcon, estrellas: Star, texto: Type, texto_largo: AlignLeft, fecha: Calendar, fecha_hora: CalendarClock, firma: PenLine };
 
@@ -34,8 +35,15 @@ function Chip({ activo, onClick, children, deshabilitado, tono = "azul", grande 
 
 function SubirFoto({ url, alSubir, etiqueta, deshabilitado, subir }) {
   const [subiendo, setSubiendo] = useState(false);
-  const elegir = async (archivo) => {
-    if (!archivo) return;
+  // (27/11/2026) La foto se convierte a WebP (1600 px, < 900 KB) al elegirla (lib/imagenes/aWeb.mjs); la vista previa es la convertida.
+  const { preparando, preparar } = usePrepararFoto("evidencia");
+  const [error, setError] = useState("");
+  const elegir = async (elegida) => {
+    if (!elegida) return;
+    setError("");
+    const foto = await preparar(elegida);
+    if (foto.error) { setError(foto.error); return; }
+    const archivo = foto.archivo;
     if (!subir) { alSubir(URL.createObjectURL(archivo)); return; }
     setSubiendo(true);
     const llave = await subir(archivo);
@@ -46,11 +54,12 @@ function SubirFoto({ url, alSubir, etiqueta, deshabilitado, subir }) {
     <span className="flex flex-wrap items-center gap-2">
       {url ? (/^(blob|data):/.test(url) ? <img src={url} alt="Foto de evidencia" className="size-14 rounded-lg object-cover" /> : <FotoSegura llave={url} className="size-14 rounded-lg object-cover" />) : null}
       {!deshabilitado ? (
-        <label className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-amber-400 bg-amber-50 px-3 text-[13px] font-semibold text-amber-900 ${subiendo ? "opacity-60" : ""}`}>
-          <Camera className="size-4" /> {subiendo ? "Subiendo…" : url ? "Cambiar foto" : etiqueta}
-          <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={subiendo} onChange={(e) => { elegir(e.target.files?.[0]); e.target.value = ""; }} />
+        <label className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-amber-400 bg-amber-50 px-3 text-[13px] font-semibold text-amber-900 ${subiendo || preparando ? "opacity-60" : ""}`}>
+          <Camera className="size-4" /> <span role={preparando ? "status" : undefined}>{preparando ? TEXTO_PREPARANDO : subiendo ? "Subiendo…" : url ? "Cambiar foto" : etiqueta}</span>
+          <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={subiendo || preparando} onChange={(e) => { elegir(e.target.files?.[0]); e.target.value = ""; }} />
         </label>
       ) : null}
+      {error ? <span role="alert" className="basis-full text-[13px] text-red-700">{error}</span> : null}
     </span>
   );
 }

@@ -15,15 +15,28 @@ import {
   ACEPTAR_ARCHIVOS, LIMITE_PIE, MAX_GRABACION_SEG, MENSAJE_GRABACION_MAXIMA, formatearDuracion, formatearTamano, validarArchivo,
 } from "@/lib/whatsapp/adjuntos.mjs";
 import useGrabadora from "./useGrabadora";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
+
+// (27/11/2026) Fotos de cámara (JPEG/PNG/HEIC) se ajustan al elegirlas (2000 px, < 900 KB) en JPEG —o PNG si tienen
+// transparencia—, nunca WebP: WhatsApp (Meta) acepta imágenes JPEG/PNG y trata WebP como sticker. WebP, GIF, audio,
+// video y documentos van tal cual (lib/imagenes/aWeb.mjs, uso «whatsapp»).
+const FOTO_A_AJUSTAR = /^image\/(jpeg|png|heic|heif)$/i;
 
 // Archivo elegido y su error de validación. Lo usa también el hilo (arrastrar y soltar).
 export function useAdjuntoPendiente() {
   const [adjunto, setAdjunto] = useState(null);
   const [error, setError] = useState("");
   const vista = useRef(null);
+  const { preparando, preparar } = usePrepararFoto("whatsapp");
   const liberar = () => { if (vista.current) URL.revokeObjectURL(vista.current); vista.current = null; };
   useEffect(() => liberar, []);
-  const elegir = useCallback((archivo, { notaVoz = false, aviso = "" } = {}) => {
+  const elegir = useCallback(async (elegido, { notaVoz = false, aviso = "" } = {}) => {
+    let archivo = elegido;
+    if (!notaVoz && archivo && (FOTO_A_AJUSTAR.test(archivo.type) || /\.hei[cf]$/i.test(archivo.name ?? ""))) {
+      const foto = await preparar(archivo);
+      if (foto.error) { setError(foto.error); return false; }
+      archivo = foto.archivo;
+    }
     const v = validarArchivo(archivo);
     if (!v.ok) { setError(v.error); return false; }
     liberar();
@@ -32,9 +45,9 @@ export function useAdjuntoPendiente() {
     setAdjunto({ archivo, nombre: archivo.name || `imagen-${Date.now()}.${v.mime.split("/")[1]}`, mime: v.mime, tipo: v.tipo, tamano: archivo.size, vista: previa, notaVoz });
     setError(aviso);
     return true;
-  }, []);
+  }, [preparar]);
   const quitar = useCallback(() => { liberar(); setAdjunto(null); setError(""); }, []);
-  return { adjunto, error, setError, elegir, quitar };
+  return { adjunto, error, setError, elegir, quitar, preparando };
 }
 
 // Ventana de 24 h cerrada: en lugar de un cuadro bloqueado sin salida, se ofrece mandar la plantilla de seguimiento.
@@ -146,7 +159,7 @@ export default function ComposerChat({
   const area = useRef(null);
   const selector = useRef(null);
   const control = useRef(null);
-  const { adjunto, error, setError, elegir, quitar } = pendiente;
+  const { adjunto, error, setError, elegir, quitar, preparando } = pendiente;
   const ajustarAltura = () => {
     const el = area.current;
     if (!el) return;
@@ -196,7 +209,7 @@ export default function ComposerChat({
       subir({ archivo, nombre: archivo.name, texto: "", notaVoz: true });
     },
   });
-  const sePuedeAdjuntar = permiso.puede && !!onEnviarAdjunto && !ocupado && !grabadora.grabando;
+  const sePuedeAdjuntar = permiso.puede && !!onEnviarAdjunto && !ocupado && !grabadora.grabando && !preparando;
   const abrirSelector = () => { if (sePuedeAdjuntar) selector.current?.click(); };
   const alPegar = (e) => {
     const archivos = [...(e.clipboardData?.files ?? [])];
@@ -228,6 +241,7 @@ export default function ComposerChat({
           ) : null}
         </div>
       ) : null}
+      {preparando ? <p role="status" className="mb-2 text-[13px] text-slate-600" data-preparando-foto>{TEXTO_PREPARANDO}</p> : null}
       {aviso}
       {adjunto && permiso.puede ? <VistaAdjunto adjunto={adjunto} onQuitar={quitar} bloqueado={subiendo} /> : null}
       {subiendo ? <Avance progreso={progreso} onCancelar={() => control.current?.abort()} /> : null}

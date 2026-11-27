@@ -12,6 +12,7 @@ import { useSnackbar } from "notistack";
 import { mutate } from "swr";
 import axiosInstance from "@/lib/axios";
 import { useCambiosCuenta } from "./GuardiaCuenta";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 
 export default function ImageUpload({ user, rol, empresa }) {
   const token = Cookies.get("token");
@@ -21,18 +22,20 @@ export default function ImageUpload({ user, rol, empresa }) {
   const { enqueueSnackbar } = useSnackbar();
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  // (27/11/2026) La foto se convierte a WebP (1024 px, < 900 KB) al elegirla y la vista previa es la convertida.
+  const { preparando, preparar } = usePrepararFoto("perfil");
 
   // Libera la vista previa anterior al cambiarla o al salir.
   useEffect(() => () => { if (imagePreview) URL.revokeObjectURL(imagePreview); }, [imagePreview]);
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
+  const handleImageChange = async (e) => {
+    const elegido = e.target.files[0];
     e.target.value = ""; // permite volver a elegir el mismo archivo después de cancelar
-    if (file) {
-      const imageURL = URL.createObjectURL(file);
-      setImagePreview(imageURL);
-      setSelectedFile(file);
-    }
+    if (!elegido) return;
+    const foto = await preparar(elegido);
+    if (foto.error) { enqueueSnackbar(foto.error, { variant: "error" }); return; }
+    setImagePreview(URL.createObjectURL(foto.archivo));
+    setSelectedFile(foto.archivo);
   };
 
   const removeImage = () => {
@@ -132,9 +135,9 @@ export default function ImageUpload({ user, rol, empresa }) {
             </div>
           </div>
         ) : (
-          <Button type="button" variant="outline" onClick={elegir} className="min-h-11 w-full font-semibold text-slate-700 sm:min-h-9">
+          <Button type="button" variant="outline" onClick={elegir} disabled={preparando} className="min-h-11 w-full font-semibold text-slate-700 sm:min-h-9">
             <Camera className="size-4" aria-hidden="true" />
-            Cambiar foto
+            {preparando ? <span role="status">{TEXTO_PREPARANDO}</span> : "Cambiar foto"}
           </Button>
         )}
         <input ref={inputRef} type="file" accept="image/*" className="hidden" tabIndex={-1} aria-hidden="true" onChange={handleImageChange} data-input-foto />

@@ -14,9 +14,10 @@ import SelectorEmpleado from "@/components/nomina/SelectorEmpleado";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fechaCorta } from "@/lib/clima/modelo.mjs";
 import {
-  ACEPTA_EVIDENCIA, ESTADO_LISTA, MEDIOS, TIPOS_EVIDENCIA, erroresDifusion, erroresEvidencia, hoyMx, tamano,
+  ESTADO_LISTA, MEDIOS, TIPOS_EVIDENCIA, erroresDifusion, erroresEvidencia, hoyMx, tamano,
 } from "@/lib/clima/inspeccion.mjs";
 import { Aviso, Boton, Cargando, Tarjeta, Vacio, codigoDe, errorDe, get, ruta } from "./ui";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 
 const CAMPO = "min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-[14px] text-slate-900";
 const ETIQUETA = "mb-1 block text-[13px] font-semibold text-slate-700";
@@ -131,8 +132,19 @@ function Evidencias({ idEmpresa, idCentro, idCampania, alCambiar }) {
   const [datos, setDatos] = useState({ tipo: "", descripcion: "", fecha: hoyMx(), archivo: null });
   const [errores, setErrores] = useState({});
   const [subiendo, setSubiendo] = useState(false);
+  // (27/11/2026) Una evidencia que es foto se convierte a WebP (2400 px, < 900 KB) al elegirla; el PDF va tal cual.
+  // El expediente en PDF solo LISTA las evidencias (no incrusta la imagen), así que WebP no lo afecta.
+  const { preparando, preparar } = usePrepararFoto("documento");
+  const elegirArchivo = async (elegido) => {
+    setErrores((x) => ({ ...x, archivo: undefined }));
+    if (!elegido || elegido.type === "application/pdf" || /\.pdf$/i.test(elegido.name ?? "")) { setDatos((d) => ({ ...d, archivo: elegido ?? null })); return; }
+    const foto = await preparar(elegido);
+    if (foto.error) { setDatos((d) => ({ ...d, archivo: null })); setErrores((x) => ({ ...x, archivo: foto.error })); return; }
+    setDatos((d) => ({ ...d, archivo: foto.archivo }));
+  };
   const subir = async (e) => {
     e.preventDefault();
+    if (preparando) return;
     const errs = erroresEvidencia(datos);
     setErrores(errs);
     if (Object.keys(errs).length) return;
@@ -233,11 +245,12 @@ function Evidencias({ idEmpresa, idCentro, idCampania, alCambiar }) {
             </label>
             <label className="block">
               <span className={ETIQUETA}>Archivo</span>
-              <input type="file" accept={ACEPTA_EVIDENCIA} className="block w-full text-[14px]" onChange={(e) => setDatos({ ...datos, archivo: e.target.files?.[0] ?? null })} />
+              <input type="file" accept="application/pdf,image/*" className="block w-full text-[14px]" disabled={preparando} onChange={(e) => elegirArchivo(e.target.files?.[0])} />
+              {preparando ? <span role="status" className="mt-1 block text-[13px] text-slate-600">{TEXTO_PREPARANDO}</span> : null}
               <Falla texto={errores.archivo} />
             </label>
             <DialogFooter>
-              <Boton type="submit" variante="primario" disabled={subiendo}>
+              <Boton type="submit" variante="primario" disabled={subiendo || preparando}>
                 {subiendo ? "Subiendo…" : "Guardar evidencia"}
               </Boton>
             </DialogFooter>

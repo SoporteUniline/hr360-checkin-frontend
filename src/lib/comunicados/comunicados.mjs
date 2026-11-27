@@ -3,6 +3,7 @@
 // moderación, límites, validación de archivos por bytes, YouTube) viven en el backend (/api/checador/comunicados);
 // aquí solo se repite lo necesario para avisar ANTES de mandar (el servidor vuelve a validar todo).
 // Todo lo que escribe una persona se muestra como texto (nunca HTML).
+import { mensajeRechazoPorPeso } from "../errorSubida.mjs";
 
 export const API = "/checador/comunicados";
 export const API_MI = `${API}/mi`;
@@ -625,6 +626,9 @@ export function textoManana(m) {
 // ───────── errores y respuestas ─────────
 /** Mensaje del servidor ({ mensaje } o { error }) o uno por defecto. Sin red: aviso claro. */
 export function errorDe(e, porDefecto = "No se pudo completar la acción. Intenta de nuevo.") {
+  // 413 de nginx en HTML (la petición no llegó al backend): «El archivo pesa demasiado…» (lib/errorSubida.mjs).
+  const pesado = mensajeRechazoPorPeso(e);
+  if (pesado) return pesado;
   const d = e?.response?.data;
   if (d?.codigo === "VALIDACION" && d.campos && typeof d.campos === "object" && Object.values(d.campos)[0]) return String(Object.values(d.campos)[0]);
   if (d?.mensaje) return d.mensaje;

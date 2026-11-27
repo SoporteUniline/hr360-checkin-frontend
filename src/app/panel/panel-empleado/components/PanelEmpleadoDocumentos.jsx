@@ -65,6 +65,8 @@ import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
 import { categoriasApi, documentosApi } from "@/lib/expedienteApi";
 import { docGeneradosApi } from "@/lib/gestionDocumentalApi";
+import { MENSAJE_ARCHIVO_PESADO } from "@/lib/errorSubida.mjs";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const TIPOS_ACEPTADOS = {
@@ -72,6 +74,9 @@ const TIPOS_ACEPTADOS = {
   "image/jpeg": [".jpg", ".jpeg"],
   "image/png": [".png"],
   "image/webp": [".webp"],
+  // (27/11/2026) HEIC/HEIF se aceptan para convertirlos a WebP al elegirlos (si el navegador no los abre, aviso claro).
+  "image/heic": [".heic"],
+  "image/heif": [".heif"],
   "application/msword": [".doc"],
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": [
     ".docx",
@@ -980,6 +985,9 @@ function ModalSubirDocumento({
   const [progreso, setProgreso] = useState(0);
   // Error visible DENTRO del modal (no notificación flotante)
   const [errorModal, setErrorModal] = useState(null);
+  // (27/11/2026) Una FOTO (no PDF ni Word) se convierte a WebP de 2400 px (se lee la letra) y < 900 KB al elegirla.
+  // El servidor guarda el SHA-256 del archivo que recibe: es el de la foto convertida, la que queda en el expediente.
+  const { preparando, preparar } = usePrepararFoto("documento");
 
   const reset = () => {
     setArchivo(null);
@@ -1023,14 +1031,19 @@ function ModalSubirDocumento({
         }
         return;
       }
-      if (accepted[0]) {
-        setArchivo(accepted[0]);
-        if (!nombreDoc) setNombreDoc(accepted[0].name.replace(/\.[^.]+$/, ""));
-      }
+      const elegido = accepted[0];
+      if (!elegido) return;
+      if (!nombreDoc) setNombreDoc(elegido.name.replace(/\.[^.]+$/, ""));
+      if (!elegido.type.startsWith("image/")) { setArchivo(elegido); return; }
+      preparar(elegido).then((foto) => {
+        if (foto.error) mostrarError(foto.error);
+        else setArchivo(foto.archivo);
+      });
     },
     accept: TIPOS_ACEPTADOS,
     maxSize: MAX_BYTES,
     multiple: false,
+    disabled: preparando,
   });
 
   const handleSubir = async () => {
@@ -1063,9 +1076,7 @@ function ModalSubirDocumento({
     } catch (err) {
       const status = err?.response?.status;
       if (status === 413) {
-        mostrarError(
-          "El archivo es demasiado grande para el servidor. El límite configurado en el servidor es inferior al tamaño del archivo. Contacta al administrador o usa un archivo más pequeño.",
-        );
+        mostrarError(err?.response?.data?.error || MENSAJE_ARCHIVO_PESADO);
       } else if (status === 400) {
         mostrarError(
           err?.response?.data?.error ||
@@ -1142,13 +1153,15 @@ function ModalSubirDocumento({
             >
               <input {...getInputProps()} />
               <UploadCloud className="w-7 h-7 mx-auto mb-1.5 text-slate-400" />
-              <p className="text-sm text-slate-600 font-medium">
-                {isDragActive
+              <p className="text-sm text-slate-600 font-medium" role={preparando ? "status" : undefined}>
+                {preparando
+                  ? TEXTO_PREPARANDO
+                  : isDragActive
                   ? "Suelta el archivo aquí"
                   : "Toca para seleccionar archivo"}
               </p>
               <p className="text-xs text-slate-400 mt-1">
-                PDF, JPG, PNG, WEBP, DOC, DOCX · máx. 10 MB
+                PDF, foto (JPG, PNG, WEBP, HEIC), DOC, DOCX · máx. 10 MB
               </p>
             </div>
           ) : (
@@ -1297,7 +1310,7 @@ function ModalSubirDocumento({
           <Button
             type="button"
             onClick={handleSubir}
-            disabled={subiendo || !archivo}
+            disabled={subiendo || preparando || !archivo}
             className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
           >
             {subiendo ? (

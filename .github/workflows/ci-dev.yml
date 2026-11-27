@@ -145,6 +145,11 @@ jobs:
       - name: Centro de comunicados — reglas de presentación, liga del correo y service worker de push
         run: node --test scripts/test-comunicados.mjs
 
+      # (27/11/2026, INC-009) Fotos a formato web al elegirlas: tamaños por uso, pasos de calidad, WebP/JPEG/PNG, nombres,
+      # tipos (HEIC), EXIF y el 413 de nginx sin JSON.
+      - name: Fotos a formato web y 413 de nginx — reglas
+        run: node --test scripts/test-fotos-web.mjs
+
       # Verificación en navegador con el backend simulado (1440 y 390): panel, aviso emergente (no se cierra con clic al
       # fondo) y muro de Mi espacio. Compila con un backend inexistente para que nada salga a la red.
       - name: Centro de comunicados — verificación en navegador (Playwright)
@@ -157,6 +162,16 @@ jobs:
           npx next build
           mkdir -p capturas-comunicados
           CAPTURAS=capturas-comunicados node scripts/verify-comunicados.mjs
+
+      # (27/11/2026, INC-009) Con la compilación anterior: una foto JPEG de 4000×3000 (ruido, EXIF girada) en la portada
+      # del muro sale como WebP < 900 KB a lo derecho; un 413 de nginx en HTML muestra el mensaje claro; HEIC sin abrir avisa.
+      - name: Fotos a formato web — portada del muro (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-fotos-web
+          CAPTURAS=capturas-fotos-web node scripts/verify-fotos-web.mjs
 
       # (27/11/2026) Centro de ayuda: formato de las guías (frontmatter y Markdown del subconjunto), imágenes y enlaces que
       # existen, pantallas y fuentes que existen, nada interno en lo público y cobertura de pantallas (COBERTURA_ESTRICTA
