@@ -18,6 +18,7 @@ import {
   Download,
 } from "lucide-react";
 import { EstadoBadge } from "@/lib/estados";
+import { contratosApi } from "@/lib/contratosApi";
 import MiniKpi from "./MiniKpi";
 
 /**
@@ -119,7 +120,12 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.open(c.url_contrato_pdf, "_blank");
+                          // (27/11/2026) El PDF firmado vive en S3 privado («s3:…»): se pide una URL temporal.
+                          if (String(c.url_contrato_pdf).startsWith("s3:")) {
+                            contratosApi.urlPdf(c.id_contrato ?? c.id).then((r) => r?.url && window.open(r.url, "_blank", "noopener")).catch(() => {});
+                          } else {
+                            window.open(c.url_contrato_pdf, "_blank");
+                          }
                         }}
                       >
                         <Download className="mr-1 h-3.5 w-3.5" />

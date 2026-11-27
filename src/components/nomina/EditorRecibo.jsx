@@ -132,6 +132,10 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
         <SheetHeader className="border-b border-slate-200 px-6 py-4 text-left">
           <SheetTitle><NombreEmpleado id={recibo.id_empleado}>{d.empleado?.nombre ?? "Recibo"}</NombreEmpleado></SheetTitle>
           <p className="text-sm text-slate-500">{d.empleado?.puesto ? `${d.empleado.puesto} · ` : ""}Pago {String(d.empleado?.periodo_pago ?? "").toLowerCase()} · {plural(d.resumen?.faltas, "falta")} · {plural(d.resumen?.retardos, "retardo")}</p>
+          {/* (27/11/2026) De dónde salió el sueldo: el contrato vigente o, si no hay, la ficha (marcado). */}
+          {d.empleado?.sueldo_texto ? (
+            <p className={`text-sm ${d.empleado.origen_sueldo === "contrato" ? "text-slate-600" : "font-semibold text-amber-800"}`} data-origen-sueldo={d.empleado.origen_sueldo}>{d.empleado.sueldo_texto}</p>
+          ) : null}
         </SheetHeader>
         <div className="grid gap-6 px-6 py-5 text-sm">
           {(d.alertas ?? []).length ? (
