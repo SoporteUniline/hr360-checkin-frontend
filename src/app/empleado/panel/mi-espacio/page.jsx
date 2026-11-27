@@ -1,5 +1,5 @@
 "use client";
-import { Package, ClipboardCheck, ClipboardList, LogOut, UsersRound, ReceiptText, HandCoins, KeyRound, ScanFace, Activity, ShieldCheck, Route } from "lucide-react";
+import { Package, ClipboardCheck, ClipboardList, LogOut, UsersRound, ReceiptText, HandCoins, KeyRound, ScanFace, Activity, ShieldCheck, Route, CircleHelp } from "lucide-react";
 import useSWR from "swr";
 import axios from "@/lib/axios";
 import { API as API_INDUCCION, RUTA_BIENVENIDA } from "@/lib/induccion/induccion.mjs";
@@ -35,6 +35,8 @@ export default function EmployeeSpace() {
       {esJefe
         ? <MenuLink href={RUTA_MONITOR_EQUIPO} icon={Activity} title="Monitor de mi equipo" description="Quién está trabajando y quién falta hoy" />
         : null}
+      {/* (27/11/2026) Centro de ayuda: guías para empleados (y jefes) de los módulos que su empresa tiene. */}
+      <MenuLink href="/empleado/panel/ayuda" icon={CircleHelp} title="Ayuda" description="Guías paso a paso para usar tu app" />
     </div><button onClick={logout} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border bg-white font-medium text-red-700"><LogOut className="size-4" />Cerrar sesión</button>
   </div>;
 }

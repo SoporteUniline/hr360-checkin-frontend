@@ -23,7 +23,7 @@ const PILARES = [
 
 const HECHOS = [
   { n: String(TOTAL_MODULOS), t: "herramientas en una sola cuenta" },
-  { n: "Rostro + GPS", t: "en cada checada, aunque no haya internet" },
+  { n: "Rostro + GPS", t: "en cada checada, desde el celular o una tableta" },
   { n: "WhatsApp", t: "para aprobar permisos y vacaciones" },
   { n: "Ley 2027", t: "registro electrónico de la jornada, listo" },
 ];

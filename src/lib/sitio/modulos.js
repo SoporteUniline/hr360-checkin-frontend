@@ -11,7 +11,7 @@ export const CATEGORIAS = [
     modulos: [
       { nombre: "Reloj checador facial", texto: "Tu gente checa con su rostro desde el celular o una tablet." },
       { nombre: "Validación GPS y geocercas", texto: "Solo registra si la persona está dentro del área de trabajo." },
-      { nombre: "Checador sin internet", texto: "Guarda la checada y la envía cuando vuelve la conexión." },
+      { nombre: "Rostro, QR o código", texto: "Cada quien checa como le funcione mejor: rostro, QR del gafete o código." },
       { nombre: "Asistencias", texto: "El día de cada persona: presente, retardo, falta o permiso." },
       { nombre: "Entradas y salidas", texto: "Cada checada con hora, lugar y quién la corrigió." },
       { nombre: "Horas extra", texto: "Autoriza, paga o repón tiempo; dobles y triples según la ley." },
@@ -97,7 +97,7 @@ export const TOTAL_MODULOS = CATEGORIAS.reduce((t, c) => t + c.modulos.length, 0
 
 // Páginas de detalle de Funciones.
 export const DETALLES = [
-  { href: "/funcionalidades/reloj-checador", nombre: "Reloj checador", texto: "Rostro, GPS y sin internet." },
+  { href: "/funcionalidades/reloj-checador", nombre: "Reloj checador", texto: "Rostro, GPS, QR o código." },
   { href: "/funcionalidades/colaboradores", nombre: "Colaboradores", texto: "Expediente y estructura." },
   { href: "/funcionalidades/contratos", nombre: "Contratos", texto: "Vigencias y renovaciones." },
   { href: "/funcionalidades/notificaciones-reglas", nombre: "Notificaciones y reglas", texto: "Avisos automáticos." },

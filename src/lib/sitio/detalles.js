@@ -5,8 +5,8 @@ export const DETALLE = {
     color: "#2c56e8",
     eyebrow: "Reloj checador",
     titulo: "Checa con su rostro. Donde trabaja.",
-    lead: "Tu gente registra entrada y salida desde el celular o una tablet, con reconocimiento facial y validación GPS, aunque no haya internet.",
-    resumen: ["Reconocimiento facial", "Geocerca de 10 a 1,000 m", "Funciona sin internet", "Reportes en Excel"],
+    lead: "Tu gente registra entrada y salida desde el celular o una tablet, con reconocimiento facial y validación GPS.",
+    resumen: ["Reconocimiento facial", "Geocerca de 10 a 1,000 m", "Checada con QR o código", "Reportes en Excel"],
     bloques: [
       {
         titulo: "Nadie checa por otro.",
