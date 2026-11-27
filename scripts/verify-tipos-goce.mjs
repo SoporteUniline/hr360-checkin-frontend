@@ -280,9 +280,11 @@ try {
 
   // Ejemplo 2: Falta injustificada (sin motivo) → OK, sin motivo ni goce.
   await elegir(page.getByLabel("Qué pasó de Ana Ruiz"), "2");
+  // (27/11/2026) Cambiar qué pasó pide «Motivo de la corrección».
+  await filaDe("Ana Ruiz").getByLabel(/Motivo de la corrección/).fill("No se presentó ni avisó");
   await filaDe("Ana Ruiz").getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 1, "PUT estado-dia falta injustificada");
-  assert.deepEqual(pet.estado[0], { id: 602, cuerpo: { id_tipo_permiso: 2 } });
+  assert.deepEqual(pet.estado[0], { id: 602, cuerpo: { id_tipo_permiso: 2, motivo_correccion: "No se presentó ni avisó", pantalla: "estado_dia" } });
   await page.getByText("Se creó un acta administrativa en borrador por la falta injustificada.").waitFor({ timeout: 5000 });
 
   // Ejemplo 3: Falta justificada (tipo anterior, servidor viejo) · «Permiso personal» · goce del tipo (sin goce).
@@ -298,9 +300,10 @@ try {
   await selectsSinRecorte(filaDe("Luis Mora"), "fila con motivo");
   await letraCampos(filaDe("Luis Mora"), "fila con motivo");
   await foto(page, "1440-fila-motivo");
+  await pend.getByLabel(/Motivo de la corrección/).fill("Avisó un día antes");
   await pend.getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 2, "PUT estado-dia falta justificada");
-  assert.deepEqual(pet.estado[1], { id: 603, cuerpo: { id_tipo_permiso: 3, id_motivo: 2, goce: "sin" } });
+  assert.deepEqual(pet.estado[1], { id: 603, cuerpo: { id_tipo_permiso: 3, id_motivo: 2, goce: "sin", motivo_correccion: "Avisó un día antes", pantalla: "estado_dia" } });
 
   // Ejemplo 1: Diego · «Sí vino → Entrada después de tiempo» → reloj con el permiso puesto; entra 11:00; visita al médico.
   await elegir(page.getByLabel("Qué pasó de Diego León"), "4");

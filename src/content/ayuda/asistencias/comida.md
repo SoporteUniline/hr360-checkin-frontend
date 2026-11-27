@@ -7,7 +7,7 @@ pantallas: [/panel/registro-asistencia]
 palabras: [comida, salir a comer, voy a comer, no marcó salida a comer, se pasó de comida, descanso, agregar comida, no fue comida, tramos]
 orden: 50
 actualizado: 2026-11-27
-fuentes: [src/app/panel/registro-asistencia/RelojDiaDialog.jsx, src/lib/asistencia/relojDia.mjs, src/app/panel/registro-asistencia/ResumenAsistencia.jsx, src/app/panel/registro-asistencia/AsistenciaRow.jsx, src/components/Clock/VoyAComer.jsx, src/components/RelojChecador.jsx, src/lib/asistencia/tablero.mjs]
+fuentes: [src/app/panel/registro-asistencia/BotonAgregarComida.jsx, src/components/asistencia/CampoMotivo.jsx, src/app/panel/registro-asistencia/RelojDiaDialog.jsx, src/lib/asistencia/relojDia.mjs, src/app/panel/registro-asistencia/ResumenAsistencia.jsx, src/app/panel/registro-asistencia/AsistenciaRow.jsx, src/components/Clock/VoyAComer.jsx, src/components/RelojChecador.jsx, src/lib/asistencia/tablero.mjs]
 ---
 
 ## Para qué sirve
@@ -56,15 +56,18 @@ En **Asistencias**, cuando hay personas cuyo horario tiene comida pero solo chec
 
 El botón **+ Comida** solo aparece si el día tiene checadas y todavía no tiene comida. También puedes cambiar el **Concepto** de un renglón existente a **Comida**.
 
+Si la comida se agregó a mano y la ves en las checadas del día (al tocar la fila en Asistencias), sus botones **Editar** y **Quitar** también piden el **Motivo de la corrección (obligatorio)**, de 5 a 500 letras. Sin él no se guarda y verás «Escribe el motivo de la corrección.» junto al campo.
+
 ## Cómo quitar una comida que no fue comida
 
 Si alguien tocó «Salir a comer» por error (por ejemplo, salió a un trámite):
 
 1. Abre su reloj del día.
 2. En la franja ámbar de la comida toca **No fue comida**.
-3. Toca **Guardar**.
+3. El tramo de antes de la comida pide motivo: «Para quitar la comida elige el motivo.». Elígelo en **Motivo** (por ejemplo, **Error de captura**).
+4. Toca **Guardar**.
 
-Ese tiempo deja de contar como comida; queda como un hueco no trabajado.
+Ese tiempo deja de contar como comida; queda como un hueco no trabajado. Como cambia las horas trabajadas, sin motivo no se guarda, y el cambio queda en el historial con tu nombre y el motivo.
 
 ## Preguntas frecuentes
 

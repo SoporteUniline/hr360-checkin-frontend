@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cambiosRegistro, etiquetaCampo } from "@/lib/asistencia/cambios.mjs";
 import { etiquetaOrigen, fechaCorta, quienCuando } from "@/lib/asistencia/historial.mjs";
+import { motivoDelCambio } from "@/lib/asistencia/motivoCorreccion.mjs";
 import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
 import dayjs from "dayjs";
@@ -115,11 +116,14 @@ export default function CeldaEditado({ registro, formatear, onVerChecadas, grand
             <p className="text-[11px] font-semibold text-slate-700">Quién y cuándo</p>
             {movimientos.length > 0 ? (
               <ul className="mt-1 space-y-1.5" aria-label="Historial de cambios">
-                {movimientos.map((c, i) => (
+                {movimientos.map((c, i) => {
+                  // (27/11/2026) Motivo de la corrección: su columna o, en bases sin la migración, el final de «después».
+                  const { despues, motivo } = motivoDelCambio(c);
+                  return (
                   <li key={`${c.creado_en}-${c.campo}-${i}`} className="text-[11px] leading-snug text-slate-600">
                     <span className="font-semibold text-slate-800">{c.nombre_usuario || "Usuario sin nombre"}</span>
                     {" · "}{fechaCorta(c.creado_en)}
-                    <span className="text-slate-400"> · {etiquetaOrigen(c.origen)}</span>
+                    <span className="text-slate-400"> · {etiquetaOrigen(c.origen, c.pantalla)}</span>
                     <br />
                     {c.campo === "comida" ? "Comida" : etiquetaCampo(c.campo)}:{" "}
                     <span className="text-slate-400 line-through">
@@ -127,10 +131,14 @@ export default function CeldaEditado({ registro, formatear, onVerChecadas, grand
                     </span>
                     {" → "}
                     <span className="font-semibold text-slate-800">
-                      {c.campo === "comida" ? c.valor_despues : formatear ? formatear(c.campo, c.valor_despues) : c.valor_despues ?? "—"}
+                      {c.campo === "comida" ? despues : formatear ? formatear(c.campo, despues) : despues ?? "—"}
                     </span>
+                    {motivo ? (
+                      <><br /><span data-motivo-cambio className="text-slate-700">Motivo: <b className="font-semibold">{motivo}</b></span></>
+                    ) : null}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             ) : registro?.ultimo_cambio ? (
               <p className="mt-1 text-[11px] text-slate-600">{quienCuando(registro.ultimo_cambio)}</p>

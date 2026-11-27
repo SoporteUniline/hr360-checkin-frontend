@@ -52,6 +52,9 @@ export default function EntradasSalidasTable({
   handleCancelMovimientoEdit,
   handleMovimientoFieldChange,
   handleSaveMovimientoClick,
+  motivoMovimiento = "",
+  errorMotivoMovimiento = "",
+  cambiarMotivoMovimiento,
   onResetFilters,
   empresaActiva,
   filterOptionsRows,
@@ -340,6 +343,9 @@ export default function EntradasSalidasTable({
       handleCancelMovimientoEdit={handleCancelMovimientoEdit}
       handleMovimientoFieldChange={handleMovimientoFieldChange}
       handleSaveMovimientoClick={handleSaveMovimientoClick}
+      motivo={motivoMovimiento}
+      errorMotivo={errorMotivoMovimiento}
+      onMotivo={cambiarMotivoMovimiento}
       empresaActiva={empresaActiva}
       colVisible={colVisible}
       onRowClick={onRowClick}

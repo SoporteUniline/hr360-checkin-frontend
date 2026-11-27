@@ -1,8 +1,12 @@
 // Historial de cambios de una asistencia (quién, cuándo, desde dónde). Backend: asistencias_cambios.
 
-const ORIGEN = { asistencia: "Edición", reloj: "Reloj checador", comida: "Comida agregada" };
+import { PANTALLAS } from "./motivoCorreccion.mjs";
 
-export const etiquetaOrigen = (origen) => ORIGEN[origen] ?? origen ?? "";
+const ORIGEN = { asistencia: "Edición", reloj: "Reloj checador", comida: "Comida agregada", estado_dia: "Qué pasó",
+  sistema: "Sistema (automático)" };
+
+// (27/11/2026) Con la pantalla de origen (asistencias_cambios.pantalla, migración 20261230) dice desde dónde se corrigió.
+export const etiquetaOrigen = (origen, pantalla = null) => PANTALLAS[pantalla] ?? ORIGEN[origen] ?? origen ?? "";
 
 // "2026-11-18 19:45:12.000000" → "18/11 19:45" (hora de la base, igual que el resto de la vista).
 export function fechaCorta(valor) {

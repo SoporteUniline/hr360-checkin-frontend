@@ -622,6 +622,8 @@ try {
       await elegir(pg.locator('[data-fila-asistencia="502"] [role=combobox]').first(), { label: "Inasistencia" });
       await dormir(300);
       await elegir(pg.locator('[data-fila-asistencia="502"] [role=combobox]').nth(1), { label: "Visita al médico" });
+      // (27/11/2026) Cambiar qué pasó pide «Motivo de la corrección».
+      await pg.locator('[data-fila-asistencia="502"]').getByLabel(/Motivo de la corrección/).fill("Avisó con receta médica");
     },
     recorte: (pg) => ({ clip: async () => {
       const b = await pg.locator('[data-fila-asistencia="502"]').boundingBox();
@@ -641,6 +643,19 @@ try {
       await pg.getByLabel("Estado para los seleccionados").selectOption({ label: "Día de descanso" }).catch(() => {});
       await pg.getByLabel("Motivo (obligatorio)").fill("Cambio de descanso autorizado");
     }, recorte: '[role="dialog"]' });
+  // (27/11/2026) «Las checadas tienen que pedir motivo»: al corregir un tramo en la fila se pide el motivo; sin él no se guarda.
+  await captura("asistencias/entradas-y-salidas-motivo", { ruta: "/panel/registro-de-entradas-y-salidas",
+    preparar: async (pg) => {
+      await clic(pg, pg.getByRole("button", { name: "Editar" }));
+      const fila = pg.locator("tr").filter({ has: pg.locator('input[type="time"]') }).first();
+      await fila.locator('input[type="time"]').first().fill("08:50");
+      await clic(pg, fila.getByRole("button", { name: "Guardar" }));
+    },
+    recorte: (pg) => ({ clip: async () => {
+      const a = await pg.locator("tr").filter({ has: pg.locator('input[type="time"]') }).first().boundingBox();
+      const b = await pg.locator("[data-motivo-entradas]").boundingBox();
+      return { x: 256, y: Math.max(0, a.y - 56), width: 1184, height: b.y + b.height - a.y + 72 };
+    } }) });
   await captura("asistencias/horas-de-ley", { ruta: "/panel/registro-asistencia?vista=horas" });
   await captura("asistencias/horas-por-reponer", { ruta: "/panel/registro-asistencia?vista=reponer" });
   await captura("asistencias/horas-por-reponer-registrar", { ruta: "/panel/registro-asistencia?vista=reponer",
@@ -684,6 +699,21 @@ try {
   await captura("incidencias/centro-de-incidencias", { ruta: "/panel/incidencias" });
   await captura("incidencias/incidencias-detalle", { ruta: "/panel/incidencias",
     preparar: async (pg) => { await clic(pg, pg.getByText("Mario Gómez", { exact: true })); await pg.mouse.wheel(0, 420); } });
+  // (27/11/2026) Corregir la entrada o la salida pide «Motivo de la corrección» debajo del renglón; sin él no se guarda.
+  await captura("incidencias/incidencias-motivo", { ruta: "/panel/incidencias",
+    preparar: async (pg) => {
+      await clic(pg, pg.getByText("Héctor León", { exact: true }));
+      const fila = pg.locator('[class*="xl:grid-cols-[112px_96px"]').filter({ has: pg.getByRole("button", { name: "Guardar" }) }).first();
+      await fila.locator('input[type="time"]').nth(1).fill("16:00");
+      await dormir(300);
+      await clic(pg, fila.getByRole("button", { name: "Guardar" }));
+      await pg.locator("[data-motivo-incidencia]").scrollIntoViewIfNeeded();
+    },
+    recorte: (pg) => ({ clip: async () => {
+      const a = await pg.locator('[class*="xl:grid-cols-[112px_96px"]').filter({ has: pg.getByRole("button", { name: "Guardar" }) }).first().boundingBox();
+      const b = await pg.locator("[data-motivo-incidencia]").boundingBox();
+      return { x: Math.max(0, a.x - 16), y: Math.max(0, a.y - 48), width: Math.min(1440 - Math.max(0, a.x - 16), a.width + 32), height: b.y + b.height - a.y + 64 };
+    } }) });
   await captura("reporte-horas/reporte-de-horas", { ruta: "/panel/reporte-horas", espera: 5000 });
   await captura("reportes-personalizados/reportes-personalizados", { ruta: "/panel/reportes-personalizados" });
   await captura("reportes-personalizados/reporte-nuevo", { ruta: "/panel/reportes-personalizados",

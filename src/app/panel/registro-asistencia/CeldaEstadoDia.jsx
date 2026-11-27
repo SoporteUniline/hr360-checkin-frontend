@@ -10,6 +10,8 @@
 //  · Asistencia, Entrada tarde, Salida temprano, Salir en medio turno: abren el reloj para poner sus horas (el parcial llega
 //    puesto en «Permiso del día», donde se elige su motivo).
 // Debajo: el resumen de motivos del reloj y, en una inasistencia injustificada, «📄 Acta en borrador».
+// (27/11/2026) «Las checadas tienen que pedir motivo»: cambiar qué pasó es una corrección y pide «Motivo de la corrección»
+// (5 a 500 letras, aparte del Motivo del permiso, que dice el goce). Sin él no se guarda (el servidor responde 422).
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import useSWR from "swr";
@@ -26,6 +28,8 @@ import {
 import { actaFila, avisosRespuesta } from "@/lib/actasEstatus.mjs";
 import QuePasoMotivo, { GoceMotivo } from "@/components/asistencia/QuePasoMotivo";
 import { leerPar, ponerPar, suscribir } from "@/lib/asistencia/parFila.mjs";
+import CampoMotivo from "@/components/asistencia/CampoMotivo";
+import { SUGERENCIAS, camposMotivo, errorMotivo, errorMotivoServidor } from "@/lib/asistencia/motivoCorreccion.mjs";
 
 const CLAVE_MOTIVOS = "/checador/motivos-permiso";
 
@@ -60,6 +64,8 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
   const cambio = separada ? cambioFila : cambioLocal;
   const setCambio = separada ? (v) => ponerPar(registro.id, v) : setCambioLocal;
   const [guardando, setGuardando] = useState(false);
+  const [motivoC, setMotivoC] = useState("");
+  const [errorC, setErrorC] = useState("");
   const editable = !readOnly && checadasVivas(registro) === 0;
   // Una sola petición para toda la tabla (SWR la comparte).
   const { data: dataMotivos } = useSWR(editable ? CLAVE_MOTIVOS : null, fetcherWithToken, { revalidateOnFocus: false });
@@ -107,14 +113,21 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
 
   const guardar = async () => {
     if (!tipo || falta) return;
+    const sinMotivo = errorMotivo(motivoC);
+    if (sinMotivo) { setErrorC(sinMotivo); return; }
     setGuardando(true);
     try {
-      const res = await axios.put(`/checador/asistencias/${registro.id}/estado-dia`, cuerpoEstadoDia(par, tipo, dataMotivos));
+      const res = await axios.put(`/checador/asistencias/${registro.id}/estado-dia`,
+        { ...cuerpoEstadoDia(par, tipo, dataMotivos), ...camposMotivo(motivoC, comoCampo ? "reloj_dia" : "estado_dia") });
       setCambio(null);
+      setMotivoC("");
+      setErrorC("");
       enqueueSnackbar(`${nombre}: ${[nombreTipo(tipo), motivo?.otro ? par.texto.trim() : motivo?.nombre].filter(Boolean).join(" · ")}. Queda en el historial con tu nombre.`, { variant: "success" });
       for (const a of avisosRespuesta(res.data)) enqueueSnackbar(a, { variant: "info" });
       await onGuardado?.(res.data?.asistencia);
     } catch (e) {
+      const faltaMotivo = errorMotivoServidor(e);
+      if (faltaMotivo) { setErrorC(faltaMotivo); return; }
       enqueueSnackbar(e?.response?.data?.error || e?.response?.data?.message || "No se pudo guardar el estado del día.", { variant: "error" });
     } finally {
       setGuardando(false);
@@ -131,6 +144,11 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
     setCambio(v ? parVacio(v) : null);
   };
   const set = (c) => setCambio({ ...par, ...c });
+  const campoCorreccion = (
+    <CampoMotivo nombre={nombre} valor={motivoC} disabled={guardando} movil={movil} error={errorC}
+      sugerencias={variante === "fila" ? SUGERENCIAS.slice(0, 3) : SUGERENCIAS}
+      onCambio={(t) => { setMotivoC(t); if (errorC) setErrorC(errorMotivo(t)); }} />
+  );
   const tecla = (e) => { if (e.key === "Enter" && pendiente && !falta) guardar(); if (e.key === "Escape") setCambio(null); };
   // Sin tipo guardado (sin checar): la opción vacía dice el estado de hoy.
   const vacioTipo = par.tipo ? null : comoCampo ? "Elige qué pasó…" : textoConIcono(estado.texto, estado.clave) || "Elige qué pasó…";
@@ -164,6 +182,7 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
                 onChange={(e) => set({ folio: e.target.value })}
                 className={`${movil ? "h-11 text-base" : "h-9 text-[13.5px] max-sm:h-11 max-sm:text-base"} min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30`} />
             ) : null}
+            {campoCorreccion}
             <span className="flex items-center gap-2">
               <span className="flex min-w-0 flex-1"><GoceMotivo goce={goce} cambia={r.goceCambia} onCambio={(g) => set({ goce: g })} movil={movil} className="w-full" /></span>
               <button type="button" disabled={Boolean(falta) || guardando} onClick={guardar}
@@ -193,6 +212,7 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
               onChange={(e) => set({ folio: e.target.value })}
               className={`${movil ? "h-11 text-base" : "h-9 text-[13.5px] max-sm:h-11 max-sm:text-base"} min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30`} />
           ) : null}
+          {campoCorreccion}
           <span className="flex items-center gap-2">
             <span className="flex min-w-0 flex-1"><GoceMotivo goce={goce} cambia={r.goceCambia} onCambio={(g) => set({ goce: g })} movil={movil} className="w-full" /></span>
             <button type="button" disabled={Boolean(falta) || guardando} onClick={guardar}

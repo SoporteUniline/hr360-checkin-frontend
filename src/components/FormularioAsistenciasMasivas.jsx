@@ -11,6 +11,8 @@ import { useSnackbar } from "notistack";
 import useEmpleadosActivosData from "@/hooks/useEmpleadosActivos";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
+import CampoMotivo from "@/components/asistencia/CampoMotivo";
+import { camposMotivo, errorMotivo, errorMotivoServidor } from "@/lib/asistencia/motivoCorreccion.mjs";
 
 export default function FormularioAsistenciasMasivas({
   values,
@@ -67,6 +69,9 @@ export default function FormularioAsistenciasMasivas({
 
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  // (27/11/2026) «Las checadas tienen que pedir motivo»: un motivo para todos los días del rango (5 a 500 letras).
+  const [motivo, setMotivo] = useState("");
+  const [errorM, setErrorM] = useState("");
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -74,6 +79,8 @@ export default function FormularioAsistenciasMasivas({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const falta = errorMotivo(motivo);
+    if (falta) { setErrorM(falta); return; }
     setLoading(true);
 
     try {
@@ -82,6 +89,7 @@ export default function FormularioAsistenciasMasivas({
         {
           ...form,
           id_empresa: empresaSeleccionada,
+          ...camposMotivo(motivo),
         },
       );
       mutate();
@@ -90,7 +98,8 @@ export default function FormularioAsistenciasMasivas({
       });
       cerrarModal();
     } catch (error) {
-      // console.error(error);
+      const faltaMotivo = errorMotivoServidor(error);
+      if (faltaMotivo) { setErrorM(faltaMotivo); return; }
       enqueueSnackbar("❌ Error al registrar asistencias", {
         variant: "error",
       });
@@ -229,6 +238,9 @@ export default function FormularioAsistenciasMasivas({
                 </div>
               </div>
             </div>
+
+            <CampoMotivo valor={motivo} error={errorM} disabled={loading}
+              onCambio={(t) => { setMotivo(t); if (errorM) setErrorM(errorMotivo(t)); }} />
 
             {/* Notas */}
             {/* <div>

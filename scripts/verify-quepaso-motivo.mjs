@@ -373,9 +373,16 @@ try {
   await letraCampos(filaDe("Ana Ruiz"), "fila Ana");
   await selectsSinRecorte(filaDe("Ana Ruiz"), "fila Ana");
   await foto(page, "fila", page.locator("table").first());
+  // (27/11/2026) «Las checadas tienen que pedir motivo»: sin «Motivo de la corrección» no hay PUT (error junto al campo).
+  // Es aparte del «Motivo» del permiso: una inasistencia injustificada no tiene motivo de permiso, pero sí de corrección.
+  await pendA.getByRole("button", { name: "OK" }).click();
+  await pendA.locator("[data-error-motivo]").waitFor({ timeout: 5000 });
+  assert.equal(await pendA.locator("[data-error-motivo]").innerText(), "Escribe el motivo de la corrección.");
+  assert.equal(pet.estado.length, 0, "sin motivo no se manda");
+  await pendA.getByLabel(/Motivo de la corrección/).fill("No se presentó ni avisó");
   await pendA.getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 1, "PUT inasistencia injustificada");
-  assert.deepEqual(pet.estado[0], { id: 602, cuerpo: { id_tipo_permiso: 2 } });
+  assert.deepEqual(pet.estado[0], { id: 602, cuerpo: { id_tipo_permiso: 2, motivo_correccion: "No se presentó ni avisó", pantalla: "estado_dia" } });
   await page.getByText("Se creó un acta administrativa en borrador por la inasistencia injustificada.").waitFor({ timeout: 5000 });
 
   // Ejemplo 2: Luis · Inasistencia · Permiso personal → goce del motivo (sin goce, se puede cambiar).
@@ -386,9 +393,10 @@ try {
   assert.equal(await pendL.locator("[data-aviso-acta]").count(), 0, "con motivo no hay acta");
   await letraCampos(filaDe("Luis Mora"), "fila Luis");
   await selectsSinRecorte(filaDe("Luis Mora"), "fila Luis");
+  await pendL.getByLabel(/Motivo de la corrección/).fill("Avisó un día antes");
   await pendL.getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 2, "PUT inasistencia justificada");
-  assert.deepEqual(pet.estado[1], { id: 603, cuerpo: { id_tipo_permiso: 2, id_motivo: 2, goce: "sin" } });
+  assert.deepEqual(pet.estado[1], { id: 603, cuerpo: { id_tipo_permiso: 2, id_motivo: 2, goce: "sin", motivo_correccion: "Avisó un día antes", pantalla: "estado_dia" } });
 
   // 3) Reloj sin checadas: el mismo par; «Inasistencia · Permiso laboral» con goce 🔒 se guarda y cierra.
   await page.getByRole("button", { name: "Abrir el reloj de Armando González" }).click();
@@ -396,15 +404,17 @@ try {
   const qp = dlgA.locator("[data-reloj-que-paso]");
   await qp.waitFor({ timeout: 10000 });
   await elegir(qp.getByLabel("Qué pasó"), "2");
-  await elegir(qp.getByLabel("Motivo"), { label: "Permiso laboral" });
+  // (27/11/2026) «Motivo» del permiso, no «Motivo de la corrección» (los dos están en el reloj sin checadas).
+  await elegir(qp.getByRole("combobox", { name: /^Motivo/ }), { label: "Permiso laboral" });
   assert.equal(await qp.locator("[data-goce-fijo]").innerText(), "🔒 Con goce", "Permiso laboral no se cambia al aplicar");
   await parAlineado(qp, "reloj vacío");
   await letraCampos(qp, "reloj vacío");
   await selectsSinRecorte(dlgA, "reloj vacío");
   await foto(page, "reloj-vacio", dlgA);
+  await qp.getByRole("button", { name: "Olvidó checar" }).click();
   await qp.getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 3, "PUT desde el reloj");
-  assert.deepEqual(pet.estado[2], { id: 608, cuerpo: { id_tipo_permiso: 2, id_motivo: 3 } });
+  assert.deepEqual(pet.estado[2], { id: 608, cuerpo: { id_tipo_permiso: 2, id_motivo: 3, motivo_correccion: "Olvidó checar", pantalla: "reloj_dia" } });
   await dlgA.waitFor({ state: "detached", timeout: 10000 });
 
   // 4) Reloj con permiso: fila «Entrada tarde» → reloj con el tipo puesto; entra 11:00 por «Visita al médico».
@@ -501,14 +511,16 @@ try {
   await selectsSinRecorte(estM, "fila móvil");
   await sinDesborde(estM, "detalle móvil");
   await foto(page, "movil", estM);
+  await estM.getByLabel(/Motivo de la corrección/).fill("Avisó por WhatsApp");
   await estM.getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 4, "PUT desde el celular");
-  assert.deepEqual(pet.estado[3], { id: 603, cuerpo: { id_tipo_permiso: 2, id_motivo: 7 } }, "Escuela de los hijos ya no se cambia al aplicar");
+  assert.deepEqual(pet.estado[3], { id: 603, cuerpo: { id_tipo_permiso: 2, id_motivo: 7, motivo_correccion: "Avisó por WhatsApp", pantalla: "estado_dia" } },
+    "Escuela de los hijos ya no se cambia al aplicar");
 
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
   console.log("OK · catálogo («Qué pasó» de captura, ley 🔒, «Tipos anteriores» plegado; motivos con goce/horas/se cambia editables → PUT/POST exactos, "
-    + "Personalizado, ocultar/mostrar) · fila con los dos selects alineados y sin cuadro · Inasistencia sin motivo → { id_tipo_permiso: 2 } + aviso de acta · "
+    + "Personalizado, ocultar/mostrar) · fila con los dos selects alineados y sin cuadro · Inasistencia sin motivo → { id_tipo_permiso: 2 } + aviso de acta (motivo de la corrección obligatorio: sin él no hay PUT) · "
     + "Inasistencia · Permiso personal → id_motivo + goce · tipo oculto guardado se ve tal cual · reloj vacío con el par (Permiso laboral 🔒) · "
     + "Entrada tarde · Visita al médico → 2 h se reponen → permiso_dia exacto · Permisos con el par → POST exacto · 1440 y 390 sin desbordes ni recortes · sin errores de JS");
 } finally {
