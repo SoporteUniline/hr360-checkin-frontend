@@ -14,13 +14,13 @@ import {
   API, FILTROS_MODERACION, LIMITES, QUIEN_PUBLICA, RUTA_PANEL, TIPOS_FOTO, enlaceSeguro, errorDe, fechaHora, normalizarConfig, palabrasDe,
   quienPublica, validarPortada,
 } from "@/lib/comunicados/comunicados.mjs";
-import { AvisoError, Campo, Interruptor, Mensaje, TextoPlano, ariaCampo, botonPeligro, botonPrimario, botonSecundario, conEmpresa, entrada, get, opcionesSwr, tarjeta, useEmpresa, useZona } from "./comun";
+import { MULTIPART, AvisoError, Campo, Interruptor, Mensaje, TextoPlano, ariaCampo, botonPeligro, botonPrimario, botonSecundario, conEmpresa, entrada, get, opcionesSwr, tarjeta, useEmpresa, usePuedeEditar, useZona } from "./comun";
 
 const autorDe = (c) => c?.autor?.nombre ?? c?.autor_nombre ?? c?.nombre ?? "Empleado";
 const tituloDe = (c) => c?.comunicado?.titulo ?? c?.titulo_comunicado ?? c?.titulo ?? "";
 const idEmpleadoDe = (c) => c?.autor?.id_empleado ?? c?.id_empleado ?? c?.autor?.id ?? null;
 
-function Comentario({ c, filtro, tz, alAccion, alSuspender }) {
+function Comentario({ c, filtro, tz, alAccion, alSuspender, editar }) {
   const oculto = [...(c.historial ?? [])].reverse().find((h) => h.accion === "ocultar" || h.accion === "ocultar_auto");
   const ocultoPor = c.oculto_por ?? oculto?.por;
   const ocultoEn = c.oculto_en ?? oculto?.en;
@@ -35,7 +35,7 @@ function Comentario({ c, filtro, tz, alAccion, alSuspender }) {
       {c.respuesta_a ? <p className="text-[13px] text-slate-500">En respuesta a {c.respuesta_a.autor}: «{String(c.respuesta_a.texto ?? "").slice(0, 120)}»</p> : null}
       {c.autor?.suspendido_hasta ? <p className="text-[13px] font-semibold text-amber-800">Sin comentarios hasta {fechaHora(c.autor.suspendido_hasta, { tz })}</p> : null}
       {Array.isArray(c.motivos) && c.motivos.length ? <p className="text-[13px] text-slate-600">Motivos: {c.motivos.filter(Boolean).join(" · ")}</p> : null}
-      <div className="flex flex-wrap gap-2">
+      {editar ? <div className="flex flex-wrap gap-2">
         {filtro === "reportados" ? (
           <>
             <button type="button" className={botonPeligro} onClick={() => alAccion(c, "ocultar")}>Ocultar comentario</button>
@@ -50,7 +50,7 @@ function Comentario({ c, filtro, tz, alAccion, alSuspender }) {
           </>
         ) : null}
         {filtro === "ocultos" ? <button type="button" className={botonSecundario} onClick={() => alAccion(c, "mostrar")}>Volver a mostrar</button> : null}
-      </div>
+      </div> : null}
     </li>
   );
 }
@@ -75,7 +75,7 @@ function Suspender({ comentario, alCerrar, alSuspender }) {
   );
 }
 
-function ReglasMuro({ config, empresa, alGuardar }) {
+function ReglasMuro({ config, empresa, alGuardar, editar }) {
   const [c, setC] = useState(() => normalizarConfig(config));
   const [palabras, setPalabras] = useState(() => normalizarConfig(config).palabras_bloqueadas.join("\n"));
   const [mensaje, setMensaje] = useState(null);
@@ -94,6 +94,7 @@ function ReglasMuro({ config, empresa, alGuardar }) {
   return (
     <section aria-labelledby="reglas-muro" className={`${tarjeta} grid gap-3 p-4`} data-reglas-muro>
       <h2 id="reglas-muro" className="text-[15px] font-extrabold text-slate-900">Reglas del muro</h2>
+      <fieldset disabled={!editar} className="grid gap-3">
       <Interruptor id="r-reacciones" checked={c.permitir_reacciones} onChange={(v) => setC({ ...c, permitir_reacciones: v })} etiqueta="Permitir me gusta" />
       <Interruptor id="r-comentarios" checked={c.permitir_comentarios} onChange={(v) => setC({ ...c, permitir_comentarios: v })} etiqueta="Permitir comentarios" />
       <Campo id="r-palabras" etiqueta="Palabras bloqueadas" ayuda="Una por línea. Un comentario con alguna queda retenido hasta que lo revises.">
@@ -111,8 +112,9 @@ function ReglasMuro({ config, empresa, alGuardar }) {
           </label>
         ))}
       </fieldset>
+      </fieldset>
       <Mensaje mensaje={mensaje} />
-      <button type="button" className={botonPrimario} disabled={guardando} onClick={guardar}>{guardando ? "Guardando…" : "Guardar reglas"}</button>
+      {editar ? <button type="button" className={botonPrimario} disabled={guardando} onClick={guardar}>{guardando ? "Guardando…" : "Guardar reglas"}</button> : null}
       <p className="text-[13px] text-slate-600">Fotos hasta 10 por publicación. Videos solo de YouTube, para no llenar tu almacenamiento.</p>
     </section>
   );
@@ -149,7 +151,7 @@ function Portada({ portada, empresa, alGuardar }) {
     cuerpo.append("titulo", titulo.trim());
     cuerpo.append("enlace", enlace.trim());
     setGuardando(true); setMensaje(null);
-    try { await axios.put(`${API}/portada`, cuerpo); setImagen(null); setVista(null); setMensaje({ tipo: "ok", texto: "Portada guardada: ya se ve arriba del muro." }); await alGuardar(); }
+    try { await axios.put(`${API}/portada`, cuerpo, MULTIPART); setImagen(null); setVista(null); setMensaje({ tipo: "ok", texto: "Portada guardada: ya se ve arriba del muro." }); await alGuardar(); }
     catch (err) { setMensaje({ tipo: "error", texto: errorDe(err, "No se pudo guardar la portada.") }); }
     finally { setGuardando(false); }
   };
@@ -193,12 +195,14 @@ function Portada({ portada, empresa, alGuardar }) {
 export default function Moderacion() {
   const empresa = useEmpresa();
   const tz = useZona();
+  const editar = usePuedeEditar();
   const [filtro, setFiltro] = useState("reportados");
   const [mensaje, setMensaje] = useState(null);
   const [suspender, setSuspender] = useState(null);
   const url = empresa.listo ? conEmpresa(`${API}/moderacion?filtro=${filtro}`, empresa.idEmpresa) : null;
   const lista = useSWR(url, get, { ...opcionesSwr, keepPreviousData: true });
   const config = useSWR(empresa.listo ? conEmpresa(`${API}/config`, empresa.idEmpresa) : null, get, opcionesSwr);
+  const portada = useSWR(empresa.listo ? conEmpresa(`${API}/portada`, empresa.idEmpresa) : null, get, opcionesSwr);
   const items = lista.data?.items ?? lista.data?.comentarios ?? [];
   const conteos = lista.data?.conteos ?? {};
   const cuerpo = (x) => (empresa.idEmpresa ? { ...x, empresa: empresa.idEmpresa } : x);
@@ -239,13 +243,13 @@ export default function Moderacion() {
           <section aria-label="Comentarios" className={tarjeta}>
             {lista.isLoading && !lista.data ? <p role="status" className="p-4 text-sm text-slate-500">Cargando…</p> : null}
             {lista.data && !items.length ? <p className="p-5 text-center text-sm text-slate-600">Nada por revisar aquí.</p> : null}
-            <ul>{items.map((c) => <Comentario key={c.id} c={c} filtro={filtro} tz={tz} alAccion={accion} alSuspender={setSuspender} />)}</ul>
+            <ul>{items.map((c) => <Comentario key={c.id} c={c} filtro={filtro} tz={tz} alAccion={accion} alSuspender={setSuspender} editar={editar} />)}</ul>
           </section>
           <p className="text-[13px] text-slate-600">Ocultar no borra: queda en el historial con quién lo ocultó y cuándo, por si hace falta en un caso laboral.</p>
         </div>
         <div className="grid content-start gap-4">
-          <Portada portada={config.data?.portada ?? null} empresa={empresa.idEmpresa} alGuardar={config.mutate} />
-          {config.data ? <ReglasMuro config={datosConfig} empresa={empresa.idEmpresa} alGuardar={config.mutate} /> : <AvisoError error={config.error} porDefecto="No se pudieron cargar las reglas del muro." />}
+          {editar ? <Portada portada={portada.data?.portada ?? null} empresa={empresa.idEmpresa} alGuardar={portada.mutate} /> : null}
+          {config.data ? <ReglasMuro config={datosConfig} empresa={empresa.idEmpresa} alGuardar={config.mutate} editar={editar} /> : <AvisoError error={config.error} porDefecto="No se pudieron cargar las reglas del muro." />}
         </div>
       </div>
       <Suspender comentario={suspender} alCerrar={() => setSuspender(null)} alSuspender={suspenderA} />

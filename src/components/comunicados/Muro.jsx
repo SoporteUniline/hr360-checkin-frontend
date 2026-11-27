@@ -5,6 +5,7 @@
 // cumpleaños. Solo lo que el empleado puede ver (lo decide el servidor). Backend: GET /checador/comunicados/mi/muro.
 import { useState } from "react";
 import Link from "next/link";
+import useSWR from "swr";
 import useSWRInfinite from "swr/infinite";
 import { AlertCircle, ChevronRight, PenSquare } from "lucide-react";
 import axios from "@/lib/axios";
@@ -39,7 +40,12 @@ export function Portada({ portada }) {
     : <div className={clase} data-portada>{contenido}</div>;
 }
 
-function Preferencias({ inicial }) {
+function Preferencias() {
+  const { data } = useSWR(`${API_MI}/preferencias`, get, { revalidateOnFocus: false, shouldRetryOnError: false });
+  if (!data) return null;
+  return <PreferenciasForm inicial={data.ocultar_cumpleanos} />;
+}
+function PreferenciasForm({ inicial }) {
   const [ocultar, setOcultar] = useState(Boolean(inicial));
   const [mensaje, setMensaje] = useState(null);
   const cambiar = async (v) => {
@@ -102,7 +108,7 @@ export default function Muro() {
         </button>
       ) : null}
       {data ? <AvisosPush /> : null}
-      {data ? <Preferencias inicial={primera?.preferencias?.ocultar_cumpleanos} /> : null}
+      {data ? <Preferencias /> : null}
     </div>
   );
 }

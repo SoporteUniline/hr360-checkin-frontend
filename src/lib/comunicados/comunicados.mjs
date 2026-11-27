@@ -15,6 +15,16 @@ export const RUTA_PUBLICAR = `${RUTA_MURO}/publicar`;
 export const rutaSeguimiento = (id) => `${RUTA_PANEL}/${encodeURIComponent(id)}`;
 export const rutaEditar = (id) => `${RUTA_PANEL}/${encodeURIComponent(id)}/editar`;
 export const rutaPost = (id) => `${RUTA_MURO}/${encodeURIComponent(id)}`;
+// Liga de los correos y del push (backend): /login?next=/mi-espacio/comunicados/<id>. Una sola liga para todos: el
+// empleado va al detalle en Mi espacio; un usuario del panel, a Comunicados (ahí le sale el aviso si es destinatario).
+export const LIGA_CORREO = "/mi-espacio/comunicados";
+export function destinoLiga(pathname, tipoUsuario) {
+  const m = String(pathname ?? "").match(/^\/mi-espacio\/comunicados(?:\/(\d{1,12}))?\/?$/);
+  if (!m) return null;
+  if (tipoUsuario === "Empleado") return m[1] ? rutaPost(m[1]) : RUTA_MURO;
+  if (tipoUsuario === "Recruiter" || tipoUsuario === "User") return RUTA_PANEL;
+  return null;
+}
 
 // Service worker de Web Push: alcance propio para no tocar el registro de «/» (offline-clock-sw.js se retira solo y
 // RetireOfflineWorker lo actualiza; si compartieran alcance, uno borraría al otro).
@@ -46,7 +56,7 @@ export const FILTROS_PANEL = Object.freeze([
   { clave: "todos", texto: "Todos", params: {} },
   { clave: "confirmacion", texto: "Requieren confirmación", params: { nivel: "confirmacion" } },
   { clave: "programados", texto: "Programados", params: { estado: "programado" } },
-  { clave: "automaticos", texto: "Automáticos", params: { automatico: "1" } },
+  { clave: "automaticos", texto: "Automáticos", params: { estado: "automaticos" } },
   { clave: "borradores", texto: "Borradores", params: { estado: "borrador" } },
   { clave: "por_aprobar", texto: "Por aprobar", params: { estado: "pendiente_aprobacion" } },
 ]);
@@ -547,14 +557,20 @@ export function reglasAuto(servidor = []) {
     return { regla: base.regla, activo: s.activo == null ? base.regla !== "bienvenida" : truthy(s.activo), audiencia: s.audiencia ?? (base.regla === "aniversario" ? "sucursal" : base.regla === "bienvenida" ? "area" : "empresa"), canales: { push: Boolean(canales.push), correo: Boolean(canales.correo), popup: false }, id_plantilla: s.id_plantilla ?? null };
   });
 }
-/** «Mañana: 2 cumpleaños y 1 aniversario» */
+/** Publicaciones de un día de la vista previa: { fecha, cumpleanos: [], aniversario: [], festivo: [], bienvenida: [] } → lista. */
+export function publicacionesDelDia(d) {
+  if (Array.isArray(d)) return d;
+  return ["cumpleanos", "aniversario", "festivo", "bienvenida"].flatMap((k) => (Array.isArray(d?.[k]) ? d[k].map((x) => ({ ...x, regla: k })) : []));
+}
+/** «Mañana: 2 cumpleaños y 1 aniversario» (acepta listas por regla o números). */
 export function textoManana(m) {
   if (!m) return "";
+  const cuenta = (...k) => { for (const c of k) { const v = m[c]; if (Array.isArray(v)) return v.length; if (v != null) return Number(v) || 0; } return 0; };
   const partesM = [];
-  if (Number(m.cumpleanos)) partesM.push(`${m.cumpleanos} cumpleaños`);
-  if (Number(m.aniversarios ?? m.aniversario)) { const n = Number(m.aniversarios ?? m.aniversario); partesM.push(plural(n, "aniversario", "aniversarios")); }
-  if (Number(m.festivos ?? m.festivo)) { const n = Number(m.festivos ?? m.festivo); partesM.push(plural(n, "festivo", "festivos")); }
-  if (Number(m.bienvenidas ?? m.bienvenida)) { const n = Number(m.bienvenidas ?? m.bienvenida); partesM.push(plural(n, "bienvenida", "bienvenidas")); }
+  if (cuenta("cumpleanos")) partesM.push(`${cuenta("cumpleanos")} cumpleaños`);
+  if (cuenta("aniversario", "aniversarios")) partesM.push(plural(cuenta("aniversario", "aniversarios"), "aniversario", "aniversarios"));
+  if (cuenta("festivo", "festivos")) partesM.push(plural(cuenta("festivo", "festivos"), "festivo", "festivos"));
+  if (cuenta("bienvenida", "bienvenidas")) partesM.push(plural(cuenta("bienvenida", "bienvenidas"), "bienvenida", "bienvenidas"));
   if (!partesM.length) return "Mañana: nada programado.";
   return `Mañana: ${partesM.length > 1 ? `${partesM.slice(0, -1).join(", ")} y ${partesM.at(-1)}` : partesM[0]}`;
 }
@@ -563,6 +579,7 @@ export function textoManana(m) {
 /** Mensaje del servidor ({ mensaje } o { error }) o uno por defecto. Sin red: aviso claro. */
 export function errorDe(e, porDefecto = "No se pudo completar la acción. Intenta de nuevo.") {
   const d = e?.response?.data;
+  if (d?.codigo === "VALIDACION" && d.campos && typeof d.campos === "object" && Object.values(d.campos)[0]) return String(Object.values(d.campos)[0]);
   if (d?.mensaje) return d.mensaje;
   if (typeof d?.error === "string") return d.error;
   if (e?.response?.status === 503 && d?.codigo === "SIN_MIGRACION") return "El módulo de comunicados aún no está instalado en el servidor.";
@@ -577,11 +594,13 @@ export function principal(data, ...claves) {
 }
 /** Rutas del aviso emergente: Mi espacio (/mi) o panel (usuario del panel ligado a un empleado). */
 export function rutasPopup(modo = "empleado") {
-  const base = modo === "panel" ? API : API_MI;
+  // Panel: /popup, /popup/:id/confirmar, /popup/:id/posponer · Mi espacio: /mi/popup, /mi/:id/confirmar, /mi/:id/posponer.
+  const popup = modo === "panel" ? `${API}/popup` : `${API_MI}/popup`;
+  const de = modo === "panel" ? popup : API_MI;
   return {
-    popup: `${base}/popup`,
-    confirmar: (id) => `${base}/${encodeURIComponent(id)}/confirmar`,
-    posponer: (id) => `${base}/${encodeURIComponent(id)}/posponer`,
+    popup,
+    confirmar: (id) => `${de}/${encodeURIComponent(id)}/confirmar`,
+    posponer: (id) => `${de}/${encodeURIComponent(id)}/posponer`,
   };
 }
 /** Aviso emergente pendiente o null. */

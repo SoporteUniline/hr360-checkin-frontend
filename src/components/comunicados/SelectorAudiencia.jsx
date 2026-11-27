@@ -6,47 +6,39 @@ import { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
 import { Plus, X } from "lucide-react";
 import { Ventana } from "@/components/avisos/Ventana";
-import { fetcherWithToken } from "@/lib/fetcher";
-import { API, GRUPOS_AUDIENCIA, audienciaParaEnviar, chipsAudiencia, textoPrevia } from "@/lib/comunicados/comunicados.mjs";
+import { API, GRUPOS_AUDIENCIA, audienciaElegida, errorDe, audienciaParaEnviar, chipsAudiencia, textoPrevia } from "@/lib/comunicados/comunicados.mjs";
 import { Interruptor, botonPrimario, botonSecundario, entrada, get, opcionesSwr } from "./comun";
 
-const lista = (data, claves, idK, nombreK) => {
-  const filas = claves.map((k) => data?.[k]).find(Array.isArray) ?? (Array.isArray(data) ? data : []);
-  const vistos = new Set();
-  return filas.map((x) => ({ id: Number(x[idK] ?? x.id), nombre: String(x[nombreK] ?? x.nombre ?? "").trim() }))
-    .filter((x) => x.nombre && !vistos.has(x.nombre.toLowerCase()) && vistos.add(x.nombre.toLowerCase()));
-};
-const nombrePersona = (e) => [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" ");
+const nombres = (l) => (Array.isArray(l) ? l : []).map((x) => String(typeof x === "object" ? x?.nombre ?? "" : x ?? "").trim()).filter(Boolean).map((nombre, i) => ({ id: i + 1, nombre }));
+const sinAcentos = (t) => String(t ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const MAX_PERSONAS = 60;
 
 /** Hook de la vista previa: { previa, cargando } con espera de 400 ms al cambiar. */
 export function usePreviaAudiencia(audiencia, empresa) {
   const clave = JSON.stringify(audienciaParaEnviar(audiencia));
   const [estable, setEstable] = useState(clave);
   useEffect(() => { const t = setTimeout(() => setEstable(clave), 400); return () => clearTimeout(t); }, [clave]);
-  const elegida = audiencia.todos || GRUPOS_AUDIENCIA.some((g) => audiencia[g.clave]?.length);
+  // Se pregunta con la audiencia ya «estable» (sin pedir la anterior mientras se escribe o se elige).
+  const elegida = audienciaElegida(JSON.parse(estable));
   const url = elegida ? `${API}/audiencia/previa?audiencia=${encodeURIComponent(estable)}${empresa ? `&empresa=${empresa}` : ""}` : null;
   const { data, isLoading } = useSWR(url, get, { ...opcionesSwr, keepPreviousData: true });
-  return { previa: elegida ? data : null, cargando: isLoading || estable !== clave };
+  return { previa: audienciaElegida(audiencia) && elegida ? data : null, cargando: isLoading || estable !== clave };
 }
 
 function Elegir({ abierta, alCerrar, audiencia, alCambiar, empresa }) {
   const [grupo, setGrupo] = useState("sucursales");
   const [buscar, setBuscar] = useState("");
-  const [nombre, setNombre] = useState("");
-  useEffect(() => { const t = setTimeout(() => setNombre(buscar.trim()), 300); return () => clearTimeout(t); }, [buscar]);
-  const q = empresa ? `?id_empresa=${empresa}` : "";
-  const suc = useSWR(abierta && empresa ? `/checador/sucursales${q}` : null, fetcherWithToken, opcionesSwr);
-  const dep = useSWR(abierta && empresa ? `/checador/departamentos${q}` : null, fetcherWithToken, opcionesSwr);
-  const pue = useSWR(abierta && empresa ? `/checador/puestos${q}` : null, fetcherWithToken, opcionesSwr);
-  const per = useSWR(abierta && empresa && grupo === "empleados" ? `/checador/empleados/activos?empresa=${empresa}&page=1&limit=25${nombre ? `&nombre=${encodeURIComponent(nombre)}` : ""}` : null, fetcherWithToken, { ...opcionesSwr, keepPreviousData: true });
+  // GET /audiencia/opciones: los valores tal cual en las fichas (sucursal, área, puesto) y las personas activas
+  // (acotado a su equipo si es jefe).
+  const { data, isLoading, error } = useSWR(abierta && empresa ? `${API}/audiencia/opciones?empresa=${empresa}` : null, get, opcionesSwr);
   const opciones = useMemo(() => ({
-    sucursales: lista(suc.data, ["sucursales"], "id_sucursal", "nombre"),
-    areas: lista(dep.data, ["departamentos"], "id_departamento", "nombre"),
-    puestos: lista(pue.data, ["puestos"], "id_puesto", "nombre_puesto"),
-    empleados: (Array.isArray(per.data?.data) ? per.data.data : []).map((e) => ({ id: Number(e.id_empleado), nombre: nombrePersona(e) })).filter((e) => e.id && e.nombre),
-  }), [suc.data, dep.data, pue.data, per.data]);
-  const visibles = grupo === "empleados" ? opciones.empleados : opciones[grupo].filter((o) => !buscar.trim() || o.nombre.toLowerCase().includes(buscar.trim().toLowerCase()));
-  const cargando = { sucursales: suc.isLoading, areas: dep.isLoading, puestos: pue.isLoading, empleados: per.isLoading }[grupo];
+    sucursales: nombres(data?.sucursales), areas: nombres(data?.areas), puestos: nombres(data?.puestos),
+    empleados: (Array.isArray(data?.empleados) ? data.empleados : []).map((e) => ({ id: Number(e.id), nombre: String(e.nombre ?? "").trim(), detalle: [e.puesto, e.sucursal].filter(Boolean).join(" · ") })).filter((e) => e.id && e.nombre),
+  }), [data]);
+  const filtro = sinAcentos(buscar.trim());
+  const coinciden = opciones[grupo].filter((o) => !filtro || sinAcentos(`${o.nombre} ${o.detalle ?? ""}`).includes(filtro));
+  const visibles = coinciden.slice(0, grupo === "empleados" ? MAX_PERSONAS : coinciden.length);
+  const cargando = isLoading;
   const elegido = (o) => (audiencia[grupo] ?? []).some((x) => (grupo === "empleados" ? x.id === o.id : x.nombre.toLowerCase() === o.nombre.toLowerCase()));
   const alternar = (o) => {
     const actual = audiencia[grupo] ?? [];
@@ -65,19 +57,21 @@ function Elegir({ abierta, alCerrar, audiencia, alCambiar, empresa }) {
           ))}
         </div>
         <label htmlFor="buscar-audiencia" className="sr-only">Buscar</label>
-        <input id="buscar-audiencia" type="search" className={entrada} placeholder={grupo === "empleados" ? "Buscar por nombre" : "Filtrar"} value={buscar} onChange={(e) => setBuscar(e.target.value)} />
+        <input id="buscar-audiencia" type="search" className={entrada} placeholder={grupo === "empleados" ? "Buscar por nombre, puesto o sucursal" : "Filtrar"} value={buscar} onChange={(e) => setBuscar(e.target.value)} />
         <ul role="tabpanel" aria-label={GRUPOS_AUDIENCIA.find((g) => g.clave === grupo)?.plural} className="grid max-h-[46dvh] gap-0.5 overflow-y-auto">
           {cargando && !visibles.length ? <li role="status" className="p-3 text-sm text-slate-500">Cargando…</li> : null}
-          {!cargando && !visibles.length ? <li className="p-3 text-sm text-slate-500">{grupo === "empleados" && !nombre ? "Escribe un nombre para buscar." : "Sin resultados."}</li> : null}
+          {error ? <li role="alert" className="p-3 text-sm text-red-700">{errorDe(error, "No se pudieron cargar las opciones.")}</li> : null}
+          {!cargando && !error && !visibles.length ? <li className="p-3 text-sm text-slate-500">Sin resultados.</li> : null}
           {visibles.map((o) => (
             <li key={`${o.id}-${o.nombre}`}>
               <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg px-2 hover:bg-slate-50">
                 <input type="checkbox" className="size-5 accent-[#2563EB]" checked={elegido(o)} onChange={() => alternar(o)} />
-                <span className="text-sm text-slate-900">{o.nombre}</span>
+                <span className="min-w-0"><span className="block text-sm text-slate-900">{o.nombre}</span>{o.detalle ? <span className="block text-[13px] text-slate-500">{o.detalle}</span> : null}</span>
               </label>
             </li>
           ))}
         </ul>
+        {coinciden.length > visibles.length ? <p className="text-[13px] text-slate-500">Se muestran {visibles.length} de {coinciden.length}: escribe para buscar.</p> : null}
         <div className="flex justify-end"><button type="button" className={botonPrimario} onClick={alCerrar}>Listo</button></div>
       </div>
     </Ventana>

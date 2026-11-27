@@ -4,8 +4,11 @@
 import axios from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
 import { useEmpresaNomina } from "@/components/nomina/comun";
-import { errorDe, iniciales } from "@/lib/comunicados/comunicados.mjs";
+import { RUTA_PANEL, errorDe, iniciales } from "@/lib/comunicados/comunicados.mjs";
+import { nivelEnRuta } from "@/lib/permisos/permisos.mjs";
 
+// La instancia de axios manda JSON por omisión: con FormData hay que pedir multipart (axios pone el boundary).
+export const MULTIPART = { headers: { "Content-Type": "multipart/form-data" } };
 export const get = (url) => axios.get(url).then((r) => r.data);
 export const opcionesSwr = { revalidateOnFocus: false, shouldRetryOnError: false };
 
@@ -21,6 +24,12 @@ export const entrada = "min-h-11 w-full rounded-lg border border-slate-300 bg-wh
 export function useZona() {
   const { dataUser } = useAuth();
   return dataUser?.zona_horaria || dataUser?.empresas_detalle?.[0]?.zona_horaria || "America/Mexico_City";
+}
+
+/** ¿Puede publicar, moderar y configurar? («comunicados: editar»; con «ver» solo consulta). El servidor revisa igual. */
+export function usePuedeEditar() {
+  const { permisosSesion } = useAuth();
+  return nivelEnRuta(RUTA_PANEL, permisosSesion) === "editar";
 }
 
 /** Empresa elegida en el panel (selector si tiene varias); sin lista, la de la sesión. El servidor valida que sea suya. */

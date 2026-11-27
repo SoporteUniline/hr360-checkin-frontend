@@ -15,7 +15,7 @@ import {
   tamanoLegible, textoPublicar, urlMiniatura, validarArchivos, validarFormulario, youtubeId,
 } from "@/lib/comunicados/comunicados.mjs";
 import SelectorAudiencia, { usePreviaAudiencia } from "./SelectorAudiencia";
-import { AvisoError, Campo, Interruptor, Mensaje, ariaCampo, botonPrimario, botonSecundario, botonTexto, entrada, get, opcionesSwr, tarjeta, useEmpresa } from "./comun";
+import { MULTIPART, AvisoError, Campo, Interruptor, Mensaje, ariaCampo, botonPrimario, botonSecundario, botonTexto, entrada, get, opcionesSwr, tarjeta, useEmpresa, usePuedeEditar } from "./comun";
 
 const seccion = `${tarjeta} grid gap-4 p-4 sm:p-5`;
 const tituloSeccion = "text-[15px] font-extrabold text-slate-900";
@@ -79,7 +79,8 @@ export default function Redactar({ id = null }) {
   const fotosGuardadas = previasGuardadas.filter((a) => a.tipo === "foto" || a.tipo === "imagen");
   const pdfGuardado = previasGuardadas.find((a) => a.tipo === "pdf");
   const errArchivos = useMemo(() => validarArchivos({ fotos: fotos.map((x) => x.archivo), pdf, previas: fotosGuardadas.length }), [fotos, pdf, fotosGuardadas.length]);
-  const editable = !editando || ["borrador", "programado"].includes(guardado?.estado);
+  const puedeEditar = usePuedeEditar();
+  const editable = puedeEditar && (!editando || ["borrador", "programado"].includes(guardado?.estado));
 
   const agregarFotos = (lista) => {
     const nuevas = [...lista].map((archivo) => { const url = URL.createObjectURL(archivo); urls.current.push(url); return { clave: `${archivo.name}-${archivo.size}-${Math.random()}`, archivo, url }; });
@@ -105,7 +106,7 @@ export default function Redactar({ id = null }) {
     if (pdf) cuerpo.append("pdf", pdf, pdf.name);
     setEnviando(accion);
     try {
-      const r = editando ? await axios.put(`${API}/${encodeURIComponent(id)}`, cuerpo) : await axios.post(API, cuerpo);
+      const r = editando ? await axios.put(`${API}/${encodeURIComponent(id)}`, cuerpo, MULTIPART) : await axios.post(API, cuerpo, MULTIPART);
       const c = principal(r.data);
       setSucio(false);
       router.push(c?.id != null && accion !== "borrador" ? rutaSeguimiento(c.id) : RUTA_PANEL);
@@ -133,6 +134,7 @@ export default function Redactar({ id = null }) {
       </header>
       <AvisoError error={existente.error} porDefecto="No se pudo cargar el comunicado." />
       {editando && guardado && !editable ? <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Este comunicado ya se publicó: solo se pueden editar borradores y programados.</p> : null}
+      {!puedeEditar ? <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Tu acceso a Comunicados es de solo consulta: no puedes publicar.</p> : null}
       <Mensaje mensaje={mensaje} />
 
       <div className="grid gap-4 lg:grid-cols-[1.35fr_1fr]">

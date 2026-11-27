@@ -15,7 +15,7 @@ import {
   API, FILTROS_DESTINATARIOS, RUTA_PANEL, errorDe, etiquetaEstado, faltan, fechaRelativa, fotosDe, pdfDe, principal, rutaEditar, tarjetasSeguimiento,
   textoDestinatario, textoEntregas, textoTipo, totalesPestanas,
 } from "@/lib/comunicados/comunicados.mjs";
-import { AvisoError, Insignia, Mensaje, TextoPlano, botonPrimario, botonSecundario, conEmpresa, get, opcionesSwr, tarjeta, useEmpresa, useZona } from "./comun";
+import { AvisoError, Insignia, Mensaje, TextoPlano, botonPrimario, botonSecundario, conEmpresa, get, opcionesSwr, tarjeta, useEmpresa, usePuedeEditar, useZona } from "./comun";
 
 const POR_PAGINA = 50;
 
@@ -99,6 +99,7 @@ function Destinatarios({ id, empresa, nivel, tz, lista, filtro, setFiltro, pagin
 export default function Seguimiento({ id }) {
   const empresa = useEmpresa();
   const tz = useZona();
+  const editar = usePuedeEditar();
   const url = empresa.listo ? conEmpresa(`${API}/${encodeURIComponent(id)}`, empresa.idEmpresa) : null;
   const { data, error, isLoading, mutate } = useSWR(url, get, opcionesSwr);
   const c = principal(data);
@@ -145,17 +146,17 @@ export default function Seguimiento({ id }) {
           <p className="mt-1 text-sm text-slate-600">{linea}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {["borrador", "programado"].includes(c.estado) ? <Link href={rutaEditar(id)} data-accion="editar" className={botonSecundario}><Pencil className="size-4" aria-hidden="true" />Editar</Link> : null}
-          {c.estado === "pendiente_aprobacion" ? (
+          {editar && ["borrador", "programado"].includes(c.estado) ? <Link href={rutaEditar(id)} data-accion="editar" className={botonSecundario}><Pencil className="size-4" aria-hidden="true" />Editar</Link> : null}
+          {editar && c.estado === "pendiente_aprobacion" ? (
             <>
               <button type="button" className={botonSecundario} onClick={() => setPregunta("rechazar")}>Rechazar</button>
               <button type="button" className={botonPrimario} disabled={ocupado === "aprobar"} onClick={aprobar}>Aprobar y publicar</button>
             </>
           ) : null}
-          {publicado ? <button type="button" className={botonSecundario} disabled={ocupado === "fijar"} onClick={fijar} aria-pressed={Boolean(c.fijado)}>{c.fijado ? <PinOff className="size-4" aria-hidden="true" /> : <Pin className="size-4" aria-hidden="true" />}{c.fijado ? "Desfijar del muro" : "Fijar en el muro"}</button> : null}
+          {editar && publicado ? <button type="button" className={botonSecundario} disabled={ocupado === "fijar"} onClick={fijar} aria-pressed={Boolean(c.fijado)}>{c.fijado ? <PinOff className="size-4" aria-hidden="true" /> : <Pin className="size-4" aria-hidden="true" />}{c.fijado ? "Desfijar del muro" : "Fijar en el muro"}</button> : null}
           {conf && publicado ? <button type="button" className={botonSecundario} disabled={ocupado === "constancia"} onClick={constancia} data-permiso="libre"><Download className="size-4" aria-hidden="true" />{ocupado === "constancia" ? "Preparando…" : "Descargar constancia (PDF)"}</button> : null}
-          {conf && publicado && nfaltan > 0 ? <button type="button" className={botonPrimario} disabled={ocupado === "recordar"} onClick={recordar}><BellRing className="size-4" aria-hidden="true" />{ocupado === "recordar" ? "Enviando…" : `Recordar a ${nfaltan === 1 ? "la persona que falta" : `los ${nfaltan} que faltan`}`}</button> : null}
-          {publicado ? <button type="button" className={botonSecundario} onClick={() => setPregunta("archivar")}><Archive className="size-4" aria-hidden="true" />Archivar</button> : null}
+          {editar && conf && publicado && nfaltan > 0 ? <button type="button" className={botonPrimario} disabled={ocupado === "recordar"} onClick={recordar}><BellRing className="size-4" aria-hidden="true" />{ocupado === "recordar" ? "Enviando…" : `Recordar a ${nfaltan === 1 ? "la persona que falta" : `los ${nfaltan} que faltan`}`}</button> : null}
+          {editar && publicado ? <button type="button" className={botonSecundario} onClick={() => setPregunta("archivar")}><Archive className="size-4" aria-hidden="true" />Archivar</button> : null}
         </div>
       </header>
       <Mensaje mensaje={mensaje} />
@@ -172,7 +173,7 @@ export default function Seguimiento({ id }) {
       <div className="grid gap-4 lg:grid-cols-[1.7fr_1fr]">
         {!conLista
           ? <p className={`${tarjeta} p-5 text-sm text-slate-600`}>{c.estado === "programado" ? "La lista de destinatarios se congela cuando se publique." : c.estado === "pendiente_aprobacion" ? "Publicación de un empleado: al aprobarla sale en el muro de toda la empresa." : "Aún no se publica."}</p>
-          : <Destinatarios id={id} empresa={empresa.idEmpresa} nivel={c.nivel} tz={tz} lista={lista} filtro={filtroActual} setFiltro={setFiltro} pagina={pagina} setPagina={setPagina} alCambiar={mutate} puedeRecordar={publicado} />}
+          : <Destinatarios id={id} empresa={empresa.idEmpresa} nivel={c.nivel} tz={tz} lista={lista} filtro={filtroActual} setFiltro={setFiltro} pagina={pagina} setPagina={setPagina} alCambiar={mutate} puedeRecordar={editar && publicado} />}
         <aside className="grid content-start gap-4">
           <section aria-labelledby="asi-lo-ven" className={`${tarjeta} grid gap-2 p-4`} data-asi-lo-ven>
             <h2 id="asi-lo-ven" className="text-[13px] font-bold uppercase tracking-wide text-slate-500">Así lo ven</h2>

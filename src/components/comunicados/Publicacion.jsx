@@ -129,7 +129,7 @@ export default function Publicacion({ it, tz, completo = false, alMeGusta, ocupa
       {pendiente ? <p className="w-fit rounded-full bg-amber-100 px-2.5 py-0.5 text-[13px] font-bold text-amber-900">Requiere tu confirmación</p> : null}
       {it.titulo ? (
         completo ? <h1 id={`post-${it.id}-titulo`} className="break-words text-xl font-extrabold leading-tight text-slate-900">{it.titulo}</h1>
-          : <h2 id={`post-${it.id}-titulo`} className="break-words text-[17px] font-extrabold leading-snug text-slate-900"><Link href={rutaPost(it.id)} className="hover:underline">{it.titulo}</Link></h2>
+          : <h2 id={`post-${it.id}-titulo`} className="break-words text-[17px] font-extrabold leading-snug text-slate-900"><Link href={rutaPost(it.id)} className="inline-flex min-h-11 items-center hover:underline">{it.titulo}</Link></h2>
       ) : <span id={`post-${it.id}-titulo`} className="sr-only">Publicación de {autor}</span>}
       {it.fecha_evento ? <p className="flex items-center gap-2 text-sm font-semibold text-slate-700"><CalendarDays className="size-4 text-[#2563EB]" aria-hidden="true" />{fechaEvento(it.fecha_evento, { tz })}</p> : null}
       {it.cuerpo ? <TextoPlano className={`text-[15px] leading-relaxed text-slate-800 ${largo ? "line-clamp-5" : ""}`}>{it.cuerpo}</TextoPlano> : null}
@@ -139,9 +139,9 @@ export default function Publicacion({ it, tz, completo = false, alMeGusta, ocupa
       <TarjetaPdf pdf={pdf} />
       {pendiente && !completo ? <Link href={rutaPost(it.id)} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#2563EB] px-4 text-[15px] font-bold text-white">Leer y confirmar</Link> : null}
       {reacciones || comentarios ? (
-        <p className="flex justify-between gap-3 text-[13px] text-slate-600" data-conteos>
+        <p className="flex items-center justify-between gap-3 text-[13px] text-slate-600" data-conteos>
           <span data-reacciones>{reacciones}</span>
-          {comentarios ? (completo ? <span>{comentarios}</span> : <Link href={`${rutaPost(it.id)}#comentarios`} className="hover:underline">{comentarios}</Link>) : null}
+          {comentarios ? (completo ? <span>{comentarios}</span> : <Link href={`${rutaPost(it.id)}#comentarios`} className="-my-3 inline-flex min-h-11 items-center hover:underline">{comentarios}</Link>) : null}
         </p>
       ) : null}
       {it.permite_reacciones !== false || it.permite_comentarios !== false ? (

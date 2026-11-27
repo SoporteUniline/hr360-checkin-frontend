@@ -62,7 +62,7 @@ export default function AvisosPush() {
       const registro = await activo(await navigator.serviceWorker.register(PUSH_SW, { scope: PUSH_ALCANCE }));
       const s = (await registro.pushManager.getSubscription()) ?? await registro.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: claveVapid(data.vapid_public_key) });
       const json = s.toJSON();
-      await axios.post(`${API_MI}/push/suscribir`, { subscription: json, endpoint: json.endpoint, keys: json.keys });
+      await axios.post(`${API_MI}/push/suscribir`, { suscripcion: json });
       setSuscrito(true);
       setMensaje("Listo: te avisaremos aquí de los comunicados nuevos.");
     } catch (e) { setMensaje(errorDe(e, e?.message || "No se pudieron activar las notificaciones.")); }

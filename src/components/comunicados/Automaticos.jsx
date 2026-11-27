@@ -9,14 +9,15 @@ import { ChevronLeft, Sparkles } from "lucide-react";
 import axios from "@/lib/axios";
 import { SelectorEmpresa } from "@/components/nomina/comun";
 import { RUTA_PLANTILLAS } from "@/lib/avisos/avisos.mjs";
-import { API, AUDIENCIAS_AUTO, REGLAS_AUTO, RUTA_PANEL, cuandoAuto, errorDe, horaHH, normalizarConfig, reglasAuto, textoManana } from "@/lib/comunicados/comunicados.mjs";
-import { AvisoError, Interruptor, Mensaje, TextoPlano, botonPrimario, conEmpresa, entrada, get, opcionesSwr, tarjeta, useEmpresa } from "./comun";
+import { API, AUDIENCIAS_AUTO, REGLAS_AUTO, RUTA_PANEL, cuandoAuto, errorDe, horaHH, normalizarConfig, publicacionesDelDia, reglasAuto, textoManana } from "@/lib/comunicados/comunicados.mjs";
+import { AvisoError, Interruptor, Mensaje, TextoPlano, botonPrimario, conEmpresa, entrada, get, opcionesSwr, tarjeta, useEmpresa, usePuedeEditar } from "./comun";
 
 const HORAS = Array.from({ length: 24 }, (_, h) => `${String(h).padStart(2, "0")}:00`);
 const reglasDe = (d) => (Array.isArray(d) ? d : d?.automaticos ?? d?.reglas ?? d?.items ?? []);
 
 export default function Automaticos() {
   const empresa = useEmpresa();
+  const editar = usePuedeEditar();
   const listo = empresa.listo;
   const auto = useSWR(listo ? conEmpresa(`${API}/automaticos`, empresa.idEmpresa) : null, get, opcionesSwr);
   const config = useSWR(listo ? conEmpresa(`${API}/config`, empresa.idEmpresa) : null, get, opcionesSwr);
@@ -42,7 +43,7 @@ export default function Automaticos() {
     finally { setGuardando(false); }
   };
 
-  const hoy = previa.data?.hoy ?? [];
+  const hoy = publicacionesDelDia(previa.data?.hoy);
   return (
     <div className="mx-auto w-full max-w-6xl space-y-4 p-1" data-pantalla="automaticos">
       <Link href={RUTA_PANEL} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-slate-600 hover:text-slate-900"><ChevronLeft className="size-4" aria-hidden="true" />Comunicados</Link>
@@ -56,7 +57,7 @@ export default function Automaticos() {
           <label htmlFor="auto-hora" className="flex items-center gap-2 text-sm font-semibold text-slate-700">Hora
             <select id="auto-hora" className={`${entrada} w-28`} value={horaHH(hora)} onChange={(e) => setHora(e.target.value)}>{HORAS.map((h) => <option key={h} value={h}>{h}</option>)}</select>
           </label>
-          <button type="button" className={botonPrimario} disabled={guardando || !auto.data} onClick={guardar}>{guardando ? "Guardando…" : "Guardar cambios"}</button>
+          {editar ? <button type="button" className={botonPrimario} disabled={guardando || !auto.data} onClick={guardar}>{guardando ? "Guardando…" : "Guardar cambios"}</button> : null}
         </div>
       </header>
       <Mensaje mensaje={mensaje} />
@@ -64,6 +65,7 @@ export default function Automaticos() {
 
       <div className="grid gap-4 lg:grid-cols-[1.8fr_1fr]">
         <section aria-label="Reglas automáticas" className={`${tarjeta} overflow-hidden`}>
+          <fieldset disabled={!editar} className="contents">
           <div className="hidden grid-cols-[2fr_1.2fr_1fr_1.2fr_0.8fr] gap-3 bg-slate-100 px-4 py-2.5 text-[13px] font-bold tracking-wide text-slate-600 md:grid" aria-hidden="true">
             <span>QUÉ SE PUBLICA</span><span>PARA</span><span>CUÁNDO</span><span>CANALES</span><span>ACTIVO</span>
           </div>
@@ -92,8 +94,9 @@ export default function Automaticos() {
               );
             })}
           </ul>
+          </fieldset>
           <p className="border-t border-slate-100 px-4 py-3 text-[13px] text-slate-600">
-            Quien no quiera que se publique su cumpleaños puede ocultarlo desde Mi espacio. <Link href={RUTA_PLANTILLAS} className="font-semibold text-[#2563EB] hover:underline">Editar plantillas de felicitación</Link>
+            Quien no quiera que se publique su cumpleaños puede ocultarlo desde Mi espacio. <Link href={RUTA_PLANTILLAS} className="inline-flex min-h-11 items-center font-semibold text-[#2563EB] hover:underline">Editar plantillas de felicitación</Link>
           </p>
         </section>
 
@@ -103,7 +106,7 @@ export default function Automaticos() {
           {previa.isLoading ? <p role="status" className="text-sm text-slate-500">Cargando…</p> : null}
           {previa.data && !hoy.length ? <p className="text-sm text-slate-600">Hoy no se publica nada automático.</p> : null}
           {hoy.map((x, i) => (
-            <article key={x.id ?? i} className="grid gap-1 rounded-xl border border-slate-200 p-3">
+            <article key={x.id ?? `${x.regla}-${i}`} className="grid gap-1 rounded-xl border border-slate-200 p-3">
               <b className="break-words text-sm text-slate-900">{x.titulo}</b>
               <TextoPlano className="text-[13px] text-slate-700">{x.cuerpo}</TextoPlano>
               {Number(x.reacciones) ? <span className="text-[13px] text-slate-500">{x.reacciones} compañeros felicitaron</span> : null}

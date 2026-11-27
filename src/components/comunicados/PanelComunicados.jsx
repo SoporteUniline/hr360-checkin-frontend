@@ -15,7 +15,7 @@ import {
   API, FILTROS_PANEL, LIMITES, RUTA_AUTOMATICOS, RUTA_MODERACION, RUTA_NUEVO, errorDe, etiquetaEstado, fechaRelativa, filtrarLocal,
   rutaSeguimiento, tarjetasResumen, textoCanales, textoLectura, textoPara, textoTipo, urlListado,
 } from "@/lib/comunicados/comunicados.mjs";
-import { AvisoError, Insignia, Mensaje, botonPrimario, botonSecundario, entrada, get, opcionesSwr, tarjeta, useZona, useEmpresa } from "./comun";
+import { AvisoError, Insignia, Mensaje, botonPrimario, botonSecundario, entrada, get, opcionesSwr, tarjeta, useZona, useEmpresa, usePuedeEditar } from "./comun";
 
 const POR_PAGINA = 20;
 
@@ -74,6 +74,7 @@ function Fila({ it, tz, porAprobar, alAprobar, alRechazar }) {
 export default function PanelComunicados() {
   const empresa = useEmpresa();
   const tz = useZona();
+  const editar = usePuedeEditar();
   const [filtro, setFiltro] = useState("todos");
   const [busqueda, setBusqueda] = useState("");
   const [q, setQ] = useState("");
@@ -109,7 +110,7 @@ export default function PanelComunicados() {
         <SelectorEmpresa {...empresa} />
         <Link href={RUTA_MODERACION} className={botonSecundario}><ShieldCheck className="size-4" aria-hidden="true" />Moderar el muro</Link>
         <Link href={RUTA_AUTOMATICOS} className={botonSecundario}><Sparkles className="size-4" aria-hidden="true" />Automáticos</Link>
-        <Link href={RUTA_NUEVO} data-accion="nuevo" className={botonPrimario}><Plus className="size-4" aria-hidden="true" />Nuevo comunicado</Link>
+        {editar ? <Link href={RUTA_NUEVO} data-accion="nuevo" className={botonPrimario}><Plus className="size-4" aria-hidden="true" />Nuevo comunicado</Link> : null}
       </div>
 
       <section aria-label="Resumen" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -156,7 +157,7 @@ export default function PanelComunicados() {
           <p className="p-6 text-center text-sm text-slate-600">{porAprobar ? "No hay publicaciones por aprobar." : q ? "Nada coincide con tu búsqueda." : "Aún no hay comunicados. Publica el primero con «Nuevo comunicado»."}</p>
         ) : null}
         <ul>
-          {items.map((it) => <Fila key={it.id} it={it} tz={tz} porAprobar={porAprobar && it.estado === "pendiente_aprobacion"} alAprobar={aprobar} alRechazar={setRechazando} />)}
+          {items.map((it) => <Fila key={it.id} it={it} tz={tz} porAprobar={editar && porAprobar && it.estado === "pendiente_aprobacion"} alAprobar={aprobar} alRechazar={setRechazando} />)}
         </ul>
       </section>
 

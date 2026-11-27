@@ -3,6 +3,7 @@ import { jwtVerify } from "jose";
 import { destinoSeguro, urlLogin } from "@/lib/destinoLogin.mjs";
 import { RUTA_NEUTRA, rutaMisEncuestas } from "@/lib/clima/pendientes.mjs";
 import { demoBasePath, nombreCookieSesion, rutaDeInstancia } from "@/lib/demo-base-path.mjs";
+import { LIGA_CORREO, destinoLiga } from "@/lib/comunicados/comunicados.mjs";
 
 //Prueba CI/CD
 
@@ -67,7 +68,7 @@ export async function middleware(request) {
   // Sin sesión, a una ruta protegida (o a «Mis encuestas», la liga del correo): al login recordando a dónde iba.
   const rutaActual = `${pathname}${request.nextUrl.search}`;
   if (!token) {
-    const protectedRoutes = ["/dashboard", "/panel", "/home", "/empleado", RUTA_NEUTRA].some(
+    const protectedRoutes = ["/dashboard", "/panel", "/home", "/empleado", RUTA_NEUTRA, LIGA_CORREO].some(
       (path) => pathname.startsWith(path),
     );
     if (protectedRoutes) {
@@ -94,6 +95,11 @@ export async function middleware(request) {
     if (pathname === RUTA_NEUTRA || pathname === `${RUTA_NEUTRA}/`) {
       const destino = rutaMisEncuestas(tipoUsuario) || defaultRedirects[tipoUsuario] || "/";
       return redirigir(destino);
+    }
+
+    // (27/11/2026) Liga de correos y push del Centro de comunicados: /mi-espacio/comunicados/<id>.
+    if (pathname.startsWith(LIGA_CORREO)) {
+      return redirigir(destinoLiga(pathname, tipoUsuario) || defaultRedirects[tipoUsuario] || "/");
     }
 
     const allowedPaths = accessRules[tipoUsuario] || [];
@@ -127,6 +133,7 @@ export const config = {
     "/empleado/:path*",
     "/login",
     "/mis-encuestas",
+    "/mi-espacio/:path*",
     "/register/:path*",
     "/contratar-plan/:path*",
     "/cotiza/:path*",

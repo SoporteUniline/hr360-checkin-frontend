@@ -10,7 +10,7 @@ import { ArrowLeft, ImagePlus, Trash2 } from "lucide-react";
 import axios from "@/lib/axios";
 import useMonitorEquipo from "@/hooks/useMonitorEquipo";
 import { API, API_MI, LIMITES, RUTA_MURO, TIPOS_FOTO, errorDe, urlMiniatura, validarArchivos, youtubeId } from "@/lib/comunicados/comunicados.mjs";
-import { Campo, ariaCampo, entrada, get, opcionesSwr } from "./comun";
+import { MULTIPART, Campo, ariaCampo, entrada, get, opcionesSwr } from "./comun";
 
 const ESTADO = {
   pendiente_aprobacion: ["Esperando aprobación de RH", "bg-amber-100 text-amber-900"],
@@ -81,7 +81,7 @@ export default function NuevaPublicacion() {
     for (const f of fotos) fd.append("fotos", f.archivo, f.archivo.name);
     setEnviando(true); setMensaje(null);
     try {
-      const r = await axios.post(equipo ? API : `${API_MI}/publicaciones`, fd);
+      const r = await axios.post(equipo ? API : `${API_MI}/publicaciones`, fd, MULTIPART);
       const estado = r.data?.estado ?? r.data?.comunicado?.estado;
       setMensaje({ tipo: "ok", texto: estado === "publicado" || equipo ? "¡Publicado! Ya lo ve tu equipo." : "Tu publicación quedó pendiente de aprobación. Te avisamos cuando RH la revise." });
       setTitulo(""); setCuerpo(""); setYoutube(""); setFotos([]); setConfirmacion(false); mutate(MIS);
