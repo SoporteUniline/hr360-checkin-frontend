@@ -12,17 +12,33 @@ export const RUTA_AUTOMATICOS = `${RUTA_PANEL}/automaticos`;
 export const RUTA_MODERACION = `${RUTA_PANEL}/moderacion`;
 export const RUTA_MURO = "/empleado/panel/muro";
 export const RUTA_PUBLICAR = `${RUTA_MURO}/publicar`;
+// Muro del panel (27/11/2026, pedido del dueño): la primera pantalla del panel y la primera pestaña de Comunicados.
+// /panel/comunicados lleva al muro; la tabla de administración pasó a «Administrar».
+export const RUTA_MURO_PANEL = "/panel/muro";
+export const RUTA_ADMINISTRAR = `${RUTA_PANEL}/administrar`;
+export const PESTANAS_PANEL = Object.freeze([
+  { clave: "muro", texto: "Muro", ruta: RUTA_MURO_PANEL },
+  { clave: "administrar", texto: "Administrar", ruta: RUTA_ADMINISTRAR },
+  { clave: "automaticos", texto: "Automáticos", ruta: RUTA_AUTOMATICOS },
+  { clave: "moderacion", texto: "Moderar el muro", ruta: RUTA_MODERACION },
+]);
+/** Pestaña de Comunicados que corresponde a una ruta (o null). */
+export function pestanaDe(pathname) {
+  const r = String(pathname ?? "").split(/[?#]/)[0].replace(/\/+$/, "");
+  if (r === RUTA_MURO_PANEL || r === RUTA_PANEL) return "muro";
+  return PESTANAS_PANEL.find((p) => p.clave !== "muro" && (r === p.ruta || r.startsWith(`${p.ruta}/`)))?.clave ?? null;
+}
 export const rutaSeguimiento = (id) => `${RUTA_PANEL}/${encodeURIComponent(id)}`;
 export const rutaEditar = (id) => `${RUTA_PANEL}/${encodeURIComponent(id)}/editar`;
 export const rutaPost = (id) => `${RUTA_MURO}/${encodeURIComponent(id)}`;
 // Liga de los correos y del push (backend): /login?next=/mi-espacio/comunicados/<id>. Una sola liga para todos: el
-// empleado va al detalle en Mi espacio; un usuario del panel, a Comunicados (ahí le sale el aviso si es destinatario).
+// empleado va al detalle en Mi espacio; un usuario del panel, al muro del panel (ahí le sale el aviso si es destinatario).
 export const LIGA_CORREO = "/mi-espacio/comunicados";
 export function destinoLiga(pathname, tipoUsuario) {
   const m = String(pathname ?? "").match(/^\/mi-espacio\/comunicados(?:\/(\d{1,12}))?\/?$/);
   if (!m) return null;
   if (tipoUsuario === "Empleado") return m[1] ? rutaPost(m[1]) : RUTA_MURO;
-  if (tipoUsuario === "Recruiter" || tipoUsuario === "User") return RUTA_PANEL;
+  if (tipoUsuario === "Recruiter" || tipoUsuario === "User") return RUTA_MURO_PANEL;
   return null;
 }
 
@@ -460,6 +476,37 @@ export const fotosDe = (it) => (it?.adjuntos ?? []).filter((a) => a.tipo === "fo
 export const pdfDe = (it) => (it?.adjuntos ?? []).find((a) => a.tipo === "pdf") ?? null;
 /** «Recursos Humanos · Evento · Toda la empresa» */
 export const lineaAutor = (it, opciones) => [fechaRelativa(it?.publicado_en, opciones), it?.tipo && it.tipo !== "publicacion" ? textoTipo(it.tipo) : null, it?.audiencia_texto].filter(Boolean).join(" · ");
+
+/**
+ * A dónde pide el muro: Mi espacio (/mi, sesión del empleado) o el panel (/muro, con la empresa elegida). Los mismos
+ * componentes (Muro, Publicacion, Comentarios) sirven a los dos lados; el panel no reporta (RH modera) ni abre el
+ * detalle de Mi espacio (comenta en la misma tarjeta).
+ */
+export function fuenteMuro(modo = "empleado", empresa = null) {
+  const panel = modo === "panel";
+  const pre = panel ? `${API}/muro` : API_MI;
+  const e = (u) => (panel && empresa ? `${u}${u.includes("?") ? "&" : "?"}empresa=${encodeURIComponent(empresa)}` : u);
+  const id = (x) => encodeURIComponent(x);
+  return {
+    modo: panel ? "panel" : "empleado",
+    muro: (cursor = null) => e(`${panel ? pre : `${pre}/muro`}${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
+    meGusta: (x) => e(`${pre}/${id(x)}/me-gusta`),
+    comentarios: (x, cursor = null) => e(`${pre}/${id(x)}/comentarios${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`),
+    comentario: (x) => e(`${pre}/comentarios/${id(x)}`),
+    meGustaComentario: (x) => e(`${pre}/comentarios/${id(x)}/me-gusta`),
+    reportar: panel ? null : (x) => `${pre}/comentarios/${id(x)}/reportar`,
+    rutaDetalle: panel ? null : rutaPost,
+  };
+}
+/** Avance del seguimiento de un post del panel: { texto, porcentaje (0–100), confirmacion }. */
+export function avanceSeguimiento(it) {
+  const s = it?.seguimiento;
+  if (!s) return null;
+  const total = Number(s.total) || 0;
+  const confirmacion = it.nivel === "confirmacion";
+  const listos = confirmacion ? Number(s.confirmados) || 0 : Number(s.vistos) || 0;
+  return { texto: s.texto || `${listos} de ${total} ${confirmacion ? "confirmaron" : "lo vieron"}`, porcentaje: total ? Math.min(100, Math.round((listos * 100) / total)) : 0, confirmacion };
+}
 
 // ───────── comentarios ─────────
 /** Hilos de un nivel: [{ ...comentario, respuestas: [] }] desde una lista plana (padre_id) o ya anidada. */

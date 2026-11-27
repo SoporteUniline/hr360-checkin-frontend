@@ -3,24 +3,25 @@
 // arriba (como la de una página), franja de comunicados por confirmar, publicaciones fijadas (hasta 3) y el resto del
 // muro con «Ver más». Notificaciones push (si están configuradas), publicar (queda pendiente de aprobación) y ocultar mi
 // cumpleaños. Solo lo que el empleado puede ver (lo decide el servidor). Backend: GET /checador/comunicados/mi/muro.
+// La portada, la lista (useFeedMuro + ListaMuro) y la tarjeta (Publicacion) son las mismas del muro del panel
+// (MuroPanel.jsx); cambia solo la fuente (fuenteMuro: /mi o /muro).
 import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import useSWRInfinite from "swr/infinite";
 import { AlertCircle, ChevronRight, PenSquare } from "lucide-react";
 import axios from "@/lib/axios";
-import { API_MI, RUTA_PUBLICAR, enlaceSeguro, errorDe, ordenarMuro, porConfirmar, rutaPost, textoPendientes } from "@/lib/comunicados/comunicados.mjs";
-import Publicacion from "./Publicacion";
+import { API_MI, RUTA_PUBLICAR, enlaceSeguro, errorDe, fuenteMuro, porConfirmar, rutaPost, textoPendientes } from "@/lib/comunicados/comunicados.mjs";
+import { useAuth } from "@/context/AuthContext";
+import TarjetaMuro, { useHilos } from "./TarjetaMuro";
 import AvisosPush from "./AvisosPush";
-import useMeGusta from "./useMeGusta";
-import { AvisoError, Interruptor, useZona } from "./comun";
+import useFeedMuro from "./useFeedMuro";
+import { AvisoError, Interruptor, get, useZona } from "./comun";
 
-const get = (url) => axios.get(url).then((r) => r.data);
-const llave = (i, previa) => (i === 0 ? `${API_MI}/muro` : previa?.siguiente ? `${API_MI}/muro?cursor=${encodeURIComponent(previa.siguiente)}` : null);
-const urlMeGusta = (id) => `${API_MI}/${encodeURIComponent(id)}/me-gusta`;
+const FUENTE_MI = fuenteMuro("empleado");
 
-export function Portada({ portada }) {
-  if (!portada?.url) return null;
+/** Portada del muro (como la de una página). acciones: botones encima (p. ej. «Cambiar portada» en el panel). */
+export function Portada({ portada, acciones = null }) {
+  if (!portada?.url) return acciones ? <div className="relative grid aspect-[16/7] w-full place-items-center overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-100 sm:aspect-[3/1]" data-portada-vacia><span className="text-[15px] text-slate-600">Sin foto de portada</span>{acciones}</div> : null;
   const enlace = enlaceSeguro(portada.enlace);
   const contenido = (
     <>
@@ -35,9 +36,34 @@ export function Portada({ portada }) {
     </>
   );
   const clase = "relative block aspect-[16/7] w-full overflow-hidden rounded-2xl bg-slate-100 sm:aspect-[3/1]";
-  return enlace
+  const banner = enlace
     ? <a href={enlace} target="_blank" rel="noopener noreferrer" className={clase} data-portada>{contenido}<span className="sr-only"> (se abre en otra pestaña)</span></a>
     : <div className={clase} data-portada>{contenido}</div>;
+  // Los botones van fuera del enlace (un botón dentro de <a> no es válido).
+  return acciones ? <div className="relative">{banner}{acciones}</div> : banner;
+}
+
+/** Fijadas arriba y luego el resto; «Ver más» con el cursor. tarjeta(it) → <li>. */
+export function ListaMuro({ feed, tarjeta, vacio }) {
+  return (
+    <>
+      {feed.isLoading && !feed.data ? <p role="status" className="rounded-xl bg-slate-100 p-5 text-sm text-slate-500">Cargando el muro…</p> : null}
+      {feed.fijados.length ? (
+        <section aria-label="Publicaciones fijadas" data-fijadas>
+          <ul className="grid gap-4">{feed.fijados.map(tarjeta)}</ul>
+        </section>
+      ) : null}
+      <section aria-label="Publicaciones" id="muro-lista">
+        {feed.data && !feed.todos.length ? <p className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-[15px] text-slate-600">{vacio}</p> : null}
+        <ul className="grid gap-4">{feed.resto.map(tarjeta)}</ul>
+      </section>
+      {feed.hayMas ? (
+        <button type="button" onClick={feed.verMas} disabled={feed.cargandoMas} className="flex min-h-12 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-[15px] font-semibold text-slate-800">
+          {feed.cargandoMas ? "Cargando…" : "Ver más publicaciones"}
+        </button>
+      ) : null}
+    </>
+  );
 }
 
 function Preferencias() {
@@ -65,18 +91,13 @@ function PreferenciasForm({ inicial }) {
 
 export default function Muro() {
   const tz = useZona();
-  const { data, error, isLoading, size, setSize, mutate, isValidating } = // Al volver del detalle (me gusta, comentario, confirmación) el muro se pide de nuevo completo: sin esto se veía la
-  // copia guardada en memoria, sin el me gusta ni los comentarios nuevos y con la confirmación todavía pendiente.
-  useSWRInfinite(llave, get, { revalidateOnMount: true, revalidateAll: true, revalidateOnFocus: true, shouldRetryOnError: false });
-  const megusta = useMeGusta(urlMeGusta);
-  const primera = data?.[0];
-  const todos = (data ?? []).flatMap((p) => p?.items ?? []).map(megusta.aplicar);
-  const { fijados, resto } = ordenarMuro(todos);
+  const { dataUser } = useAuth();
+  const feed = useFeedMuro(FUENTE_MI);
+  const hilos = useHilos();
+  const { data, error, mutate, megusta, primera } = feed;
   const pendientes = Number(primera?.pendientes_confirmar) || 0;
-  const primeroPendiente = todos.find(porConfirmar);
-  const hayMas = Boolean(data?.[data.length - 1]?.siguiente);
-  const cargandoMas = isValidating && size > (data?.length ?? 0);
-  const tarjeta = (it) => <li key={it.id}><Publicacion it={it} tz={tz} alMeGusta={megusta.alternar} ocupado={megusta.ocupado(it.id)} /></li>;
+  const primeroPendiente = feed.todos.find(porConfirmar);
+  const tarjeta = (it) => <li key={it.id}><TarjetaMuro it={it} tz={tz} fuente={FUENTE_MI} hilos={hilos} megusta={megusta} yo={dataUser?.nombre} /></li>;
 
   return (
     <div className="space-y-4" data-pantalla="muro">
@@ -94,21 +115,7 @@ export default function Muro() {
       ) : null}
       <AvisoError error={error} porDefecto="No pudimos cargar el muro." reintentar={mutate} />
       {megusta.error ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{megusta.error}</p> : null}
-      {isLoading && !data ? <p role="status" className="rounded-xl bg-slate-100 p-5 text-sm text-slate-500">Cargando el muro…</p> : null}
-      {fijados.length ? (
-        <section aria-label="Publicaciones fijadas" data-fijadas>
-          <ul className="grid gap-4">{fijados.map(tarjeta)}</ul>
-        </section>
-      ) : null}
-      <section aria-label="Publicaciones" id="muro-lista">
-        {data && !todos.length ? <p className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-[15px] text-slate-600">Aún no hay publicaciones. Aquí verás los avisos de tu empresa.</p> : null}
-        <ul className="grid gap-4">{resto.map(tarjeta)}</ul>
-      </section>
-      {hayMas ? (
-        <button type="button" onClick={() => setSize(size + 1)} disabled={cargandoMas} className="flex min-h-12 w-full items-center justify-center rounded-xl border border-slate-300 bg-white text-[15px] font-semibold text-slate-800">
-          {cargandoMas ? "Cargando…" : "Ver más publicaciones"}
-        </button>
-      ) : null}
+      <ListaMuro feed={feed} tarjeta={tarjeta} vacio="Aún no hay publicaciones. Aquí verás los avisos de tu empresa." />
       {data ? <AvisosPush /> : null}
       {data ? <Preferencias /> : null}
     </div>

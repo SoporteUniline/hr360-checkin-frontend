@@ -57,6 +57,7 @@ export const RUTAS_MODULO = Object.freeze([
   ["/panel/plantillas-induccion", "induccion"],
   ["/empleado/panel/bienvenida", "induccion"],
   ["/panel/comunicados", "comunicados"],
+  ["/panel/muro", "comunicados"],
   ["/empleado/panel/muro", "comunicados"],
 ]);
 

@@ -1,8 +1,7 @@
-import PanelComunicados from "@/components/comunicados/PanelComunicados";
+import { redirect } from "next/navigation";
+import { RUTA_MURO_PANEL } from "@/lib/comunicados/comunicados.mjs";
 
-// Comunicados (Centro de comunicados). Ver src/components/comunicados y docs/comunicados.md.
-export const metadata = { title: "Comunicados | ADAMIA" };
-
+// Comunicados abre en su primera pestaña, el muro (/panel/muro). La tabla está en /panel/comunicados/administrar.
 export default function PaginaComunicados() {
-  return <PanelComunicados />;
+  redirect(RUTA_MURO_PANEL);
 }

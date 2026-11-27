@@ -262,17 +262,17 @@ try {
   await captura(duena, "1440-panel-mis-encuestas");
   console.log("PASS: /mis-encuestas sin sesión → login con next → panel «Mis encuestas» de la dueña");
 
-  // 5) Monitor (primera pantalla del panel): aviso y número junto a «Mis encuestas» en el menú.
+  // 5) Primera pantalla del panel (desde el 27/11/2026 el muro; antes el Monitor): aviso y número junto a «Mis encuestas».
   await ir(duena, "/panel");
-  await duena.waitForURL("**/panel/monitor", { timeout: 30000 });
+  await duena.waitForURL("**/panel/muro", { timeout: 30000 });
   const avisoPanel = duena.getByRole("region", { name: AVISO });
   await avisoPanel.getByText("Tienes 1 encuesta por contestar").waitFor({ timeout: 30000 });
   const menu = duena.locator('[data-sidebar="sidebar"]').first();
   const itemMenu = menu.getByRole("button", { name: /Mis encuestas/ });
   await itemMenu.waitFor({ timeout: 30000 });
   assert.equal(await itemMenu.getByLabel("1 por contestar").count(), 1, "número junto a «Mis encuestas»");
-  await sinDesborde(duena, "1440 monitor con aviso");
-  await captura(duena, "1440-panel-monitor-aviso");
+  await sinDesborde(duena, "1440 muro con aviso");
+  await captura(duena, "1440-panel-muro-aviso");
   await avisoPanel.getByRole("link", { name: "Contestar" }).click();
   await duena.waitForURL("**/panel/mis-encuestas/31?empresa=9", { timeout: 30000 });
   await contestar(duena);
@@ -288,7 +288,7 @@ try {
   assert.equal(await duena.getByRole("region", { name: AVISO }).count(), 0, "contestada: sin aviso en el Monitor");
   await menu.getByRole("button", { name: /Mis encuestas/ }).waitFor();
   assert.equal(await menu.getByLabel("1 por contestar").count(), 0, "sin número en el menú");
-  console.log("PASS: dueña: aviso en el Monitor y número en el menú; contesta desde el panel con su empresa");
+  console.log("PASS: dueña: aviso en la primera pantalla (muro) y en el Monitor, número en el menú; contesta desde el panel con su empresa");
 
   // 6) Dueña en celular (390): Monitor con aviso y contestar en el panel, sin desborde.
   pendiente.duena = true;
