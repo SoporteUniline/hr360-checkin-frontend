@@ -4,11 +4,14 @@
 // (docs/prospectos.md). Es una página, no una ventana (docs/vistas-de-detalle.md). Letra de 16 px o más, títulos en 700,
 // botones de 48 px con texto y sin degradados: la usa también gente mayor.
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import useSWR from "swr";
 import Cookies from "js-cookie";
 import { enqueueSnackbar } from "notistack";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { celularLegible, consultaProspectos, fechaCorta, textoOrigen, valorOrigen } from "@/lib/prospectos/reglas.mjs";
+// (27/11/2026, docs/newsletter.md) «Avisar por WhatsApp a» y enlace al newsletter semanal.
+import AvisosWhatsapp from "./AvisosWhatsapp";
 
 const API = `${process.env.NEXT_PUBLIC_RUTA_BACKEND ?? ""}/checador/prospectos`;
 const CAMPO = "h-12 w-full rounded-xl border border-[#C7CEDD] bg-white px-4 text-base text-[#0B1033] outline-none focus-visible:border-[#2C56E8] focus-visible:ring-[3px] focus-visible:ring-[#2C56E8]/30";
@@ -74,6 +77,7 @@ export default function ProspectosPage() {
       <header className="grid gap-1">
         <h1 className="text-[1.75rem] font-bold leading-tight">Prospectos</h1>
         <p className="text-[#4B5563]">Personas que dejaron sus datos en los pop-ups de la página o en Contacto.</p>
+        <p><Link href="/dashboard/newsletter" className="inline-flex min-h-12 items-center font-bold text-[#1E40C4] underline underline-offset-4">Newsletter semanal y Guía 2027</Link></p>
       </header>
 
       <section className="grid gap-3 sm:grid-cols-2" aria-label="Resumen">
@@ -176,6 +180,8 @@ export default function ProspectosPage() {
           </nav>
         </>
       )}
+
+      <AvisosWhatsapp />
     </div>
   );
 }
