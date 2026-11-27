@@ -17,6 +17,8 @@ export const MODULOS = Object.freeze([
   { clave: "turnos_extra", nombre: "Turnos extra", descripcion: "Programar turnos extra con avisos de ley y seguirlos en vivo." },
   // (27/12/2026) Inducción digital (backend docs/induccion-digital.md).
   { clave: "induccion", nombre: "Inducción digital", descripcion: "Nuevos ingresos: datos, documentos y firma desde el celular, checklist del primer día y ruta de bienvenida." },
+  // (27/11/2026) Centro de comunicados: muro de la empresa y avisos con confirmación de leído (backend docs/comunicados.md).
+  { clave: "comunicados", nombre: "Centro de comunicados", descripcion: "Muro de la empresa y comunicados con confirmación de leído por app, correo, push y aviso emergente." },
 ].map((m) => Object.freeze({ base: false, ...m })));
 
 export const CLAVES = MODULOS.map((m) => m.clave);
@@ -54,6 +56,8 @@ export const RUTAS_MODULO = Object.freeze([
   ["/panel/nuevos-ingresos", "induccion"],
   ["/panel/plantillas-induccion", "induccion"],
   ["/empleado/panel/bienvenida", "induccion"],
+  ["/panel/comunicados", "comunicados"],
+  ["/empleado/panel/muro", "comunicados"],
 ]);
 
 const sinConsulta = (url) => String(url ?? "").split(/[?#]/)[0].replace(/\/+$/, "") || "/";

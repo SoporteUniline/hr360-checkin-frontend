@@ -30,10 +30,10 @@ export const PLANTILLAS = Object.freeze([
   Object.freeze({ clave: "administrador", nombre: "Administrador", descripcion: "Ve y edita todos los módulos.", permisos: con("editar", {}) }),
   Object.freeze({
     clave: "recursos_humanos", nombre: "Recursos Humanos",
-    descripcion: "Personal, asistencias, incidencias, nómina, documentos, clima, evaluaciones e inducción. Ve reclutamiento.",
+    descripcion: "Personal, asistencias, incidencias, nómina, documentos, clima, evaluaciones, inducción y comunicados. Ve reclutamiento.",
     permisos: con("sin_acceso", {
       empleados: "editar", asistencias: "editar", vacaciones: "editar", permisos: "editar", turnos_extra: "editar",
-      nomina: "editar", documentos: "editar", clima: "editar", evaluaciones: "editar", induccion: "editar",
+      nomina: "editar", documentos: "editar", clima: "editar", evaluaciones: "editar", induccion: "editar", comunicados: "editar",
       reclutamiento: "ver", tareas: "ver", activos: "ver", configuracion: "ver",
     }),
   }),
