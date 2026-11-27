@@ -110,8 +110,8 @@ try {
   // El asistente comercial de antes sigue en la página.
   await page.getByText("asistente comercial de ADAMIA").first().waitFor({ timeout: 4000 });
 
-  // Enlaces: demo → /contacto, sesión → /login. Al salir no quedan animaciones vivas (sin errores).
-  assert.equal(await page.locator(".top-actions a.btn-primary").getAttribute("href"), "/contacto");
+  // Enlaces: demo → /demo (demo pública, 25/11/2026), sesión → /login. Al salir no quedan animaciones vivas (sin errores).
+  assert.equal(await page.locator(".top-actions a.btn-primary").getAttribute("href"), "/demo");
   await page.locator(".top-actions .login").click();
   await page.waitForURL("**/login");
   await dormir(3000);

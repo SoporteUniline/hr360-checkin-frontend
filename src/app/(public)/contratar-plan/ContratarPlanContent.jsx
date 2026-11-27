@@ -742,7 +742,7 @@ export default function ContratarPlanContent() {
             <div className="ct-incluye">
               <h3>Incluye</h3>
               <ul>
-                <li>Reloj checador con rostro y GPS, aunque no haya internet.</li>
+                <li>Reloj checador con rostro y GPS, desde el celular o una tableta.</li>
                 <li>Vacaciones, permisos y aprobaciones por WhatsApp.</li>
                 <li>Contratos, expedientes y firma en línea.</li>
                 <li>Reportes de horas y asistencia listos para pagar.</li>
