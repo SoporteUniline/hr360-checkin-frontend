@@ -406,14 +406,7 @@ async function capturasPropias() {
       await rh.context().close();
     });
 
-    await intentar("seguridad", async () => {
-      const pg = await sesion(ANA, CELULAR);
-      await ir(pg, "/empleado/panel/seguridad");
-      await pg.getByText("Sesiones abiertas").waitFor({ timeout: 30000 });
-      await dormir(600);
-      await foto(pg, "emp-seguridad");
-      await pg.context().close();
-    });
+    // Seguridad y Face ID: la guía (y sus capturas) es seguridad/face-id-y-sesiones (nomina.mjs).
   } finally {
     await browser.close();
     next.kill("SIGTERM");
@@ -480,7 +473,6 @@ const CONVERTIR = [
   ["clima/1440-plantillas.png", "adamia-ai/indicador-uso.webp", [280, 245, 1130, 265]],
   ["clima-aviso/390-empleado-mi-espacio.png", "mi-espacio/mi-espacio.webp", [0, 0, 390, 844]],
   ["clima-aviso/390-empleado-inicio-aviso.png", "mi-espacio/inicio.webp", [0, 0, 390, 844]],
-  ["propias/emp-seguridad.png", "mi-espacio/seguridad.webp", null],
 ];
 
 async function convertir() {

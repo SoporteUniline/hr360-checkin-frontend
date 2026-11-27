@@ -89,12 +89,14 @@ export async function contexto(browser, { base, ancho, alto, cookie = null, usua
 
 /**
  * Guarda una captura en public/ayuda/capturas/<modulo>/<nombre>.webp. objetivo: Locator (recorta a ese elemento) o
- * null (la ventana). Baja la calidad si pasa de ~200 KB.
+ * null (la ventana). recorte: { x, y, width, height } de la ventana (p. ej. para dejar fuera un mapa que no carga en la
+ * prueba). Baja la calidad si pasa de ~200 KB.
  */
-export async function guardar(page, modulo, nombre, { objetivo = null, completa = false, margen = 0 } = {}) {
+export async function guardar(page, modulo, nombre, { objetivo = null, completa = false, margen = 0, recorte = null } = {}) {
   await dormir(350);
   let png;
-  if (objetivo && margen) {
+  if (recorte) png = await page.screenshot({ clip: recorte });
+  else if (objetivo && margen) {
     await objetivo.scrollIntoViewIfNeeded();
     const c = await objetivo.boundingBox();
     const v = page.viewportSize();

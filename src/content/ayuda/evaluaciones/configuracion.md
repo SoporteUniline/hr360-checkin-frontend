@@ -22,9 +22,14 @@ RH y el dueño.
 
 Entra a **Evaluación de desempeño › Configuración**. Tiene tres secciones: **Valores iniciales**, **Niveles** y **Acceso al módulo**.
 
-## Valores iniciales
+## Cómo definir los valores iniciales
 
-En **Permisos y confidencialidad** enciende o apaga:
+1. Abre la sección **Valores iniciales**.
+2. En **Permisos y confidencialidad** enciende o apaga cada opción (tabla de abajo).
+3. Elige el **Mínimo de respuestas para perspectivas anónimas**.
+4. Presiona **Guardar preferencias**.
+
+Las opciones de **Permisos y confidencialidad**:
 
 | Opción | Qué hace |
 |---|---|
@@ -42,8 +47,6 @@ En **Permisos y confidencialidad** enciende o apaga:
 | Pedir leer el aviso de privacidad antes de enviar | Nadie envía una evaluación sin leer el aviso. |
 | Al cerrar incompleta, calcular con lo respondido | Apagado, la calificación queda vacía mientras falte alguna respuesta. |
 
-Abajo elige el **Mínimo de respuestas para perspectivas anónimas**. Presiona **Guardar preferencias**.
-
 > **Importante:** Estos valores aplican a las campañas **nuevas**. Cada campaña guarda su propia configuración al lanzarse.
 
 ## Avisos por WhatsApp
@@ -54,13 +57,13 @@ En **Mensajes aprobados por WhatsApp (no se pueden cambiar)** ves el texto exact
 
 ![Configuración con las opciones de permisos y el estado de WhatsApp](/ayuda/capturas/evaluaciones/configuracion-whatsapp.webp "Valores iniciales y avisos por WhatsApp")
 
-## Niveles
+## Cómo ordenar los niveles jerárquicos
 
 1. En **Niveles jerárquicos** crea tus niveles (por ejemplo, Operativo, Supervisión, Gerencia) con su **Orden**.
 2. En **Asignar nivel a colaboradores** busca a cada persona y elige su nivel (o «Sin nivel»).
 3. Para borrar un nivel no debe tener colaboradores asignados.
 
-## Acceso al módulo
+## Cómo dar acceso al módulo a RH y Dirección
 
 En **Acceso de RH y Dirección** das acceso a más personas:
 

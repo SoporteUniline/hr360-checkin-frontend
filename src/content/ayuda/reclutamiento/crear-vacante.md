@@ -23,7 +23,17 @@ RH y el dueño.
 - Entra a **Reclutamiento y selección › Vacantes** y presiona **Nueva vacante** (o **Crear vacante** si aún no tienes).
 - Revisa tus **Catálogos** (**Reclutamiento y selección › Catálogos**): las sucursales y las modalidades. Vienen Presencial, Híbrida y Remota; con **Agregar modalidad** creas otra (por ejemplo, «En campo») y decides si requiere sucursal.
 
-## Paso 1 · Datos del puesto
+## Cómo crear una vacante
+
+El asistente tiene tres pasos:
+
+1. **Datos del puesto**: nombre, modalidad, sucursal, jornada, lugares, fecha de cierre, sueldo y descripción.
+2. **Formulario**: las preguntas que contesta el candidato al postularse.
+3. **Publicación**: revisa la vista previa, decide los avisos y presiona **Publicar vacante** (o **Guardar borrador**).
+
+Cada paso, en detalle:
+
+### Paso 1 · Datos del puesto
 
 1. **Nombre del puesto** (obligatorio), por ejemplo «Auxiliar administrativo».
 2. **Modalidad** (obligatoria).
@@ -38,7 +48,7 @@ RH y el dueño.
 
 > **Consejo:** Lo que escribas en **Acerca del puesto**, el sueldo, la dirección y la jornada es lo que el agente de WhatsApp usa para contestar dudas. Mientras más claro, mejor contesta.
 
-## Paso 2 · Formulario
+### Paso 2 · Formulario
 
 En **Tu formulario, a tu manera** armas lo que se pide al postularse por la página:
 
@@ -51,7 +61,7 @@ En **Tu formulario, a tu manera** armas lo que se pide al postularse por la pág
 
 Puedes tener hasta 30 preguntas.
 
-## Paso 3 · Publicación
+### Paso 3 · Publicación
 
 1. Revisa **Así está quedando tu vacante**: una vista previa de su página.
 2. En **Avisos de nuevas postulaciones** decide:

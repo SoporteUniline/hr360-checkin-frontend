@@ -156,3 +156,5 @@ Ahora vive aquí: las horas extra se autorizan en el reloj de cada día (botón 
 - [Cómo corregir varios días a la vez](/ayuda/asistencias/acciones-masivas)
 - [Cómo autorizar o no las horas extra del día](/ayuda/asistencias/autorizar-horas-extra)
 - [Cómo consultar y corregir entradas y salidas](/ayuda/asistencias/entradas-y-salidas)
+- [Cómo crear y calcular una nómina](/ayuda/nomina/crear-y-calcular-nomina)
+- [Cómo calcula ADAMIA la nómina](/ayuda/nomina/como-se-calcula-la-nomina)

@@ -30,7 +30,7 @@ Toca **Tareas** en la barra de abajo de tu app.
 
 Arriba ves tus **checklists** con su estado (por ejemplo «Antes de las 09:30 · 4 preguntas») y abajo tus tareas en tres pestañas: **Por hacer**, **En revisión** y **Hechas**.
 
-## Paso a paso: hacer una tarea
+## Cómo hacer una tarea
 
 1. Toca la tarea.
 2. Palomea cada **paso** conforme lo terminas.
@@ -40,7 +40,7 @@ Arriba ves tus **checklists** con su estado (por ejemplo «Antes de las 09:30 ·
 
 > **Importante:** No podrás mandarla a revisión si te faltan pasos o la foto. Tu jefe es quien la da por terminada.
 
-## Paso a paso: contestar un checklist
+## Cómo contestar un checklist
 
 1. Toca el checklist.
 2. Contesta cada pregunta (las que tienen asterisco son obligatorias). Si una no aplica ese día y lo permite, toca **No aplica**.

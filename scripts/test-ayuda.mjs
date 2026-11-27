@@ -18,9 +18,9 @@ import { indicePublico, leerAyuda, medidasImagen } from "../src/lib/ayuda/conten
 import { jsonSeguro, datosGuia } from "../src/lib/ayuda/seo.mjs";
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-// Cobertura: mientras las guías de los demás módulos se integran, las pantallas sin guía son ADVERTENCIA.
-// Cuando todas estén escritas, cambiar a true: entonces una pantalla nueva sin guía rompe el CI.
-export const COBERTURA_ESTRICTA = false;
+// Cobertura estricta (desde la integración de todos los bloques, 27/11/2026): una pantalla nueva sin guía, una guía
+// fuera de la plantilla, un aviso del frontmatter o una ruta de capacitación con una guía que no existe rompen el CI.
+export const COBERTURA_ESTRICTA = true;
 // Pantallas que NO necesitan guía (no son pantallas de trabajo). Cada una con su motivo.
 const EXCLUIDAS = new Map([
   ["/panel", "solo redirige a la primera pantalla (Muro o Monitor)"],
@@ -31,7 +31,8 @@ const EXCLUIDAS = new Map([
   ["/panel/reportes-personalizados/debug", "herramienta interna de desarrollo («NO incluir en sidebar ni en producción»)"],
   ["/panel/cotizaciones", "herramienta del administrador de ADAMIA, sin uso del cliente"],
   ["/panel/mensajes-sistema", "herramienta del administrador de ADAMIA, sin uso del cliente"],
-  ["/panel/reclutamiento/entrevistas", "maqueta vieja; el menú lleva a la agenda real (/panel/whatsapp?vista=entrevistas)"],
+  ["/panel/reclutamiento/entrevistas", "solo redirige a la agenda real de entrevistas (/panel/whatsapp?vista=entrevistas)"],
+  ["/panel/catalogos/cuentas-bancarias", "página vacía sin entrada en el menú del cliente (las cuentas de cada empleado van en su ficha, pestaña Cuentas bancarias)"],
   // Las páginas públicas con liga (/encuesta/[token], /buzon/[clave], /vacante/[slug], /postular/[token]) no entran en la
   // cobertura (solo se revisan /panel y /empleado): se explican dentro de las guías y no llevan botón «?».
 ]);
@@ -44,6 +45,10 @@ const PROHIBIDO = [
   [/\bhttp:\/\//, "enlace sin https"],
   [/\b(?:sk|pk)_(?:live|test)_[A-Za-z0-9]{6,}|AIza[0-9A-Za-z_-]{20,}|-----BEGIN/, "llave o credencial"],
 ];
+// Única excepción: la guía de Integraciones documenta la dirección base PÚBLICA de la API para clientes (la misma que
+// muestra la pantalla Ajustes › Integraciones y la página /desarrolladores). Se quita exactamente esa dirección (sin
+// nada más después) y solo en esa guía antes de revisar PROHIBIDO; cualquier otra «/api/» sigue fallando.
+const API_PUBLICA = { guia: "integraciones/llaves-de-api", re: /https:\/\/adamia\.com\.mx\/api\/integracion\/v1(?![\w/?#-]|\.\w)/g };
 // ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 const RAIZ = path.resolve(new URL("..", import.meta.url).pathname);
@@ -161,6 +166,21 @@ test("botón «?»: qué guía abre cada pantalla (exacta > prefijo más largo >
   const nomina = [{ slug: "n/nomina", pantallas: ["/panel/nomina"], orden: 10 }, { slug: "n/bonos", pantallas: ["/panel/nomina/bonos"], orden: 20 }];
   assert.deepEqual(guiasDePantalla(nomina, "/panel/nomina/5").map((g) => g.slug), ["n/nomina"], "prefijo: /panel/nomina/5 abre la guía de /panel/nomina");
   assert.deepEqual(guiasDePantalla(nomina, "/panel/nomina/bonos/3").map((g) => g.slug), ["n/bonos", "n/nomina"], "gana el prefijo más largo");
+  // Un comodín ([[...x]] / [...x]) cubre muchas pantallas: pierde ante la ruta exacta y ante un prefijo más largo;
+  // un segmento fijo gana a un [id] (/panel/comunicados/nuevo no abre la guía de /panel/comunicados/[id]).
+  const comodin = [
+    { slug: "e/todo", pantallas: ["/panel/evaluaciones/[[...secciones]]"], orden: 1 },
+    { slug: "e/camp", pantallas: ["/panel/evaluaciones/campanas"], orden: 20 },
+    { slug: "e/raiz", pantallas: ["/panel/evaluaciones"], orden: 30 },
+  ];
+  assert.deepEqual(guiasDePantalla(comodin, "/panel/evaluaciones").map((g) => g.slug), ["e/raiz", "e/todo"]);
+  assert.deepEqual(guiasDePantalla(comodin, "/panel/evaluaciones/campanas").map((g) => g.slug), ["e/camp", "e/todo", "e/raiz"]);
+  assert.deepEqual(guiasDePantalla(comodin, "/panel/evaluaciones/campanas/5").map((g) => g.slug), ["e/camp", "e/todo", "e/raiz"]);
+  assert.deepEqual(guiasDePantalla(comodin, "/panel/evaluaciones/plantillas").map((g) => g.slug), ["e/todo", "e/raiz"]);
+  assert.deepEqual(guiasDePantalla([comodin[0]], "/panel/evaluaciones").map((g) => g.slug), ["e/todo"], "solo el comodín: sí abre");
+  const fijo = [{ slug: "c/id", pantallas: ["/panel/comunicados/[id]"], orden: 1 }, { slug: "c/nuevo", pantallas: ["/panel/comunicados/nuevo"], orden: 50 }];
+  assert.deepEqual(guiasDePantalla(fijo, "/panel/comunicados/nuevo").map((g) => g.slug), ["c/nuevo", "c/id"]);
+  assert.deepEqual(guiasDePantalla(fijo, "/panel/comunicados/12").map((g) => g.slug), ["c/id"]);
   assert.equal(rutaDeArchivo("(public)/ayuda/[modulo]/page.jsx"), "/ayuda/[modulo]");
   assert.equal(rutaDeArchivo("panel/muro/Muro.jsx"), null);
   assert.equal(rutaRepresentativa("/panel/clima/[[...secciones]]"), "/panel/clima");
@@ -264,26 +284,32 @@ test("contenido: hay guías, módulos y rutas de capacitación", () => {
   assert.ok(ayuda.guias.length >= 10, `guías: ${ayuda.guias.length}`);
   assert.ok(ayuda.modulos.some((m) => m.slug === "comunicados") && ayuda.modulos.some((m) => m.slug === "primeros-pasos"));
   assert.ok(ayuda.rutas.length >= 3);
+  // Cada carpeta tiene su portada (index.md). La portada no abre con el botón «?»: sus «pantallas» van vacías.
+  assert.deepEqual(ayuda.modulos.filter((m) => !m.portada).map((m) => m.slug), [], "carpetas sin index.md");
+  assert.deepEqual(ayuda.modulos.filter((m) => m.portada?.pantallas?.length).map((m) => m.slug), [], "index.md con pantallas");
 });
 
 test("contenido: cada archivo tiene frontmatter válido y solo el subconjunto de Markdown", () => {
-  const errores = ayuda.problemas.filter((p) => p.nivel === "error").map((p) => `${p.archivo}${p.linea ? `:${p.linea}` : ""} — ${p.mensaje}`);
-  ayuda.problemas.filter((p) => p.nivel === "aviso").forEach((p) => avisar(`${p.archivo}: ${p.mensaje}`));
+  const errores = ayuda.problemas.filter((p) => p.nivel === "error" || (COBERTURA_ESTRICTA && p.nivel === "aviso")).map((p) => `${p.archivo}${p.linea ? `:${p.linea}` : ""} — ${p.mensaje}`);
+  if (!COBERTURA_ESTRICTA) ayuda.problemas.filter((p) => p.nivel === "aviso").forEach((p) => avisar(`${p.archivo}: ${p.mensaje}`));
   assert.deepEqual(errores, []);
   const slugs = ayuda.guias.map((g) => g.slug);
   assert.equal(new Set(slugs).size, slugs.length, "sin guías repetidas");
 });
 
-test("contenido: cada guía sigue la plantilla (para qué sirve, quién, antes, paso a paso, FAQ, qué pasa si, relacionado)", () => {
+test("contenido: cada guía sigue la plantilla (para qué sirve, quién, antes, cómo… con pasos, FAQ, qué pasa si, relacionado)", () => {
   const faltan = [];
   const SECCIONES = [/^para que sirve$/, /^quien la usa$/, /^antes de empezar$/, /^como /, /^preguntas frecuentes$/, /^que pasa si/, /^relacionado$/];
   const norm = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   for (const g of ayuda.guias) {
     const h2 = g.toc.map((s) => norm(s.texto));
     for (const re of SECCIONES) if (!h2.some((t) => re.test(t))) faltan.push(`${g.archivo}: falta «## ${re.source.replace(/[\^$]/g, "").replace(/^como $/, "Cómo …")}»`);
+    // Al menos una tarea «## Cómo …» con pasos numerados (también es lo que Google lee como HowTo).
+    if (!g.tareas.length) faltan.push(`${g.archivo}: ninguna sección «## Cómo …» tiene pasos numerados (1. 2. 3.)`);
+    if (g.toc.some((s) => /^paso a paso/.test(norm(s.texto)))) faltan.push(`${g.archivo}: usa «## Cómo …» en lugar de «## Paso a paso…»`);
   }
-  // Las guías de los demás bloques llegan en paralelo: la plantilla es advertencia, salvo en las de este bloque.
-  const propias = faltan.filter((f) => /\/(comunicados|primeros-pasos)\//.test(f));
+  // Estricta: todas las guías. Si no, solo las de Comunicados y Primeros pasos (las demás, advertencia).
+  const propias = COBERTURA_ESTRICTA ? faltan : faltan.filter((f) => /\/(comunicados|primeros-pasos)\//.test(f));
   faltan.filter((f) => !propias.includes(f)).forEach(avisar);
   assert.deepEqual(propias, []);
 });
@@ -333,11 +359,18 @@ test("contenido: «pantallas» existen en src/app y «fuentes» existen en el re
 test("contenido público: sin variables de entorno, direcciones internas ni llaves", () => {
   const malos = [];
   for (const x of [...ayuda.guias, ...ayuda.rutas]) {
-    const texto = [x.titulo, x.resumen, (x.palabras ?? []).join(" "), textoPlano(x.bloques)].join("\n");
+    const permitida = (t) => (x.slug === API_PUBLICA.guia ? t.replace(API_PUBLICA.re, "") : t);
+    const texto = permitida([x.titulo, x.resumen, (x.palabras ?? []).join(" "), textoPlano(x.bloques)].join("\n"));
     const enlaces = [];
-    recorrer(x.bloques, { enlace: (h) => enlaces.push(h), imagen: (s) => enlaces.push(s) });
+    recorrer(x.bloques, { enlace: (h) => enlaces.push(permitida(h)), imagen: (s) => enlaces.push(s) });
     for (const [re, motivo] of PROHIBIDO) if (re.test(texto) || enlaces.some((h) => re.test(h))) malos.push(`${x.archivo}: ${motivo}`);
   }
+  // La excepción es estrecha: otra ruta /api/ en la misma guía, o la misma dirección en otra guía, sí falla.
+  assert.equal("ver https://adamia.com.mx/api/integracion/v1 y listo".replace(API_PUBLICA.re, "").match(PROHIBIDO[1][0]), null);
+  assert.equal("es `https://adamia.com.mx/api/integracion/v1`. Compártela".replace(API_PUBLICA.re, "").match(PROHIBIDO[1][0]), null, "con punto final");
+  assert.ok(PROHIBIDO[1][0].test("https://adamia.com.mx/api/integracion/v1/empleados".replace(API_PUBLICA.re, "")), "una ruta más larga no se permite");
+  assert.ok(PROHIBIDO[1][0].test("https://adamia.com.mx/api/integracion/v1.json".replace(API_PUBLICA.re, "")), "otro archivo no se permite");
+  assert.ok(PROHIBIDO[1][0].test("https://adamia.com.mx/api/checador/x".replace(API_PUBLICA.re, "")), "otra /api/ no se permite");
   const indice = JSON.stringify(indicePublico(ayuda));
   assert.doesNotMatch(indice, /"fuentes"|src\/components|src\/app/, "el índice público no lleva las fuentes");
   assert.deepEqual(malos, []);

@@ -3,9 +3,9 @@ titulo: Clima laboral y NOM-035
 resumen: Mide cómo se siente tu gente con encuestas anónimas, cumple la NOM-035 y convierte los resultados en un plan de acción.
 modulo: clima
 audiencia: [rh, dueno, jefe, empleado]
-pantallas: [/panel/clima]
+pantallas: []
 palabras: [clima laboral, encuesta, nom-035, nom035, enps, riesgo psicosocial, anónima, plan de acción]
-orden: 0
+orden: 40
 actualizado: 2026-11-27
 fuentes: [src/components/clima/ModuloClima.jsx, src/components/Sidebar/nav-main.jsx, src/app/empleado/panel/mi-espacio/page.jsx, src/lib/clima/pendientes.mjs]
 ---

@@ -33,7 +33,7 @@ El número rojo dice cuántos avisos hay. Desde aquí felicitas en dos toques.
 - Para cumpleaños, la ficha debe tener **Fecha de nacimiento**; para aniversarios, **Fecha de ingreso**.
 - Para felicitar por WhatsApp, la ficha debe tener un **Teléfono** válido; para correo, un **Correo Notificaciones**.
 
-## Paso a paso: revisar los avisos
+## Cómo revisar los avisos
 
 1. Toca la **campana** (arriba, junto a «Reloj checador»).
 2. Verás los avisos agrupados en **Hoy**, **Mañana** y **Esta semana**.
@@ -42,7 +42,7 @@ El número rojo dice cuántos avisos hay. Desde aquí felicitas en dos toques.
 
 Abajo verás si hay felicitaciones automáticas, por ejemplo «Los cumpleaños se felicitan solos por correo a las 9:05 a. m.».
 
-## Paso a paso: felicitar a alguien
+## Cómo felicitar a alguien
 
 1. Toca `Felicitar` junto a la persona (en los avisos de hoy y mañana).
 2. Elige **WhatsApp** o **Correo** a la derecha para ver cómo le llegará.

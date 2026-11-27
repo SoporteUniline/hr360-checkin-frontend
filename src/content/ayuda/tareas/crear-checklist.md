@@ -27,7 +27,7 @@ Recursos Humanos y el dueño.
 - El módulo **Tareas y checklists** debe estar activo.
 - Ten tus **puestos** y **departamentos** bien capturados: se usan para asignar el checklist.
 
-## Paso a paso: crear el checklist
+## Cómo crear el checklist
 
 1. Toca `Nuevo checklist`.
 2. En **¿Cómo quieres empezar?** toca `Empezar en blanco` o copia uno que ya tengas.

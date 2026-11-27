@@ -26,7 +26,16 @@ RH y el dueño, desde el panel.
 
 ![Pantalla para lanzar una encuesta con los pasos quién contesta, cuándo y por dónde](/ayuda/capturas/clima/lanzar.webp "Lanzar «Clima general»: tres pasos y la barra de abajo con el total de personas")
 
-## Paso 1 · ¿Quién contesta?
+## Cómo lanzar la encuesta
+
+1. **¿Quién contesta?**: toda la empresa, por área o puesto, o personas específicas.
+2. **¿Cuándo?**: el día que abre, el día que cierra y los recordatorios.
+3. **¿Por dónde les llega?**: app del empleado, correo, WhatsApp y, en clima, al checar salida.
+4. **Programar**: revisa la barra de abajo y presiona **Programar encuesta**.
+
+Cada paso, en detalle:
+
+### Paso 1 · ¿Quién contesta?
 
 Elige una de tres opciones:
 
@@ -38,7 +47,7 @@ Abajo verás un resumen de tu selección y cuántas personas la recibirán. El n
 
 > **Ojo:** Si eliges grupos pequeños, aparece un aviso en ámbar: «Equipos pequeños (…): las respuestas no llevan nombre, pero RH podría deducir quién contestó». En la NOM-035 el aviso dice que las áreas con menos de 5 personas se verán solo juntas.
 
-## Paso 2 · ¿Cuándo?
+### Paso 2 · ¿Cuándo?
 
 1. **Abre**: el día en que empieza (por omisión, hoy).
 2. **Cierra**: el último día para contestar (por omisión, 10 días después). No puede ser antes del día que abre.
@@ -50,7 +59,7 @@ Debajo te dice qué días saldrán («Saldrán: 17/11, 19/11…»). Los recordat
 
 Si tu empresa todavía no tiene la actualización de canales, en lugar de los botones verás un solo campo **Recordatorio** con opciones como «A los 3 días, a quien no ha contestado».
 
-## Paso 3 · ¿Por dónde les llega?
+### Paso 3 · ¿Por dónde les llega?
 
 ![Canales de la encuesta: app del empleado, correo, WhatsApp y al checar salida](/ayuda/capturas/clima/lanzar-canales.webp "Los cuatro canales; WhatsApp manda una liga personal")
 
@@ -67,7 +76,7 @@ Sobre WhatsApp:
 - Si una persona no tiene teléfono o el mensaje no se puede entregar, se le manda por correo.
 - Los mensajes de WhatsApp salen de 9:00 a 21:00 (hora de tu empresa).
 
-## Paso 4 · Programar
+### Paso 4 · Programar
 
 Abajo verás una barra con el total de personas, el número de preguntas y si es anónima. Presiona **Programar encuesta**.
 

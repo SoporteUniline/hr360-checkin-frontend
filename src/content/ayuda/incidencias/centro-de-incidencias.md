@@ -98,3 +98,4 @@ Solo si además tiene una checada ese día (Conflicto). Si no, aparecen como inf
 - [Cómo autorizar o no las horas extra del día](/ayuda/asistencias/autorizar-horas-extra)
 - [Cómo marcar qué pasó un día sin checadas](/ayuda/asistencias/que-paso-y-motivo)
 - [Cómo generar el reporte de horas](/ayuda/reporte-horas/generar-reporte-de-horas)
+- [Cómo crear y calcular una nómina](/ayuda/nomina/crear-y-calcular-nomina)

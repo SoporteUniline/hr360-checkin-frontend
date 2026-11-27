@@ -3,9 +3,9 @@ titulo: Empleados — tu plantilla en una sola pantalla
 resumen: Consulta, busca, filtra y descarga a tu personal; desde aquí das de alta, editas, das de baja y entras a la ficha de cada persona.
 modulo: empleados
 audiencia: [rh, dueno]
-pantallas: [/panel/empleados]
+pantallas: []
 palabras: [empleados, plantilla, personal, lista, buscar, filtrar, columnas, descargar, excel, vistas guardadas, activos, inactivos]
-orden: 0
+orden: 25
 actualizado: 2026-11-27
 fuentes: [src/app/panel/empleados/page.jsx, src/app/panel/empleados/EmpleadosTable.jsx, src/app/panel/empleados/MobileEmpleadosView.jsx, src/components/tabla/ColumnasSelector.jsx, src/components/tabla/VistasGuardadas.jsx]
 ---
@@ -54,7 +54,7 @@ Arriba hay cuatro números: **Total empleados**, **Activos**, **Nuevos este mes*
 
 1. Escribe en **Buscar** el nombre de la persona. La lista se actualiza sola mientras escribes.
 2. Usa los encabezados de la tabla (**Nombre**, **Puesto**, **Unidad de negocio**, **Depto.** y **Estado**) para elegir uno o varios valores.
-3. Si tu empresa tiene [campos personalizados](/ayuda/catalogos/campos-personalizados) con filtro, también aparecen como filtros.
+3. Si tu empresa tiene [campos personalizados](/ayuda/campos-personalizados/crear-campos-personalizados) con filtro, también aparecen como filtros.
 4. Para volver a ver todo, toca `Limpiar`.
 
 > **Consejo:** Si siempre revisas el mismo grupo (por ejemplo, solo una unidad de negocio), guarda la búsqueda con **Vistas guardadas**. Se guarda en tu navegador, junto con las columnas que elegiste.

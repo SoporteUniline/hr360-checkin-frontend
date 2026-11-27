@@ -5,7 +5,7 @@ modulo: nomina
 audiencia: [rh, dueno, empleado]
 pantallas: []
 palabras: [nómina, nomina, pago, recibos, sueldo, bonos, préstamos, aguinaldo, finiquito, liquidación]
-orden: 1
+orden: 32
 actualizado: 2026-11-27
 fuentes: [src/components/nomina/ModuloNomina.jsx, src/lib/nomina/nomina.mjs, src/lib/modulos/catalogo.mjs, src/components/Sidebar/nav-main.jsx]
 ---

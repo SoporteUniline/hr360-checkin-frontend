@@ -27,7 +27,7 @@ Recursos Humanos y el dueño.
 - Si manejas varias empresas, ten claro a cuál pertenece el departamento: cada empresa tiene su propio catálogo.
 - Revisa que no exista ya con otro nombre parecido (usa el filtro **Nombre** de la tabla).
 
-## Paso a paso: crear un departamento
+## Cómo crear un departamento
 
 1. Toca `Nuevo departamento`.
 2. Elige la **Empresa**.
@@ -36,12 +36,12 @@ Recursos Humanos y el dueño.
 
 ![Ventana Nuevo departamento](/ayuda/capturas/catalogos/departamentos-nuevo.webp "Nuevo departamento")
 
-## Paso a paso: editar o eliminar
+## Cómo editar o eliminar un departamento
 
 1. En la fila, toca el lápiz (**Editar**), cambia el nombre y toca `Actualizar`.
 2. Para quitarlo, toca el bote (**Eliminar**) y confirma en **Eliminar departamento**. Esta acción no se puede deshacer.
 
-## Paso a paso: filtrar la tabla
+## Cómo filtrar la tabla
 
 Usa los encabezados **Nombre** y **Unidad de negocio** para elegir uno o varios valores. La tabla se pagina abajo.
 

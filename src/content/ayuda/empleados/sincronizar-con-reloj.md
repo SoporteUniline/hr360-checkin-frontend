@@ -24,7 +24,7 @@ Recursos Humanos y el dueño.
 - Las personas necesitan **Código de empleado** (NIP). Quien no lo tenga se cuenta como **Sin NIP** y no se manda.
 - El reloj debe estar **activo** y conectado a internet.
 
-## Paso a paso
+## Cómo sincronizar los empleados
 
 1. Entra a **Gestión de personal → Empleados**.
 2. Toca `Sincronizar con reloj`.

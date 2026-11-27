@@ -88,6 +88,6 @@ No. Los cambios aplican desde hoy. Haz el cambio el día que empiece el nuevo ho
 ## Relacionado
 
 - [Cómo asignar empleados a un turno](/ayuda/turnos/asignar-empleados-a-un-turno)
-- [Cómo programar un turno extra](/ayuda/turnos_extra/programar-un-turno-extra)
+- [Cómo programar un turno extra](/ayuda/turnos-extra/programar-un-turno-extra)
 - [Configuración del checador: tolerancias y jornada mínima](/ayuda/reloj-checador/configuracion-del-checador)
 - [Cómo revisar las horas de la semana contra el límite de la ley](/ayuda/asistencias/horas-de-ley)

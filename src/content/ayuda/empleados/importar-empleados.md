@@ -24,7 +24,7 @@ Recursos Humanos y el dueño.
 - Usa **siempre la plantilla que descargas de ADAMIA**: trae los catálogos y turnos disponibles de tu empresa.
 - Si vas a subir fotos, nombra cada foto con el **correo exacto** del empleado, por ejemplo `juan@empresa.com.jpg`. De preferencia fotos cuadradas.
 
-## Paso a paso
+## Cómo importar el Excel
 
 1. Entra a **Gestión de personal → Empleados** y toca `Importar empleados`.
 2. En **1. Descargar plantilla**, toca `Descargar`.

@@ -3,7 +3,7 @@ titulo: Mi firma y PIN — firma tus documentos en un paso
 resumen: Guarda tu firma una sola vez y crea un PIN secreto de 6 dígitos para firmar tus documentos desde el celular sin dibujar cada vez.
 modulo: empleados
 audiencia: [empleado, jefe]
-pantallas: [/empleado/panel/mi-firma, /empleado/panel/mi-espacio]
+pantallas: [/empleado/panel/mi-firma]
 palabras: [mi firma, pin, firmar, firma guardada, olvidé mi pin, cambiar pin, bloqueado, mi espacio]
 orden: 90
 actualizado: 2026-11-27
@@ -29,7 +29,7 @@ Entra a **Mi espacio** (abajo a la derecha) → **Mi firma y PIN**.
 
 ![Menú de Mi espacio en el celular](/ayuda/capturas/empleados/mi-espacio-menu.webp "Mi espacio: Mi firma y PIN, Mi rostro y más")
 
-## Paso a paso: guardar tu firma
+## Cómo guardar tu firma
 
 1. En **Mi firma**, toca `Registrar firma`.
 2. Dibuja tu firma con el dedo **como aparece en tus documentos**. En el celular se abre a pantalla completa para que tengas espacio.
@@ -39,7 +39,7 @@ Para cambiarla después, toca `Cambiar mi firma` y repite.
 
 ![Pantalla Mi firma y PIN con la firma guardada](/ayuda/capturas/empleados/mi-firma-y-pin.webp "Tu firma guardada y tu PIN")
 
-## Paso a paso: crear tu PIN
+## Cómo crear tu PIN
 
 1. En **Mi PIN secreto**, escribe tu **Nuevo PIN (6 dígitos)**.
 2. Escríbelo otra vez en **Escríbelo otra vez**.
@@ -53,7 +53,7 @@ Para cambiarla después, toca `Cambiar mi firma` y repite.
 
 > **Importante:** **Nadie más conoce tu PIN, ni Recursos Humanos.** No lo compartas.
 
-## Paso a paso: cambiar tu PIN
+## Cómo cambiar tu PIN
 
 1. Toca `Cambiar mi PIN`.
 2. Escribe tu **PIN actual**, luego el nuevo dos veces.
@@ -91,4 +91,4 @@ No. Para entrar usas tu correo y tu contraseña. El PIN solo sirve para firmar.
 ## Relacionado
 
 - [Cómo firmar un documento desde el celular](/ayuda/documentos/firmar-desde-el-celular)
-- [Mi rostro: regístralo para checar](/ayuda/empleados/mi-rostro)
+- [Mi rostro: regístralo para checar](/ayuda/reloj-checador/registrar-mi-rostro)

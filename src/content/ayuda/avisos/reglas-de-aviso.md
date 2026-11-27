@@ -1,6 +1,6 @@
 ---
 titulo: Reglas de aviso
-resumen: Activa y configura los correos automáticos de ADAMIA. Felicitaciones, reportes de cumpleaños y aniversarios, contratos por vencer, inasistencias y llegadas tarde, con su frecuencia y sus destinatarios.
+resumen: Activa y configura los correos automáticos de ADAMIA (felicitaciones, cumpleaños y aniversarios, contratos por vencer, inasistencias y retardos), con su frecuencia y destinatarios.
 modulo: avisos
 audiencia: [rh, dueno]
 pantallas: [/panel/reglas-aviso]

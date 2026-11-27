@@ -33,6 +33,14 @@ Entra a **Ausencias y permisos → Vacaciones → Planeación de vacaciones**.
   - **Mes**: una fila por persona con barras en sus días de vacaciones; cambia de mes con ‹ y ›. Los colores dicen el estado (Aprobado, Planeado o Solicitado).
   - **Tabla**: la lista con Empleado, Departamento, fechas, Días y Estado.
 
+## Cómo ver quién sale en un mes
+
+1. Elige el año en el rango de fechas.
+2. Si quieres, filtra por unidad, departamento o empleado (**Limpiar** quita los filtros).
+3. En la vista **Año**, toca el mes que te interesa: se abre en la vista **Mes**.
+4. Revisa las barras de cada persona y cambia de mes con ‹ y ›.
+5. Para una lista con fechas y días, cambia a la vista **Tabla**.
+
 ## Preguntas frecuentes
 
 ### ¿Qué es «Planeados»?

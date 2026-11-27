@@ -24,7 +24,7 @@ Cualquier empleado que recibe un enlace de firma.
 - Si abriste el enlace dentro de otra app (por ejemplo, desde un chat) y la cámara no funciona, ábrelo en **Safari** o **Chrome**.
 - Para firmar con PIN necesitas haber guardado tu firma y tu PIN en **Mi espacio → Mi firma y PIN**. Ve [Mi firma y PIN](/ayuda/empleados/mi-firma-y-pin).
 
-## Paso a paso: elegir cómo firmar
+## Cómo elegir cómo firmar
 
 Al abrir el enlace verás **¿Cómo quieres firmar?**:
 
@@ -33,7 +33,7 @@ Al abrir el enlace verás **¿Cómo quieres firmar?**:
 
 ![Pantalla para elegir cómo firmar](/ayuda/capturas/documentos/firmar-elegir-metodo.webp "Elige entre tu PIN o dibujar tu firma")
 
-## Paso a paso: firmar con tu PIN
+## Cómo firmar con tu PIN
 
 1. Toca **Firmar con mi PIN**.
 2. **Revisa tu documento.** Lee con calma; puedes ampliar el texto y recorrer todas las páginas.
@@ -49,7 +49,7 @@ Al abrir el enlace verás **¿Cómo quieres firmar?**:
 
 > **Consejo:** Tu PIN nunca se muestra ni se guarda en el documento.
 
-## Paso a paso: dibujar tu firma
+## Cómo firmar dibujando tu firma
 
 1. Toca **Dibujar mi firma**.
 2. Toca `Activar cámara` y permite el acceso. Coloca tu rostro dentro del recuadro, con buena luz. **Solo se toma una fotografía; no se graba audio ni video.**

@@ -47,7 +47,7 @@ Quitar la asignación no borra el horario que ya tenía. Para cambiarlo, asígna
 
 ### ¿Una persona puede tener dos turnos?
 
-No. Cada persona tiene un horario semanal. Si necesitas que trabaje tiempo adicional un día, usa un [turno extra](/ayuda/turnos_extra/programar-un-turno-extra).
+No. Cada persona tiene un horario semanal. Si necesitas que trabaje tiempo adicional un día, usa un [turno extra](/ayuda/turnos-extra/programar-un-turno-extra).
 
 ## Qué pasa si…
 
@@ -57,5 +57,6 @@ No. Cada persona tiene un horario semanal. Si necesitas que trabaje tiempo adici
 ## Relacionado
 
 - [Cómo crear o editar un turno](/ayuda/turnos/crear-un-turno)
-- [Cómo programar un turno extra](/ayuda/turnos_extra/programar-un-turno-extra)
+- [Cómo programar un turno extra](/ayuda/turnos-extra/programar-un-turno-extra)
 - [Cómo ver quién está trabajando ahora con el Monitor](/ayuda/monitor/usar-el-monitor)
+- [Cómo revisar y exportar las asistencias de un periodo](/ayuda/asistencias/revisar-asistencias)

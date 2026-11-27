@@ -12,7 +12,7 @@ fuentes: [src/lib/ia/creditos.mjs, src/components/ia/IndicadorCreditos.jsx, src/
 
 ## Para qué sirve
 
-Esta guía explica, desde la vista de quien usa Adamia AI, qué es el saldo que aparece en las pantallas con IA, qué pasa cuando se acaba y qué límites existen. La pantalla para comprar y revisar el historial de créditos está en **Ajustes › Créditos de Adamia AI**.
+Esta guía explica, desde la vista de quien usa Adamia AI, qué es el saldo que aparece en las pantallas con IA, qué pasa cuando se acaba y qué límites existen. Para comprar créditos y revisar su historial, ve [Créditos de Adamia AI](/ayuda/creditos-ia/creditos-de-adamia-ai) (**Ajustes › Créditos de Adamia AI**).
 
 ## Quién la usa
 
@@ -38,9 +38,13 @@ Junto a cada función con IA (el panel de Adamia AI, la caja «Créala con Adami
 
 Junto al indicador está el enlace **Ver créditos** o **Recargar**, que lleva a **Créditos de Adamia AI**.
 
-## Qué pasa cuando se acaba el saldo
+## Cómo seguir cuando se acaba el saldo
 
-En cualquier pantalla con IA aparece el aviso **Te quedaste sin créditos de Adamia AI** con el mensaje «Sin créditos de Adamia AI. Recarga para seguir usando la IA.» y dos botones: **Ahora no** y **Recargar créditos**. Tu saldo se actualiza en cuanto se confirma el pago y **lo que ya hiciste no se pierde**.
+En cualquier pantalla con IA aparece el aviso **Te quedaste sin créditos de Adamia AI** con el mensaje «Sin créditos de Adamia AI. Recarga para seguir usando la IA.».
+
+1. Presiona **Recargar créditos** (o **Ahora no** para cerrar el aviso).
+2. En **Créditos de Adamia AI** elige un paquete y paga. Ve [Cómo recargar](/ayuda/creditos-ia/creditos-de-adamia-ai#como-recargar).
+3. Regresa a la pantalla donde estabas. Tu saldo se actualiza en cuanto se confirma el pago y **lo que ya hiciste no se pierde**.
 
 En el panel de la Ley Federal del Trabajo, el aviso aparece dentro de la conversación con el enlace **Recargar créditos**.
 
@@ -74,7 +78,7 @@ Se muestra en pantalla y se le manda un correo al dueño una vez por recarga.
 
 ### …recargué y sigue diciendo «Sin créditos»
 
-El pago puede tardar en confirmarse (por ejemplo, en OXXO o transferencia). Revisa **Créditos de Adamia AI**.
+El pago puede tardar en confirmarse (por ejemplo, en OXXO o transferencia). Revisa el mensaje del pago en [Créditos de Adamia AI](/ayuda/creditos-ia/creditos-de-adamia-ai#como-recargar).
 
 ### …dice «Adamia AI no está activa en esta empresa»
 
@@ -82,5 +86,6 @@ El dueño debe activarla desde el botón **Adamia AI**.
 
 ## Relacionado
 
+- [Créditos de Adamia AI: saldo, recargas y movimientos](/ayuda/creditos-ia/creditos-de-adamia-ai)
 - [Qué es Adamia AI](/ayuda/adamia-ai/que-es-adamia-ai)
 - [Preguntar a la Ley Federal del Trabajo](/ayuda/adamia-ai/preguntar-a-la-ley)

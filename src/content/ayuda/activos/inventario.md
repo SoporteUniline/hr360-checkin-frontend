@@ -24,7 +24,7 @@ Recursos Humanos, el dueño y los usuarios del panel con acceso al módulo.
 
 Necesitas al menos una **ubicación** (almacén) y tus **categorías**. Si no tienes ubicación, el formulario te pide registrar una. Ve [Ajustes](/ayuda/activos/ajustes).
 
-## Paso a paso: registrar un artículo
+## Cómo registrar un artículo
 
 1. Entra a **Activos y uniformes → Inventario** y elige **Activos** o **Uniformes** arriba.
 2. Toca `Registrar activo` o `Registrar uniforme`.
@@ -42,7 +42,7 @@ Necesitas al menos una **ubicación** (almacén) y tus **categorías**. Si no ti
 
 ![Formulario para registrar un artículo](/ayuda/capturas/activos/registrar-articulo.webp "Datos del artículo")
 
-## Paso a paso: movimientos de un artículo
+## Cómo registrar los movimientos de un artículo
 
 1. En el inventario toca `Ver` en el artículo.
 2. En la **Ficha del artículo** tienes:
@@ -57,7 +57,7 @@ Abajo verás **Asignaciones actuales** (quién lo tiene), **Existencias por ubic
 
 ![Ficha de un artículo con sus movimientos](/ayuda/capturas/activos/ficha-del-articulo.webp "Ficha del artículo")
 
-## Paso a paso: buscar y exportar
+## Cómo buscar y exportar el inventario
 
 - Busca por **nombre, código, serie o talla**.
 - Filtra por estado (**Registros activos**, **Incluir archivados**, **Existencias bajas**) y por categoría.

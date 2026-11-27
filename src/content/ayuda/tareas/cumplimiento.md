@@ -22,7 +22,12 @@ Lo encuentras en **Checklists → Cumplimiento**.
 
 Recursos Humanos y el dueño.
 
-## Paso a paso
+## Antes de empezar
+
+- El módulo **Tareas y checklists** debe estar activo y tu gente debe tener checklists asignados. Ve [Cómo crear un checklist](/ayuda/tareas/crear-checklist).
+- Los envíos **por revisar** no cuentan hasta que se aprueban: revísalos primero en [Revisar](/ayuda/tareas/revisar-checklists).
+
+## Cómo revisar el cumplimiento
 
 1. Elige el periodo (por ejemplo **Esta quincena**).
 2. Filtra por checklist (o **Todos los checklists**) y por sucursal (o **Todas las sucursales**).

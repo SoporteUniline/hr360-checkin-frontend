@@ -27,7 +27,7 @@ Recursos Humanos y el dueño.
 - El documento debe estar **generado para un empleado** (ve [Cómo generar un documento](/ayuda/documentos/generar-documento)).
 - Si la persona va a firmar **con PIN**, debe tener su firma y PIN guardados en su app (ve [Mi firma y PIN](/ayuda/empleados/mi-firma-y-pin)). Si no, firmará dibujando.
 
-## Paso a paso: solicitar la firma
+## Cómo solicitar la firma
 
 1. En **Documentos emitidos**, busca el documento por folio, nombre o empleado.
 2. Toca el ojo para abrirlo.
@@ -41,7 +41,7 @@ Aparece **Firma pendiente** con el **enlace de firma**. Toca `Copiar enlace` y m
 
 > **Importante:** El enlace es **personal** y **vence en 72 horas**. ADAMIA no lo manda solo: tú se lo compartes.
 
-## Paso a paso: revisar si ya firmó
+## Cómo revisar si ya firmó
 
 1. Abre de nuevo el documento en **Documentos emitidos**.
 2. Verás uno de estos estados:

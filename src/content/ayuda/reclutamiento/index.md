@@ -3,9 +3,9 @@ titulo: Reclutamiento y selección
 resumen: Publica vacantes, recibe postulaciones por página y por WhatsApp con un agente que entrevista, lleva cada candidato por etapas y contrátalo en un clic.
 modulo: reclutamiento
 audiencia: [rh, dueno]
-pantallas: [/panel/reclutamiento]
+pantallas: []
 palabras: [reclutamiento, selección, vacantes, candidatos, bolsa de trabajo, whatsapp, agente, entrevista, contratar, dashboard de reclutamiento]
-orden: 0
+orden: 42
 actualizado: 2026-11-27
 fuentes: [src/components/reclutamiento/navigation.js, src/components/reclutamiento/RecruitmentDashboard.jsx, src/components/reclutamiento/RecruitmentModule.jsx, src/components/Sidebar/nav-main.jsx, src/lib/reclutamiento/model.js]
 ---
@@ -41,16 +41,7 @@ En el grupo **RECLUTAMIENTO Y SELECCIÓN** encontrarás:
 
 ## El dashboard
 
-Arriba elige la **vacante** (o todas) y el **periodo** (últimos 7, 30 o 90 días). Verás:
-
-- **Vacantes publicadas**, **Postulaciones recibidas**, **Candidatos por revisar** y **Contrataciones**.
-- **Tu proceso, de un vistazo**: cuántos hay en cada etapa.
-- **¿Qué sigue hoy?**: lo que conviene atender primero.
-- **Así llegan tus candidatos**: postulaciones por día.
-- **Tu próxima conversación**: la siguiente entrevista agendada.
-- **Vacantes en marcha** y **Últimos movimientos**.
-
-![Dashboard de reclutamiento con indicadores y etapas](/ayuda/capturas/reclutamiento/dashboard.webp "Dashboard de reclutamiento")
+La primera pantalla del módulo te dice qué está pasando y qué atender hoy. Ve [Cómo leer el dashboard de reclutamiento](/ayuda/reclutamiento/dashboard-de-reclutamiento).
 
 ## El camino completo
 

@@ -65,14 +65,7 @@ try {
   // ——— Mi espacio (teléfono) ———
   {
     const { ctx, page } = await contexto(browser, { base, ancho: 390, alto: 844, cookie: firmar("Empleado"), usuario: () => ANA, manejar });
-    await page.goto(base + "/empleado/panel/inicio", { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: /Hola, Ana/ }).waitFor({ timeout: 60000 });
-    await dormir(800);
-    await guardar(page, M, "mi-espacio-inicio-movil");
-    await page.goto(base + "/empleado/panel/mi-espacio", { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: "Mi espacio" }).waitFor({ timeout: 60000 });
-    await dormir(600);
-    await guardar(page, M, "mi-espacio-movil", { completa: true });
+    // Inicio y Mi espacio: sus guías (y capturas) están en mi-espacio/ (talento.mjs).
     await page.goto(base + "/empleado/panel/ayuda", { waitUntil: "domcontentloaded" });
     await page.locator("[data-pantalla='ayuda-app'] [data-guia-app]").first().waitFor({ timeout: 60000 });
     await guardar(page, M, "ayuda-movil");

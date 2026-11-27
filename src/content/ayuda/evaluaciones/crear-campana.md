@@ -24,7 +24,18 @@ Solo RH (y el dueño) puede programar campañas.
 - Revisa que tus empleados tengan **jefe inmediato** en su ficha: con eso ADAMIA propone las asignaciones.
 - Entra a **Evaluación de desempeño › Campañas** y presiona **Nueva evaluación**. Se abre un asistente de cuatro pasos. Puedes guardar un borrador en cualquier momento con **Guardar borrador**.
 
-## Paso 1 · Campaña y formato
+## Cómo crear una campaña
+
+El asistente tiene cuatro pasos:
+
+1. **Campaña y formato**: nombre, instrucciones, plantilla y periodo evaluado.
+2. **Participantes y modelo**: perspectivas, pesos y personas evaluadas.
+3. **Quién evalúa a quién**: la matriz de asignaciones.
+4. **Revisar y programar**: confidencialidad, fechas, publicación y **Iniciar campaña**.
+
+Cada paso, en detalle:
+
+### Paso 1 · Campaña y formato
 
 1. Escribe el **Nombre de la campaña** (por ejemplo, «Desempeño · Cuarto trimestre 2026»).
 2. Escribe las **Instrucciones para los evaluadores**.
@@ -33,7 +44,7 @@ Solo RH (y el dueño) puede programar campañas.
 
 ![Asistente Nueva evaluación en el paso Campaña y formato](/ayuda/capturas/evaluaciones/nueva-campana.webp "Paso 1 · Campaña y formato")
 
-## Paso 2 · Participantes y modelo
+### Paso 2 · Participantes y modelo
 
 1. En **¿Qué perspectivas quieres incluir?** elige un modelo. Cada uno trae pesos iniciales:
 
@@ -53,7 +64,7 @@ Solo RH (y el dueño) puede programar campañas.
 
 > **Consejo:** Los modelos son formatos iniciales. Revisa siempre las relaciones y sus pesos.
 
-## Paso 3 · Quién evalúa a quién
+### Paso 3 · Quién evalúa a quién
 
 1. Presiona **Proponer asignaciones**. ADAMIA arma la matriz con el organigrama real (jefe, pares, colaboradores y autoevaluación).
 2. Revisa la **Matriz de asignaciones**: evaluado, evaluador y relación. Filtra por **Persona evaluada** si son muchas.
@@ -61,7 +72,7 @@ Solo RH (y el dueño) puede programar campañas.
 
 Si cambias participantes o perspectivas, vuelve a presionar **Proponer asignaciones**.
 
-## Paso 4 · Revisar y programar
+### Paso 4 · Revisar y programar
 
 1. **Confidencialidad de la campaña**: marca **Agrupar resultados de pares** y **Agrupar resultados ascendentes** para ocultar autores y resultados individuales de esas perspectivas, y elige el **Mínimo de respuestas por grupo confidencial**.
 2. **Fechas y recordatorios**: elige **Disponible desde**, **Fecha límite para responder** y la **Zona horaria**. En **Recordatorios automáticos** marca 7 días antes, 3 días antes, 1 día antes o el día del cierre. En **Repetir campaña** elige No repetir, Cada trimestre, Cada mes o Cada año.

@@ -3,9 +3,9 @@ titulo: Tareas y checklists — cómo funcionan
 resumen: Tareas que se hacen una vez (con pasos, fecha y responsable) y checklists que se repiten cada día o semana y se califican solos. Así se conectan con tu equipo.
 modulo: tareas
 audiencia: [rh, dueno, jefe]
-pantallas: [/panel/tareas]
+pantallas: []
 palabras: [tareas, checklists, tablero, proyectos, revisar, cumplimiento, equipo, pendientes, kanban, calificación]
-orden: 0
+orden: 43
 actualizado: 2026-11-27
 fuentes: [src/components/tareas/ModuloTareas.jsx, src/components/tareas/Tablero.jsx, src/lib/tareas/reglas.mjs, src/components/Sidebar/nav-main.jsx]
 ---

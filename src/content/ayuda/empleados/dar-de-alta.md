@@ -26,7 +26,7 @@ Recursos Humanos y el dueño de la empresa.
 - Si manejas varias empresas, elige primero una empresa específica en el filtro **Unidad de negocio** de la lista. Con **Todas las empresas** el sistema no te deja crear.
 - El **correo** debe ser único: no puede repetirse con otro empleado de la empresa ni con un usuario del panel.
 
-## Paso a paso: registrar a la persona
+## Cómo registrar a la persona
 
 1. Entra a **Gestión de personal → Empleados**.
 2. Toca `Nuevo empleado`. Se abre la ficha en blanco con el cursor en **Nombre(s)**.
@@ -69,7 +69,7 @@ Recursos Humanos y el dueño de la empresa.
 - **Medio de pago:** Transferencia, Efectivo o Mixto. En Mixto escribe el **Monto por transferencia**; el resto del neto se paga en efectivo.
 - **Cuentas bancarias:** tipo (Cuenta o CLABE), banco y número. Si eliges **Otro**, escribe el nombre del banco. El número lleva entre 10 y 18 dígitos.
 
-## Paso a paso: si algo falta
+## Si falta un dato al registrar
 
 Si tocas `Registrar` y falta un dato, aparece un aviso amarillo con el problema y la ficha **te lleva sola a la pestaña donde está el error**, con el cursor en el campo.
 
@@ -107,3 +107,6 @@ Si tiene **Código de empleado** y tu empresa tiene relojes activos, se manda a 
 - [Cómo importar empleados desde Excel](/ayuda/empleados/importar-empleados)
 - [Catálogos base: departamentos, puestos y unidades de negocio](/ayuda/catalogos)
 - [Inducción digital](/ayuda/induccion)
+- [Cómo asignar empleados a un turno](/ayuda/turnos/asignar-empleados-a-un-turno)
+- [Cómo elegir la forma de checar de cada empleado](/ayuda/reloj-checador/como-checa-cada-empleado)
+- [Cómo invitar a un nuevo ingreso](/ayuda/induccion/invitar-nuevo-ingreso)

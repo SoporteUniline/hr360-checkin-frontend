@@ -8,7 +8,7 @@ guías (backend: `docs/adamia-ai.md`, «Cómo usar ADAMIA»).
 
 | Pieza | Dónde |
 | --- | --- |
-| Contenido (una carpeta por tema) | `src/content/ayuda/<carpeta>/<guia>.md` · `index.md` = portada del tema (opcional) |
+| Contenido (una carpeta por tema) | `src/content/ayuda/<carpeta>/<guia>.md` · `index.md` = portada del tema (obligatoria, `pantallas: []`; su `orden` ordena la carpeta en la portada) |
 | Rutas de capacitación | `src/content/ayuda/_rutas/<slug>.md` |
 | Capturas | `public/ayuda/capturas/<carpeta>/<nombre>.webp` (scripts en `scripts/capturas-ayuda/`) |
 | Lectura en el build | `src/lib/ayuda/contenido.mjs` (frontmatter, Markdown, tamaño de cada captura) |
@@ -29,8 +29,11 @@ guías (backend: `docs/adamia-ai.md`, «Cómo usar ADAMIA»).
 
 ### Qué guía abre el botón «?»
 1. Las guías cuyas `pantallas` coinciden EXACTO con la ruta (los segmentos `[id]` de Next encajan con cualquier valor).
+   Un segmento fijo gana a uno `[id]`: en `/panel/comunicados/nuevo` sale primero la guía de `nuevo` que la de `[id]`.
 2. Si no hay, la del prefijo más largo: `/panel/nomina` cubre `/panel/nomina/5`. `/panel`, `/empleado` y
-   `/empleado/panel` nunca cuentan como prefijo.
+   `/empleado/panel` nunca cuentan como prefijo. Un patrón con comodín (`/panel/evaluaciones/[[...secciones]]`) cuenta
+   como prefijo de sus segmentos fijos: sirve de guía «general» del módulo y pierde ante la ruta exacta
+   (`/panel/evaluaciones/campanas`) y ante un prefijo más largo.
 3. Empate (misma ruta): gana el `orden` más bajo. Las demás salen como «También en esta pantalla».
 4. Sin ninguna: el panel abre el buscador con las guías de la sesión.
 
@@ -46,8 +49,10 @@ guías (backend: `docs/adamia-ai.md`, «Cómo usar ADAMIA»).
 
 1. **Lee el código de la pantalla** (`src/app/...`, `src/components/...` y, si hace falta, el backend). Nada inventado:
    usa los textos EXACTOS de botones y campos.
-2. Crea `src/content/ayuda/<carpeta>/<guia>.md` (minúsculas, números y guiones). Un archivo que empieza con «_» no se
-   publica (borradores). Carpetas reservadas: `rutas`, `manual`, `buscar`, `capturas`.
+2. Crea `src/content/ayuda/<carpeta>/<guia>.md` (minúsculas, números y guiones; nunca «_» en carpetas). Un archivo que
+   empieza con «_» no se publica (borradores). Carpetas reservadas: `rutas`, `manual`, `buscar`, `capturas`. Cada carpeta
+   lleva su `index.md` (portada: `titulo`, `resumen`, `pantallas: []`, `orden`). Antes de crear una guía, busca si ya hay
+   una del mismo tema en otra carpeta: una sola guía canónica y, desde las demás, un enlace.
 3. Frontmatter (YAML simple: `clave: valor` y listas `[a, b]` en UNA línea; comentario al final con « # …»):
 
    ```
@@ -66,8 +71,10 @@ guías (backend: `docs/adamia-ai.md`, «Cómo usar ADAMIA»).
    Obligatorias: `titulo`, `resumen`, `modulo`, `audiencia`, `actualizado`, `fuentes`. `index.md` solo pide `titulo` y `resumen`.
    Una ruta (`_rutas/<slug>.md`) pide `titulo`, `resumen`, `audiencia` y `guias: [carpeta/guia, …]`.
 4. Secciones, en este orden: `## Para qué sirve` · `## Quién la usa` · `## Antes de empezar` · una `## Cómo …` por tarea
-   (lista numerada; se vuelve HowTo en Google) · `## Preguntas frecuentes` (cada una `### ¿…?`) · `## Qué pasa si…` ·
-   `## Relacionado`.
+   (lista numerada; se vuelve HowTo en Google; al menos una por guía y nunca «## Paso a paso: …») · `## Preguntas
+   frecuentes` (cada una `### ¿…?`) · `## Qué pasa si…` · `## Relacionado` (enlaza las guías de otros bloques que se
+   tocan: asistencias ↔ nómina, contratar ↔ inducción, ficha ↔ reloj…). Un asistente de varios pasos va como
+   `## Cómo …` con la lista de pasos y cada paso en `### Paso N · …`. `resumen` de 200 caracteres como máximo.
 5. **Markdown permitido (nada más; sin HTML):** `##`, `###`; párrafos; `**negritas**`, `*cursivas*`, `` `código corto` ``
    (se ve como botón); enlaces `[texto](/ayuda/carpeta/guia#ancla)`, a pantallas (`/panel/...`) o externos `https://`;
    listas `-` y `1.` con UN nivel de anidación (sangría de 2 a 5 espacios); imagen sola en su línea
@@ -79,22 +86,25 @@ guías (backend: `docs/adamia-ai.md`, «Cómo usar ADAMIA»).
    Torres»…). Copia el estilo de `scripts/capturas-ayuda/comunicados.mjs`: `levantarNext()`, `contexto()` con tu
    `manejar` y `guardar(page, carpeta, nombre, { objetivo })` (WebP calidad ~80, máx. ~200 KB; 1440×900 panel, 390×844
    celular). Corre el build antes: `NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build`, luego
-   `PLAYWRIGHT_MODULE_PATH=… node scripts/capturas-ayuda/<bloque>.mjs` y vuelve a compilar (el build guarda el ancho y alto
+   `PLAYWRIGHT_MODULE_PATH=… node scripts/capturas-ayuda/<bloque>.mjs` (`guardar(…, { recorte })` recorta un área de la
+   ventana, p. ej. arriba de un mapa de Google que no carga en la prueba) y vuelve a compilar (el build guarda el ancho y alto
    de cada captura). Nunca `playwright install` en local.
 7. **Nada interno en lo público:** ni variables de entorno, ni direcciones `/api/`, servidores internos, llaves o datos
-   reales. `test-ayuda` lo revisa.
+   reales. `test-ayuda` lo revisa. Única excepción (estrecha y comentada en `API_PUBLICA`): la guía de Integraciones
+   puede escribir la dirección base pública de la API para clientes, `https://adamia.com.mx/api/integracion/v1`, nada más.
+   Describe el comportamiento actual tal cual (p. ej., el reloj necesita internet); no opines sobre fallas.
 8. Corre `node --test scripts/test-ayuda.mjs`. Debe pasar sin errores; las advertencias dicen qué revisar.
 
 ## Pruebas
 - `node --test scripts/test-ayuda.mjs`: unidad (formato, Markdown, «?», búsqueda, avance, imágenes, JSON-LD) y el
   contenido real: frontmatter válido, imágenes, enlaces y anclas que existen, `pantallas` en `src/app`, `fuentes` en el
   repositorio, nada interno, plantilla de secciones y **cobertura**: cada página de `/panel` y `/empleado` debe tener una
-  guía (lista `EXCLUIDAS` comentada). `COBERTURA_ESTRICTA` (arriba del script) está en `false` mientras se integran las
-  guías de los demás bloques: las pantallas sin guía salen como advertencia. **Cambiarla a `true`** cuando todo esté
-  integrado. Vigencia: avisa si un archivo de `fuentes` cambió (git) después de `actualizado`.
+  guía (lista `EXCLUIDAS` comentada). `COBERTURA_ESTRICTA = true` (desde el 27/11/2026): una pantalla sin guía, una guía
+  fuera de la plantilla (incluida una «## Cómo …» con pasos numerados), un aviso del frontmatter, una carpeta sin
+  `index.md` o una ruta de capacitación con una guía que no existe rompen el CI. Vigencia: avisa (sin fallar) si un
+  archivo de `fuentes` cambió (git) después de `actualizado`.
 - `node scripts/verify-ayuda.mjs` (después del build): ver el encabezado del script. En el CI van después de la
   verificación de Comunicados (`.github/workflows/ci-dev.yml`).
 
 ## Pendiente
 - «¿Te sirvió?» y el avance de las rutas se guardan solo en el navegador (sin servidor todavía).
-- `COBERTURA_ESTRICTA = true` al terminar de integrar las guías de todos los bloques.

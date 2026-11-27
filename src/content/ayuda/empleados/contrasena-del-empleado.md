@@ -23,7 +23,7 @@ Recursos Humanos y el dueño, con permiso sobre ese empleado.
 - La persona ya debe estar registrada (no aplica en un alta todavía sin guardar).
 - Confirma que su **correo** en la ficha es correcto: es su usuario para entrar.
 
-## Paso a paso
+## Cómo cambiar la contraseña
 
 1. Entra a **Gestión de personal → Empleados**.
 2. En la fila de la persona, toca la **llave** de **Acciones** (o, dentro de su ficha, pestaña **Checador y acceso**, el botón `Cambiar contraseña`).

@@ -3,9 +3,9 @@ titulo: Gestión documental — tus documentos de RH en un solo lugar
 resumen: Cómo se conectan la biblioteca, las plantillas, los documentos generados, la firma electrónica, los contratos y las actas administrativas.
 modulo: documentos
 audiencia: [rh, dueno]
-pantallas: [/panel/gestion-documental/biblioteca]
+pantallas: []
 palabras: [gestión documental, documentos, plantillas, firma electrónica, contratos, actas, biblioteca, generar documento, expediente]
-orden: 0
+orden: 28
 actualizado: 2026-11-27
 fuentes: [src/components/Sidebar/nav-main.jsx, src/app/panel/gestion-documental/biblioteca/page.jsx, src/app/panel/gestion-documental/plantillas/page.jsx, src/app/panel/gestion-documental/generar/page.jsx, src/app/panel/gestion-documental/documentos/page.jsx]
 ---

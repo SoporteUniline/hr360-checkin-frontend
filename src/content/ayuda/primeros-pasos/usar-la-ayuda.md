@@ -41,6 +41,8 @@ Si la pantalla todavía no tiene una guía propia, el panel te muestra el buscad
 
 ![Ayuda en el panel con el buscador, las rutas de capacitación y las guías por tema](/ayuda/capturas/primeros-pasos/ayuda-panel.webp)
 
+![Ayuda en Mi espacio, en el celular, con el buscador y las guías para ti](/ayuda/capturas/primeros-pasos/ayuda-movil.webp "En Mi espacio, la ayuda muestra las guías para tu papel")
+
 ## Cómo seguir una ruta de capacitación
 
 Una ruta es una lista de guías en orden para aprender lo esencial, como «Primer día de RH» o «Empleado nuevo».
@@ -76,4 +78,4 @@ Por ahora tu respuesta se guarda solo en tu navegador. Si una guía no te sirvi�
 ## Relacionado
 
 - [Conoce el panel de Recursos Humanos](/ayuda/primeros-pasos/conoce-el-panel)
-- [Conoce Mi espacio](/ayuda/primeros-pasos/conoce-mi-espacio)
+- [Conoce tu espacio en ADAMIA](/ayuda/mi-espacio/conoce-tu-espacio)

@@ -76,6 +76,16 @@ Recomendación para RH y jefes: usa los resultados para conversar con el grupo y
 
 Un área con menos de 5 personas invitadas no se muestra sola: sus respuestas se juntan con las demás.
 
+## Cómo cuidar el anonimato de tu gente
+
+Lo que RH y los jefes pueden hacer, con lo que la pantalla ya ofrece:
+
+1. Al lanzar, si sale el aviso ámbar de **equipos pequeños**, elige grupos más grandes (por ejemplo, el área completa en lugar de un puesto) o toda la empresa.
+2. Espera a que la encuesta **cierre**: los resultados solo aparecen entonces.
+3. Lee los resultados de un grupo chico (menos de 10 respuestas) como una señal y conversa con todo el grupo; nunca busques a una persona.
+4. Pide a tu gente que **no ponga nombres** en los comentarios abiertos.
+5. Para quejas o denuncias, comparte el [buzón confidencial](/ayuda/clima/buzon-confidencial) en lugar de una encuesta.
+
 ## Buzón confidencial
 
 En el buzón de quejas no se guarda la dirección IP ni el usuario de quien escribe. La persona solo deja nombre y contacto si quiere. Del lado de RH, abrir una queja y cada cambio quedan en una bitácora con el nombre de quien lo hizo. Más detalle en [Buzón confidencial](/ayuda/clima/buzon-confidencial).

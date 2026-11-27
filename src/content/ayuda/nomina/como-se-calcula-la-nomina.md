@@ -24,7 +24,21 @@ Recursos Humanos y el dueño de la cuenta. Para el empleado, el recibo en PDF mu
 
 El cálculo usa lo que hay en la ficha del empleado (pestaña **Datos de nómina**: periodo de pago, sueldo, medio de pago y, si es mixto, cuánto va por transferencia; además sus horas por día) y lo que hay en **Asistencias** (horario, checadas, faltas, permisos, festivos y horas extra autorizadas).
 
-## Paso 1. Los días pagados
+## Cómo calcula ADAMIA cada recibo
+
+Para cada persona, ADAMIA sigue siempre el mismo orden:
+
+1. Cuenta los **días pagados** del periodo.
+2. Calcula el **sueldo** de esos días.
+3. Suma **lo que se paga de más** (horas extra autorizadas, prima dominical, festivos o descansos trabajados y bono de desempeño).
+4. Resta **lo que se descuenta** (horas no trabajadas o no repuestas, abonos a préstamos y descuentos del catálogo).
+5. Aplica los **retardos**.
+6. Aplica los **bonos y descuentos del catálogo**.
+7. Calcula el **neto** y lo reparte entre transferencia y efectivo.
+
+Cada paso, en detalle:
+
+### Paso 1. Los días pagados
 
 ADAMIA revisa cada día del periodo, solo dentro de las fechas en que la persona estuvo activa:
 
@@ -41,7 +55,7 @@ ADAMIA revisa cada día del periodo, solo dentro de las fechas en que la persona
 
 > **Ojo:** Si la persona no tiene ningún horario capturado, ADAMIA le paga todos sus días activos y te avisa «No tiene horario: se pagaron todos sus días activos. Revísalo.».
 
-## Paso 2. El sueldo
+### Paso 2. El sueldo
 
 Depende del periodo de pago de la ficha:
 
@@ -57,7 +71,7 @@ Ejemplo con un sueldo semanal de $2,100.00 y 5.83 días pagados en una nómina d
 
 **El sueldo diario** (para horas extra, primas y descuentos por horas) se obtiene dividiendo el sueldo entre 7 si es semanal, 14 si es catorcenal, 15 si es quincenal y 30 si es mensual. La **tarifa por hora** es el diario entre las horas por día de su ficha (8 si no tiene).
 
-## Paso 3. Lo que se paga de más
+### Paso 3. Lo que se paga de más
 
 | Concepto en el recibo | Cuándo aparece | Cuánto |
 | --- | --- | --- |
@@ -70,7 +84,7 @@ Ejemplo con un sueldo semanal de $2,100.00 y 5.83 días pagados en una nómina d
 
 > **Importante:** Solo cuentan las horas extra **autorizadas** en Asistencias. Si alguien se quedó más tiempo pero nadie lo autorizó, no se paga como extra.
 
-## Paso 4. Lo que se descuenta
+### Paso 4. Lo que se descuenta
 
 | Concepto en el recibo | De dónde sale |
 | --- | --- |
@@ -83,11 +97,11 @@ Los permisos de unas horas marcados como «se reponen» o «se pagan» **no** de
 
 **Préstamos.** Cada préstamo vigente agrega el renglón «Abono a préstamo #N». El importe es el **menor** de tres: el abono pactado, el saldo pendiente y el 30 % de lo que la persona gana en el periodo por arriba del salario mínimo de sus días pagados (límite de la ley). Si el límite recorta el abono, el renglón lo explica en una nota.
 
-## Paso 5. Los retardos
+### Paso 5. Los retardos
 
 **Los retardos no descuentan sueldo.** Solo hacen que un bono condicionado a puntualidad salga en $0. Un retardo se cuenta igual que en Asistencias: llegar después del horario (o de la hora de su permiso para llegar tarde) más la tolerancia de la empresa.
 
-## Paso 6. Los bonos y descuentos del catálogo
+### Paso 6. Los bonos y descuentos del catálogo
 
 Cada bono o descuento asignado a la persona aparece con su valor (el valor propio de la persona, si tiene uno; si no, el valor sugerido):
 
@@ -99,7 +113,7 @@ Cada bono o descuento asignado a la persona aparece con su valor (el valor propi
 
 Los permisos sin goce no cuentan como faltas para los bonos «sin faltas».
 
-## Paso 7. Neto y reparto
+### Paso 7. Neto y reparto
 
 **Neto = percepciones − descuentos.** Después se reparte según el **medio de pago** de la ficha:
 
@@ -143,3 +157,7 @@ Sí, en borrador. Escribe el nuevo importe y, de preferencia, el motivo. Si reca
 - [Cómo revisar y ajustar los recibos](/ayuda/nomina/revisar-y-ajustar-recibos)
 - [Cómo crear bonos y descuentos](/ayuda/nomina/bonos-y-descuentos)
 - [Cómo manejar préstamos a empleados](/ayuda/nomina/prestamos)
+- [Cómo revisar y exportar las asistencias de un periodo](/ayuda/asistencias/revisar-asistencias)
+- [Cómo autorizar o no las horas extra del día](/ayuda/asistencias/autorizar-horas-extra)
+- [Cómo controlar las horas por reponer](/ayuda/asistencias/horas-por-reponer)
+- [Cómo revisar y resolver incidencias antes de la prenómina](/ayuda/incidencias/centro-de-incidencias)

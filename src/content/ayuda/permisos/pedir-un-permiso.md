@@ -79,3 +79,4 @@ Sí, eligiendo **Vacaciones** en «Qué pasó». Ver [Cómo pedir vacaciones](/a
 - [Cómo pedir vacaciones](/ayuda/vacaciones/pedir-vacaciones)
 - [Permisos por horas: llegar tarde, salir antes o salir y regresar](/ayuda/permisos/permisos-por-horas)
 - [Cómo ver mis asistencias](/ayuda/asistencias/mis-asistencias)
+- [Cómo aprobar las solicitudes de mi equipo](/ayuda/solicitudes-equipo/aprobar-solicitudes-de-mi-equipo)

@@ -18,7 +18,7 @@ Si tu empresa checa con **Facial**, **Ambos** o **Código y cara**, el reloj nec
 
 ## Quién la usa
 
-Recursos Humanos y el dueño. La persona también puede registrarlo ella misma desde su app: ve [Mi rostro](/ayuda/empleados/mi-rostro).
+Recursos Humanos y el dueño. La persona también puede registrarlo ella misma desde su app: ve [Mi rostro](/ayuda/reloj-checador/registrar-mi-rostro).
 
 ## Antes de empezar
 
@@ -32,14 +32,14 @@ Abre la ficha → pestaña **Checador y acceso** → bloque **Reconocimiento fac
 
 ![Bloques de rostro, firma y PIN en la ficha del empleado](/ayuda/capturas/empleados/ficha-rostro-firma-pin.webp "Consentimiento, Firma y PIN y Reconocimiento facial")
 
-## Paso a paso: con la cámara de la computadora
+## Cómo registrarlo con la cámara de la computadora
 
 1. Toca `Registrar rostro` (o `Volver a registrar` si ya tenía).
 2. Pide a la persona que siga las indicaciones: mirar al frente, subir y bajar un poco la cara y girarla un poco a cada lado. **Las 5 fotos se toman solas.**
 3. Cuando termine verás «5 fotos tomadas. Se guardan al guardar la ficha.»
 4. Toca `Guardar` en la ficha. Sin este paso, el rostro **no** se guarda.
 
-## Paso a paso: desde el celular de la persona (QR)
+## Cómo registrarlo desde el celular de la persona (QR)
 
 Es lo más fácil cuando la cámara de la computadora no ayuda.
 
@@ -50,7 +50,7 @@ Es lo más fácil cuando la cámara de la computadora no ayuda.
 
 > **Ojo:** El enlace **vence en 15 minutos** y **sirve una sola vez**. Si vence, toca `Generar otro`. Generar uno nuevo anula el anterior.
 
-## Paso a paso: probar el rostro
+## Cómo probar el rostro
 
 1. Con el rostro ya guardado, toca `Probar rostro`.
 2. La persona mira a la cámara. ADAMIA lo compara con el rostro guardado usando **la misma regla del checador**.
@@ -60,7 +60,7 @@ Es solo una prueba: **no se guarda nada**. Se compara con el rostro guardado, no
 
 Debajo verás **Fotos registradas** y **Últimos intentos que no lo reconocieron**. Si dice que se registró con una sola foto, vuelve a registrarlo con las 5 posiciones: lo reconocerá mejor.
 
-## Paso a paso: consentimiento del rostro
+## Cómo pedir el consentimiento del rostro
 
 El rostro es un **dato sensible**. El consentimiento **no es obligatorio para checar**, pero es la constancia de que la persona lo aceptó.
 
@@ -95,6 +95,7 @@ No con el enlace del celular: solo para personas activas.
 
 ## Relacionado
 
-- [Mi rostro (para empleados)](/ayuda/empleados/mi-rostro)
+- [Mi rostro (para empleados)](/ayuda/reloj-checador/registrar-mi-rostro)
 - [La ficha del empleado y sus 5 pestañas](/ayuda/empleados/ficha-del-empleado)
 - [Firma y PIN del empleado: qué puede hacer RH](/ayuda/empleados/firma-y-pin-del-empleado)
+- [Cómo elegir la forma de checar de cada empleado](/ayuda/reloj-checador/como-checa-cada-empleado)

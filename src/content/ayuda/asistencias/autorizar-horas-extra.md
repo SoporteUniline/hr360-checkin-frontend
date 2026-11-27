@@ -99,7 +99,7 @@ Regístralo en **Horas por reponer** con **Registrar reposición**. Así no se p
 
 ### ¿Y si programé un turno extra?
 
-Las horas de un [turno extra](/ayuda/turnos_extra/programar-un-turno-extra) quedan autorizadas como extra desde que se programan.
+Las horas de un [turno extra](/ayuda/turnos-extra/programar-un-turno-extra) quedan autorizadas como extra desde que se programan.
 
 ## Qué pasa si…
 
@@ -113,5 +113,6 @@ Las horas de un [turno extra](/ayuda/turnos_extra/programar-un-turno-extra) qued
 - [Cómo corregir la checada de un día](/ayuda/asistencias/corregir-checada-del-dia)
 - [Cómo revisar las horas de la semana contra la ley](/ayuda/asistencias/horas-de-ley)
 - [Centro de incidencias](/ayuda/incidencias/centro-de-incidencias)
-- [Cómo programar un turno extra](/ayuda/turnos_extra/programar-un-turno-extra)
+- [Cómo programar un turno extra](/ayuda/turnos-extra/programar-un-turno-extra)
 - [Cómo generar el reporte de horas](/ayuda/reporte-horas/generar-reporte-de-horas)
+- [Cómo calcula ADAMIA la nómina](/ayuda/nomina/como-se-calcula-la-nomina)

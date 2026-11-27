@@ -23,7 +23,7 @@ Recursos Humanos, el dueño y los usuarios del panel con acceso al módulo.
 - El artículo debe estar en el **Inventario** con existencias disponibles.
 - Para entregar uniformes más rápido, registra las **tallas** de la persona y arma **paquetes por puesto** (ve [Ajustes](/ayuda/activos/ajustes)).
 
-## Paso a paso: encontrar a la persona
+## Cómo encontrar a la persona
 
 1. Entra a **Activos y uniformes → Personas**.
 2. Busca por nombre o puesto y toca `Abrir`.
@@ -35,7 +35,7 @@ Recursos Humanos, el dueño y los usuarios del panel con acceso al módulo.
 
 > **Consejo:** En **Tallas del empleado** registra su **Talla de uniforme**, **Talla de pantalón** y **Sistema de calzado** y toca `Guardar tallas`.
 
-## Paso a paso: hacer una entrega
+## Cómo hacer una entrega
 
 1. En la persona toca `Entregar` (o en Inicio toca **Entregar**).
 2. **1. Empleado y modalidad:** confirma al **Empleado** y elige la **Modalidad**:
@@ -58,7 +58,7 @@ El resguardo es el documento de entrega: folio, fecha, artículos, condición y 
 
 La persona lo ve en su app y toca `Confirmar recepción` o `Reportar diferencia` si algo no coincide. Mientras no responda, la entrega aparece como **Pendiente de acuse**; si reporta un problema, como **Con diferencia**.
 
-## Paso a paso: recibir una devolución
+## Cómo recibir una devolución
 
 1. En la persona toca `Recibir devolución` (o en Inicio **Recibir devolución**).
 2. Elige al empleado si hace falta.
@@ -73,13 +73,13 @@ La persona lo ve en su app y toca `Confirmar recepción` o `Reportar diferencia`
 
 > **Importante:** ADAMIA **no hace descuentos automáticos** a la persona por daños o pérdidas.
 
-## Paso a paso: cambio de talla
+## Cómo hacer un cambio de talla
 
 1. En la persona, en **Uniformes entregados**, toca `Cambiar talla` en la prenda.
 2. Elige la **Nueva prenda / variante disponible** y la **Condición de la prenda recibida**.
 3. Toca `Confirmar cambio`. La recepción de la prenda anterior y la entrega de la nueva se registran juntas.
 
-## Paso a paso: revertir una entrega hecha por error
+## Cómo revertir una entrega hecha por error
 
 1. Abre el resguardo.
 2. Toca **Revertir entrega por error** y confirma.

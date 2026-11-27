@@ -131,5 +131,5 @@ Sí. Cuando abres una publicación (o cierras su aviso emergente), queda como vi
 ## Relacionado
 
 - [Cómo publicar en el muro desde Mi espacio](/ayuda/comunicados/publicar-desde-mi-espacio)
-- [Conoce Mi espacio](/ayuda/primeros-pasos/conoce-mi-espacio)
+- [Conoce tu espacio en ADAMIA](/ayuda/mi-espacio/conoce-tu-espacio)
 - [Confirmación de lectura y seguimiento](/ayuda/comunicados/confirmacion-y-seguimiento) (para Recursos Humanos)

@@ -25,6 +25,7 @@ Cada llave **solo ve una empresa** y **solo lo que le permitas**.
 - Entra por **Ajustes → Integraciones**. Si tienes varias empresas, elige la empresa: cada una tiene sus propias llaves.
 - Ten claro qué necesita hacer el otro sistema para darle solo esos permisos.
 - La documentación técnica está en la página pública para desarrolladores: [adamia.com.mx/desarrolladores](https://adamia.com.mx/desarrolladores). También la abres con **Ver documentación**.
+- Arriba, en **API de ADAMIA v1**, ves la dirección base que usa el otro sistema: `https://adamia.com.mx/api/integracion/v1`. Compártela con quien programa la conexión junto con la documentación.
 
 ![Pantalla de integraciones con llaves](/ayuda/capturas/integraciones/integraciones-llaves.webp "La API, la lista de llaves con su estado y el uso reciente")
 

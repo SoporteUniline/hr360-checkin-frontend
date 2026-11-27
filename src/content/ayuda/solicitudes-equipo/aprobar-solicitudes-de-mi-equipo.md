@@ -95,3 +95,5 @@ Lo mismo que cuando RH aprueba en Permisos: los días quedan marcados en Asisten
 - [Monitor de mi equipo (para jefes)](/ayuda/monitor/monitor-de-mi-equipo)
 - [Panel de vacaciones](/ayuda/vacaciones/panel-de-vacaciones)
 - [Planeación de vacaciones](/ayuda/vacaciones/planeacion-de-vacaciones)
+- [Cómo pedir un permiso desde tu celular](/ayuda/permisos/pedir-un-permiso)
+- [Cómo pedir vacaciones](/ayuda/vacaciones/pedir-vacaciones)

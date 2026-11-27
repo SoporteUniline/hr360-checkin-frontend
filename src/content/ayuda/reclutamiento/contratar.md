@@ -82,3 +82,6 @@ Tu empresa no tiene Inducción digital encendida o no tiene una plantilla de ind
 - [Candidatos y selección](/ayuda/reclutamiento/candidatos-y-seleccion)
 - [Conversaciones de WhatsApp](/ayuda/reclutamiento/conversaciones-de-whatsapp)
 - [Reclutamiento: visión general](/ayuda/reclutamiento)
+- [Cómo invitar a un nuevo ingreso](/ayuda/induccion/invitar-nuevo-ingreso)
+- [Cómo revisar documentos y dar de alta a un nuevo ingreso](/ayuda/induccion/revisar-y-dar-de-alta)
+- [La ficha del empleado — sus 5 pestañas y cómo editarla](/ayuda/empleados/ficha-del-empleado)

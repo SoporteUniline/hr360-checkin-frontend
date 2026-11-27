@@ -57,15 +57,21 @@ Presiona **PDF de campaña** para bajar el informe con el diseño de ADAMIA.
 
 ## Cómo mandar recordatorios
 
-En una campaña **Activa** presiona **Recordar pendientes** y confirma. El servidor programa los avisos a los evaluadores que no han enviado. Si tu empresa encendió los avisos por WhatsApp, también les llega por ahí (ver [Configuración](/ayuda/evaluaciones/configuracion)).
+1. Abre una campaña **Activa**.
+2. Presiona **Recordar pendientes** y confirma.
+
+ADAMIA programa los avisos a los evaluadores que no han enviado. Si tu empresa encendió los avisos por WhatsApp, también les llega por ahí (ver [Configuración](/ayuda/evaluaciones/configuracion)).
 
 ## Cómo ampliar el plazo
 
-Presiona **Ampliar plazo**, elige la **Nueva fecha límite**, escribe el **Motivo** y confirma.
+1. Presiona **Ampliar plazo**.
+2. Elige la **Nueva fecha límite** y escribe el **Motivo**.
+3. Confirma.
 
 ## Cómo cerrar la campaña
 
-Presiona **Cerrar campaña**, escribe el motivo y confirma. Ya nadie podrá enviar evaluaciones.
+1. Presiona **Cerrar campaña**.
+2. Escribe el motivo y confirma. Ya nadie podrá enviar evaluaciones.
 
 > **Ojo:** Si cierras una campaña incompleta, la calificación final de quien no tenga todas sus respuestas queda vacía, salvo que en Configuración se haya encendido «Al cerrar incompleta, calcular con lo respondido».
 

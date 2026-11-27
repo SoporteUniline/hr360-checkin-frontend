@@ -117,3 +117,4 @@ En el **Inicio** de su app, en la tarjeta **Tiempo por reponer**; con **Ver de d
 - [Permisos por horas: llegar tarde, salir antes o salir y regresar](/ayuda/permisos/permisos-por-horas)
 - [Cómo registrar que alguien llegó tarde o salió antes con permiso](/ayuda/asistencias/permiso-del-dia)
 - [Cómo autorizar o no las horas extra del día](/ayuda/asistencias/autorizar-horas-extra)
+- [Cómo calcula ADAMIA la nómina](/ayuda/nomina/como-se-calcula-la-nomina)

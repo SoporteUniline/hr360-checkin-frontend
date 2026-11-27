@@ -36,7 +36,7 @@ Tienes dos entradas al mismo expediente:
 
 Arriba ves los contadores **Cargados**, **Vigentes**, **Por vencer**, **Vencidos** y **Obligat.** (obligatorios), y la **Completitud** del expediente.
 
-## Paso a paso: subir un documento
+## Cómo subir un documento
 
 1. En el expediente toca `Cargar`.
 2. Arrastra el archivo o toca **Toca para seleccionar archivo**.
@@ -46,14 +46,14 @@ Arriba ves los contadores **Cargados**, **Vigentes**, **Por vencer**, **Vencidos
 6. Si quieres, agrega **Fecha emisión** y **Notas**.
 7. Toca `Subir documento`. Verás «Documento subido correctamente».
 
-## Paso a paso: buscar, ver y eliminar
+## Cómo buscar, ver y eliminar un documento
 
 - Filtra por categoría con los botones de arriba, escribe en **Buscar documento…** o elige un estatus: Vigente, Sin vencimiento, **Por vencer (30 días)** o Vencido.
 - Toca el ojo (**Ver documento**) para abrirlo. Queda registrado en la bitácora que lo viste.
 - Toca **Bitácora** para ver quién subió, vio o cambió el documento y cuándo.
 - Toca el bote (**Eliminar**) y confirma. **Se elimina permanentemente.**
 
-## Paso a paso: administrar categorías
+## Cómo administrar las categorías
 
 1. Toca `Categorías`.
 2. Para crear una, escribe el **Nombre**, elige un **Color** y toca `Crear categoría`.

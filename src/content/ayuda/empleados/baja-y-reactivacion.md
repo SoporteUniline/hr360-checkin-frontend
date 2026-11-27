@@ -25,7 +25,7 @@ Recursos Humanos y el dueño.
 - Ten claro el **motivo de la baja** (renuncia voluntaria, despido, fin de contrato, etc.). Es obligatorio.
 - La baja se registra **con la fecha de hoy**.
 
-## Paso a paso: dar de baja
+## Cómo dar de baja a un empleado
 
 1. Entra a **Gestión de personal → Empleados**.
 2. Busca a la persona en la pestaña **Activos**.
@@ -38,7 +38,7 @@ Recursos Humanos y el dueño.
 
 ![Ventana para dar de baja con el motivo escrito](/ayuda/capturas/empleados/dialogo-dar-de-baja.webp "El motivo de la baja es obligatorio")
 
-## Paso a paso: reactivar
+## Cómo reactivar a un empleado
 
 1. En **Empleados**, abre la pestaña **Inactivos**.
 2. En **Acciones**, toca el escudo verde (**Reactivar**).

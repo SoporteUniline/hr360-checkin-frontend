@@ -2,6 +2,7 @@
 titulo: Primeros pasos
 resumen: Entra a ADAMIA, conoce el panel de Recursos Humanos y Mi espacio, trabaja con varias empresas y aprende a usar esta ayuda.
 orden: 1
+pantallas: []
 ---
 Si es tu primer día con ADAMIA, empieza aquí. En pocos minutos sabrás entrar, moverte por el menú y encontrar ayuda en cualquier pantalla con el botón **?**.
 

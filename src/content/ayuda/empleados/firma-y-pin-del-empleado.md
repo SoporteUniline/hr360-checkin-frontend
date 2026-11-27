@@ -24,7 +24,7 @@ Recursos Humanos y el dueño.
 
 La persona debe estar registrada. La firma y el PIN los crea ella desde **Mi espacio → Mi firma y PIN**; mándale la guía [Mi firma y PIN](/ayuda/empleados/mi-firma-y-pin).
 
-## Paso a paso: revisar el estado
+## Cómo revisar el estado
 
 1. Abre la ficha de la persona.
 2. Ve a la pestaña **Checador y acceso** y baja hasta **Firma y PIN**.
@@ -34,7 +34,7 @@ La persona debe estar registrada. La firma y el PIN los crea ella desde **Mi esp
 
 ![Secciones Consentimiento del rostro, Firma y PIN y Reconocimiento facial en la ficha](/ayuda/capturas/empleados/ficha-rostro-firma-pin.webp "Firma y PIN, al centro")
 
-## Paso a paso: desbloquear el PIN
+## Cómo desbloquear el PIN
 
 Úsalo cuando la persona se equivocó varias veces y su PIN quedó bloqueado, pero **sí lo recuerda**.
 
@@ -43,7 +43,7 @@ La persona debe estar registrada. La firma y el PIN los crea ella desde **Mi esp
 
 Se quita el bloqueo por intentos fallidos. **El PIN no cambia** y tú no lo ves. Queda registrado que lo desbloqueaste.
 
-## Paso a paso: restablecer el PIN
+## Cómo restablecer el PIN
 
 Úsalo cuando la persona **olvidó** su PIN.
 

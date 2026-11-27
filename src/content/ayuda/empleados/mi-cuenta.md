@@ -25,13 +25,13 @@ Cualquier usuario del panel (RH, dueño y usuarios con acceso). La pestaña **Mi
 - Tu **correo** es con el que entras al panel. Si lo cambias, a partir de ese momento entras con el nuevo.
 - Si manejas varias empresas, en **Mi empresa** primero eliges cuál editar.
 
-## Paso a paso: tu información (pestaña Mi cuenta)
+## Cómo cambiar tu información (pestaña Mi cuenta)
 
 1. Cambia **Nombre** o **Correo** (ambos obligatorios).
 2. Para la foto, toca `Cambiar foto`, elige la imagen y revisa la vista previa («Vista previa. La foto aún no se guarda.»). Toca `Guardar foto` o `Cancelar`.
 3. Toca `Guardar`.
 
-## Paso a paso: tu contraseña (pestaña Seguridad)
+## Cómo cambiar tu contraseña (pestaña Seguridad)
 
 1. Escribe la **Nueva contraseña** y repítela en **Confirmar contraseña**.
 2. Mientras escribes, se marcan las **Recomendaciones**: al menos 8 caracteres, letras y números, y un símbolo (por ejemplo ! # $ %). También verás si las contraseñas coinciden.
@@ -41,7 +41,7 @@ Cualquier usuario del panel (RH, dueño y usuarios con acceso). La pestaña **Mi
 
 > **Consejo:** No uses información personal (tu nombre, fecha de nacimiento) en la contraseña.
 
-## Paso a paso: datos de tu empresa (pestaña Mi empresa)
+## Cómo editar los datos de tu empresa (pestaña Mi empresa)
 
 1. Si tienes varias empresas, toca la que quieres editar en **Selecciona la empresa a editar**.
 2. Actualiza el logo y los **Datos generales**: Empresa, Nombre del dueño, Giro, **Zona horaria**, Correo, Teléfono y Dirección (obligatorios, salvo el giro).

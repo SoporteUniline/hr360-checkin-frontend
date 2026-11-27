@@ -3,9 +3,9 @@ titulo: Inducción digital — cómo funciona de principio a fin
 resumen: La persona contratada llena sus datos, sube sus documentos, firma y registra su rostro desde su celular; RH revisa y con un clic la da de alta. Así se conecta todo.
 modulo: induccion
 audiencia: [rh, dueno]
-pantallas: [/panel/nuevos-ingresos]
+pantallas: []
 palabras: [inducción, onboarding, nuevo ingreso, preingreso, contratación, alta digital, primer día, bienvenida, liga]
-orden: 0
+orden: 29
 actualizado: 2026-11-27
 fuentes: [src/components/induccion/NuevosIngresos.jsx, src/components/induccion/DetalleIngreso.jsx, src/components/induccion/Preingreso.jsx, src/components/induccion/PlantillasInduccion.jsx, src/components/induccion/RutaBienvenida.jsx, src/lib/induccion/induccion.mjs]
 ---

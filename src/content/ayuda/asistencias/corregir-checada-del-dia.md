@@ -171,3 +171,4 @@ Asistencias y el Monitor de todas las personas que lo tengan abierto se actualiz
 - [Cómo se registra y se corrige la comida](/ayuda/asistencias/comida)
 - [Cómo autorizar o no las horas extra del día](/ayuda/asistencias/autorizar-horas-extra)
 - [Cómo corregir varios días a la vez](/ayuda/asistencias/acciones-masivas)
+- [Cómo calcula ADAMIA la nómina](/ayuda/nomina/como-se-calcula-la-nomina)

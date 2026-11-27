@@ -23,7 +23,7 @@ Cada ingreso tiene un **checklist del primer día** con las tareas que definiste
 
 El checklist se crea al invitar a la persona, con las tareas de su plantilla. Ve [Plantillas de inducción](/ayuda/induccion/plantillas-de-induccion).
 
-## Paso a paso: dar seguimiento
+## Cómo dar seguimiento al checklist
 
 1. En **Nuevos ingresos**, toca el nombre de la persona (o `Ver checklist →` si ya está dada de alta).
 2. Verás las tareas **agrupadas por responsable** (Recursos Humanos, Sistemas, Jefe directo, Almacén…) con su plazo: «2 días antes», «Día 1», «Día 5»…
@@ -31,7 +31,7 @@ El checklist se crea al invitar a la persona, con las tareas de su plantilla. Ve
 
 ![Checklist del primer día agrupado por responsable](/ayuda/capturas/induccion/checklist-primer-dia.webp "Cada responsable con sus tareas y su plazo")
 
-## Paso a paso: asignar una tarea sin responsable
+## Cómo asignar una tarea sin responsable
 
 Si una tarea dice **Sin responsable: elige quién la hace** (por ejemplo, la persona no tiene jefe directo asignado o el rol no tiene a nadie):
 
@@ -40,7 +40,7 @@ Si una tarea dice **Sin responsable: elige quién la hace** (por ejemplo, la per
 
 Si tu empresa usa Tareas y checklists, en ese momento se le crea la tarea.
 
-## Paso a paso: tareas ligadas a Activos y uniformes
+## Cómo registrar las entregas en Activos y uniformes
 
 Las tareas de entrega (uniforme, gafete, equipo) muestran el enlace **Registrar la entrega en Activos y uniformes**. Úsalo para hacer la entrega con su resguardo. Ve [Cómo entregar y recibir activos y uniformes](/ayuda/activos/entregar-y-recibir).
 

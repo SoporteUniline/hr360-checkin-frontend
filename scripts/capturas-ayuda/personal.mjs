@@ -341,9 +341,7 @@ GRUPOS.empleados = async () => {
     await page.getByRole("button", { name: "Cambiar mi PIN" }).click().catch(() => {});
     await page.getByText("Nuevo PIN (6 dígitos)").scrollIntoViewIfNeeded().catch(() => {});
     await guardar(page, "empleados", "cambiar-mi-pin");
-    await page.goto(base + "/empleado/panel/mi-rostro", { waitUntil: "domcontentloaded" });
-    await page.getByText("Tu rostro está registrado").waitFor({ timeout: 30000 });
-    await guardar(page, "empleados", "mi-rostro");
+    // Mi rostro: la guía (y su captura) es reloj-checador/registrar-mi-rostro (tiempo.mjs).
     await ctx.close();
   });
 };
@@ -366,12 +364,7 @@ GRUPOS.catalogos = async () => {
       await guardar(page, "catalogos", `${nombre}-nuevo`, { zona: page.getByRole("dialog") });
       await page.keyboard.press("Escape");
     }
-    await page.goto(base + "/panel/campos-personalizados", { waitUntil: "domcontentloaded" });
-    await page.getByText("Cuadrilla").first().waitFor({ timeout: 30000 });
-    await guardar(page, "catalogos", "campos-personalizados");
-    await page.getByRole("button", { name: "Nuevo campo" }).first().click();
-    await page.getByLabel(/Nombre del campo/).fill("Turno de comedor");
-    await guardar(page, "catalogos", "campos-personalizados-nuevo", { zona: page.getByRole("dialog") });
+    // Campos personalizados: la guía (y sus capturas) es campos-personalizados/crear-campos-personalizados (nomina.mjs).
     await ctx.close();
   });
 };
@@ -891,12 +884,7 @@ GRUPOS.avisos = async () => {
     await dormir(1200);
     await guardar(page, "avisos", "felicitar", { zona: page.getByRole("dialog") });
     await page.keyboard.press("Escape");
-    await page.goto(base + "/panel/plantillas-felicitacion", { waitUntil: "domcontentloaded" });
-    await page.getByText("Plantillas de felicitación").first().waitFor({ timeout: 30000 });
-    await dormir(1200);
-    await guardar(page, "avisos", "plantillas-de-felicitacion");
-    await page.getByText("Envío y avisos").first().scrollIntoViewIfNeeded();
-    await guardar(page, "avisos", "plantillas-envio-y-avisos");
+    // Plantillas de felicitación: la guía (y sus capturas) es avisos/plantillas-de-felicitacion (nomina.mjs).
     await ctx.close();
   });
 };

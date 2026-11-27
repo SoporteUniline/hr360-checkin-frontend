@@ -33,7 +33,7 @@ Recursos Humanos y el dueño.
 - Los formatos que la persona firma salen de tus **Plantillas de documentos**. Créalos primero en [Plantillas de documentos](/ayuda/documentos/plantillas-de-documentos).
 - Piensa qué áreas atienden tareas (Recursos Humanos, Sistemas, Almacén…) y quién es la persona de cada una.
 
-## Paso a paso: crear tu primera plantilla
+## Cómo crear tu primera plantilla
 
 1. Toca `Usar la sugerida de ADAMIA` (recomendado) o `Plantilla en blanco`.
 2. Si ya tienes una plantilla general, ADAMIA te pregunta **¿Para quién es esta copia?**: elige **Un puesto**, **Un área** o **Una sucursal** y el valor, y toca `Copiar`.
@@ -64,7 +64,7 @@ Recursos Humanos y el dueño.
 
 > **Consejo:** Si tu empresa tiene encendido **Tareas y checklists**, cada tarea con responsable le llega como una tarea real en su app.
 
-## Paso a paso: roles y quién los atiende
+## Cómo definir los roles y quién los atiende
 
 Una tarea puede ser de una persona, de un rol o de «su jefe directo». Al iniciar cada ingreso, el rol se resuelve con la persona que tenga asignada.
 

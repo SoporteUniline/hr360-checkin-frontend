@@ -87,5 +87,6 @@ Revisa tu conexión y vuelve a abrirla. Si sigue igual, entra desde el navegador
 ## Relacionado
 
 - [Conoce tu espacio en ADAMIA](/ayuda/mi-espacio/conoce-tu-espacio)
-- [Entrar, contraseña y Face ID](/ayuda/mi-espacio/entrar-contrasena-y-face-id)
+- [Cómo entrar a ADAMIA](/ayuda/primeros-pasos/iniciar-sesion)
+- [Seguridad, Face ID y sesiones abiertas](/ayuda/seguridad/face-id-y-sesiones)
 - [Tu pantalla de Inicio](/ayuda/mi-espacio/inicio)

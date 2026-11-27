@@ -114,3 +114,6 @@ Todavía se está cargando la empresa de tu sesión. Espera unos segundos o reca
 - [Cómo calcula ADAMIA la nómina](/ayuda/nomina/como-se-calcula-la-nomina)
 - [Cómo crear bonos y descuentos](/ayuda/nomina/bonos-y-descuentos)
 - [Nómina: visión general](/ayuda/nomina)
+- [Cómo revisar y exportar las asistencias de un periodo](/ayuda/asistencias/revisar-asistencias)
+- [Cómo revisar y resolver incidencias antes de la prenómina](/ayuda/incidencias/centro-de-incidencias)
+- [Cómo autorizar o no las horas extra del día](/ayuda/asistencias/autorizar-horas-extra)

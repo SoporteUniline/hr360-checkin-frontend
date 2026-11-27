@@ -26,7 +26,13 @@ Entra con el botón **Ajustes** (arriba a la derecha de Activos y uniformes).
 
 Recursos Humanos, el dueño y los usuarios con acceso al módulo.
 
-## Paso a paso: categorías
+## Antes de empezar
+
+- El módulo **Activos y uniformes** debe estar activo.
+- Las ubicaciones se ligan a tus sucursales: da de alta tus [unidades de negocio](/ayuda/catalogos/unidades-de-negocio).
+- Los paquetes se arman por puesto y con artículos del inventario: ten tus [puestos](/ayuda/catalogos/puestos) y tus [artículos](/ayuda/activos/inventario).
+
+## Cómo crear una categoría
 
 1. En **Categorías**, elige arriba **Activos** o **Uniformes**.
 2. Toca `Agregar categoría`.
@@ -35,7 +41,7 @@ Recursos Humanos, el dueño y los usuarios con acceso al módulo.
 
 Para dejar de usar una categoría sin afectar los artículos que ya la tienen, edítala y desmarca **Disponible para nuevos artículos**.
 
-## Paso a paso: ubicaciones
+## Cómo agregar una ubicación
 
 1. En **Ubicaciones**, toca `Agregar ubicación`.
 2. Escribe el **Nombre** (por ejemplo «Almacén Matriz»), elige la **Sucursal** (o **Sin sucursal específica**) y una **Descripción** opcional.
@@ -43,7 +49,7 @@ Para dejar de usar una categoría sin afectar los artículos que ya la tienen, e
 
 > **Consejo:** Registra tu primer almacén antes de cargar inventario: todo artículo necesita una ubicación.
 
-## Paso a paso: paquetes por puesto
+## Cómo armar un paquete por puesto
 
 1. En **Paquetes y dotaciones**, toca `Crear paquete`.
 2. Escribe el **Nombre** y elige el **Puesto** (o **Todos los puestos**).
@@ -63,6 +69,12 @@ Son paquetes de antes que mezclaban equipos y uniformes. Se conservan, pero para
 ### ¿Por qué no veo el catálogo de categorías?
 
 Si aparece «El catálogo de categorías está pendiente de activación», tu sistema necesita una actualización; los artículos existentes conservan su categoría.
+
+## Qué pasa si…
+
+- **…desmarcas «Disponible para nuevos artículos»:** la categoría queda **Archivada**. Ya no se ofrece para artículos nuevos y los que ya la tienen la conservan.
+- **…dejas el nombre vacío:** no se guarda; el **Nombre** es obligatorio en categorías y ubicaciones.
+- **…todavía no tienes paquetes:** la lista dice «No hay registros para mostrar.». Crea el primero con `Crear paquete`.
 
 ## Relacionado
 

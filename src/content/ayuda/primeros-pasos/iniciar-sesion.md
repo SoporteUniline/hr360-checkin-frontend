@@ -35,6 +35,8 @@ Al entrar:
 - **Recursos Humanos y dueños** llegan al **Muro** de la empresa (o al **Monitor**, si la empresa no tiene el Centro de comunicados).
 - **Empleados y jefes** llegan a **Mi espacio**, en **Inicio**.
 
+Si abriste una liga de ADAMIA (por ejemplo, a una encuesta) y no habías entrado, después de entrar ADAMIA te lleva a esa pantalla.
+
 ## Cómo entrar con Face ID o huella
 
 La primera vez que entras con contraseña en un dispositivo, ADAMIA te pregunta, por ejemplo, «¿Activar Face ID para entrar más rápido?».
@@ -43,6 +45,8 @@ La primera vez que entras con contraseña en un dispositivo, ADAMIA te pregunta,
 2. La próxima vez, en la pantalla de inicio, haz clic en **Entrar con Face ID** (o **Entrar con huella**, o **Entrar con tu passkey** en computadora).
 
 Si no quieres activarlo, elige **Ahora no** (te vuelve a preguntar en una semana) o **No volver a preguntar en este dispositivo**.
+
+También lo activas cuando quieras, y revisas tus dispositivos y sesiones abiertas, en [Seguridad, Face ID y sesiones abiertas](/ayuda/seguridad/face-id-y-sesiones).
 
 ![Iniciar sesión en el celular](/ayuda/capturas/primeros-pasos/iniciar-sesion-movil.webp "En el celular, la misma pantalla con el botón de Face ID o huella")
 
@@ -64,6 +68,10 @@ Si no quieres activarlo, elige **Ahora no** (te vuelve a preguntar en una semana
 
 Sí. Entra desde el navegador del celular o desde la app de ADAMIA, con el mismo correo y contraseña.
 
+### ¿Puedo cambiar mi contraseña desde Mi espacio?
+
+Usa **¿Olvidaste tu contraseña?** en la pantalla de entrada, o pide a Recursos Humanos que te la cambie.
+
 ### ¿Cómo cierro sesión?
 
 En el panel, haz clic en tu nombre abajo a la izquierda y luego en **Cerrar sesión**. En Mi espacio, entra a **Mi espacio** y toca **Cerrar sesión** al final.
@@ -79,4 +87,5 @@ En el panel, haz clic en tu nombre abajo a la izquierda y luego en **Cerrar sesi
 ## Relacionado
 
 - [Conoce el panel de Recursos Humanos](/ayuda/primeros-pasos/conoce-el-panel)
-- [Conoce Mi espacio](/ayuda/primeros-pasos/conoce-mi-espacio)
+- [Conoce tu espacio en ADAMIA](/ayuda/mi-espacio/conoce-tu-espacio)
+- [Seguridad, Face ID y sesiones abiertas](/ayuda/seguridad/face-id-y-sesiones)

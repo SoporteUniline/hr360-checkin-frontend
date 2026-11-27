@@ -23,7 +23,7 @@ Recursos Humanos y el dueño.
 - La persona debe haber enviado su información (en el tablero, su siguiente paso dice `Revisar y dar de alta`).
 - Sus datos y documentos **solo los ve Recursos Humanos**.
 
-## Paso a paso: revisar los documentos
+## Cómo revisar los documentos
 
 1. En **Nuevos ingresos**, toca `Revisar y dar de alta` en la fila de la persona.
 2. Baja a **Documentos**. Por cada documento:
@@ -40,7 +40,7 @@ Recursos Humanos y el dueño.
 
 > **Consejo:** Si un dato lo **escribió** en lugar de subir archivo (por ejemplo su NSS o su CLABE), lo verás como «Lo escribió en sus datos».
 
-## Paso a paso: dar de alta
+## Cómo dar de alta
 
 1. Con todo lo obligatorio aprobado, toca `Revisar y dar de alta`.
 2. Lee la confirmación **¿Dar de alta a …?** y toca `Dar de alta`.
@@ -56,7 +56,7 @@ Recursos Humanos y el dueño.
 - Su rostro queda listo para checar.
 - Se borran del proceso sus datos y su rostro (ya viven en su ficha) y **su liga deja de funcionar**.
 
-## Paso a paso: cancelar un ingreso
+## Cómo cancelar un ingreso
 
 1. Abre el ingreso y toca `Cancelar ingreso`.
 2. Escribe por qué (por ejemplo «Ya no se presentó») y confirma con `Cancelar ingreso`.
@@ -88,3 +88,4 @@ No pasa nada: si tocas dar de alta otra vez, ADAMIA devuelve el mismo empleado, 
 - [Checklist del primer día](/ayuda/induccion/checklist-primer-dia)
 - [Cómo subir documentos al expediente digital](/ayuda/empleados/expediente-digital)
 - [Inducción digital: cómo funciona](/ayuda/induccion)
+- [Cómo contratar a un candidato](/ayuda/reclutamiento/contratar)

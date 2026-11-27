@@ -24,7 +24,7 @@ Recursos Humanos y el dueño.
 - Ten el **celular** (10 dígitos, para WhatsApp) o el **correo** de la persona. Al menos uno de los dos es obligatorio.
 - Si contratas desde **Reclutamiento**, no tienes que invitar: al marcar al candidato como **Contratado**, aparece solo en Nuevos ingresos y le llega la invitación.
 
-## Paso a paso
+## Cómo invitar a un nuevo ingreso
 
 1. Entra a **Gestión de personal → Nuevos ingresos**.
 2. Si manejas varias empresas, elige la empresa.
@@ -52,7 +52,7 @@ Después de enviar verás cómo se mandó (por WhatsApp, por correo o «compárt
 
 > **Importante:** La liga **solo se muestra en ese momento**. Si la pierdes, usa **Reenviar** y se genera otra.
 
-## Paso a paso: reenviar la liga
+## Cómo reenviar la liga
 
 1. En **Nuevos ingresos**, toca el nombre de la persona (o `Reenviar por WhatsApp` si no ha abierto su liga).
 2. Toca `Reenviar liga`.
@@ -84,3 +84,4 @@ Si no la completa en **2 días**, ADAMIA le manda **un recordatorio** y avisa a 
 - [La liga de ingreso (lo que ve la persona)](/ayuda/induccion/liga-de-ingreso)
 - [Cómo revisar documentos y dar de alta](/ayuda/induccion/revisar-y-dar-de-alta)
 - [Inducción digital: cómo funciona](/ayuda/induccion)
+- [Cómo contratar a un candidato](/ayuda/reclutamiento/contratar)

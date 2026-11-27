@@ -23,7 +23,7 @@ Las personas que entraron con [Inducción digital](/ayuda/induccion).
 - Entra a tu app con tu correo y contraseña.
 - La ruta solo aparece si tu ingreso tiene una. Si no ves la opción, tu empresa no te preparó ruta.
 
-## Paso a paso
+## Cómo avanzar en tu ruta
 
 1. Entra a **Mi espacio** y toca **Mi ruta de bienvenida**. Ahí mismo ves cuántos pasos llevas (por ejemplo «2 de 5 listos»).
 2. Arriba verás el **Avance de tu ruta**.

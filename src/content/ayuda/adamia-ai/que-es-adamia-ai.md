@@ -26,6 +26,14 @@ En la barra de arriba del panel está el botón **Adamia AI**. Si no está activ
 - Si eres el dueño, presiona **Activar Adamia AI**.
 - Si no, verás «Pídele al dueño de la cuenta que la active».
 
+## Cómo activar o apagar Adamia AI
+
+Solo el dueño de la cuenta ve estos botones.
+
+1. En la barra de arriba del panel presiona **Adamia AI**.
+2. Si dice «Adamia AI no está activa en esta empresa», presiona **Activar Adamia AI**.
+3. Para apagarla, abajo del panel de Adamia AI presiona **Apagar**. Ahí mismo, si tu cuenta usa tope mensual, está **Cambiar tope**.
+
 ## Qué puede hacer en cada módulo
 
 | Dónde | Qué hace |

@@ -20,7 +20,7 @@ Recursos Humanos y el dueño.
 
 ## Antes de empezar
 
-Entra a **Control de tiempo → Turnos extra**. Para programar uno, ve a [Cómo programar un turno extra](/ayuda/turnos_extra/programar-un-turno-extra).
+Entra a **Control de tiempo → Turnos extra**. Para programar uno, ve a [Cómo programar un turno extra](/ayuda/turnos-extra/programar-un-turno-extra).
 
 ## Cómo encontrar un turno extra
 
@@ -28,7 +28,7 @@ Entra a **Control de tiempo → Turnos extra**. Para programar uno, ve a [Cómo 
 2. A la izquierda verás los turnos de esa semana con su día, horario, número de personas y su estado: **Programado**, **En curso**, **Terminado** o **Cancelado**.
 3. Toca un turno para ver su detalle a la derecha.
 
-![Turnos extra con la lista de la semana y el detalle del turno en curso](/ayuda/capturas/turnos_extra/turnos-extra.webp "El turno en curso muestra a cada persona con su entrada, su tiempo extra y su estado")
+![Turnos extra con la lista de la semana y el detalle del turno en curso](/ayuda/capturas/turnos-extra/turnos-extra.webp "El turno en curso muestra a cada persona con su entrada, su tiempo extra y su estado")
 
 ## Cómo leer el detalle
 
@@ -83,6 +83,6 @@ No: ya no muestra los botones de editar ni cancelar.
 
 ## Relacionado
 
-- [Cómo programar un turno extra](/ayuda/turnos_extra/programar-un-turno-extra)
+- [Cómo programar un turno extra](/ayuda/turnos-extra/programar-un-turno-extra)
 - [Cómo ver quién está trabajando ahora con el Monitor](/ayuda/monitor/usar-el-monitor)
 - [Cómo generar el reporte de horas](/ayuda/reporte-horas/generar-reporte-de-horas)

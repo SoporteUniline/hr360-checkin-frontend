@@ -26,7 +26,7 @@ Recursos Humanos y el dueño.
 
 Ten a la mano la razón social y el RFC del patrón de esa unidad, su domicilio completo y un teléfono o correo de contacto.
 
-## Paso a paso: crear una unidad de negocio
+## Cómo crear una unidad de negocio
 
 1. Toca `Nueva unidad de negocio`.
 2. (Opcional) Toca el ícono de la cámara para subir el **logo** de la unidad.
@@ -37,7 +37,7 @@ Ten a la mano la razón social y el RFC del patrón de esa unidad, su domicilio 
 
 ![Ventana Nueva Unidad de Negocio](/ayuda/capturas/catalogos/unidades-de-negocio-nuevo.webp "Datos de identificación y contacto")
 
-## Paso a paso: ubicarla en el mapa
+## Cómo ubicarla en el mapa
 
 La ubicación sirve para que el agente de WhatsApp de Reclutamiento le proponga al candidato la sucursal más cercana.
 
@@ -47,7 +47,7 @@ La ubicación sirve para que el agente de WhatsApp de Reclutamiento le proponga 
 
 > **Consejo:** Si el mapa no está disponible, puedes escribir la **Latitud** y la **Longitud** a mano (cópialas de Google Maps).
 
-## Paso a paso: buscar, editar o eliminar
+## Cómo buscar, editar o eliminar una unidad
 
 - Usa **Buscar** para encontrar una unidad por nombre y el filtro **Empresa** si manejas varias.
 - Toca el lápiz para editar o el bote para eliminar. Al eliminar, confirma en **Eliminar unidad de negocio**; no se puede deshacer.

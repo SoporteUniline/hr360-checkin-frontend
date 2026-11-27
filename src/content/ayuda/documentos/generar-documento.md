@@ -25,7 +25,7 @@ Recursos Humanos y el dueño.
 - Necesitas al menos una plantilla **activa** (tuya o de ADAMIA). Si no hay, verás «No hay plantillas disponibles» y el botón `Ir a Plantillas`.
 - Si manejas varias empresas, elige la **Empresa del documento**.
 
-## Paso a paso
+## Cómo generar un documento
 
 Arriba ves los cuatro pasos: **Plantilla → Empleado → Vista previa → Listo**.
 

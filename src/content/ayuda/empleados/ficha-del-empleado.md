@@ -86,7 +86,7 @@ El **expediente digital** de la persona: documentos cargados, vigentes, por venc
 
 ![Pestaña Documentos de la ficha](/ayuda/capturas/empleados/ficha-documentos.webp "Pestaña Documentos: el expediente digital")
 
-## Paso a paso: editar y guardar
+## Cómo editar y guardar la ficha
 
 1. Abre la ficha.
 2. Cambia lo que necesites en cualquier pestaña. Puedes pasar de una pestaña a otra sin perder lo escrito.
@@ -94,7 +94,7 @@ El **expediente digital** de la persona: documentos cargados, vigentes, por venc
 
 Si falta un dato obligatorio o algo está mal escrito, aparece un aviso y la ficha te lleva a la pestaña y al campo con el problema.
 
-## Paso a paso: salir sin perder cambios
+## Cómo salir sin perder cambios
 
 Si intentas salir (flecha de regresar, `Cerrar` de la ventana flotante, otra opción del menú) con cambios pendientes, aparece **Tienes cambios sin guardar** con tres opciones:
 
@@ -141,5 +141,9 @@ Se guardan en el momento con `Guardar contacto`, sin necesidad del botón Guarda
 
 - [Empleados: tu plantilla en una sola pantalla](/ayuda/empleados)
 - [Cómo dar de baja o reactivar a un empleado](/ayuda/empleados/baja-y-reactivacion)
-- [Campos personalizados](/ayuda/catalogos/campos-personalizados)
+- [Campos personalizados](/ayuda/campos-personalizados/crear-campos-personalizados)
 - [Panel de empleado: expediente 360°](/ayuda/empleados/panel-empleado)
+- [Cómo elegir la forma de checar de cada empleado](/ayuda/reloj-checador/como-checa-cada-empleado)
+- [Cómo registrar el rostro de un empleado](/ayuda/empleados/rostro-del-empleado)
+- [Firma y PIN del empleado — qué puede hacer RH](/ayuda/empleados/firma-y-pin-del-empleado)
+- [Áreas de Check — dónde se puede checar con GPS](/ayuda/catalogos/areas-de-check)

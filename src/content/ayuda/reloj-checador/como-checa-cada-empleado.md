@@ -69,3 +69,6 @@ Para personas que salen y regresan varias veces (por ejemplo, a visitar clientes
 - [Cómo checar desde tu celular](/ayuda/reloj-checador/checar-desde-el-celular)
 - [Checadores físicos (ZKTeco y Hikvision)](/ayuda/reloj-checador/checadores-fisicos)
 - [Cómo registrar tu rostro para checar](/ayuda/reloj-checador/registrar-mi-rostro)
+- [La ficha del empleado — sus 5 pestañas y cómo editarla](/ayuda/empleados/ficha-del-empleado)
+- [Cómo registrar el rostro de un empleado](/ayuda/empleados/rostro-del-empleado)
+- [Áreas de Check — dónde se puede checar con GPS](/ayuda/catalogos/areas-de-check)

@@ -22,7 +22,12 @@ Desde **Inicio** llegas a tres listas de seguimiento:
 
 Recursos Humanos, el dueño y los usuarios con acceso al módulo.
 
-## Paso a paso: mandar un equipo a revisión
+## Antes de empezar
+
+- El módulo **Activos y uniformes** debe estar activo y el artículo debe estar en el [inventario](/ayuda/activos/inventario).
+- Solo puedes mandar a revisión artículos activos con existencias disponibles.
+
+## Cómo mandar un equipo a revisión
 
 1. En **Inicio**, toca **En revisión o mantenimiento** (o, en la ficha del artículo, `Enviar a revisión`).
 2. Toca `Registrar mantenimiento`.
@@ -31,14 +36,14 @@ Recursos Humanos, el dueño y los usuarios con acceso al módulo.
 
 ![Revisión y mantenimiento](/ayuda/capturas/activos/revision-y-mantenimiento.webp "Equipos fuera de disponibilidad")
 
-## Paso a paso: concluir la revisión
+## Cómo concluir la revisión
 
 1. En la lista, toca `Concluir`.
 2. Elige el **Resultado**: **Reparado → disponible** o **No reparable → baja definitiva**.
-3. Escribe el **Costo (MXN)** si hubo y el **Trabajo realizado / motivo**.
+3. Escribe el **Costo (MXN)** (0 si no costó nada) y el **Trabajo realizado / motivo**.
 4. Toca `Guardar resultado`. La disponibilidad se actualiza sola.
 
-## Paso a paso: atender solicitudes del personal
+## Cómo atender las solicitudes del personal
 
 Las personas piden atención desde su app (o RH la registra por ellas con `Registrar solicitud`). Cada solicitud tiene **Tipo** (Falla de equipo, Cambio de talla, Reposición u Otro), descripción y estado **Pendiente** o **Atendida**.
 
@@ -48,7 +53,7 @@ Las personas piden atención desde su app (o RH la registra por ellas con `Regis
 
 > **Importante:** Responder una solicitud **no cambia existencias**. Registra la entrega o la devolución correspondiente cuando ocurra.
 
-## Paso a paso: consultar el historial
+## Cómo consultar el historial
 
 1. En **Inicio**, toca **Historial**.
 2. Busca por artículo, persona o referencia y filtra por **Tipo de movimiento**.
@@ -63,6 +68,12 @@ No. Pasa a **En revisión** y regresa a disponible solo cuando concluyes la revi
 ### ¿La persona ve la respuesta a su solicitud?
 
 Sí, en su app, en **Mis activos y uniformes**.
+
+## Qué pasa si…
+
+- **…el artículo no aparece en «Artículo disponible»:** no tiene existencias disponibles (todo está entregado o ya en revisión) o está inactivo.
+- **…escribes una cantidad mayor a la disponible:** el campo no lo acepta; el máximo es lo que hay disponible.
+- **…el equipo no se pudo reparar:** concluye la revisión con **No reparable → baja definitiva**. Ya no regresa a disponible y queda en el historial.
 
 ## Relacionado
 

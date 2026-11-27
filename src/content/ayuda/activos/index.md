@@ -3,9 +3,9 @@ titulo: Activos y uniformes — qué hay, quién lo tiene y qué falta atender
 resumen: Controla equipos (laptops, terminales, radios) y prendas (playeras, gafetes) con su inventario, sus entregas con resguardo y sus devoluciones, desde una sola pantalla.
 modulo: activos
 audiencia: [rh, dueno]
-pantallas: [/panel/activos]
+pantallas: []
 palabras: [activos, uniformes, inventario, equipo, prendas, resguardo, entrega, devolución, existencias, por reponer]
-orden: 0
+orden: 44
 actualizado: 2026-11-27
 fuentes: [src/components/activos/Overview.jsx, src/components/activos/NavegacionActivos.jsx]
 ---

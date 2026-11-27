@@ -676,8 +676,8 @@ try {
   await captura("turnos/turnos-lista", { ruta: "/panel/turnos" });
   await captura("turnos/turno-nuevo", { ruta: "/panel/turnos", preparar: (pg) => clic(pg, pg.getByRole("button", { name: "Nuevo turno" })), recorte: '[role="dialog"]' });
   await captura("turnos/asignar-empleados", { ruta: "/panel/turnos", preparar: (pg) => clic(pg, pg.getByTitle("Asignar empleados")), recorte: '[role="dialog"]' });
-  await captura("turnos_extra/turnos-extra", { ruta: "/panel/turnos-extra" });
-  await captura("turnos_extra/turno-extra-nuevo", { ruta: "/panel/turnos-extra",
+  await captura("turnos-extra/turnos-extra", { ruta: "/panel/turnos-extra" });
+  await captura("turnos-extra/turno-extra-nuevo", { ruta: "/panel/turnos-extra",
     preparar: (pg) => clic(pg, pg.getByRole("button", { name: "Nuevo turno extra" })), recorte: '[role="dialog"]' });
 
   // ── Incidencias y reportes ──

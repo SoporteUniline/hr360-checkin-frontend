@@ -3,11 +3,11 @@ titulo: Conoce tu espacio en ADAMIA
 resumen: Cómo se usa la app del empleado: la barra de abajo, la pantalla Mi espacio con todas sus opciones, tu perfil y cómo cerrar sesión.
 modulo: mi-espacio
 audiencia: [empleado, jefe]
-pantallas: [/empleado/panel/mi-espacio, /empleado, /empleado/panel/mi-firma, /empleado/panel/mi-rostro]
+pantallas: [/empleado/panel/mi-espacio]
 palabras: [mi espacio, app del empleado, menú, barra inferior, perfil, cerrar sesión, mis recibos, mis evaluaciones, encuestas, mi firma, mi rostro]
 orden: 0
 actualizado: 2026-11-27
-fuentes: [src/components/empleado/EmployeeShell.jsx, src/app/empleado/panel/mi-espacio/page.jsx, src/app/empleado/page.jsx, src/app/empleado/panel/mi-firma/page.jsx, src/app/empleado/panel/mi-rostro/page.jsx, src/components/avisos/CampanaAvisos.jsx]
+fuentes: [src/components/empleado/EmployeeShell.jsx, src/app/empleado/panel/mi-espacio/page.jsx, src/app/empleado/page.jsx, src/components/avisos/CampanaAvisos.jsx]
 ---
 
 ## Para qué sirve
@@ -23,9 +23,15 @@ Todas las personas con cuenta de empleado. Si eres jefe, verás algunas opciones
 - Necesitas tu cuenta de ADAMIA (correo y contraseña) que te da Recursos Humanos.
 - Lo que ves depende de lo que tu empresa tenga activo. Si una opción de esta guía no te aparece, tu empresa no la usa.
 
-## La barra de abajo
+## Cómo moverte por la app
 
-Siempre está abajo de la pantalla:
+1. Usa la **barra de abajo** para cambiar de sección. Siempre está abajo de la pantalla.
+2. Toca el **logo**, arriba, para volver a **Inicio**.
+3. Toca el círculo con tus iniciales (**Mi perfil**) para abrir **Mi espacio** con todas tus opciones.
+4. Toca el botón **?** de arriba para abrir la ayuda de la pantalla en la que estás.
+5. Para salir, entra a **Mi espacio** y toca **Cerrar sesión**, al final.
+
+Botones de la barra de abajo:
 
 | Botón | Para qué |
 |---|---|
@@ -38,7 +44,7 @@ Siempre está abajo de la pantalla:
 
 Un número sobre **Mi espacio** te avisa cuántas encuestas tienes por contestar.
 
-Arriba, el logo te lleva a **Inicio** y el círculo con tus iniciales (**Mi perfil**) te lleva a **Mi espacio**. Si eres jefe, también ves una campana con los avisos de los próximos 7 días de tu equipo (cumpleaños y aniversarios) para felicitarlos.
+Si eres jefe, arriba también ves una campana con los avisos de los próximos 7 días de tu equipo (cumpleaños y aniversarios) para felicitarlos.
 
 ![Pantalla Mi espacio en el celular con sus opciones](/ayuda/capturas/mi-espacio/mi-espacio.webp "Mi espacio")
 
@@ -49,34 +55,19 @@ Arriba ves tu nombre y tu correo. Abajo, las opciones:
 | Opción | Para qué |
 |---|---|
 | Mi ruta de bienvenida | Si acabas de entrar, tu avance de inducción («N de M listos»). |
-| Mi firma y PIN | Guarda tu firma y un PIN de 6 dígitos para firmar documentos. |
-| Mi rostro | Regístralo o actualízalo para checar con tu cara. |
-| Seguridad y Face ID | Entra sin contraseña y revisa tus dispositivos. Ver [Entrar, contraseña y Face ID](/ayuda/mi-espacio/entrar-contrasena-y-face-id). |
-| Mis recibos de pago | Consulta, descarga y firma tus recibos. |
+| Mi firma y PIN | Guarda tu firma y un PIN de 6 dígitos para firmar documentos. Ver [Mi firma y PIN](/ayuda/empleados/mi-firma-y-pin). |
+| Mi rostro | Regístralo o actualízalo para checar con tu cara. Ver [Cómo registrar tu rostro](/ayuda/reloj-checador/registrar-mi-rostro). |
+| Seguridad y Face ID | Entra sin contraseña y revisa tus dispositivos. Ver [Seguridad, Face ID y sesiones abiertas](/ayuda/seguridad/face-id-y-sesiones). |
+| Mis recibos de pago | Consulta, descarga y firma tus recibos. Ver [Mis recibos de pago](/ayuda/nomina/mis-recibos-de-pago). |
 | Mis préstamos | Pide un préstamo, firma tu acuerdo y ve tu saldo. |
 | Mis activos y uniformes | Consulta tus entregas y resguardos. |
 | Encuestas | Clima y NOM-035, siempre anónimas. Ver [Cómo contestar una encuesta](/ayuda/clima/contestar-encuesta). |
 | Mis evaluaciones | Evaluaciones de desempeño, resultados y seguimiento. Ver [Responder una evaluación](/ayuda/evaluaciones/responder-evaluacion). |
-| Solicitudes de mi equipo | Si tienes colaboradores asignados, apruebas sus solicitudes. |
-| Monitor de mi equipo | Si eres jefe: quién está trabajando y quién falta hoy. |
+| Solicitudes de mi equipo | Si tienes colaboradores asignados, apruebas sus solicitudes. Ver [Solicitudes de mi equipo](/ayuda/solicitudes-equipo/aprobar-solicitudes-de-mi-equipo). |
+| Monitor de mi equipo | Si eres jefe: quién está trabajando y quién falta hoy. Ver [Monitor de mi equipo](/ayuda/monitor/monitor-de-mi-equipo). |
+| Ayuda | Todas las guías para ti. |
 
 Al final está **Cerrar sesión**.
-
-## Mi firma y PIN, en corto
-
-1. Entra a **Mi espacio › Mi firma y PIN**.
-2. Dibuja tu firma con el dedo y guárdala.
-3. Crea un PIN secreto de 6 dígitos. Con ese PIN firmas tus documentos y se estampa la firma guardada.
-
-Puedes cambiar ambos cuando quieras. Si olvidas tu PIN, lo cambias con la contraseña de tu cuenta.
-
-## Mi rostro, en corto
-
-1. Entra a **Mi espacio › Mi rostro**.
-2. Acepta el aviso de datos biométricos.
-3. Sigue las indicaciones: se toman 5 poses (de frente, arriba, abajo, izquierda y derecha).
-
-ADAMIA no guarda tu foto: solo guarda una huella numérica de tu cara para reconocerte al checar.
 
 ## Preguntas frecuentes
 
@@ -88,6 +79,10 @@ Tu empresa no tiene esos módulos activos.
 
 Sí. Es la misma página en cualquier navegador.
 
+### ¿Por qué veo «Monitor de mi equipo» y mis compañeros no?
+
+Solo aparece para quien tiene colaboradores a cargo.
+
 ### Entré y dice «Este espacio es para colaboradores»
 
 Tu cuenta es de panel (RH o dueño), no de empleado. Usa **Volver a mi panel**.
@@ -96,14 +91,21 @@ Tu cuenta es de panel (RH o dueño), no de empleado. Usa **Volver a mi panel**.
 
 ### …no recuerdo mi contraseña
 
-Usa **¿Olvidaste tu contraseña?** en la pantalla de entrada. Ver [Entrar, contraseña y Face ID](/ayuda/mi-espacio/entrar-contrasena-y-face-id).
+Usa **¿Olvidaste tu contraseña?** en la pantalla de entrada. Ver [Cómo entrar a ADAMIA](/ayuda/primeros-pasos/iniciar-sesion#como-recuperar-tu-contrasena).
 
 ### …veo «Cargando tu espacio…» mucho tiempo
 
 Revisa tu conexión a internet y vuelve a abrir la página.
 
+### …toco una opción de un módulo apagado
+
+Verás un aviso de que no está activo: pídele a Recursos Humanos que lo encienda.
+
 ## Relacionado
 
 - [Tu pantalla de Inicio](/ayuda/mi-espacio/inicio)
-- [Entrar, contraseña y Face ID](/ayuda/mi-espacio/entrar-contrasena-y-face-id)
+- [Cómo entrar a ADAMIA](/ayuda/primeros-pasos/iniciar-sesion)
+- [Seguridad, Face ID y sesiones abiertas](/ayuda/seguridad/face-id-y-sesiones)
+- [Mi firma y PIN](/ayuda/empleados/mi-firma-y-pin)
+- [Cómo usar el muro en Mi espacio](/ayuda/comunicados/muro-empleado)
 - [ADAMIA en tu celular](/ayuda/mi-espacio/adamia-en-tu-celular)

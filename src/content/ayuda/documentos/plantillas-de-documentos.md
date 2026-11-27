@@ -24,7 +24,7 @@ Recursos Humanos y el dueño.
 
 Revisa que los datos de tus empleados (puesto, departamento, fecha de ingreso, RFC, CURP) y de tu empresa estén completos: son los que llenan las variables.
 
-## Paso a paso: usar una plantilla ADAMIA
+## Cómo usar una plantilla ADAMIA
 
 ADAMIA trae **21 formatos listos para completar**: confidencialidad, responsivas de equipo, constancias, aviso de privacidad, carta oferta, descripción de puesto y más.
 
@@ -45,7 +45,7 @@ Este formato se prepara aparte:
 
 > **Importante:** Entrega las políticas y permite su lectura antes de solicitar la firma. Este formato no sustituye el Reglamento Interior de Trabajo ni su depósito y difusión.
 
-## Paso a paso: crear tu propia plantilla
+## Cómo crear tu propia plantilla
 
 1. Toca `Nueva plantilla`.
 2. En **Información** llena:
@@ -77,7 +77,7 @@ En el documento se ven entre llaves, por ejemplo `{{empleado.nombre}}`, y se ree
 
 > **Ojo:** `Aplicar al editor` **reemplaza** el contenido actual del editor. Revisa siempre el texto antes de usarlo.
 
-## Paso a paso: administrar tus plantillas
+## Cómo administrar tus plantillas
 
 En **Mis plantillas** ves **Total plantillas**, **Activas**, **Inactivas** y **Categorías**.
 

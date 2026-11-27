@@ -26,7 +26,7 @@ Recursos Humanos, el dueño y los jefes.
 
 El módulo **Tareas y checklists** debe estar activo. Ve [Tareas y checklists: cómo funcionan](/ayuda/tareas).
 
-## Paso a paso: crear y asignar una tarea
+## Cómo crear y asignar una tarea
 
 1. Toca `Nueva tarea`.
 2. Escribe **Qué hay que hacer** (por ejemplo «Decorar el comedor»).
@@ -39,14 +39,14 @@ El módulo **Tareas y checklists** debe estar activo. Ve [Tareas y checklists: c
 
 ![Ventana Nueva tarea](/ayuda/capturas/tareas/nueva-tarea.webp "Qué, quién, para cuándo y sus pasos")
 
-## Paso a paso: dar seguimiento
+## Cómo dar seguimiento
 
 - **Mover una tarea:** arrástrala a otra columna.
 - **Abrir una tarea:** tócala. Verás el avance de sus pasos, la foto de evidencia, los **Comentarios** y el **Historial**. Puedes escribir un comentario y tocar `Enviar`.
 - **Filtrar:** busca por tarea o persona, elige un proyecto (o **Solo tareas sueltas**) o una persona, y toca el chip **Vencidas** para ver solo las atrasadas.
 - **Mi equipo hoy:** a la derecha ves quién vino (según sus checadas), lo que trae abierto y avisos como «no checó hoy y tiene tareas para hoy».
 
-## Paso a paso: aprobar o regresar una tarea
+## Cómo aprobar o regresar una tarea
 
 Cuando la persona termina, la tarea pasa a **En revisión**.
 
@@ -56,7 +56,7 @@ Cuando la persona termina, la tarea pasa a **En revisión**.
 
 ![Tarea en revisión con sus botones para aprobar o regresar](/ayuda/capturas/tareas/tarea-en-revision.webp "Aprueba o regresa la tarea")
 
-## Paso a paso: editar o archivar
+## Cómo editar o archivar una tarea
 
 1. Abre la tarea y toca **Editar**.
 2. Cambia lo que necesites y toca `Guardar cambios`.

@@ -40,7 +40,11 @@ Las tarjetas de solicitudes solo aparecen si tu empresa usa Permisos o Vacacione
 
 ## Cómo checar desde Inicio
 
-Toca **Checar entrada o salida**. Te lleva al reloj checador de tu app. Si estás en tu hora de comida, el único botón es el de regresar de comer. Las reglas de la checada están en las guías de Asistencia.
+1. En **Tu jornada de hoy**, toca **Checar entrada o salida**.
+2. Se abre el reloj checador de tu app: checa como siempre.
+3. Al volver a Inicio, tu checada ya aparece en tu jornada.
+
+Si estás en tu hora de comida, el único botón es el de regresar de comer. Las reglas de la checada están en [Cómo checar desde tu celular](/ayuda/reloj-checador/checar-desde-el-celular).
 
 ## Preguntas frecuentes
 
@@ -67,3 +71,4 @@ Tu empresa no lo activó, ya la contestaste hoy, o todavía no registras tu sali
 - [Conoce tu espacio en ADAMIA](/ayuda/mi-espacio/conoce-tu-espacio)
 - [Cómo contestar una encuesta](/ayuda/clima/contestar-encuesta)
 - [ADAMIA en tu celular](/ayuda/mi-espacio/adamia-en-tu-celular)
+- [Cómo checar desde tu celular](/ayuda/reloj-checador/checar-desde-el-celular)

@@ -28,7 +28,7 @@ Recursos Humanos y el dueño.
 
 Para los documentos de **un empleado** (INE, contrato firmado, certificados) usa su [expediente digital](/ayuda/empleados/expediente-digital), no la biblioteca.
 
-## Paso a paso: subir un documento
+## Cómo subir un documento
 
 1. En la pestaña **Documentos cargados**, toca `Subir documento`.
 2. Elige la **Categoría** o escribe una nueva para crearla al momento.
@@ -38,7 +38,7 @@ Para los documentos de **un empleado** (INE, contrato firmado, certificados) usa
 
 > **Consejo:** También puedes crear categorías antes con el botón `Nueva categoría`.
 
-## Paso a paso: subir una nueva versión
+## Cómo subir una nueva versión
 
 Cuando actualizas un documento, no lo reemplaces: sube una versión nueva y conserva el historial.
 
@@ -49,13 +49,13 @@ Cuando actualizas un documento, no lo reemplaces: sube una versión nueva y cons
 
 Para ver las anteriores, toca **Historial versiones** y `Ver` en la que necesites.
 
-## Paso a paso: buscar, editar y eliminar
+## Cómo buscar, editar y eliminar un documento
 
 - Busca por **título, descripción o archivo** y filtra por **Categorías** y **Tipo de archivo**. `Limpiar filtros` quita todo.
 - **Editar** cambia la categoría, el título o la descripción (no el archivo; para eso usa Nueva versión).
 - **Eliminar** oculta el documento del sistema.
 
-## Paso a paso: formatos por puesto
+## Cómo editar los formatos por puesto
 
 1. Abre la pestaña **Formatos por puesto**.
 2. En **Plantillas ADAMIA** verás las bases por tipo de puesto (perfil, descripción y actividades). En **Mis documentos**, las versiones que ya guardó tu empresa.

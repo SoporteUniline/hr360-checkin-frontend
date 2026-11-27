@@ -33,7 +33,7 @@ La persona debe estar registrada como empleado.
 - En la tabla, la **Vigencia** te marca «VENCE HOY», «VENCIDO» o «Sin fecha de término» (en los indefinidos).
 - Filtros en los encabezados: folio, empleado, puesto, tipo y estatus.
 
-## Paso a paso: registrar un contrato
+## Cómo registrar un contrato
 
 1. Toca `Nuevo contrato`.
 2. **Información básica:** Empresa, **Empleado** (búscalo por nombre), Puesto y Departamento (se llenan con los de su ficha), Elaborado por y Jefe inmediato.
@@ -59,21 +59,21 @@ La persona debe estar registrada como empleado.
 
 > **Importante:** Revisa que vacaciones, aguinaldo y prima vacacional cumplan al menos con la Ley Federal del Trabajo vigente para la antigüedad de la persona.
 
-## Paso a paso: renovar un contrato
+## Cómo renovar un contrato
 
 1. En la fila del contrato que vence, toca **Duplicar**.
 2. Se abre un contrato nuevo con salario, horarios, prestaciones y modalidad **copiados**.
 3. Elige otra vez el **Tipo de contrato** (no se copia). La **fecha de inicio** sugerida es el día siguiente al fin del anterior. La **fecha de fin** déjala vacía o pon una nueva.
 4. Toca `Guardar`.
 
-## Paso a paso: cambiar el estatus
+## Cómo cambiar el estatus
 
 1. Toca **Cambiar estatus** en la fila.
 2. Elige el **Nuevo estatus**: Activo, Suspendido, Terminado o Cancelado.
 3. Si es **Terminado** o **Cancelado**, escribe el **Motivo** (obligatorio).
 4. Toca `Guardar cambio`.
 
-## Paso a paso: ver e imprimir
+## Cómo ver e imprimir un contrato
 
 Toca **Ver detalles** para ver el contrato en solo lectura (vigencia, compensación, jornada y prestaciones) y `Imprimir contrato` para obtener el PDF con espacio para las firmas del trabajador y del representante de la empresa.
 

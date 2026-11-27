@@ -18,9 +18,11 @@ Esta guía explica cómo se comporta el reloj checador cuando el aparato **pierd
 
 Recursos Humanos, el dueño y los empleados.
 
-## Lo más importante
+## Antes de empezar
 
 > **Importante:** el reloj checador **necesita internet** para registrar una checada. Sin conexión no se guarda ninguna entrada ni salida nueva.
+
+Asegúrate de que el aparato del reloj (tableta, computadora o celular) tenga Wi-Fi o datos estables.
 
 ## Cómo saber si el reloj está conectado
 
@@ -29,7 +31,7 @@ Recursos Humanos, el dueño y los empleados.
 - En modo Rostro, sin conexión la cámara se reemplaza por «Rostro no disponible sin conexión · Restablece la conexión para registrar una checada.».
 - Si alguien intenta checar sin internet verá «Necesitas conexión a internet para checar.».
 
-## Qué hacer si se cae el internet
+## Cómo seguir si se cae el internet
 
 1. Revisa el Wi-Fi o los datos del aparato y espera a que vuelva **En línea**.
 2. Mientras tanto, pide a las personas que anoten su hora de entrada o salida.

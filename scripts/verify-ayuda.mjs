@@ -150,9 +150,12 @@ try {
     await p.locator("[data-panel-ayuda]").waitFor({ timeout: 20000 });
     await p.locator("[data-panel-ayuda] [data-guia-abierta='comunicados/confirmacion-y-seguimiento']").waitFor({ timeout: 30000 });
     await p.keyboard.press("Escape");
-    // Pantalla sin guía: abre el buscador.
-    await p.goto(base + "/panel/turnos", { waitUntil: "networkidle" });
+    // Pantalla sin guía (desde la cobertura estricta todas las de trabajo tienen; esta es una exclusión de test-ayuda):
+    // abre el buscador.
+    await p.goto(base + "/panel/catalogos/cuentas-bancarias", { waitUntil: "networkidle" });
     await p.locator("[data-boton-ayuda]").click();
+    // Se escribe cuando el índice ya cargó (antes, el buscador se vuelve a pintar y se pierde lo escrito).
+    await p.locator("[data-panel-ayuda]").getByText("Esta pantalla aún no tiene una guía propia").waitFor({ timeout: 30000 });
     await p.locator("[data-panel-ayuda] [data-buscar-ayuda]").fill("portada");
     await p.locator("[data-panel-ayuda] [data-resultado-ayuda='comunicados/portada-y-fijadas']").click();
     await p.locator("[data-panel-ayuda] [data-guia-abierta='comunicados/portada-y-fijadas']").waitFor({ timeout: 20000 });

@@ -70,7 +70,7 @@ Porque cada salida y su regreso son tramos distintos (por ejemplo, salió a come
 
 ### ¿Qué son las «Capturas en este dispositivo · Requiere revisión»?
 
-Son checadas que se guardaron en ese mismo aparato cuando no había internet y todavía no se confirmaron en el servidor. RH puede revisar la hora original. No se suman a los contadores ni a la exportación. Ver [El reloj y la conexión a internet](/ayuda/reloj-checador/reloj-sin-conexion).
+Son checadas que ese mismo aparato guardó sin internet con una versión anterior del reloj (hoy el reloj necesita internet) y que todavía no se confirmaron en el servidor. RH puede revisar la hora original. No se suman a los contadores ni a la exportación. Ver [El reloj y la conexión a internet](/ayuda/reloj-checador/reloj-sin-conexion).
 
 ### ¿Dónde veo las checadas de un empleado por días?
 

@@ -81,5 +81,7 @@ Las sesiones se registran desde que entras de nuevo. Si dice «No hay otras sesi
 
 ## Relacionado
 
+- [Cómo entrar a ADAMIA y recuperar tu contraseña](/ayuda/primeros-pasos/iniciar-sesion)
+- [Conoce tu espacio en ADAMIA](/ayuda/mi-espacio/conoce-tu-espacio)
 - [Cómo dar acceso al panel a otra persona](/ayuda/usuarios/dar-acceso-a-tu-equipo)
 - [Mis recibos de pago](/ayuda/nomina/mis-recibos-de-pago)

@@ -22,7 +22,7 @@ Empleados, en el reloj de la empresa o en su celular. RH lo explica al capacitar
 
 Tu horario de comida viene de tu turno. Si tienes dudas sobre tu hora de comida, pregunta a Recursos Humanos.
 
-## Forma 1: contestar «¿Sales a comer?»
+## Cómo salir a comer contestando «¿Sales a comer?»
 
 En tu **primera salida del día** el reloj siempre pregunta **«¿Sales a comer?»**:
 
@@ -30,7 +30,7 @@ En tu **primera salida del día** el reloj siempre pregunta **«¿Sales a comer?
 2. Elige **Salir a comer** (tu jornada sigue abierta) o **Registrar salida** (si de verdad te vas).
 3. La confirmación te dice a qué hora debes regresar, por ejemplo «Regresa a las 2:00 p.m.».
 
-## Forma 2: el interruptor «Voy a comer»
+## Cómo salir a comer con el interruptor «Voy a comer»
 
 Úsalo cuando ya saliste antes ese día (por ejemplo a un trámite) y ahora sí vas a comer:
 

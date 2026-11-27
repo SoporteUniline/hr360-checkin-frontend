@@ -95,5 +95,7 @@ Por empresa. Todos los usuarios de esa empresa usan el mismo saldo.
 
 ## Relacionado
 
+- [Créditos y límites de Adamia AI: indicadores y topes](/ayuda/adamia-ai/creditos-y-limites)
+- [Qué es Adamia AI](/ayuda/adamia-ai/que-es-adamia-ai)
 - [Mi suscripción, facturas y pagos](/ayuda/suscripcion/mi-suscripcion)
 - [Roles y permisos por módulo](/ayuda/usuarios/roles-y-permisos)

@@ -3,9 +3,9 @@ titulo: Catálogos base — las listas que usa tu empresa
 resumen: Qué son los catálogos de departamentos, puestos, unidades de negocio, estado civil y campos personalizados, y en qué orden conviene llenarlos.
 modulo: catalogos
 audiencia: [rh, dueno]
-pantallas: [/panel/catalogos]
+pantallas: []
 palabras: [catálogos, catalogo, listas, departamentos, puestos, sucursales, unidades de negocio, estado civil, campos personalizados, configuración inicial]
-orden: 0
+orden: 26
 actualizado: 2026-11-27
 fuentes: [src/app/panel/catalogos/page.jsx, src/components/Sidebar/nav-main.jsx]
 ---
@@ -30,11 +30,11 @@ Si manejas varias empresas, cada catálogo pertenece a una empresa: al crear una
 | [Departamentos](/ayuda/catalogos/departamentos) | Gestión de personal → Departamentos | Áreas de trabajo (Ventas, Operación, Sistemas…). |
 | [Puestos](/ayuda/catalogos/puestos) | Gestión de personal → Puestos | El puesto de cada persona. |
 | [Estado civil](/ayuda/catalogos/estado-civil) | Gestión de personal → Estado civil | Opciones del dato personal. |
-| [Campos personalizados](/ayuda/catalogos/campos-personalizados) | Ajustes → Campos personalizados | Datos extra que tu empresa necesita en la ficha. |
+| [Campos personalizados](/ayuda/campos-personalizados/crear-campos-personalizados) | Ajustes → Campos personalizados | Datos extra que tu empresa necesita en la ficha. |
 
-En **Catálogos base** también están **Áreas de Check** y **Tipos de registro**, que pertenecen al control de asistencia.
+En **Catálogos base** también están [Áreas de Check](/ayuda/catalogos/areas-de-check) (dónde se puede checar con GPS) y [Tipos de registro](/ayuda/asistencias/tipos-de-registro), que pertenecen al control de asistencia.
 
-## Paso a paso: orden recomendado
+## Cómo darlos de alta, en orden
 
 1. Da de alta tus **Unidades de negocio** con sus datos fiscales.
 2. Crea tus **Departamentos**.
@@ -62,4 +62,4 @@ Sí. Cada empresa tiene sus propios catálogos.
 ## Relacionado
 
 - [Cómo dar de alta a un empleado](/ayuda/empleados/dar-de-alta)
-- [Campos personalizados](/ayuda/catalogos/campos-personalizados)
+- [Campos personalizados](/ayuda/campos-personalizados/crear-campos-personalizados)

@@ -32,6 +32,14 @@ Los permisos se asignan en **Ajustes → Usuarios con acceso**. Ve [Cómo dar ac
 
 > **Importante:** La seguridad no depende solo de la pantalla: el servidor también revisa cada permiso. Aunque alguien encontrara un botón, sin permiso de edición su cambio se rechaza.
 
+## Cómo elegir los permisos de una persona
+
+1. Entra a **Ajustes → Usuarios con acceso** y presiona el lápiz (**Editar**) de la persona, o **Nuevo acceso** si aún no lo tiene.
+2. En **Rol** elige la plantilla que más se parece a su trabajo (ve la tabla de [plantillas de rol](#las-plantillas-de-rol)).
+3. En **Permisos por módulo** ajusta cada módulo a **Sin acceso**, **Ver** o **Ver y editar**. Con **Todo: Sin acceso**, **Todo: Ver** y **Todo: Ver y editar** cambias todos de un jalón.
+4. En **Empresas** elige **Todas las empresas** o **Solo algunas**.
+5. Presiona **Guardar**. Los cambios se aplican en menos de un minuto.
+
 ## Los módulos de la matriz
 
 La matriz tiene una fila por cada módulo de ADAMIA (Asistencias, Empleados, Nómina, Vacaciones, Permisos, Evaluación de desempeño, Reclutamiento, Tareas y checklists, Activos y uniformes, Gestión documental, Turnos extra, Inducción digital y Centro de comunicados), más **Clima y NOM-035** y **Ajustes de la empresa** (datos y logo de la empresa, plantillas de felicitación y campos personalizados).

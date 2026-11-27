@@ -28,7 +28,7 @@ Tu empresa debe usar el módulo **Activos y uniformes**. Si no ves la opción en
 
 ![Mis activos y uniformes en el celular](/ayuda/capturas/activos/mis-activos-y-uniformes.webp "Tus resguardos y lo que tienes a tu cargo")
 
-## Paso a paso: confirmar una entrega
+## Cómo confirmar una entrega
 
 1. En **Mis resguardos**, busca la entrega que dice **Pendiente de acuse**.
 2. Toca `Ver y confirmar`.
@@ -42,7 +42,7 @@ Tu empresa debe usar el módulo **Activos y uniformes**. Si no ves la opción en
 - **Historial de entregas y devoluciones**.
 - **Solicitudes e incidencias**: para pedir atención a Recursos Humanos.
 
-## Paso a paso: pedir atención
+## Cómo pedir atención
 
 1. Baja a **Solicitudes e incidencias** y toca `Registrar solicitud`.
 2. Elige el **Tipo**: Falla de equipo, Cambio de talla, Reposición u Otro.

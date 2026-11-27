@@ -42,7 +42,7 @@ Entra a **Control de tiempo → Turnos extra**.
 5. Revisa la columna **Avisos de ley** de cada persona.
 6. Toca **Programar turno**.
 
-![Ventana Nuevo turno extra con el horario, los filtros y la lista de personas con sus avisos de ley](/ayuda/capturas/turnos_extra/turno-extra-nuevo.webp "Cada persona muestra su turno normal, a qué hora salió, sus horas de la semana y los avisos de ley")
+![Ventana Nuevo turno extra con el horario, los filtros y la lista de personas con sus avisos de ley](/ayuda/capturas/turnos-extra/turno-extra-nuevo.webp "Cada persona muestra su turno normal, a qué hora salió, sus horas de la semana y los avisos de ley")
 
 > **Importante:** si alguna persona tiene un **aviso grave** (es menor de edad o juntaría más de 12 horas seguidas), el botón cambia a **Confirmar y programar** y te muestra quiénes son. Si la empresa decide programarlas de todos modos, queda registrado quién lo confirmó.
 
@@ -75,7 +75,7 @@ No. Al día siguiente cada quien vuelve a su turno normal.
 
 ### ¿Cómo sé quién ya llegó al turno extra?
 
-En la misma pantalla, el turno muestra en vivo quién checó. Ver [Cómo seguir un turno extra en vivo](/ayuda/turnos_extra/seguir-un-turno-extra).
+En la misma pantalla, el turno muestra en vivo quién checó. Ver [Cómo seguir un turno extra en vivo](/ayuda/turnos-extra/seguir-un-turno-extra).
 
 ## Qué pasa si…
 
@@ -86,7 +86,7 @@ En la misma pantalla, el turno muestra en vivo quién checó. Ver [Cómo seguir 
 
 ## Relacionado
 
-- [Cómo seguir un turno extra en vivo](/ayuda/turnos_extra/seguir-un-turno-extra)
+- [Cómo seguir un turno extra en vivo](/ayuda/turnos-extra/seguir-un-turno-extra)
 - [Cómo autorizar o no las horas extra del día](/ayuda/asistencias/autorizar-horas-extra)
 - [Cómo revisar las horas de la semana contra el límite de la ley](/ayuda/asistencias/horas-de-ley)
 - [Cómo crear o editar un turno](/ayuda/turnos/crear-un-turno)

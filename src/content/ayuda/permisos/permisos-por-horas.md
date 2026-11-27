@@ -90,3 +90,4 @@ Sí. También puedes registrarlo directo en el reloj del día: [Cómo registrar 
 - [Cómo registrar que alguien llegó tarde o salió antes con permiso](/ayuda/asistencias/permiso-del-dia)
 - [Cómo registrar un permiso](/ayuda/permisos/registrar-un-permiso)
 - [Cómo pedir un permiso](/ayuda/permisos/pedir-un-permiso)
+- [Cómo aprobar las solicitudes de mi equipo](/ayuda/solicitudes-equipo/aprobar-solicitudes-de-mi-equipo)

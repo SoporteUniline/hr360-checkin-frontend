@@ -28,7 +28,7 @@ Recursos Humanos y el dueño.
 
 Arriba ves **Total actas**, **Borradores**, **Elaboradas**, **Cerradas** y **Graves**.
 
-## Paso a paso: levantar un acta
+## Cómo levantar un acta
 
 1. Toca `Nueva acta`.
 2. **Información básica:** Empresa, **Empleado** (búscalo por nombre) y **Tipo de Acta**. Si el tipo no existe, créalo con el botón **Crear tipo de acta**.
@@ -41,7 +41,7 @@ Arriba ves **Total actas**, **Borradores**, **Elaboradas**, **Cerradas** y **Gra
 
 ![Ventana Nueva Acta Administrativa](/ayuda/capturas/documentos/nueva-acta.webp "Secciones del acta")
 
-## Paso a paso: tipos de acta
+## Cómo crear tipos de acta
 
 1. En la ventana del acta, toca **Crear tipo de acta**.
 2. Escribe el **Nombre del tipo** (por ejemplo «Falta injustificada») y una **Descripción**.
@@ -58,7 +58,7 @@ Arriba ves **Total actas**, **Borradores**, **Elaboradas**, **Cerradas** y **Gra
 | Cerrada | El caso terminó. |
 | Cancelada | La falta se corrigió o el acta no procede. |
 
-## Paso a paso: revisar, cambiar estatus, descargar y firmar
+## Cómo revisar, cambiar el estatus, descargar y firmar un acta
 
 1. En la fila, toca **Ver**.
 2. Revisa la información general, los detalles del incidente, el descargo y la información administrativa.

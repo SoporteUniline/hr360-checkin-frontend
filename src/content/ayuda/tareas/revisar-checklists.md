@@ -20,7 +20,13 @@ Cuando alguien envía un checklist que debe revisarse, aparece en **Checklists �
 
 Quien el checklist diga en **¿Quién lo revisa?**: el jefe inmediato o Recursos Humanos / el dueño.
 
-## Paso a paso
+## Antes de empezar
+
+- El módulo **Tareas y checklists** debe estar activo.
+- Solo llegan aquí los checklists que en **¿Quién lo revisa?** tienen un revisor. Los de «Nadie, se aprueba solo» se aprueban al enviarse. Ve [Cómo crear un checklist](/ayuda/tareas/crear-checklist).
+- La pestaña **Revisar** muestra un número con los envíos que esperan tu revisión.
+
+## Cómo revisar un checklist
 
 1. Entra a **Checklists → Revisar**.
 2. A la izquierda elige el envío (checklist, persona, fecha y calificación).

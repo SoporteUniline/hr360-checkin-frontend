@@ -26,7 +26,7 @@ Recursos Humanos y el dueño.
 
 El directorio incluye a las personas **activas e inactivas**, así que también puedes consultar a quien ya se fue.
 
-## Paso a paso
+## Cómo abrir el expediente de una persona
 
 1. En **Directorio**, elige la unidad de negocio (o deja **Todas las unidades de negocio**).
 2. Escribe en **Buscar empleado…** el nombre, puesto o departamento.

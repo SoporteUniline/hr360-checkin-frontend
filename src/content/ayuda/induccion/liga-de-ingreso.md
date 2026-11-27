@@ -25,7 +25,7 @@ La persona que va a entrar a trabajar.
 - **La liga es personal:** no la compartas. Vence en la fecha que te indica tu mensaje.
 - **No tienes que terminar de una vez:** todo se guarda solo y puedes seguir después con la misma liga.
 
-## Paso a paso
+## Cómo completar tu alta
 
 Arriba verás tu avance en cuatro partes: **Datos**, **Documentos**, **Firma** y **Rostro**. Puedes moverte entre ellas con los botones de arriba.
 
