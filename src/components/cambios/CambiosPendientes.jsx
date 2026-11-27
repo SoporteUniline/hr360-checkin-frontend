@@ -23,6 +23,7 @@ import { debeDetenerEnlace, decidirTrasGuardar, rutaInterna } from "@/lib/cambio
 const Contexto = createContext(null);
 const MARCA = "__cambiosPendientes";
 
+// (27/11/2026, regla del dueño) La ventana se lee bien a los 60 años: letra de 16 px y botones de 48 px.
 export function CambiosPendientesProvider({ children }) {
   const router = useRouter();
   const guardias = useRef(new Map()); // id → { hayCambios, guardar, descartada }
@@ -194,15 +195,15 @@ export function CambiosPendientesProvider({ children }) {
       <AlertDialog open={Boolean(pregunta)} onOpenChange={(abierto) => { if (!abierto) seguirEditando(); }}>
         <AlertDialogContent data-dialogo-cambios className="max-w-[calc(100%-2rem)] gap-5 sm:max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#080d36]">Tienes cambios sin guardar</AlertDialogTitle>
-            <AlertDialogDescription>¿Qué quieres hacer? Si sales sin guardar, los cambios se pierden.</AlertDialogDescription>
+            <AlertDialogTitle className="text-[20px] font-bold text-[#080d36]">Tienes cambios sin guardar</AlertDialogTitle>
+            <AlertDialogDescription className="text-[16px] text-[#374151]">¿Qué quieres hacer? Si sales sin guardar, los cambios se pierden.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:justify-stretch">
             <button
               type="button"
               onClick={guardarYSalir}
               disabled={guardando}
-              className="min-h-[44px] w-full rounded-lg bg-[#2563EB] px-4 text-sm font-semibold text-white hover:bg-[#1d4ed8] disabled:opacity-60"
+              className="min-h-12 w-full rounded-lg bg-[#2563EB] px-4 text-[16px] font-semibold text-white hover:bg-[#1d4ed8] disabled:opacity-60"
             >
               {guardando ? "Guardando…" : "Guardar y salir"}
             </button>
@@ -210,7 +211,7 @@ export function CambiosPendientesProvider({ children }) {
               type="button"
               onClick={salirSinGuardar}
               disabled={guardando}
-              className="min-h-[44px] w-full rounded-lg border border-red-200 bg-white px-4 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+              className="min-h-12 w-full rounded-lg border border-red-200 bg-white px-4 text-[16px] font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
             >
               Salir sin guardar
             </button>
@@ -219,7 +220,7 @@ export function CambiosPendientesProvider({ children }) {
               onClick={seguirEditando}
               disabled={guardando}
               autoFocus
-              className="min-h-[44px] w-full rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-60"
+              className="min-h-12 w-full rounded-lg px-4 text-[16px] font-semibold text-[#374151] hover:bg-slate-100 disabled:opacity-60"
             >
               Seguir editando
             </button>

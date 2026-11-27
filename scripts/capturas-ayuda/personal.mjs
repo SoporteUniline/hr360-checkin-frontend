@@ -623,6 +623,9 @@ ruta("GET", /^\/checador\/contratos\/42\/detalle$/, () => json({
 ruta("GET", /^\/checador\/calculos-lft\/publico\/vacaciones-ley$/, () => json({ dias: 16, anio_servicio: 3 }));
 ruta("GET", /^\/checador\/contratos\/40\/documento$/, () => json({ congelado: true, html: TEXTO_CONTRATO, faltantes: [], plantilla: { id_plantilla: null, nombre: "Indeterminado Uniline" } }));
 ruta("GET", /^\/checador\/contratos\/revisar-sueldos$/, () => json({ migracion: true, duplicados: [],
+  periodicidades: [{ motivo: "periodicidad_por_confirmar", id_empleado: 19, nombre: "Beto Soto Lara", id_contrato: 43, folio: "CT-0043", salario_contrato: 5000,
+    periodicidad_guardada: "quincenal", periodicidad_como_dice: "Quincenal", hoy: { periodicidad: "Quincenal", mensual: 5000, monto: 2500 },
+    como_dice: { periodicidad: "Quincenal", mensual: 10000, monto: 5000 } }],
   diferencias: [{ id_empleado: 18, nombre: "Frida Serrano Gil", id_contrato: 41, folio: "CT-0041", sueldo_ficha: 4500, periodo_ficha: "Quincenal", salario_contrato: 9600, periodicidad_contrato: "Mensual", contrato_en_periodo_ficha: 4800, diferencia: 300 }] }));
 ruta("GET", /^\/checador\/contratos\/plantillas-base$/, () => json({ variables: [], bases: [
   ["indeterminado", "indefinido", "Contrato por tiempo indeterminado (base ADAMIA)"], ["determinado", "temporal", "Contrato por tiempo determinado (base ADAMIA)"],

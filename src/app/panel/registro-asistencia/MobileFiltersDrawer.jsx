@@ -7,6 +7,7 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from "@/components/ui/drawer";
+import { X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
@@ -172,8 +173,8 @@ export default function MobileFiltersDrawer({
         <div className="w-10 h-1.5 rounded-full bg-gray-300 mx-auto mt-3 shrink-0" />
 
         <div className="px-6 pt-4 pb-3 shrink-0 border-b border-gray-100">
-          <div className="flex items-start justify-between gap-3">
-            <div>
+          <div className="flex items-start gap-3">
+            <div className="mr-auto">
               <DrawerTitle className="text-xl font-extrabold tracking-tight text-gray-900">
                 Filtros
               </DrawerTitle>
@@ -192,6 +193,15 @@ export default function MobileFiltersDrawer({
               className="text-sm font-semibold text-brand min-h-[44px] px-2"
             >
               Limpiar
+            </button>
+            <button
+              type="button"
+              aria-label="Cerrar filtros"
+              onClick={() => onOpenChange(false)}
+              data-cerrar-hoja
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 active:bg-gray-50"
+            >
+              <X className="h-6 w-6" aria-hidden="true" />
             </button>
           </div>
         </div>

@@ -44,8 +44,11 @@ Piezas en `src/components/detalle/` (importa desde `@/components/detalle`):
    las ventanas; `alert-dialog.jsx` (Radix) ya no se cerraba afuera; `sheet.jsx` igual, salvo los paneles que son un
    **menú** (`<SheetContent menu>`: menú lateral, «Más acciones», menú de la página pública), que sí se cierran al tocar
    afuera como cualquier menú. Los menús y listas desplegables (Popover, DropdownMenu, Select) no son ventanas.
-   Las hojas `Drawer` (vaul: filtros y detalle en celular, menú del Navbar) no se cambiaron: se cierran deslizando.
-   Prueba: `scripts/verify-contratos.mjs` (paso 2c).
+   Las hojas de celular (`drawer.jsx`, vaul: filtros, detalle) tampoco: se cierran con su X o botón de cerrar, con Esc o
+   deslizándolas hacia abajo; toda hoja sin botón de cerrar visible lleva una X de 48 px. Las que son menú
+   (`<DrawerContent menu>`: menú del Navbar en celular) sí se cierran al tocar afuera.
+   La ventana compartida «Tienes cambios sin guardar» (`CambiosPendientes.jsx`) usa letra de 16 px y botones de 48 px.
+   Pruebas: `scripts/verify-contratos.mjs` (paso 2c) y `scripts/verify-hojas.mjs` (hojas de celular).
 8. Los **datos y las reglas** los da el servidor (en contratos: sueldo vigente, firmas, historial); las vistas solo
    los ponen en palabras con funciones puras probadas (`src/lib/contratos/detalleContrato.mjs`).
 
