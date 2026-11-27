@@ -7,7 +7,7 @@ pantallas: [/panel/vacaciones/por-ley]
 palabras: [vacaciones por ley, vacaciones dignas, antigüedad, días de vacaciones, prima vacacional, 12 días, artículo 76, artículo 80, regla, tabla de vacaciones]
 orden: 20
 actualizado: 2026-11-27
-fuentes: [src/app/panel/vacaciones/por-ley/page.jsx, src/app/panel/vacaciones/por-periodo/page.jsx]
+fuentes: [src/app/panel/vacaciones/por-ley/page.jsx, src/app/panel/vacaciones/por-periodo/page.jsx, src/lib/calculos/calculosLft.mjs]
 ---
 
 ## Para qué sirve
@@ -45,7 +45,9 @@ La Ley Federal del Trabajo (art. 76, reforma de 2023) da como mínimo:
 | 26 a 30 | 30 |
 | 31 a 35 | 32 |
 
-Y una **prima vacacional** de al menos el **25 %** (art. 80). Tu empresa puede dar más.
+Y así, 2 días más cada 5 años. También una **prima vacacional** de al menos el **25 %** (art. 80). Tu empresa puede dar más.
+
+> **Importante:** Si tu tabla da **menos** días que la ley para un año (o no tiene regla para él), ADAMIA usa los días de la ley al cargar los periodos, al proponer un periodo a mano, en los contratos nuevos y en los finiquitos. Si da **más**, usa los de tu tabla.
 
 ## Cómo agregar una regla
 
@@ -64,11 +66,11 @@ Usa el lápiz (**Editar**) o el bote de basura (**Eliminar**) de cada fila. Al e
 
 ### ¿Tengo que poner una regla para cada año?
 
-No es obligatorio. Para cada persona el sistema usa la regla con el mayor número de años que no pase de su antigüedad. Por ejemplo, con reglas para 6 y 11 años, alguien con 8 años toma la de 6. Al capturar un periodo a mano, en cambio, se busca la regla exacta de sus años; si no existe, te pide capturar los días.
+No es obligatorio. Para cada persona el sistema usa la regla con el mayor número de años que no pase de su antigüedad. Por ejemplo, con reglas para 6 y 11 años, alguien con 8 años toma la de 6. Si no hay regla, o la regla da menos que la ley, se usan los días de la ley. Lo mismo pasa al proponer un periodo a mano.
 
 ### ¿Cuándo se cargan los días a cada persona?
 
-Cada noche, para quien cumple un año más de antigüedad, si tiene fecha de ingreso y hay regla para sus años.
+Cada noche, para quien cumple un año más de antigüedad y tiene fecha de ingreso. Los días son el mayor entre la ley y tu regla.
 
 ### ¿Qué pasa si cambio una regla?
 

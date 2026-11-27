@@ -7,7 +7,7 @@ pantallas: [/panel/vacaciones/por-periodo]
 palabras: [vacaciones por periodo, periodo vacacional, año de antigüedad, días de vacaciones, activa, usada, vencida, nuevo periodo, fecha de ingreso]
 orden: 30
 actualizado: 2026-11-27
-fuentes: [src/app/panel/vacaciones/por-periodo/page.jsx]
+fuentes: [src/app/panel/vacaciones/por-periodo/page.jsx, src/lib/calculos/calculosLft.mjs]
 ---
 
 ## Para qué sirve
@@ -41,11 +41,11 @@ Filtra por **unidad de negocio**, **Buscar por nombre…**, año, departamento y
 
 1. Toca **Nuevo periodo**.
 2. Elige la empresa y busca al empleado en **Buscar colaborador por nombre...**.
-3. El sistema calcula solo, con su fecha de ingreso, el **último periodo cumplido**: **Fecha inicio**, **Fecha fin**, **Año del período vacacional** y los **Días** según Vacaciones por ley.
+3. El sistema calcula solo, con su fecha de ingreso, el **último periodo cumplido**: **Fecha inicio**, **Fecha fin**, **Año del período vacacional** y los **Días**: el mayor entre la Ley Federal del Trabajo (art. 76: 12 el primer año, 14 el segundo…) y tu regla de Vacaciones por ley.
 4. Revisa o ajusta los datos y el **Estado**.
 5. Guarda.
 
-> **Consejo:** si aparece «No existe una regla en «Vacaciones por ley» para N año(s). Captura los días manualmente.», escribe los días o agrega la regla que falta.
+> **Consejo:** si tu empresa no tiene regla para ese año, o su regla da menos que la ley, verás un aviso como «Sin regla de la empresa para N año(s): se proponen los N días de la ley (art. 76).». Revisa los días y guarda.
 
 ## Cómo corregir o eliminar un periodo
 

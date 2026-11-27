@@ -13,6 +13,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 const require = createRequire(import.meta.url);
+const LFT = require("../lib/calculos-lft-servidor.cjs");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
 const SALIDA = path.resolve(process.env.CAPTURAS_AYUDA || "public/ayuda/capturas");
 const SOLO = (process.argv.find((a) => a.startsWith("solo=")) ?? "").slice(5).split(",").filter(Boolean);
@@ -152,22 +153,16 @@ const EMPLEADOS_AGUINALDO = [
   { id: 13, id_empleado: 13, id_empresa: 7, nombre_completo: "Frida Serrano Luna", puesto: "Vendedora", departamento: "Ventas", fecha_ingreso: "2026-11-18", salario_diario: 280, periodicidad_pago: "Semanal", aguinaldo_dias: 15 },
   { id: 14, id_empleado: 14, id_empresa: 7, nombre_completo: "Héctor León Ruiz", puesto: "Almacenista", departamento: "Almacén", fecha_ingreso: "2026-02-01", salario_diario: 320, periodicidad_pago: "Quincenal", aguinaldo_dias: 15 },
 ];
-// Misma regla que el servidor (aguinaldosController.calcularAguinaldoIndividual).
+// (27/11/2026) Mismo motor que el servidor (copia de services/calculosLft.js en scripts/lib; ver docs/calculos-lft.md).
 function aguinaldo(e, corte, anio, noTrab) {
-  const ingreso = new Date(e.fecha_ingreso);
-  const fc = new Date(corte);
-  const inicioAnio = new Date(anio, 0, 1);
-  const desde = ingreso > inicioAnio ? ingreso : inicioAnio;
-  const bruto = Math.max(0, Math.floor((fc - desde) / 86400000));
-  const neto = Math.max(0, bruto - noTrab);
-  const anios = (fc - ingreso) / 86400000 / 365.25;
-  const prop = anios < 1;
-  const dias = prop ? (15 * neto) / 365 : 15;
+  const r = LFT.calcularAguinaldo({ salario_diario: e.salario_diario, fecha_ingreso: e.fecha_ingreso, fecha_corte: corte, dias_aguinaldo: e.aguinaldo_dias, faltas: noTrab });
+  const a = LFT.antiguedad(e.fecha_ingreso, corte);
   return {
     id_empleado: e.id_empleado, id_empresa: 7, nombre_completo: e.nombre_completo, puesto: e.puesto, departamento: e.departamento, fecha_ingreso: e.fecha_ingreso,
-    fecha_corte: corte, dias_trabajados: neto, años_trabajados: anios.toFixed(2), años_completos: Math.floor(anios), salario_diario: e.salario_diario.toFixed(2),
-    salario_mensual: (e.salario_diario * 30.4).toFixed(2), periodicidad_pago: e.periodicidad_pago, dias_aguinaldo_ley: "15.00", dias_aguinaldo_calculado: dias.toFixed(2),
-    monto_aguinaldo: (dias * e.salario_diario).toFixed(2), es_proporcional: prop, dias_no_trabajados: noTrab.toFixed(2),
+    fecha_corte: corte, dias_trabajados: r.dias_trabajados, dias_periodo: r.dias_periodo, dias_anio: r.dias_anio, años_trabajados: a.anios.toFixed(2), años_completos: a.anios_completos,
+    salario_diario: r.salario_diario.toFixed(2), salario_mensual: (r.salario_diario * 30).toFixed(2), periodicidad_pago: e.periodicidad_pago, dias_aguinaldo_ley: r.dias_aguinaldo.toFixed(2),
+    dias_aguinaldo_calculado: r.dias_proporcionales.toFixed(4), monto_aguinaldo: r.monto.toFixed(2), es_proporcional: r.es_proporcional, dias_no_trabajados: r.faltas.toFixed(2),
+    formula: r.formula, explicacion: r.explicacion, version: r.version,
   };
 }
 const NO_TRAB = { 15: 0, 12: 0, 13: 0, 14: 2 };
@@ -176,47 +171,25 @@ const CALCULOS_AGUINALDO = [
   { id_calculo: 2, nombre_empresa: "Uniline", año_fiscal: 2025, fecha_calculo: "2025-12-10", fecha_corte: "2025-12-15", total_empleados: 3, total_general: 13120.5, estado: "Pagado" },
   { id_calculo: 1, nombre_empresa: "Uniline", año_fiscal: 2025, fecha_calculo: "2025-12-08", fecha_corte: "2025-12-15", total_empleados: 3, total_general: 12980, estado: "Cancelado" },
 ];
-// Finiquito con la misma fórmula del servidor (finiquitosController.calcularFiniquito).
+// Finiquito con el mismo motor del servidor (finiquitosController.calcularFiniquito → services/calculosLft.js).
+const INGRESO_HECTOR = "2024-02-01";
 function finiquito(b) {
-  const ingreso = "2024-02-01";
-  const sd = Number(b.salario_diario_manual);
-  const baja = b.fecha_baja;
-  const dt = Math.floor((new Date(baja) - new Date(ingreso)) / 86400000);
-  const anios = dt / 365.25;
-  const completos = Math.floor(anios);
-  const ultimo = new Date(ingreso); ultimo.setFullYear(new Date(ingreso).getFullYear() + completos);
-  const brutoAnio = anios < 1 ? dt : Math.floor((new Date(baja) - ultimo) / 86400000) || 365;
-  const noTrab = Number(b.dias_no_trabajados ?? 0);
-  const netoAnio = Math.max(0, brutoAnio - noTrab);
-  const pend = Number(b.dias_salario_pendiente ?? 0);
-  const desde = new Date(Math.max(new Date(ingreso), new Date(new Date(baja).getFullYear(), 0, 1)));
-  const diasAg = Math.max(0, Math.floor((new Date(baja) - desde) / 86400000) + 1);
-  const agProp = (Number(b.dias_aguinaldo_manual ?? 15) * Math.max(0, diasAg - noTrab)) / 365;
-  const vacProp = (Number(b.dias_vacaciones_ley_año_actual ?? 12) * netoAnio) / 365;
-  const vacPend = Math.max(0, vacProp - Number(b.dias_vacaciones_año_actual_ya_gozadas ?? 0));
-  const vacTot = Number(b.dias_vacaciones_años_anteriores ?? 0) + vacPend;
-  const mVac = vacTot * sd;
-  const mPrima = mVac * (Number(b.prima_vacacional_porcentaje_manual ?? 25) / 100);
-  const sub = pend * sd + agProp * sd + mVac + mPrima;
-  const liq = b.tipo_calculo === "liquidacion";
-  const tope = 278.8 * 2;
-  const primaAnt = liq ? completos * 12 * Math.min(sd, tope) : 0;
-  const indem = liq ? (90 + completos * 20) * sd : 0;
-  const venc = liq ? Number(b.dias_salarios_vencidos ?? 0) * sd : 0;
-  const f2 = (n) => Number(n).toFixed(2);
+  const pick = (...k) => k.map((x) => b[x]).find((v) => v !== undefined && v !== null && v !== "");
+  const calculo = LFT.calcularFiniquito({
+    fecha_ingreso: INGRESO_HECTOR, fecha_baja: b.fecha_baja, tipo_terminacion: b.tipo_terminacion,
+    salario_diario: pick("salario_diario_manual", "salario_diario") ?? 320, dias_salario_pendiente: b.dias_salario_pendiente,
+    faltas_aguinaldo: b.dias_no_trabajados, dias_aguinaldo: b.dias_aguinaldo_manual, prima_vacacional_porcentaje: b.prima_vacacional_porcentaje_manual,
+    dias_vacaciones_anio_empresa: b.dias_vacaciones_ley_año_actual, dias_vacaciones_pendientes_anteriores: b.dias_vacaciones_años_anteriores,
+    dias_vacaciones_gozadas_anio_actual: b.dias_vacaciones_año_actual_ya_gozadas, zona_salario_minimo: b.zona_salario_minimo,
+    incluir_20_dias: b.incluir_20_dias, gratificacion_adicional: b.gratificacion_adicional,
+  });
   return {
-    id_empleado: 14, id_empresa: 7, nombre_completo: "Héctor León Ruiz", puesto: "Almacenista", departamento: "Almacén", fecha_ingreso: ingreso, fecha_baja: baja,
-    dias_trabajados: dt, años_trabajados: anios.toFixed(2), años_completos: completos, salario_diario: f2(sd), salario_mensual: f2(sd * 30.4), periodicidad_pago: "Quincenal",
-    es_liquidacion: liq, tipo_calculo: b.tipo_calculo, tipo_terminacion: b.tipo_terminacion, dias_aguinaldo: 15, prima_vacacional_porcentaje: 25, dias_vacaciones_ley_año_actual: Number(b.dias_vacaciones_ley_año_actual ?? 12),
-    dias_no_trabajados: f2(noTrab), dias_transcurridos_año_bruto: brutoAnio, dias_transcurridos_año_neto: f2(netoAnio), dias_salario_pendiente: f2(pend), monto_salario_pendiente: f2(pend * sd),
-    dias_aguinaldo_proporcional: f2(agProp), monto_aguinaldo_proporcional: f2(agProp * sd), dias_vacaciones_años_anteriores: f2(b.dias_vacaciones_años_anteriores ?? 0),
-    dias_vacaciones_año_actual_proporcional_bruto: f2(vacProp), dias_vacaciones_año_actual_ya_gozadas: f2(b.dias_vacaciones_año_actual_ya_gozadas ?? 0), dias_vacaciones_año_actual_pendientes: f2(vacPend),
-    dias_vacaciones_totales: f2(vacTot), monto_vacaciones_no_gozadas: f2(mVac), monto_prima_vacacional: f2(mPrima), subtotal_finiquito: f2(sub),
-    dias_prima_antiguedad: f2(liq ? completos * 12 : 0), monto_prima_antiguedad: f2(primaAnt), tope_prima_antiguedad: f2(tope), dias_indemnizacion_total: f2(liq ? 90 + completos * 20 : 0),
-    monto_indemnizacion_constitucional: f2(indem), dias_salarios_vencidos: f2(b.dias_salarios_vencidos ?? 0), monto_salarios_vencidos: f2(venc), subtotal_liquidacion: f2(primaAnt + indem + venc), total_pagar: f2(sub + primaAnt + indem + venc),
+    ...LFT.aColumnasFiniquito(calculo), id_empleado: 14, id_empresa: 7, nombre_completo: "Héctor León Ruiz", puesto: "Almacenista", departamento: "Almacén",
+    periodicidad_pago: "Quincenal", tipo_calculo: calculo.es_liquidacion ? "liquidacion" : "finiquito", calculo, avisos: calculo.avisos, nota_bruto: LFT.NOTA_BRUTO,
+    salario_empleado: { salario_diario: 320, origen: "contrato", texto: "Contrato activo: $4,800.00 quincenal ÷ 15 = $320.00 diarios" },
   };
 }
-const FINIQUITO_GUARDADO = { id_finiquito: 8, ...finiquito({ salario_diario_manual: 320, fecha_baja: "2026-11-27", tipo_calculo: "finiquito", tipo_terminacion: "Renuncia Voluntaria", dias_salario_pendiente: 5, dias_vacaciones_años_anteriores: 4, dias_vacaciones_ley_año_actual: 14 }), estado: "Pendiente", motivo_baja: "Cambio de ciudad", nombre_empresa: "Uniline", calculado_por: "laura.rios@uniline.mx", fecha_calculo: "2026-11-27" };
+const FINIQUITO_GUARDADO = { id_finiquito: 8, ...finiquito({ salario_diario_manual: 320, fecha_baja: "2026-11-27", tipo_terminacion: "Renuncia Voluntaria", dias_salario_pendiente: 5, dias_vacaciones_años_anteriores: 4 }), estado: "Pendiente", motivo_baja: "Cambio de ciudad", nombre_empresa: "Uniline", calculado_por: "laura.rios@uniline.mx", fecha_calculo: "2026-11-27", calculado_version_anterior: false };
 const FINIQUITOS = [
   FINIQUITO_GUARDADO,
   { id_finiquito: 7, id_empleado: 16, nombre_completo: "Valeria Castillo Mora", puesto: "Compras", fecha_ingreso: "2021-05-10", fecha_baja: "2026-10-31", años_trabajados: "5.47", tipo_terminacion: "Despido Injustificado", es_liquidacion: 1, total_pagar: 98450.32, estado: "Pagado", nombre_empresa: "Uniline", fecha_calculo: "2026-10-31" },
@@ -408,10 +381,16 @@ async function rutas(ctx, usuario) {
     }
     // Finiquitos
     if (p === "/checador/finiquitos" && m === "GET") return ok({ data: FINIQUITOS, total: FINIQUITOS.length });
-    if (p === "/checador/finiquitos/empleados-activos") return ok({ data: [{ id: 14, id_empleado: 14, id_empresa: 7, nombre_completo: "Héctor León Ruiz", fecha_ingreso: "2024-02-01", puesto: "Almacenista", departamento: "Almacén", periodicidad_pago: "Quincenal", salario_diario: 320 }] });
+    if (p === "/checador/finiquitos/empleados-activos") return ok({ data: [{ id: 14, id_empleado: 14, id_empresa: 7, nombre_completo: "Héctor León Ruiz", fecha_ingreso: INGRESO_HECTOR, puesto: "Almacenista", departamento: "Almacén", periodicidad_pago: "Quincenal", salario_diario: 320, salario_origen: "contrato", salario_texto: "Contrato activo: $4,800.00 quincenal ÷ 15 = $320.00 diarios", aguinaldo_dias: 15, prima_vacacional_porcentaje: 25 }] });
     if (/\/checador\/finiquitos\/empleado\/\d+\/dias-no-trabajados$/.test(p)) return ok({ dias_no_trabajados: 0 });
-    if (/\/checador\/finiquitos\/empleado\/\d+\/vacaciones-datos$/.test(p)) return ok({ diasPendientes: 4, diasLeyAñoActual: 14 });
+    if (/\/checador\/finiquitos\/empleado\/\d+\/vacaciones-datos$/.test(p)) return ok({ diasPendientes: 4, diasGozadosAdelantados: 0, diasLeyAñoActual: LFT.diasVacacionesALaFecha(INGRESO_HECTOR, url.searchParams.get("fechaBaja") || "2026-11-27"), primaVacacional: 25, diasAguinaldo: 15 });
     if (p === "/checador/finiquitos/calcular") return ok(finiquito(cuerpo));
+    if (p === "/checador/calculos-lft/publico/aguinaldo") {
+      const sd = LFT.salarioDiarioDe({ salario: cuerpo.salario, periodicidad: { diario: "Diario", semanal: "Semanal", quincenal: "Quincenal", mensual: "Mensual" }[cuerpo.tipo_salario] });
+      const r = LFT.calcularAguinaldo({ salario_diario: sd, fecha_ingreso: cuerpo.fecha_ingreso, fecha_corte: cuerpo.fecha_corte, dias_aguinaldo: cuerpo.dias_aguinaldo, faltas: cuerpo.dias_no_laborados });
+      return ok({ ...r, salario_diario_texto: `${LFT.pesos(sd)} diarios` });
+    }
+    if (p === "/checador/calculos-lft/publico/vacaciones-ley") return ok({ dias: 12, anio_servicio: 1, tabla: LFT.tablaVacacionesLey(35) });
     if (/^\/checador\/finiquitos\/8$/.test(p)) return ok(FINIQUITO_GUARDADO);
     // Ajustes
     if (p === "/checador/users/access") return ok({ data: ACCESOS, total: ACCESOS.length });
@@ -619,7 +598,7 @@ const ESCENAS = {
     await page.getByRole("combobox").first().click();
     await page.getByRole("option", { name: "Matriz Colima" }).click();
     await page.getByText("Selección de empleados").waitFor({ timeout: 30000 });
-    await page.getByLabel("Fecha de corte *").fill("2026-12-15").catch(async () => { await page.locator("input[type=date]").first().fill("2026-12-15"); });
+    await page.getByLabel("Fecha de corte *").fill("2026-12-31").catch(async () => { await page.locator("input[type=date]").first().fill("2026-12-31"); });
     await page.getByText("Seleccionar / Deseleccionar Todos").click();
     await dormir(1500);
     await alInicio(page.getByText("Configuración del Cálculo"));
@@ -648,10 +627,9 @@ const ESCENAS = {
     await page.getByRole("button", { name: "Calcular finiquito" }).click();
     await page.getByRole("button", { name: "Guardar y continuar" }).waitFor({ timeout: 15000 });
     await guardar(page, "nomina", "finiquito-calculado");
-    await page.getByLabel("Tipo de cálculo").selectOption("liquidacion");
     await page.getByLabel("Tipo de terminación").selectOption("Despido Injustificado");
     await page.getByRole("button", { name: "Calcular finiquito" }).click();
-    await page.getByText("Subtotal liquidación").waitFor({ timeout: 15000 });
+    await page.getByText("Subtotal indemnización").waitFor({ timeout: 15000 });
     const resumen = page.getByRole("complementary", { name: "Resumen del finiquito" });
     await alInicio(resumen);
     await guardar(page, "nomina", "liquidacion-calculada", { clip: await areaDe(page, resumen, 16) });
