@@ -7,7 +7,7 @@ pantallas: [/panel/contratos]
 palabras: [contratos, contrato laboral, vigencia, por vencer, vencido, renovar, duplicar, indefinido, temporal, periodo de prueba, estatus, terminar contrato]
 orden: 60
 actualizado: 2026-11-27
-fuentes: [src/app/panel/contratos/page.jsx, src/app/panel/contratos/ContratosTable.jsx, src/app/panel/contratos/ContratoDialog.jsx, src/app/panel/contratos/CambiarEstatusContrato.jsx, src/app/panel/contratos/ContratoViewDialog.jsx, src/components/avisos/CampanaAvisos.jsx]
+fuentes: [src/app/panel/contratos/page.jsx, src/app/panel/contratos/ContratosTable.jsx, src/app/panel/contratos/ContratoDialog.jsx, src/lib/calculosLftApi.js, src/app/panel/contratos/CambiarEstatusContrato.jsx, src/app/panel/contratos/ContratoViewDialog.jsx, src/components/avisos/CampanaAvisos.jsx]
 ---
 
 ## Para qué sirve
@@ -40,7 +40,7 @@ La persona debe estar registrada como empleado.
 3. **Tipo y vigencia:** elige el **Tipo de Contrato** y las fechas.
 4. **Compensación:** Salario Base, Periodicidad de Pago (Semanal, Quincenal o Mensual) y Moneda.
 5. **Jornada laboral:** Tipo de Jornada (Diurna, Nocturna, Mixta o Reducida), Horas Semanales, Entrada, Salida y horario de comida.
-6. **Prestaciones:** Días de Vacaciones, Días de Aguinaldo, Prima Vacacional (%) y Prestaciones Superiores (por ejemplo, vales de despensa o seguro de gastos médicos).
+6. **Prestaciones:** Días de Vacaciones, Días de Aguinaldo, Prima Vacacional (%) y Prestaciones Superiores (por ejemplo, vales de despensa o seguro de gastos médicos). En un contrato nuevo, **Días de Vacaciones** se llena solo con los días de ley (art. 76) según la antigüedad de la persona al inicio del contrato: 12 el primer año, 14 el segundo, 16 el tercero, 18 el cuarto, 20 el quinto, 22 del sexto al décimo y 2 más cada 5 años. Debajo del campo verás «Por ley (art. 76): N días en el año N de servicio». Puedes dar más días, no menos; si pones menos, verás «Son menos días de los que pide la ley.».
 7. **Ubicación y modalidad:** Presencial, Remoto o Híbrido, y Lugar de Trabajo. Agrega **Notas** si hay acuerdos especiales.
 8. Toca `Guardar`. Verás «Contrato creado correctamente.»
 
@@ -57,7 +57,7 @@ La persona debe estar registrada como empleado.
 | Periodo de Prueba | Sí |
 | Prestación de Servicios | No |
 
-> **Importante:** Revisa que vacaciones, aguinaldo y prima vacacional cumplan al menos con la Ley Federal del Trabajo vigente para la antigüedad de la persona.
+> **Importante:** La ley pide al menos 15 días de aguinaldo y 25 % de prima vacacional. Estos datos del contrato son los que usan los finiquitos y los aguinaldos de esa persona.
 
 ## Cómo renovar un contrato
 
