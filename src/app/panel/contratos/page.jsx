@@ -20,7 +20,6 @@ import { Combobox } from "@/components/Combobox";
 import StatCard from "@/components/StatCard";
 import TablePagination from "@/components/TablePagination";
 import ContratosTable from "./ContratosTable";
-import ContratoDialog from "./ContratoDialog";
 import CambiarEstatusContrato from "./CambiarEstatusContrato";
 import {
   AlertDialog,
@@ -43,7 +42,8 @@ import AccesosRapidos from "@/components/AccesosRapidos";
  * - Relación:
  *   - Hook: `useContratosData`
  *   - API: `src/lib/contratosApi.js`
- *   - Componentes: `ContratosTable`, `ContratoDialog`; el detalle vive en `[id]/DetalleContrato.jsx`
+ *   - Componentes: `ContratosTable`; el detalle vive en `[id]/DetalleContrato.jsx`; alta, duplicar y editar, en sus páginas
+ *     (`nuevo/`, `[id]/editar/`, con `formulario/FormularioContrato.jsx`)
  */
 export default function ContratosPage() {
   const [empresaFiltro, setEmpresaFiltro] = useState("all");
@@ -64,16 +64,12 @@ export default function ContratosPage() {
   const [limit, setLimit] = useState(10);
 
   // Modales
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editItem, setEditItem] = useState(null);
-  const [seedItem, setSeedItem] = useState(null); // para duplicación
   const [openEstatus, setOpenEstatus] = useState(false);
   const [estatusRow, setEstatusRow] = useState(null);
-  const [inicial, setInicial] = useState(null);
   const router = useRouter();
 
   // (27/11/2026) Enlaces de antes (?id=, campana de avisos, búsqueda): ahora abren la vista de detalle.
-  // ?nuevo=<empleado>&empresa=&sueldo=&periodicidad= (desde la ficha sin contrato vigente): alta con el sueldo de la ficha.
+  // ?nuevo=<empleado>&empresa=&sueldo=&periodicidad= (enlaces de antes desde la ficha): ahora el alta es una página.
   useEffect(() => {
     const id = searchParams.get("id");
     if (id) {
@@ -82,15 +78,9 @@ export default function ContratosPage() {
     }
     const nuevo = searchParams.get("nuevo");
     if (nuevo) {
-      setInicial({
-        id_empleado: Number(nuevo),
-        id_empresa: Number(searchParams.get("empresa")) || null,
-        salario_base: searchParams.get("sueldo") || "",
-        periodicidad_pago: searchParams.get("periodicidad") || "",
-      });
-      setEditItem(null);
-      setSeedItem(null);
-      setOpenDialog(true);
+      const q = new URLSearchParams({ empleado: nuevo });
+      for (const k of ["empresa", "sueldo", "periodicidad"]) if (searchParams.get(k)) q.set(k, searchParams.get(k));
+      router.replace(`/panel/contratos/nuevo?${q}`);
     }
   }, [searchParams, router]);
   const [deleteRow, setDeleteRow] = useState(null);
@@ -278,11 +268,8 @@ export default function ContratosPage() {
     URL.revokeObjectURL(url);
   };
 
-  const handleDuplicate = (row) => {
-    setSeedItem(row);
-    setEditItem(null);
-    setOpenDialog(true);
-  };
+  // (27/11/2026) Duplicar, nuevo y editar ya no son ventanas: van a su página con pestañas.
+  const handleDuplicate = (row) => router.push(`/panel/contratos/nuevo?duplicar=${encodeURIComponent(row.id || row.id_contrato)}`);
 
   const handleDelete = (row) => {
     setDeleteRow(row);
@@ -344,12 +331,7 @@ export default function ContratosPage() {
             </Button>
             <Button
               className="bg-brand font-semibold text-white shadow-sm hover:opacity-95"
-              onClick={() => {
-                setSeedItem(null);
-                setEditItem(null);
-                setInicial(null);
-                setOpenDialog(true);
-              }}
+              onClick={() => router.push("/panel/contratos/nuevo")}
             >
               <Plus className="w-4 h-4 mr-2" />
               Nuevo contrato
@@ -394,11 +376,7 @@ export default function ContratosPage() {
         page={page}
         limit={limit}
         onHeaderFilteringMetaChange={setHeaderFilterMeta}
-        onEdit={(row) => {
-          setEditItem(row);
-          setSeedItem(null);
-          setOpenDialog(true);
-        }}
+        onEdit={(row) => router.push(`/panel/contratos/${encodeURIComponent(row.id || row.id_contrato)}/editar`)}
         onDuplicate={handleDuplicate}
         onDelete={handleDelete}
         onCambiarEstatus={(row) => {
@@ -416,21 +394,6 @@ export default function ContratosPage() {
         onLimitChange={setLimit}
       />
 
-      {/* Modal crear/editar/duplicar */}
-      <ContratoDialog
-        open={openDialog}
-        setOpen={setOpenDialog}
-        editItem={editItem}
-        seedItem={seedItem}
-        inicial={inicial}
-        onSaved={() => {
-          setEditItem(null);
-          setSeedItem(null);
-          setInicial(null);
-          mutate();
-        }}
-        empresas={dataUser?.empresas_detalle || []}
-      />
 
 
       {/* Cambiar estatus (Activo / Suspendido / Terminado / Cancelado) */}

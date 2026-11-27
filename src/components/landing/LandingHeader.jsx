@@ -92,7 +92,7 @@ export default function LandingHeader() {
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[320px] sm:w-[360px]">
+              <SheetContent side="right" menu className="w-[320px] sm:w-[360px]">
                 <div className="flex items-center gap-3">
                   <Image
                     src="/assets/adamia.png"
