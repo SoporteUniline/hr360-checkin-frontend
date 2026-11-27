@@ -29,7 +29,7 @@ Recursos Humanos y el dueño, con permiso de edición de asistencias. Los emplea
 ## Antes de empezar
 
 - Abre **Control de tiempo → Asistencias** (o el **Monitor**) y busca a la persona y el día.
-- Ten a la mano el **motivo** de la corrección: es obligatorio cada vez que agregas, cambias o anulas una checada.
+- Ten a la mano el **motivo** de la corrección: es obligatorio cada vez que agregas, cambias o anulas una checada, y también al tocar **No fue comida**.
 
 ## Cómo abrir el reloj del día
 

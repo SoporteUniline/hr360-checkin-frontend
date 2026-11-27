@@ -160,13 +160,14 @@ export function cuerpoPut(renglones, { fecha, zona } = {}) {
       anulado: Boolean(r.anulado),
       id_autoriza: r.autoriza_no ? null : r.id_autoriza ?? null,
       autoriza_no: Boolean(r.autoriza_no),
-      // «No fue comida»: quita la marca de «Salir a comer» puesta por error (el servidor no cambia horas).
+      // «No fue comida»: quita la marca de «Salir a comer» puesta por error (no mueve horas; pide motivo: errorDe).
       ...(r.quitarComida ? { quitar_comida: true } : {}),
     })),
   };
 }
 
-// «No fue comida» en la franja de comida: el tramo deja de contar como salida a comer.
+// «No fue comida» en la franja de comida: el tramo deja de contar como salida a comer. (27/11/2026) Cambia las horas
+// trabajadas: el renglón pide motivo (errorDe), igual que el servidor.
 export const quitarComida = (renglones, k) => renglones.map((x) => (x.k === k ? { ...x, salioAComer: false, quitarComida: true } : x));
 
 // Errores 400 del servidor ({ errores: [{ indice, error }] }) → { [clave del renglón]: texto }.
@@ -236,6 +237,8 @@ export function errorDe(r, todos, horario = null) {
     if (r.anuladoAntes || r.motivo) return "";
     return r.origen === "manual" ? "Para quitar un registro agregado a mano elige el motivo." : "Para anular una checada del reloj elige el motivo.";
   }
+  // (27/11/2026, toda corrección que cambia horas pide motivo) «No fue comida» (mismo texto que el servidor).
+  if (r.quitarComida && !r.motivo) return "Para quitar la comida elige el motivo.";
   if (r.ini == null) return "Falta la entrada.";
   if (r.fin == null && (editado(r) || r.origen === "manual")) return "Falta la salida.";
   if (r.fin != null && r.fin <= r.ini) return "La salida debe ser después de la entrada.";

@@ -579,12 +579,20 @@ try {
   // «No fue comida» (marcó «Salir a comer» por error): la franja se va y el PUT pide quitar la marca de ese tramo.
   await comidaReloj.getByRole("button", { name: "No fue comida" }).click();
   await comidaReloj.waitFor({ state: "detached", timeout: 5000 });
+  // (27/11/2026, toda corrección que cambia horas pide motivo) «No fue comida» cambia las horas trabajadas: el tramo pide
+  // motivo y sin él no se guarda (mismo texto que el 422 del servidor).
+  const tramoComida = dlgFrida.locator('[data-renglon="1"]');
+  assert.equal(await tramoComida.getByRole("alert").innerText(), "Para quitar la comida elige el motivo.");
+  assert.equal(await dlgFrida.getByRole("button", { name: "Guardar" }).isDisabled(), true, "sin motivo no se guarda");
+  await elegir(tramoComida.getByLabel("Motivo"), "captura");
+  assert.equal(await tramoComida.getByRole("alert").count(), 0);
   const antesNoComida = pet.reloj.length;
   await dlgFrida.getByRole("button", { name: "Guardar" }).click();
   for (let i = 0; i < 50 && pet.reloj.length === antesNoComida; i++) await dormir(100);
   const putFrida = pet.reloj.at(-1);
   assert.equal(putFrida.id, 510);
   assert.deepEqual(putFrida.cuerpo.registros.find((x) => x.id === 7801).quitar_comida, true);
+  assert.equal(putFrida.cuerpo.registros.find((x) => x.id === 7801).motivo, "captura", "el PUT lleva el motivo");
   assert.equal("quitar_comida" in putFrida.cuerpo.registros.find((x) => x.id === 7802), false);
   // Guardar cierra el reloj solo (no se pulsa Escape: con cambios a medio guardar abriría «¿Salir sin guardar?»).
   await dlgFrida.waitFor({ state: "detached", timeout: 10000 });

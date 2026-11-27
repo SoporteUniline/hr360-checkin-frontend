@@ -24,7 +24,7 @@ qué falta junto al campo y no manda nada.
 | Acciones masivas | `AccionesMasivas.jsx` | Motivo cualquiera → 5 a 500, sugerencias, error junto al campo; uno para todas las filas. |
 | Comida agregada a mano (Editar / Quitar en las checadas del día) | `BotonAgregarComida.jsx` | Sin motivo → campo en los dos; `DELETE` manda el motivo en el cuerpo. |
 | Registro masivo de incidencias (formulario sin botón hoy) | `FormularioAsistenciasMasivas.jsx` | Sin motivo → campo obligatorio. |
-| Reloj del día | `lib/asistencia/relojDia.mjs` | Ya pedía motivo por renglón; «Otro» ahora con 5 letras (antes 3); quitar lo agregado a mano dice «Para quitar un registro agregado a mano elige el motivo.». |
+| Reloj del día | `lib/asistencia/relojDia.mjs` | Ya pedía motivo por renglón; «Otro» ahora con 5 letras (antes 3); quitar lo agregado a mano dice «Para quitar un registro agregado a mano elige el motivo.»; «No fue comida» (cambia las horas trabajadas) pide el motivo del renglón: «Para quitar la comida elige el motivo.». |
 | Historial («Editado») | `CeldaEditado.jsx`, `lib/asistencia/historial.mjs` | Muestra «Motivo: …» y la pantalla de origen; en bases sin la migración lee el motivo del final de «después». |
 
 `PanelEditarAsistencia.jsx` (y por él el guardado de `useAsistenciaActions`) no se usa en ninguna pantalla: si se vuelve a

@@ -278,6 +278,13 @@ test("quitarComida: el tramo deja de ser comida y el PUT pide quitar la marca", 
   assert.equal(pausaComidaTras(ordenar(sin), 0), null, "después: ya no");
   assert.deepEqual(cuerpoPut(sin, { fecha: F }).registros[0].quitar_comida, true);
   assert.equal("quitar_comida" in cuerpoPut(regs, { fecha: F }).registros[0], false, "sin tocar no se manda");
+  // (27/11/2026, toda corrección que cambia horas pide motivo) Sin motivo, error en el renglón (mismo texto que el servidor).
+  assert.equal(errorDe(sin[0], sin), "Para quitar la comida elige el motivo.");
+  assert.equal(errorDe(regs[0], regs), "", "sin tocar no pide motivo");
+  const conMotivo = sin.map((x) => ({ ...x, motivo: "captura" }));
+  assert.equal(errorDe(conMotivo[0], conMotivo), "");
+  assert.equal(cuerpoPut(conMotivo, { fecha: F }).registros[0].motivo, "captura");
+  assert.equal(errorDe({ ...sin[0], motivo: "otro: casa" }, sin), "Escribe el motivo (al menos 5 letras).");
 });
 
 // (25/11/2026, aprobado por el dueño) La hora extra va fuera de la jornada programada (LFT art. 66). Espejo del servidor.

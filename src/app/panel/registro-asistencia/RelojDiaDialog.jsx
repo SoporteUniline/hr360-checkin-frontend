@@ -87,7 +87,7 @@ function opcionesCorreccion(motivos, actual) {
 // La autorización de la extra y el error del renglón van justo debajo de la fila.
 function Renglon({ r, n, error, motivos, autorizadores, nocturno, horario, h, onCambio, onQuitar }) {
   const ed = editado(r);
-  const pideMotivo = ed || (r.anulado && !r.anuladoAntes);
+  const pideMotivo = ed || (r.anulado && !r.anuladoAntes) || Boolean(r.quitarComida);
   const otro = esMotivoOtro(r.motivo);
   const valorMotivo = otro ? "otro" : r.motivo;
   const extra = r.concepto === "extra" && !r.anulado;

@@ -64,9 +64,10 @@ Si alguien tocó «Salir a comer» por error (por ejemplo, salió a un trámite)
 
 1. Abre su reloj del día.
 2. En la franja ámbar de la comida toca **No fue comida**.
-3. Toca **Guardar**.
+3. El tramo de antes de la comida pide motivo: «Para quitar la comida elige el motivo.». Elígelo en **Motivo** (por ejemplo, **Error de captura**).
+4. Toca **Guardar**.
 
-Ese tiempo deja de contar como comida; queda como un hueco no trabajado.
+Ese tiempo deja de contar como comida; queda como un hueco no trabajado. Como cambia las horas trabajadas, sin motivo no se guarda, y el cambio queda en el historial con tu nombre y el motivo.
 
 ## Preguntas frecuentes
 
