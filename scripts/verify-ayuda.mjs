@@ -105,6 +105,31 @@ try {
       if (OUT) writeFileSync(`${OUT}/ayuda-guia.pdf`, pdf);
     }
     await page.emulateMedia({ media: "screen" });
+    // Tabla de 3 columnas: en el teléfono se desliza dentro de su caja (la página no) y la primera columna no parte
+    // palabras letra por letra.
+    await page.goto(base + "/ayuda/nomina/como-se-calcula-la-nomina", { waitUntil: "networkidle" });
+    const tabla = page.locator(".ay-md .ay-tabla").filter({ has: page.locator("thead th:nth-child(3)") }).first();
+    await tabla.scrollIntoViewIfNeeded();
+    await sinDesborde(page);
+    const partidas = await tabla.evaluate((caja) => {
+      const malas = [];
+      for (const celda of caja.querySelectorAll("tr > :first-child")) {
+        const texto = celda.textContent;
+        for (const m of texto.matchAll(/\S+/g)) {
+          const nodo = [...celda.querySelectorAll("*"), celda].flatMap((e) => [...e.childNodes]).find((n) => n.nodeType === 3 && n.textContent.includes(m[0]));
+          if (!nodo) continue;
+          const r = document.createRange();
+          const i = nodo.textContent.indexOf(m[0]);
+          r.setStart(nodo, i); r.setEnd(nodo, i + m[0].length);
+          const lineas = new Set([...r.getClientRects()].map((x) => Math.round(x.top)));
+          if (lineas.size > 1) malas.push(m[0]);
+        }
+      }
+      return malas;
+    });
+    assert.deepEqual(partidas, [], "palabras partidas en la primera columna");
+    if (movil) assert.ok(await tabla.evaluate((e) => e.scrollWidth >= e.clientWidth), "la tabla vive en su caja con desplazamiento");
+    await captura(page, `ayuda-tabla-${sufijo}`);
     // Ruta de capacitación con avance (localStorage).
     await page.goto(base + "/ayuda/rutas/empleado-nuevo", { waitUntil: "networkidle" });
     await page.locator("[data-avance-ruta='0']").waitFor({ timeout: 30000 });

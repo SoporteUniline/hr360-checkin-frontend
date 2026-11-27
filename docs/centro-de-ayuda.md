@@ -80,10 +80,12 @@ guías (backend: `docs/adamia-ai.md`, «Cómo usar ADAMIA»).
    listas `-` y `1.` con UN nivel de anidación (sangría de 2 a 5 espacios); imagen sola en su línea
    `![Descripción](/ayuda/capturas/carpeta/archivo.webp "Pie de foto")`; avisos con `> **Consejo:**`, `> **Importante:**`
    u `> **Ojo:**` (dentro solo párrafos y listas); tablas `| a | b |` con `| --- | --- |`.
+   En el teléfono una tabla ancha se desliza dentro de su caja (celdas de 8rem mínimo, sin partir palabras); aun así,
+   prefiere listas a tablas de 3 columnas con textos largos.
    Lo que no está en la lista se pinta como texto y `test-ayuda` lo marca como error, con el número de línea.
    El ancla de un encabezado es su texto sin acentos ni signos: «Cómo archivar un comunicado» → `#como-archivar-un-comunicado`.
 6. **Capturas:** reales, del sistema con API simulada y SOLO datos de demostración («Uniline», «Laura Ríos», «Ana
-   Torres»…). Copia el estilo de `scripts/capturas-ayuda/comunicados.mjs`: `levantarNext()`, `contexto()` con tu
+   Torres», «Roberto Méndez» como dueño…). Nunca nombres de personas reales del equipo o de clientes. Copia el estilo de `scripts/capturas-ayuda/comunicados.mjs`: `levantarNext()`, `contexto()` con tu
    `manejar` y `guardar(page, carpeta, nombre, { objetivo })` (WebP calidad ~80, máx. ~200 KB; 1440×900 panel, 390×844
    celular). Corre el build antes: `NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build`, luego
    `PLAYWRIGHT_MODULE_PATH=… node scripts/capturas-ayuda/<bloque>.mjs` (`guardar(…, { recorte })` recorta un área de la

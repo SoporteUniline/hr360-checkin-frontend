@@ -54,7 +54,7 @@ const persona = (id, nombre, ap, am, o = {}) => ({
 const EMPLEADOS = [
   persona(15, "Ana", "Torres", "Ruiz", { puesto: "Cajera", departamento: "Ventas", nip: "1015", fecha_ingreso: "2023-02-13" }),
   persona(16, "Carlos", "Andrey", "Luna", { puesto: "Supervisor", departamento: "Operación", nip: "1016", fecha_ingreso: "2021-08-02" }),
-  persona(17, "Diego", "Paz", "Herrera", { puesto: "Auxiliar de sistemas", departamento: "Sistemas", nip: "1017", unidad_negocio: "Norte", sucursal: "Norte" }),
+  persona(17, "Andrés", "Paz", "Herrera", { puesto: "Auxiliar de sistemas", departamento: "Sistemas", nip: "1017", unidad_negocio: "Norte", sucursal: "Norte" }),
   persona(18, "Frida", "Serrano", "Gil", { puesto: "Vendedora", departamento: "Ventas", nip: "1018", sincronizacion_checador: sinc("pendiente") }),
   persona(19, "José", "Ramírez", "Ortiz", { puesto: "Almacenista", departamento: "Operación", nip: "", sincronizacion_checador: { estado: "sin_nip" } }),
   persona(20, "Valeria", "Castillo", "Mora", { puesto: "Compradora", departamento: "Compras", nip: "1020", unidad_negocio: "Norte", sucursal: "Norte" }),
@@ -378,8 +378,8 @@ const CAT_IND = {
     { clave: "acta_nacimiento", nombre: "Acta de nacimiento", categoria: "Identificación", caras: 1 },
   ],
   categorias: ["Identificación", "Contractual", "Fiscal", "Académico", "Médico", "Capacitación"],
-  roles: [{ id_rol: 1, nombre: "Recursos Humanos", id_empleado: 50, persona: "Laura Ríos" }, { id_rol: 2, nombre: "Sistemas", id_empleado: 51, persona: "Diego Paz" }, { id_rol: 3, nombre: "Almacén", id_empleado: null, persona: null }],
-  personas: [{ id: 50, nombre: "Laura Ríos" }, { id: 51, nombre: "Diego Paz" }, { id: 60, nombre: "Carlos Andrey" }],
+  roles: [{ id_rol: 1, nombre: "Recursos Humanos", id_empleado: 50, persona: "Laura Ríos" }, { id_rol: 2, nombre: "Sistemas", id_empleado: 51, persona: "Andrés Paz" }, { id_rol: 3, nombre: "Almacén", id_empleado: null, persona: null }],
+  personas: [{ id: 50, nombre: "Laura Ríos" }, { id: 51, nombre: "Andrés Paz" }, { id: 60, nombre: "Carlos Andrey" }],
   formatos: [{ id: 11, nombre: "Contrato tiempo determinado" }, { id: 12, nombre: "Reglamento interior de trabajo" }, { id: 13, nombre: "Aviso de privacidad para empleados" }, { id: 14, nombre: "Política NOM-035" }],
   puestos: ["Almacenista", "Auxiliar contable", "Cajera", "Vendedor"], areas: ["Ventas", "Operación"], sucursales: ["Centro", "Norte"],
   tareas_activo: true, whatsapp: { configurado: true }, limites: {}, dia: { min: -30, max: 90 },
@@ -401,7 +401,7 @@ const CONT_CAJERA = {
 const av = (datos, l, t, firma, rostro, extra = {}) => ({ datos, documentos: { listos: l, total: t }, firma, rostro, por_revisar: 0, rechazados: 0, listo_para_alta: false, ...extra });
 const TAREAS_IND = [
   ["Recursos Humanos", "Laura Ríos", [["Expediente completo (7 documentos)", true], ["Contrato y reglamento firmados", true], ["Alta en el IMSS", false, -1]]],
-  ["Sistemas", "Diego Paz", [["Correo de la empresa", true], ["Usuario en el punto de venta", false]]],
+  ["Sistemas", "Andrés Paz", [["Correo de la empresa", true], ["Usuario en el punto de venta", false]]],
   ["Jefe directo", "Carlos Andrey", [["Presentarlo con el equipo", true], ["Recorrido por la sucursal", true], ["Primera reunión 1 a 1 (agendada para el viernes)", false, 5]]],
   ["Almacén", "Rafa Soto", [["Uniforme talla M (2 playeras)", true, 1, "activos"]]],
 ].flatMap(([grupo, resp, ts], g) => ts.map(([titulo, hecha, d = 1, liga = null], i) => ({
@@ -566,7 +566,7 @@ const PLANTILLAS_DOC = [
 const DOCS_EMITIDOS = [
   { id_documento: 31, folio: "DOC-0031", nombre_documento: "Carta de trabajo · Ana Torres Ruiz", nombre_empleado: "Ana Torres Ruiz", id_empleado: 15, id_empresa: 7, nombre_plantilla: "Carta de trabajo", estatus: "emitido", fecha_creacion: `${dia(-1)} 10:20:00`, contenido_html: "<h2 style='text-align:center'>Carta de trabajo</h2><p>A quien corresponda:</p><p>Por medio de la presente hacemos constar que <b>Ana Torres Ruiz</b> labora en <b>Uniline</b> como <b>Cajera</b> desde el 13 de febrero de 2023.</p><p>Se extiende la presente para los fines que a la interesada convengan.</p><p style='margin-top:40px'>Atentamente,<br>Laura Ríos · Recursos Humanos</p>" },
   { id_documento: 30, folio: "DOC-0030", nombre_documento: "Contrato por tiempo determinado · Frida Serrano Gil", nombre_empleado: "Frida Serrano Gil", id_empleado: 18, id_empresa: 7, nombre_plantilla: "Contrato por tiempo determinado", estatus: "firmado", fecha_creacion: `${dia(-6)} 12:00:00`, contenido_html: "<p>Contrato.</p>" },
-  { id_documento: 29, folio: "DOC-0029", nombre_documento: "Acuse de reglamento interior · Diego Paz Herrera", nombre_empleado: "Diego Paz Herrera", id_empleado: 17, id_empresa: 7, nombre_plantilla: "Acuse de reglamento interior", estatus: "emitido", fecha_creacion: `${dia(-9)} 09:30:00`, contenido_html: "<p>Acuse.</p>" },
+  { id_documento: 29, folio: "DOC-0029", nombre_documento: "Acuse de reglamento interior · Andrés Paz Herrera", nombre_empleado: "Andrés Paz Herrera", id_empleado: 17, id_empresa: 7, nombre_plantilla: "Acuse de reglamento interior", estatus: "emitido", fecha_creacion: `${dia(-9)} 09:30:00`, contenido_html: "<p>Acuse.</p>" },
   { id_documento: 28, folio: "DOC-0028", nombre_documento: "Carta de trabajo · Carlos Andrey Luna", nombre_empleado: "Carlos Andrey Luna", id_empleado: 16, id_empresa: 7, nombre_plantilla: "Carta de trabajo", estatus: "borrador", fecha_creacion: `${dia(-15)} 16:45:00`, contenido_html: "<p>Carta.</p>" },
 ];
 const BIBLIOTECA = [
@@ -689,7 +689,7 @@ const ESTADO_ACTIVOS = {
   employees: [
     { id: "15", name: "Ana Torres Ruiz", role: "Cajera", roleId: "1", department: "Ventas", branch: "Matriz", active: true, size: "M", pantsSize: "30", shoeSize: "24", shoeSystem: "MX", notes: "" },
     { id: "16", name: "Carlos Andrey Luna", role: "Supervisor", roleId: "2", department: "Operación", branch: "Matriz", active: true, size: "L", pantsSize: "", shoeSize: "", shoeSystem: "", notes: "" },
-    { id: "17", name: "Diego Paz Herrera", role: "Auxiliar de sistemas", roleId: "3", department: "Sistemas", branch: "Norte", active: true, size: "M", pantsSize: "", shoeSize: "", shoeSystem: "", notes: "" },
+    { id: "17", name: "Andrés Paz Herrera", role: "Auxiliar de sistemas", roleId: "3", department: "Sistemas", branch: "Norte", active: true, size: "M", pantsSize: "", shoeSize: "", shoeSystem: "", notes: "" },
   ],
   roles: [], branches: [], locations: [{ id: "1", name: "Almacén Matriz", active: true }, { id: "2", name: "Bodega Norte", active: true }],
   balances: [], catalogReady: true,
@@ -766,7 +766,7 @@ GRUPOS.activos = async () => {
 // ===== Tareas y checklists =====
 const PERSONAS_T = [
   { id: 15, nombre: "Ana Torres", puesto: "Cajera", id_puesto: 1, sucursal: "Matriz", departamento: "Ventas", id_jefe_inmediato: 16, hoy: "en_jornada" },
-  { id: 17, nombre: "Diego Paz", puesto: "Auxiliar de sistemas", id_puesto: 3, sucursal: "Norte", departamento: "Sistemas", id_jefe_inmediato: 16, hoy: "salio" },
+  { id: 17, nombre: "Andrés Paz", puesto: "Auxiliar de sistemas", id_puesto: 3, sucursal: "Norte", departamento: "Sistemas", id_jefe_inmediato: 16, hoy: "salio" },
   { id: 18, nombre: "Frida Serrano", puesto: "Vendedora", id_puesto: 4, sucursal: "Matriz", departamento: "Ventas", id_jefe_inmediato: 16, hoy: "sin_checar" },
   { id: 19, nombre: "José Ramírez", puesto: "Almacenista", id_puesto: 5, sucursal: "Matriz", departamento: "Operación", id_jefe_inmediato: 16, hoy: "en_jornada" },
 ];
@@ -858,7 +858,7 @@ Object.assign(AVISOS_RH, {
     aviso({ clave: `cumpleanos-15-${ANIO}`, tipo: "cumpleanos", id_empleado: 15, nombre: "Ana Torres Ruiz", nombre_corto: "Ana", area: "Ventas", fecha: HOY, dias: 0, grupo: "hoy", anio: ANIO, edad: 36, whatsapp: { telefono: "523312345678", visible: "+52 33 •••• 5678", motivo: null, mensajes: msgCumple("Ana") } }),
     aviso({ clave: `aniversario-16-${ANIO}`, tipo: "aniversario", id_empleado: 16, nombre: "Carlos Andrey Luna", nombre_corto: "Carlos", area: "Operación", fecha: dia(1), dias: 1, grupo: "manana", anio: ANIO, anios: 3, whatsapp: { telefono: null, visible: null, motivo: "No tiene teléfono registrado en su ficha.", mensajes: msgAniv("Carlos", 3) }, correo: { disponible: false, visible: null, motivo: "No tiene correo de notificaciones en su ficha." } }),
     { clave: "contrato-41", tipo: "contrato", id_contrato: 41, id_empleado: 18, nombre: "Frida Serrano Gil", area: "Ventas", fecha: dia(1), dias: 1, grupo: "manana", tipo_contrato: "Determinado" },
-    aviso({ clave: `cumpleanos-17-${ANIO}`, tipo: "cumpleanos", id_empleado: 17, nombre: "Diego Paz Herrera", nombre_corto: "Diego", area: "Sistemas", fecha: dia(4), dias: 4, grupo: "semana", anio: ANIO, edad: 29, whatsapp: { telefono: "523398765432", visible: "+52 33 •••• 5432", motivo: null, mensajes: msgCumple("Diego") } }),
+    aviso({ clave: `cumpleanos-17-${ANIO}`, tipo: "cumpleanos", id_empleado: 17, nombre: "Andrés Paz Herrera", nombre_corto: "Andrés", area: "Sistemas", fecha: dia(4), dias: 4, grupo: "semana", anio: ANIO, edad: 29, whatsapp: { telefono: "523398765432", visible: "+52 33 •••• 5432", motivo: null, mensajes: msgCumple("Andrés") } }),
   ],
 });
 const PLANT_CUMPLE = { tipo: "cumpleanos", personalizada: false, diseno: "festivo", asunto: "¡Feliz cumpleaños, {nombre}!", mensaje: "Todo el equipo de {empresa} te desea un gran día. Gracias por tu entrega en {área}; que este año te traiga mucho de lo que buscas.\n\n¡Disfrútalo!", envio_correo_auto: true, aviso_campana: true, envio_whatsapp_auto: false, revision: 0, actualizado_por: null, actualizado_en: null, regla_activa: true };

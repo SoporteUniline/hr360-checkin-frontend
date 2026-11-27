@@ -51,6 +51,9 @@
 .ay-md .ay-tabla:focus-visible { outline: 3px solid var(--ay-blue); outline-offset: 2px; }
 .ay-md table { width: 100%; border-collapse: collapse; font-size: .95rem; line-height: 1.45; }
 .ay-md th, .ay-md td { text-align: left; padding: 10px 12px; border-top: 1px solid var(--ay-line); vertical-align: top; }
+/* Tablas en el teléfono: cada celda guarda un ancho mínimo y las palabras no se parten letra por letra (el .ay-md general
+   usa overflow-wrap: anywhere). Si no caben, la tabla se desliza dentro de .ay-tabla (overflow-x: auto), nunca la página. */
+.ay-md .ay-tabla th, .ay-md .ay-tabla td { min-width: 8rem; overflow-wrap: normal; word-break: normal; }
 .ay-md thead th { background: var(--ay-soft); color: var(--ay-ink); font-weight: 700; border-top: 0; }
 
 /* ——— Páginas públicas ——— */

@@ -37,7 +37,7 @@ const DESTINATARIOS = [
   { id_empleado: 20, nombre: "Karla Ortiz", puesto: "Cajera", estado: "confirmado", confirmado_en: hace(30), recordatorios: 0 },
   { id_empleado: 10, nombre: "Jorge Ramírez", puesto: "Almacenista", estado: "visto", visto_en: hace(100), confirmado_en: null, recordatorios: 1 },
   { id_empleado: 11, nombre: "Sofía Méndez", puesto: "Cajera", estado: "visto", visto_en: hace(70), confirmado_en: null, recordatorios: 1 },
-  { id_empleado: 12, nombre: "Luis Hernández", puesto: "Vendedor", estado: "no_visto", recordatorios: 1 },
+  { id_empleado: 12, nombre: "Raúl Hernández", puesto: "Vendedor", estado: "no_visto", recordatorios: 1 },
   { id_empleado: 13, nombre: "Pedro Salas", puesto: "Mantenimiento", estado: "sin_canal", recordatorios: 0 },
 ];
 const AUTOMATICOS = [
@@ -49,7 +49,7 @@ const AUTOMATICOS = [
 const CONFIG = { publican_jefes: true, publican_empleados: true, permitir_reacciones: true, permitir_comentarios: true, palabras_bloqueadas: ["palabra-de-ejemplo"], umbral_reportes: 3, hora_automaticos: "08:00" };
 const PORTADA = { url: `${ARCHIVOS}/posada-2026.svg`, titulo: "Posada 2026 · ¡ya casi!", enlace: "https://uniline.mx/posada" };
 const MODERACION = {
-  reportados: [{ id: 91, texto: "[comentario de ejemplo reportado por burla a un compañero]", estado: "visible", reportes: 3, autor: { id_empleado: 12, nombre: "Luis Hernández" }, comunicado: { id: 3, titulo: "Torneo de fútbol Sucursal Norte" }, motivos: ["Se burla de un compañero"] }],
+  reportados: [{ id: 91, texto: "[comentario de ejemplo reportado por burla a un compañero]", estado: "visible", reportes: 3, autor: { id_empleado: 12, nombre: "Raúl Hernández" }, comunicado: { id: 3, titulo: "Torneo de fútbol Sucursal Norte" }, motivos: ["Se burla de un compañero"] }],
   retenidos: [{ id: 92, texto: "[comentario de ejemplo con una palabra de la lista]", estado: "retenido", reportes: 0, autor: { id_empleado: 13, nombre: "Pedro Salas" }, comunicado: { id: 2, titulo: "Mensaje de fin de año" } }],
   ocultos: [],
 };
@@ -75,7 +75,7 @@ function manejar({ ruta, metodo, url, json }) {
     const items = LISTA.filter((x) => !estado || x.estado === estado);
     return json({ ok: true, items, total: items.length, resumen: { publicados_mes: 12, lectura_promedio: 84, confirmaciones_pendientes: 18, programados: 1, pendientes_aprobacion: 1 } });
   }
-  if (r === "/audiencia/opciones") return json({ ok: true, sucursales: ["Centro", "Norte"], areas: ["Producción", "Ventas", "Almacén"], puestos: ["Almacenista", "Cajera", "Vendedor"], empleados: [{ id: 12, nombre: "Luis Hernández", puesto: "Vendedor", area: "Ventas", sucursal: "Centro" }] });
+  if (r === "/audiencia/opciones") return json({ ok: true, sucursales: ["Centro", "Norte"], areas: ["Producción", "Ventas", "Almacén"], puestos: ["Almacenista", "Cajera", "Vendedor"], empleados: [{ id: 12, nombre: "Raúl Hernández", puesto: "Vendedor", area: "Ventas", sucursal: "Centro" }] });
   if (r === "/audiencia/previa") return json({ ok: true, total: 42, con_app: 39, con_correo: 35, sin_canal: 3 });
   if (r === "/popup") return json({ ok: true, popup: null });
   if (r === "/automaticos/previa") {

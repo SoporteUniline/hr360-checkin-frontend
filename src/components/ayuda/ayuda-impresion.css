@@ -24,6 +24,9 @@
   .ay-md .ay-figura { break-inside: avoid; margin: 10pt 0; }
   .ay-md .ay-figura img { box-shadow: none; max-height: 220mm; width: auto; max-width: 100%; }
   .ay-md .ay-aviso, .ay-md table, .ay-md li { break-inside: avoid; }
+  /* En papel la tabla ocupa el ancho de la hoja (sin desplazamiento): se quitan los mínimos del teléfono. */
+  .ay-md .ay-tabla { overflow: visible; }
+  .ay-md .ay-tabla th, .ay-md .ay-tabla td { min-width: 0; overflow-wrap: anywhere; }
   .ay-md a { color: #1f44c8; text-decoration: none; }
   .ay-md a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 8.5pt; color: #6b7190; font-weight: 400; overflow-wrap: anywhere; }
   .ay .ay-impresion-cabeza { display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5pt solid #2c56e8; padding-bottom: 8pt; margin-bottom: 14pt; font: 600 9pt/1.2 sans-serif; color: #6b7190; }

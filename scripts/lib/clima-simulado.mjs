@@ -877,7 +877,7 @@ export function datosSimulados() {
         personas: [
           {
             id: 1,
-            nombre: "Luis Pérez",
+            nombre: "Raúl Pérez",
             area: "Almacén",
             acontecimiento: true,
             requiereValoracion: true,

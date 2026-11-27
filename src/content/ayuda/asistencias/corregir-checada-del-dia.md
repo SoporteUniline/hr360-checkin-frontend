@@ -59,7 +59,7 @@ Cuando no cambias nada, los números son los que calculó el sistema. En cuanto 
 
 ## Cómo agregar una checada que olvidó
 
-Ejemplo: Diego entró a las 8:55 y no checó su salida.
+Ejemplo: Héctor entró a las 8:55 y no checó su salida.
 
 1. Abre su reloj del día. Verás su renglón con **Sin salida**.
 2. Escribe la hora de salida en el campo **Salida** del renglón (por ejemplo 4:00 p.m.).

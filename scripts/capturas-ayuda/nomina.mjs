@@ -111,9 +111,9 @@ const periodoBase = { id_empresa: 7, periodicidad: "Semanal", empleados: 3, tota
 const PERIODOS = [
   { ...periodoBase, id: 5, fecha_inicio: "2026-11-16", fecha_fin: "2026-11-22", estado: "borrador", version: 3 },
   { ...periodoBase, id: 4, fecha_inicio: "2026-11-09", fecha_fin: "2026-11-15", estado: "por_autorizar", version: 6 },
-  { ...periodoBase, id: 3, fecha_inicio: "2026-11-02", fecha_fin: "2026-11-08", estado: "autorizado", version: 9, total_neto: 6480, autorizado_por_nombre: "Diego Uniline" },
-  { ...periodoBase, id: 2, fecha_inicio: "2026-10-26", fecha_fin: "2026-11-01", estado: "autorizado", version: 8, total_neto: 6300, autorizado_por_nombre: "Diego Uniline" },
-  { ...periodoBase, id: 1, fecha_inicio: "2026-10-26", fecha_fin: "2026-11-01", estado: "cancelado", version: 4, total_neto: 6120, cancelado_por_nombre: "Diego Uniline", motivo_cancelacion: "Faltaba capturar el bono de productividad." },
+  { ...periodoBase, id: 3, fecha_inicio: "2026-11-02", fecha_fin: "2026-11-08", estado: "autorizado", version: 9, total_neto: 6480, autorizado_por_nombre: "Roberto Méndez" },
+  { ...periodoBase, id: 2, fecha_inicio: "2026-10-26", fecha_fin: "2026-11-01", estado: "autorizado", version: 8, total_neto: 6300, autorizado_por_nombre: "Roberto Méndez" },
+  { ...periodoBase, id: 1, fecha_inicio: "2026-10-26", fecha_fin: "2026-11-01", estado: "cancelado", version: 4, total_neto: 6120, cancelado_por_nombre: "Roberto Méndez", motivo_cancelacion: "Faltaba capturar el bono de productividad." },
 ];
 const reciboEnvios = { 3: { ana: "enviado", carlos: "error", frida: "sin_correo" }, 2: { ana: "enviado", carlos: "enviado", frida: "enviado" } };
 
@@ -128,18 +128,18 @@ const PERSONAS_BONO = [
   { id_empleado: 15, nombre: "Ana Torres", puesto: "Empacadora", lo_tiene: true, quitado: false, valor: null },
   { id_empleado: 12, nombre: "Carlos Terriquez", puesto: "Operador", lo_tiene: true, quitado: false, valor: 300 },
   { id_empleado: 13, nombre: "Frida Serrano", puesto: "Vendedora", lo_tiene: false, quitado: false, valor: null },
-  { id_empleado: 14, nombre: "Diego León", puesto: "Almacenista", lo_tiene: false, quitado: false, valor: null },
+  { id_empleado: 14, nombre: "Héctor León", puesto: "Almacenista", lo_tiene: false, quitado: false, valor: null },
   { id_empleado: 16, nombre: "Valeria Castillo", puesto: "Compras", lo_tiene: false, quitado: false, valor: null },
 ];
 const PRESTAMOS = [
   { id: 3, id_empresa: 7, id_empleado: 15, empleado: "Ana Torres", monto: 3000, abono: 500, saldo: 3000, motivo: "Consulta médica", origen: "empleado", estado: "solicitado", version: 1, firma_estatus: null, creado_en: "2026-11-21T16:00:00Z", solicitado_por_nombre: "Ana Torres" },
   { id: 4, id_empresa: 7, id_empleado: 13, empleado: "Frida Serrano", monto: 2000, abono: 400, saldo: 2000, motivo: "Útiles escolares", origen: "rh", estado: "por_firmar", version: 2, firma_estatus: "pendiente", creado_en: "2026-11-20T17:00:00Z", solicitado_por_nombre: "Laura Ríos" },
   { id: 2, id_empresa: 7, id_empleado: 12, empleado: "Carlos Terriquez", monto: 1000, abono: 250, saldo: 500, motivo: "Reparación del auto", origen: "rh", estado: "vigente", version: 4, firma_estatus: "firmado", creado_en: "2026-10-30T16:00:00Z", solicitado_por_nombre: "Laura Ríos" },
-  { id: 1, id_empresa: 7, id_empleado: 14, empleado: "Diego León", monto: 1500, abono: 300, saldo: 0, motivo: null, origen: "empleado", estado: "liquidado", version: 7, firma_estatus: "firmado", creado_en: "2026-08-01T16:00:00Z", solicitado_por_nombre: "Diego León" },
+  { id: 1, id_empresa: 7, id_empleado: 14, empleado: "Héctor León", monto: 1500, abono: 300, saldo: 0, motivo: null, origen: "empleado", estado: "liquidado", version: 7, firma_estatus: "firmado", creado_en: "2026-08-01T16:00:00Z", solicitado_por_nombre: "Héctor León" },
 ];
 const MOVIMIENTOS = {
   2: [
-    { id: 1, tipo: "abono_nomina", importe: 250, saldo_despues: 750, periodo_inicio: "2026-11-02", periodo_fin: "2026-11-08", registrado_por_nombre: "Diego Uniline", creado_en: "2026-11-09T18:00:00Z" },
+    { id: 1, tipo: "abono_nomina", importe: 250, saldo_despues: 750, periodo_inicio: "2026-11-02", periodo_fin: "2026-11-08", registrado_por_nombre: "Roberto Méndez", creado_en: "2026-11-09T18:00:00Z" },
     { id: 2, tipo: "abono_efectivo", importe: 250, saldo_despues: 500, nota: "Pagó en caja", registrado_por_nombre: "Laura Ríos", creado_en: "2026-11-12T18:00:00Z" },
   ],
 };
@@ -150,7 +150,7 @@ const EMPLEADOS_AGUINALDO = [
   { id: 15, id_empleado: 15, id_empresa: 7, nombre_completo: "Ana Torres Paz", puesto: "Empacadora", departamento: "Empaque", fecha_ingreso: "2022-03-01", salario_diario: 300, periodicidad_pago: "Semanal", aguinaldo_dias: 15 },
   { id: 12, id_empleado: 12, id_empresa: 7, nombre_completo: "Carlos Terriquez Gil", puesto: "Operador", departamento: "Producción", fecha_ingreso: "2023-06-12", salario_diario: 350, periodicidad_pago: "Semanal", aguinaldo_dias: 15 },
   { id: 13, id_empleado: 13, id_empresa: 7, nombre_completo: "Frida Serrano Luna", puesto: "Vendedora", departamento: "Ventas", fecha_ingreso: "2026-11-18", salario_diario: 280, periodicidad_pago: "Semanal", aguinaldo_dias: 15 },
-  { id: 14, id_empleado: 14, id_empresa: 7, nombre_completo: "Diego León Ruiz", puesto: "Almacenista", departamento: "Almacén", fecha_ingreso: "2026-02-01", salario_diario: 320, periodicidad_pago: "Quincenal", aguinaldo_dias: 15 },
+  { id: 14, id_empleado: 14, id_empresa: 7, nombre_completo: "Héctor León Ruiz", puesto: "Almacenista", departamento: "Almacén", fecha_ingreso: "2026-02-01", salario_diario: 320, periodicidad_pago: "Quincenal", aguinaldo_dias: 15 },
 ];
 // Misma regla que el servidor (aguinaldosController.calcularAguinaldoIndividual).
 function aguinaldo(e, corte, anio, noTrab) {
@@ -205,7 +205,7 @@ function finiquito(b) {
   const venc = liq ? Number(b.dias_salarios_vencidos ?? 0) * sd : 0;
   const f2 = (n) => Number(n).toFixed(2);
   return {
-    id_empleado: 14, id_empresa: 7, nombre_completo: "Diego León Ruiz", puesto: "Almacenista", departamento: "Almacén", fecha_ingreso: ingreso, fecha_baja: baja,
+    id_empleado: 14, id_empresa: 7, nombre_completo: "Héctor León Ruiz", puesto: "Almacenista", departamento: "Almacén", fecha_ingreso: ingreso, fecha_baja: baja,
     dias_trabajados: dt, años_trabajados: anios.toFixed(2), años_completos: completos, salario_diario: f2(sd), salario_mensual: f2(sd * 30.4), periodicidad_pago: "Quincenal",
     es_liquidacion: liq, tipo_calculo: b.tipo_calculo, tipo_terminacion: b.tipo_terminacion, dias_aguinaldo: 15, prima_vacacional_porcentaje: 25, dias_vacaciones_ley_año_actual: Number(b.dias_vacaciones_ley_año_actual ?? 12),
     dias_no_trabajados: f2(noTrab), dias_transcurridos_año_bruto: brutoAnio, dias_transcurridos_año_neto: f2(netoAnio), dias_salario_pendiente: f2(pend), monto_salario_pendiente: f2(pend * sd),
@@ -262,9 +262,9 @@ const CREDITOS = {
   consumo_mes: [{ funcion: "clima_plan", nombre: "Clima · plan de acción", usos: 12, mxn: 3.72 }, { funcion: "lft", nombre: "Ley Federal del Trabajo", usos: 140, mxn: 9.8 }], compra: null,
 };
 const LLAVES = [
-  { id: 3, nombre: "Nómina externa", prefijo: "adk_live_Xk29PqLm", permisos: ["empleados:leer", "asistencias:leer"], estado: "activa", creada_en: "2026-11-02 10:14:00", creada_por: "Diego Uniline", expira_en: "2027-01-31 10:14:00", ultimo_uso_en: "2026-11-26 08:58:12", ultimo_uso_ip: "203.0.113.10", revocada_en: null },
-  { id: 2, nombre: "Control de acceso", prefijo: "adk_live_Hh71ZzWq", permisos: ["empleados:leer", "empleados:escribir"], estado: "expirada", creada_en: "2026-08-01 12:00:00", creada_por: "Diego Uniline", expira_en: "2026-10-30 12:00:00", ultimo_uso_en: "2026-10-29 22:10:00", ultimo_uso_ip: "198.51.100.2", revocada_en: null },
-  { id: 1, nombre: "Prueba de integración", prefijo: "adk_live_Aa00Bb11", permisos: ["asistencias:leer"], estado: "revocada", creada_en: "2026-07-15 09:00:00", creada_por: "Diego Uniline", expira_en: null, ultimo_uso_en: null, ultimo_uso_ip: null, revocada_en: "2026-07-20 18:30:00" },
+  { id: 3, nombre: "Nómina externa", prefijo: "adk_live_Xk29PqLm", permisos: ["empleados:leer", "asistencias:leer"], estado: "activa", creada_en: "2026-11-02 10:14:00", creada_por: "Roberto Méndez", expira_en: "2027-01-31 10:14:00", ultimo_uso_en: "2026-11-26 08:58:12", ultimo_uso_ip: "203.0.113.10", revocada_en: null },
+  { id: 2, nombre: "Control de acceso", prefijo: "adk_live_Hh71ZzWq", permisos: ["empleados:leer", "empleados:escribir"], estado: "expirada", creada_en: "2026-08-01 12:00:00", creada_por: "Roberto Méndez", expira_en: "2026-10-30 12:00:00", ultimo_uso_en: "2026-10-29 22:10:00", ultimo_uso_ip: "198.51.100.2", revocada_en: null },
+  { id: 1, nombre: "Prueba de integración", prefijo: "adk_live_Aa00Bb11", permisos: ["asistencias:leer"], estado: "revocada", creada_en: "2026-07-15 09:00:00", creada_por: "Roberto Méndez", expira_en: null, ultimo_uso_en: null, ultimo_uso_ip: null, revocada_en: "2026-07-20 18:30:00" },
 ];
 const BITACORA = [
   { id: 90, id_llave: 3, llave: "Nómina externa", prefijo: "adk_live_Xk29PqLm", metodo: "GET", ruta: "/api/integracion/v1/asistencias", estado: 200, ms: 84, ip: "203.0.113.10", creado_en: "2026-11-26 08:58:12" },
@@ -304,7 +304,7 @@ const EMPLEADOS = [
   { id_empleado: 15, id_empresa: 7, nombre: "Ana", apellido_paterno: "Torres", apellido_materno: "Paz", correo: "ana.torres@correo.mx", puesto: "Empacadora" },
   { id_empleado: 12, id_empresa: 7, nombre: "Carlos", apellido_paterno: "Terriquez", apellido_materno: "Gil", correo: "carlos.t@correo.mx", puesto: "Operador" },
   { id_empleado: 13, id_empresa: 7, nombre: "Frida", apellido_paterno: "Serrano", apellido_materno: "Luna", correo: null, puesto: "Vendedora" },
-  { id_empleado: 14, id_empresa: 7, nombre: "Diego", apellido_paterno: "León", apellido_materno: "Ruiz", correo: "diego.leon@correo.mx", puesto: "Almacenista" },
+  { id_empleado: 14, id_empresa: 7, nombre: "Héctor", apellido_paterno: "León", apellido_materno: "Ruiz", correo: "hector.leon@correo.mx", puesto: "Almacenista" },
   { id_empleado: 18, id_empresa: 7, nombre: "Laura", apellido_paterno: "Ríos", apellido_materno: "Vega", correo: "laura.rios@uniline.mx", puesto: "Jefa de RH" },
 ];
 const CAMPOS = [
@@ -391,7 +391,7 @@ async function rutas(ctx, usuario) {
     }
     if (p === "/checador/firma-digital/solicitudes/documento") {
       const tipo = url.searchParams.get("tipo_documento");
-      if (tipo === "FINIQUITO" || tipo === "LIQUIDACION") return ok({ success: true, solicitud: { id: 31, estatus: "pendiente", nombre_firmante: "Diego León Ruiz", expires_at: "2026-12-27T18:00:00Z" } });
+      if (tipo === "FINIQUITO" || tipo === "LIQUIDACION") return ok({ success: true, solicitud: { id: 31, estatus: "pendiente", nombre_firmante: "Héctor León Ruiz", expires_at: "2026-12-27T18:00:00Z" } });
       return ok({ success: true, solicitud: { estatus: "pendiente", url_firma: "/firmar/demo" } });
     }
     // Empleados y catálogos
@@ -408,7 +408,7 @@ async function rutas(ctx, usuario) {
     }
     // Finiquitos
     if (p === "/checador/finiquitos" && m === "GET") return ok({ data: FINIQUITOS, total: FINIQUITOS.length });
-    if (p === "/checador/finiquitos/empleados-activos") return ok({ data: [{ id: 14, id_empleado: 14, id_empresa: 7, nombre_completo: "Diego León Ruiz", fecha_ingreso: "2024-02-01", puesto: "Almacenista", departamento: "Almacén", periodicidad_pago: "Quincenal", salario_diario: 320 }] });
+    if (p === "/checador/finiquitos/empleados-activos") return ok({ data: [{ id: 14, id_empleado: 14, id_empresa: 7, nombre_completo: "Héctor León Ruiz", fecha_ingreso: "2024-02-01", puesto: "Almacenista", departamento: "Almacén", periodicidad_pago: "Quincenal", salario_diario: 320 }] });
     if (/\/checador\/finiquitos\/empleado\/\d+\/dias-no-trabajados$/.test(p)) return ok({ dias_no_trabajados: 0 });
     if (/\/checador\/finiquitos\/empleado\/\d+\/vacaciones-datos$/.test(p)) return ok({ diasPendientes: 4, diasLeyAñoActual: 14 });
     if (p === "/checador/finiquitos/calcular") return ok(finiquito(cuerpo));
@@ -531,7 +531,7 @@ const ESCENAS = {
   },
   async nominaDueno(b) {
     puedeAutorizar = true;
-    const ctx = await contexto(b, { ...RH, nombre: "Diego Uniline", correo: "diego@uniline.mx" });
+    const ctx = await contexto(b, { ...RH, nombre: "Roberto Méndez", correo: "roberto@uniline.mx" });
     const page = await abrir(ctx, "/panel/nomina/4", (pg) => pg.getByRole("button", { name: "Autorizar y enviar recibos" }));
     await guardar(page, "nomina", "nomina-por-autorizar");
     await page.getByRole("button", { name: "Autorizar y enviar recibos" }).click();
@@ -585,8 +585,8 @@ const ESCENAS = {
     await page.getByRole("button", { name: "Registrar préstamo" }).click();
     const dlg = page.getByRole("dialog");
     await dlg.getByText("Monto prestado").waitFor();
-    await dlg.getByRole("combobox").first().fill("Diego");
-    await page.getByRole("option", { name: /Diego León/ }).dispatchEvent("mousedown");
+    await dlg.getByRole("combobox").first().fill("Héctor");
+    await page.getByRole("option", { name: /Héctor León/ }).dispatchEvent("mousedown");
     await dlg.getByLabel("Monto prestado").fill("10000");
     await dlg.getByLabel("Abono por nómina").fill("500");
     await dlg.getByText("Pasa de un mes de salario").waitFor({ timeout: 8000 }).catch(() => {});
@@ -634,13 +634,13 @@ const ESCENAS = {
   },
   async finiquitos(b) {
     const ctx = await contexto(b, RH);
-    const page = await abrir(ctx, "/panel/finiquitos-y-liquidaciones", "Diego León Ruiz");
+    const page = await abrir(ctx, "/panel/finiquitos-y-liquidaciones", "Héctor León Ruiz");
     await guardar(page, "nomina", "finiquitos-lista");
     await page.getByRole("button", { name: "Nuevo Finiquito" }).click();
     await page.getByRole("combobox").first().click();
     await page.getByRole("option", { name: "Matriz Colima" }).click();
-    await page.locator("#finiquito-empleado").fill("Diego");
-    await page.getByRole("button", { name: "Diego León Ruiz" }).click({ timeout: 15000 });
+    await page.locator("#finiquito-empleado").fill("Héctor");
+    await page.getByRole("button", { name: "Héctor León Ruiz" }).click({ timeout: 15000 });
     await page.getByLabel("Salario diario").waitFor({ timeout: 15000 });
     await page.getByLabel("Días de salario pendientes").fill("5");
     await page.getByText("Ajustes de vacaciones y aguinaldo").click();
@@ -656,7 +656,7 @@ const ESCENAS = {
     await alInicio(resumen);
     await guardar(page, "nomina", "liquidacion-calculada", { clip: await areaDe(page, resumen, 16) });
     await page.goto(base + "/panel/finiquitos-y-liquidaciones", { waitUntil: "domcontentloaded" });
-    await page.getByText("Diego León Ruiz").first().waitFor({ timeout: 30000 });
+    await page.getByText("Héctor León Ruiz").first().waitFor({ timeout: 30000 });
     await page.getByRole("button", { name: "Ver", exact: true }).first().click();
     await page.getByText("Firma del documento").waitFor({ timeout: 30000 });
     await page.getByText("Pendiente de firma").waitFor({ timeout: 15000 }).catch(() => {});

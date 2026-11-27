@@ -118,7 +118,7 @@ const filasAsistencia = () => [
   fila(504, "Mario", "Gómez", "Almacén", { hora_entrada_programada: "08:00:00", hora_salida_programada: "17:00:00", minutos_programados: 480,
     entrada: t("07:51"), salida: t("20:02"), checadas_vivas: 3, minutos_trabajados: 671, minutos_comida: 60, minutos_extra: 0,
     minutos_extra_por_autorizar: 191, estado_extra: "pendiente", estado_calculado: { clave: "ok", texto: "Asistió", atencion: false } }),
-  fila(507, "Diego", "León", "Administración", { entrada: t("08:55"), checadas_vivas: 1, estado_calculado: { clave: "sinsalida", texto: "Sin salida", atencion: true } }),
+  fila(507, "Héctor", "León", "Administración", { entrada: t("08:55"), checadas_vivas: 1, estado_calculado: { clave: "sinsalida", texto: "Sin salida", atencion: true } }),
   fila(508, "Rosa", "Díaz", "Ventas", { entrada: t("09:00"), salida: t("16:00"), checadas_vivas: 3, minutos_trabajados: 390, minutos_comida: 30,
     hora_salida_comida_programada: "11:00:00", hora_regreso_comida_programada: "11:30:00", estado_calculado: { clave: "ok", texto: "Asistió", atencion: false } }),
   fila(509, "Tomás", "Ruiz", "Ventas", { entrada: t("09:00"), salida: t("16:00"), checadas_vivas: 1, minutos_trabajados: 420, minutos_comida: 0,
@@ -631,12 +631,12 @@ try {
     preparar: async (pg) => {
       await clic(pg, pg.getByRole("checkbox", { name: "Elegir a Armando González" }));
       await clic(pg, pg.getByRole("checkbox", { name: "Elegir a Juan Pérez" }));
-      await clic(pg, pg.getByRole("checkbox", { name: "Elegir a Diego León" }));
+      await clic(pg, pg.getByRole("checkbox", { name: "Elegir a Héctor León" }));
     } });
   await captura("asistencias/acciones-masivas-marcar-como", { ruta: "/panel/registro-asistencia",
     preparar: async (pg) => {
       await clic(pg, pg.getByRole("checkbox", { name: "Elegir a Armando González" }));
-      await clic(pg, pg.getByRole("checkbox", { name: "Elegir a Diego León" }));
+      await clic(pg, pg.getByRole("checkbox", { name: "Elegir a Héctor León" }));
       await clic(pg, pg.getByRole("button", { name: "Marcar como…" }));
       await pg.getByLabel("Estado para los seleccionados").selectOption({ label: "Día de descanso" }).catch(() => {});
       await pg.getByLabel("Motivo (obligatorio)").fill("Cambio de descanso autorizado");

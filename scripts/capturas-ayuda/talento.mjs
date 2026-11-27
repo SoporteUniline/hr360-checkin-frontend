@@ -104,7 +104,7 @@ const CANDIDATOS = [
   candidato(201, "Ana Torres", 55, "oferta", -6, { contratacion: { fecha_ingreso: fecha(7), id_sucursal: 1, checklist: ["data", "offer"] } }),
   candidato(202, "Beto Ruiz", 55, "entrevista", -5),
   candidato(203, "Carla Gil", 56, "revision", -3),
-  candidato(204, "Diego Paz", 56, "nuevo", -1),
+  candidato(204, "Andrés Paz", 56, "nuevo", -1),
   candidato(205, "Elena Mora", 55, "nuevo", -1),
   candidato(206, "Fernando Ríos", 56, "descartado", -9),
 ];
@@ -163,7 +163,7 @@ const COMPANEROS = [
   { id: 101, name: "Ana Torres", area: "Almacén", position: "Montacarguista", managerId: 18 },
   { id: 102, name: "Beto Ruiz", area: "Almacén", position: "Montacarguista", managerId: 18 },
   { id: 103, name: "Carla Gil", area: "Ventas", position: "Cajera", managerId: 19 },
-  { id: 104, name: "Diego Paz", area: "Ventas", position: "Cajero", managerId: 19 },
+  { id: 104, name: "Andrés Paz", area: "Ventas", position: "Cajero", managerId: 19 },
   { id: 18, name: "Jorge Ramírez", area: "Almacén", position: "Jefe de almacén", managerId: null },
   { id: 19, name: "Elena Mora", area: "Ventas", position: "Gerente de tienda", managerId: null },
 ];
@@ -188,7 +188,7 @@ const CALIBRACION = {
     { employeeId: 101, name: "Ana Torres", score: 3.52, originalScore: 3.52, performanceLevel: 2, potentialLevel: 3, changed: false, revision: 1 },
     { employeeId: 102, name: "Beto Ruiz", score: 4.4, originalScore: 4.1, performanceLevel: 3, potentialLevel: 3, changed: true, revision: 2 },
     { employeeId: 103, name: "Carla Gil", score: 4.1, originalScore: 4.1, performanceLevel: 3, potentialLevel: 2, changed: false, revision: 1 },
-    { employeeId: 104, name: "Diego Paz", score: 2.8, originalScore: 2.8, performanceLevel: 1, potentialLevel: 2, changed: false, revision: 1 },
+    { employeeId: 104, name: "Andrés Paz", score: 2.8, originalScore: 2.8, performanceLevel: 1, potentialLevel: 2, changed: false, revision: 1 },
     { employeeId: 105, name: "Fernanda Ríos", score: 3.3, originalScore: 3.3, performanceLevel: 2, potentialLevel: 2, changed: false, revision: 1 },
     { employeeId: 106, name: "Gabriel León", score: 3.6, originalScore: 3.6, performanceLevel: 2, potentialLevel: null, changed: false, revision: 1 },
   ],
