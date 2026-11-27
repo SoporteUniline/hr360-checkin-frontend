@@ -72,7 +72,7 @@ export const DUENO = "dueno"; // solo el dueño de la cuenta
 // Clima, Ajustes y las del dueño. Gana el prefijo más largo.
 const RUTAS_PROPIAS = [
   ["/panel/dashboard", LIBRE], ["/panel/cuenta", LIBRE], ["/panel/seguridad", LIBRE], ["/panel/creditos-ia", LIBRE],
-  ["/panel/mis-encuestas", LIBRE],
+  ["/panel/mis-encuestas", LIBRE], ["/panel/ayuda", LIBRE], // (27/11/2026) Centro de ayuda: para cualquiera con sesión
   ["/panel/usuarios-con-acceso", DUENO], ["/panel/mi-suscripcion", DUENO], ["/panel/modulos", DUENO],
   ["/panel/cotizaciones", DUENO], ["/panel/mensajes-sistema", DUENO], ["/panel/integraciones", DUENO],
   ["/panel/monitor", "asistencias"], ["/panel/registro-asistencia", "asistencias"], ["/panel/horas-extra", "asistencias"],

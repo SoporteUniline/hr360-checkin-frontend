@@ -1,9 +1,17 @@
 // Muestra la respuesta de la IA con formato simple (negritas, viñetas, párrafos) sin insertar HTML: todo es texto,
 // así nada de lo que escriba la IA puede ejecutarse en la página.
-function enLinea(texto) {
+// (27/11/2026) Enlaces «[texto](https://…)» (las guías que cita «Cómo usar ADAMIA»): solo https, en otra pestaña.
+function negritas(texto, base) {
   return String(texto).split(/(\*\*[^*]+\*\*)/g).map((parte, i) =>
-    parte.startsWith("**") && parte.endsWith("**") ? <strong key={i}>{parte.slice(2, -2)}</strong> : parte,
+    parte.startsWith("**") && parte.endsWith("**") ? <strong key={`${base}-${i}`}>{parte.slice(2, -2)}</strong> : parte,
   );
+}
+function enLinea(texto) {
+  return String(texto).split(/(\[[^\]]+\]\(https:\/\/[^)\s]+\))/g).flatMap((parte, i) => {
+    const m = /^\[([^\]]+)\]\((https:\/\/[^)\s]+)\)$/.exec(parte);
+    if (!m) return negritas(parte, i);
+    return [<a key={`e-${i}`} href={m[2]} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand underline underline-offset-2">{m[1]}</a>];
+  });
 }
 
 export default function TextoIA({ texto }) {

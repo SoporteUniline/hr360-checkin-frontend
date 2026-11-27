@@ -24,6 +24,31 @@ const SUGERENCIAS = [
   "¿Qué le debo pagar si despido sin causa a alguien con 2 años y $300 diarios?",
   "¿Cuánto se paga la hora extra después de las 9 horas a la semana?",
 ];
+// (27/11/2026) Dos funciones: la ley laboral (LFT) y «Cómo usar ADAMIA», que responde con las guías del Centro de ayuda
+// (backend: POST /checador/ia/ayuda/preguntar) y cita el enlace de la guía.
+const SUGERENCIAS_AYUDA = [
+  "¿Cómo publico un comunicado que deban confirmar de leído?",
+  "¿Cómo veo quién no ha leído un aviso?",
+  "¿Cómo cambio la portada del muro?",
+];
+const FUNCIONES = {
+  lft: { pestana: "Ley laboral", api: "/checador/ia/lft", sugerencias: SUGERENCIAS, intro: "Pregunta lo que necesites de la Ley Federal del Trabajo. Te respondo con el texto oficial y el artículo.", placeholder: "Ej. ¿Cuánto es la prima vacacional?", espera: "Consultando la ley…" },
+  ayuda: { pestana: "Cómo usar ADAMIA", api: "/checador/ia/ayuda", sugerencias: SUGERENCIAS_AYUDA, intro: "Pregunta cómo hacer algo en ADAMIA. Te respondo con las guías del Centro de ayuda y te dejo el enlace.", placeholder: "Ej. ¿Cómo publico un comunicado?", espera: "Buscando en las guías…" },
+};
+
+function GuiasCitadas({ guias }) {
+  if (!guias?.length) return null;
+  return (
+    <div className="mt-2 grid gap-1.5">
+      {guias.map((g) => (
+        <a key={g.slug} href={g.url} target="_blank" rel="noopener noreferrer" data-guia-citada={g.slug}
+          className="flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[12.5px] font-semibold text-brand hover:border-brand">
+          <BookOpenText className="size-3.5 shrink-0" /> <span className="min-w-0 truncate">Guía: {g.titulo}</span>
+        </a>
+      ))}
+    </div>
+  );
+}
 const fechaDOF = (f) => (f ? String(f).slice(0, 10).split("-").reverse().join("/") : "");
 
 function Articulos({ articulos }) {
@@ -99,7 +124,8 @@ function Tope({ estado, idEmpresa, alCambiar }) {
   );
 }
 
-function Chat({ idEmpresa, estado, alCambiar }) {
+function Chat({ idEmpresa, estado, alCambiar, funcion = "lft" }) {
+  const F = FUNCIONES[funcion];
   const [mensajes, setMensajes] = useState([]);
   const [idConversacion, setIdConversacion] = useState(null);
   const [texto, setTexto] = useState("");
@@ -108,7 +134,7 @@ function Chat({ idEmpresa, estado, alCambiar }) {
   const [verHistorial, setVerHistorial] = useState(false);
   const [sinCreditos, setSinCreditos] = useState(false);
   const fin = useRef(null);
-  const historial = useSWR(verHistorial ? `/checador/ia/lft/conversaciones?empresa=${idEmpresa}` : null, get);
+  const historial = useSWR(verHistorial ? `${F.api}/conversaciones?empresa=${idEmpresa}` : null, get);
   useEffect(() => { fin.current?.scrollIntoView({ block: "end", behavior: "smooth" }); }, [mensajes, enviando]);
 
   const preguntar = async (pregunta) => {
@@ -117,9 +143,9 @@ function Chat({ idEmpresa, estado, alCambiar }) {
     setError(""); setSinCreditos(false); setTexto(""); setEnviando(true);
     setMensajes((m) => [...m, { rol: "usuario", texto: p }]);
     try {
-      const { data } = await axios.post("/checador/ia/lft/preguntar", { empresa: idEmpresa, pregunta: p, id_conversacion: idConversacion }, { timeout: 60000, avisoSinCreditos: false });
+      const { data } = await axios.post(`${F.api}/preguntar`, { empresa: idEmpresa, pregunta: p, id_conversacion: idConversacion }, { timeout: 60000, avisoSinCreditos: false });
       setIdConversacion(data.id_conversacion);
-      setMensajes((m) => [...m, { rol: "asistente", texto: data.respuesta, articulos: data.articulos }]);
+      setMensajes((m) => [...m, { rol: "asistente", texto: data.respuesta, articulos: data.articulos, guias: data.guias }]);
       alCambiar();
     } catch (e) {
       setError(errorDe(e, "No se pudo responder. Intenta de nuevo."));
@@ -129,7 +155,7 @@ function Chat({ idEmpresa, estado, alCambiar }) {
     } finally { setEnviando(false); }
   };
   const abrir = async (id) => {
-    const { data } = await axios.get(`/checador/ia/lft/conversaciones/${id}?empresa=${idEmpresa}`);
+    const { data } = await axios.get(`${F.api}/conversaciones/${id}?empresa=${idEmpresa}`);
     setMensajes(data.mensajes); setIdConversacion(id); setVerHistorial(false);
   };
   const nueva = () => { setMensajes([]); setIdConversacion(null); setVerHistorial(false); setError(""); };
@@ -151,19 +177,19 @@ function Chat({ idEmpresa, estado, alCambiar }) {
           </div>
         ) : mensajes.length === 0 ? (
           <div className="space-y-2">
-            <p className="text-sm text-slate-600">Pregunta lo que necesites de la Ley Federal del Trabajo. Te respondo con el texto oficial y el artículo.</p>
-            {SUGERENCIAS.map((s) => (
+            <p className="text-sm text-slate-600">{F.intro}</p>
+            {F.sugerencias.map((s) => (
               <button key={s} type="button" onClick={() => preguntar(s)} className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-[13px] text-slate-700 hover:border-brand">{s}</button>
             ))}
           </div>
         ) : (
           mensajes.map((m, i) => (
             <div key={i} className={m.rol === "usuario" ? "ml-8 rounded-xl rounded-br-sm bg-brand px-3 py-2 text-[13.5px] text-white" : "mr-2 rounded-xl rounded-bl-sm border border-slate-200 bg-white px-3 py-2.5 text-slate-800"}>
-              {m.rol === "usuario" ? <p className="whitespace-pre-line">{m.texto}</p> : <><TextoIA texto={m.texto} /><Articulos articulos={m.articulos} /></>}
+              {m.rol === "usuario" ? <p className="whitespace-pre-line">{m.texto}</p> : <><TextoIA texto={m.texto} /><Articulos articulos={m.articulos} /><GuiasCitadas guias={m.guias} /></>}
             </div>
           ))
         )}
-        {enviando ? <p role="status" className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="size-4 animate-spin" /> Consultando la ley…</p> : null}
+        {enviando ? <p role="status" className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="size-4 animate-spin" /> {F.espera}</p> : null}
         {error ? (
           <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-2.5 text-sm text-red-700">
             {error}{sinCreditos ? <> <Link href={RUTA_CREDITOS} className="font-semibold underline">Recargar créditos</Link></> : null}
@@ -175,10 +201,10 @@ function Chat({ idEmpresa, estado, alCambiar }) {
         <div className="flex items-end gap-2">
           <textarea aria-label="Tu pregunta" value={texto} onChange={(e) => setTexto(e.target.value)} rows={2} maxLength={2000}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); preguntar(texto); } }}
-            placeholder="Ej. ¿Cuánto es la prima vacacional?" className="min-h-11 flex-1 resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
+            placeholder={F.placeholder} className="min-h-11 flex-1 resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-brand focus:outline-none" />
           <button type="submit" disabled={enviando || texto.trim().length < 3} aria-label="Enviar pregunta" className="grid size-11 place-items-center rounded-lg bg-brand text-white disabled:opacity-50"><Send className="size-4" /></button>
         </div>
-        <p className="text-[11.5px] text-slate-500">Orientación con base en la LFT vigente (reforma DOF {fechaDOF(estado.lft?.reforma)}). No sustituye asesoría legal.</p>
+        <p className="text-[11.5px] text-slate-500">{funcion === "ayuda" ? "Responde con las guías del Centro de ayuda de ADAMIA." : <>Orientación con base en la LFT vigente (reforma DOF {fechaDOF(estado.lft?.reforma)}). No sustituye asesoría legal.</>}</p>
         <Tope estado={estado} idEmpresa={idEmpresa} alCambiar={alCambiar} />
       </form>
     </div>
@@ -189,6 +215,7 @@ export default function AdamiaAI() {
   const { dataUser } = useAuth() ?? {};
   const pathname = usePathname();
   const [abierto, setAbierto] = useState(false);
+  const [funcion, setFuncion] = useState("lft");
   const empresa = useEmpresaNomina();
   const estado = useSWR(abierto && empresa.idEmpresa ? `/checador/ia/estado?empresa=${empresa.idEmpresa}` : null, get, { shouldRetryOnError: false });
   // Solo en el panel de la empresa (no en el de administración de ADAMIA) y nunca para un empleado.
@@ -205,18 +232,28 @@ export default function AdamiaAI() {
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-brand text-white"><Sparkles className="size-4" /></span>
             <div className="min-w-0 flex-1">
               <SheetTitle className="text-base font-extrabold text-[#080d36]">Adamia AI</SheetTitle>
-              <SheetDescription className="text-[12.5px] text-slate-500">Ley Federal del Trabajo para tu empresa</SheetDescription>
+              <SheetDescription className="text-[12.5px] text-slate-500">{funcion === "ayuda" ? "Dudas de cómo usar ADAMIA" : "Ley Federal del Trabajo para tu empresa"}</SheetDescription>
             </div>
             <SelectorEmpresa {...empresa} />
           </div>
-          {estado.isLoading || !empresa.idEmpresa ? (
+          {/* (27/11/2026) Sin datos (p. ej. mientras el panel se cierra y SWR suelta la llave) se muestra «Cargando…»: antes
+              «Activar» recibía estado vacío y la página tronaba al cerrar Adamia AI. */}
+          {estado.isLoading || !empresa.idEmpresa || (!estado.data && !estado.error) ? (
             <p role="status" className="p-4 text-sm text-slate-500">Cargando…</p>
           ) : estado.error ? (
             <p role="alert" className="m-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{codigo === "SIN_MIGRACION" ? "Falta preparar la base de datos de Adamia AI." : errorDe(estado.error, "No se pudo cargar Adamia AI.")}</p>
           ) : !estado.data?.activo ? (
             <div className="p-4"><Activar estado={estado.data} idEmpresa={empresa.idEmpresa} alCambiar={() => estado.mutate()} /></div>
           ) : (
-            <Chat idEmpresa={empresa.idEmpresa} estado={estado.data} alCambiar={() => estado.mutate()} />
+            <>
+              <div role="tablist" aria-label="Tipo de pregunta" className="grid grid-cols-2 gap-1 border-b border-slate-200 bg-slate-50 p-1.5">
+                {Object.entries(FUNCIONES).map(([clave, f]) => (
+                  <button key={clave} type="button" role="tab" aria-selected={funcion === clave} onClick={() => setFuncion(clave)}
+                    className={`min-h-9 rounded-md text-[13px] font-semibold ${funcion === clave ? "bg-white text-brand shadow-sm" : "text-slate-600 hover:text-slate-900"}`}>{f.pestana}</button>
+                ))}
+              </div>
+              <Chat key={funcion} funcion={funcion} idEmpresa={empresa.idEmpresa} estado={estado.data} alCambiar={() => estado.mutate()} />
+            </>
           )}
         </SheetContent>
       </Sheet>
