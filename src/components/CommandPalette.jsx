@@ -421,7 +421,7 @@ const GROUPS = [
     key: "contratos",
     label: "CONTRATOS",
     icon: FileText,
-    route: (item) => `/panel/contratos?id=${item.id}`,
+    route: (item) => `/panel/contratos/${item.id}`,
     hint: (item) => item.subtitulo || "",
   },
   {

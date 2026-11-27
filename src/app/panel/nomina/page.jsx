@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Chip, Kpi, SelectorEmpresa, mensajeError, useEmpresaNomina } from "@/components/nomina/comun";
 import { ModuloNomina, Tabla, FilaEnlace, CeldaEnlace, celda, Cargando, ErrorCarga, Vacio } from "@/components/nomina/ModuloNomina";
 import { ESTADOS, PERIODICIDADES, dinero, fechaCorta, periodoSugerido } from "@/lib/nomina/nomina.mjs";
+import AvisoSueldosPorRevisar from "@/components/nomina/AvisoSueldosPorRevisar";
 
 const get = (url) => axios.get(url).then((r) => r.data);
 const hoy = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
@@ -24,9 +25,11 @@ export default function NominaPage() {
   const { data, error, isLoading } = useSWR(empresa.idEmpresa ? `/checador/nomina/periodos?empresa=${empresa.idEmpresa}` : null, get);
   const [nuevo, setNuevo] = useState(null);
   const [creando, setCreando] = useState(false);
+  // (27/11/2026) Personas con el sueldo de la ficha distinto al de su contrato vigente: la nómina no se crea.
+  const [porRevisar, setPorRevisar] = useState([]);
   const periodos = data?.periodos ?? [];
 
-  const abrirNuevo = () => setNuevo({ periodicidad: "Semanal", ...periodoSugerido("Semanal", hoy()) });
+  const abrirNuevo = () => { setPorRevisar([]); setNuevo({ periodicidad: "Semanal", ...periodoSugerido("Semanal", hoy()) }); };
   const crear = async (e) => {
     e.preventDefault();
     setCreando(true);
@@ -34,7 +37,8 @@ export default function NominaPage() {
       const r = await axios.post("/checador/nomina/periodos", { id_empresa: empresa.idEmpresa, periodicidad: nuevo.periodicidad, fecha_inicio: nuevo.inicio, fecha_fin: nuevo.fin });
       router.push(`/panel/nomina/${r.data.id}`);
     } catch (err) {
-      enqueueSnackbar(mensajeError(err, "No se pudo crear la nómina."), { variant: "error" });
+      if (err?.response?.data?.codigo === "SUELDOS_POR_REVISAR") setPorRevisar(err.response.data.personas ?? []);
+      else enqueueSnackbar(mensajeError(err, "No se pudo crear la nómina."), { variant: "error" });
       setCreando(false);
     }
   };
@@ -85,7 +89,7 @@ export default function NominaPage() {
             <form onSubmit={crear} className="grid gap-4">
               <label className="grid gap-1.5 text-sm font-medium">
                 Periodicidad
-                <select className="h-10 rounded-lg border border-gray-300 px-2" value={nuevo.periodicidad} onChange={(e) => setNuevo({ periodicidad: e.target.value, ...periodoSugerido(e.target.value, hoy()) })}>
+                <select className="h-10 rounded-lg border border-gray-300 px-2" value={nuevo.periodicidad} onChange={(e) => { setPorRevisar([]); setNuevo({ periodicidad: e.target.value, ...periodoSugerido(e.target.value, hoy()) }); }}>
                   {PERIODICIDADES.map((p) => <option key={p}>{p}</option>)}
                 </select>
                 <span className="text-xs font-normal text-gray-500">Entran las personas con este periodo de pago en su ficha.</span>
@@ -94,6 +98,7 @@ export default function NominaPage() {
                 <label className="grid gap-1.5 text-sm font-medium">Del<input type="date" required className="h-10 rounded-lg border border-gray-300 px-2" value={nuevo.inicio} onChange={(e) => setNuevo({ ...nuevo, inicio: e.target.value })} /></label>
                 <label className="grid gap-1.5 text-sm font-medium">Al<input type="date" required className="h-10 rounded-lg border border-gray-300 px-2" value={nuevo.fin} min={nuevo.inicio} onChange={(e) => setNuevo({ ...nuevo, fin: e.target.value })} /></label>
               </div>
+              <AvisoSueldosPorRevisar personas={porRevisar} accion="crear" />
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setNuevo(null)}>Cancelar</Button>
                 <Button type="submit" disabled={creando}>{creando ? "Calculando…" : "Crear y calcular"}</Button>

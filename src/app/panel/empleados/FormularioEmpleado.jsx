@@ -943,7 +943,7 @@ export default function FormularioEmpleado({
                       )}
                       {tab === "pago" && (
                         <div className="space-y-6">
-                          <TabNomina renderCampos={renderCamposDe("nomina")} form={form} soloLectura={soloLectura} />
+                          <TabNomina renderCampos={renderCamposDe("nomina")} form={form} soloLectura={soloLectura} empleadoId={values?.id_empleado} />
                           <TabCuentasBancarias renderCampos={renderCamposDe("cuentas")} form={form} soloLectura={soloLectura} />
                         </div>
                       )}

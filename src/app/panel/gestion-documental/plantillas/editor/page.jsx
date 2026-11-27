@@ -33,6 +33,9 @@ import {
 } from "lucide-react";
 import { useSnackbar } from "notistack";
 import { motion, AnimatePresence } from "framer-motion";
+import { PanelContrato, VistaPreviaContrato } from "@/components/documentos/EditorContrato";
+import { TIPOS_OPCIONES } from "@/lib/contratos/detalleContrato.mjs";
+import { resaltarVariables } from "@/lib/contratos/htmlContrato.mjs";
 
 /* ─── Variables disponibles del sistema ─── */
 const VARIABLES_SISTEMA = [
@@ -62,6 +65,8 @@ const CATEGORIAS = [
   { value: "Legal",          label: "Legal" },
   { value: "RRHH",           label: "RRHH" },
   { value: "Otro",           label: "Otro" },
+  // (27/11/2026) Contratos individuales de trabajo: «Se usa para» elige el tipo; los datos contrato.* se llenan solos.
+  { value: "Contrato",       label: "Contrato" },
 ];
 
 /* ─── Barra de herramientas del editor ─── */
@@ -377,10 +382,12 @@ export default function EditorPlantillaPage() {
     codigo: "",
     nombre: "",
     descripcion: "",
-    categoria: "Laboral",
+    categoria: searchParams.get("categoria") === "Contrato" ? "Contrato" : "Laboral",
+    tipo_contrato: "",
     variables: "",
     contenido_html: "",
   });
+  const esContrato = form.categoria === "Contrato";
 
   const setField = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
@@ -406,6 +413,7 @@ export default function EditorPlantillaPage() {
           nombre:         data.nombre || "",
           descripcion:    data.descripcion || "",
           categoria:      data.categoria || "Laboral",
+          tipo_contrato:  data.tipo_contrato || "",
           variables:      data.variables || "",
           contenido_html: html,
         });
@@ -460,6 +468,10 @@ export default function EditorPlantillaPage() {
     const contenido_html = editorRef.current?.innerHTML || form.contenido_html;
     if (!form.codigo.trim() || !form.nombre.trim() || !form.categoria) {
       enqueueSnackbar("Completa los campos requeridos: código, nombre y categoría", { variant: "warning" });
+      return;
+    }
+    if (form.categoria === "Contrato" && !form.tipo_contrato) {
+      enqueueSnackbar("Elige para qué tipo de contrato se usa esta plantilla", { variant: "warning" });
       return;
     }
     if (!contenido_html.trim() || contenido_html === "<br>") {
@@ -626,6 +638,19 @@ export default function EditorPlantillaPage() {
             </div>
           </div>
 
+          {esContrato ? (
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex flex-col gap-2">
+              <Label htmlFor="tipo_contrato" className="text-[16px] font-semibold text-gray-900">Se usa para</Label>
+              <select id="tipo_contrato" className="min-h-12 rounded-[12px] border border-[#CBD3E3] bg-white px-3 text-[16px]" value={form.tipo_contrato} onChange={(e) => setField("tipo_contrato", e.target.value)}>
+                <option value="">Elige el tipo de contrato</option>
+                {TIPOS_OPCIONES.map((t) => <option key={t.value} value={t.value}>Contratos: {t.label.toLowerCase()}</option>)}
+              </select>
+              <p className="m-0 text-[16px] text-[#4B5563]">Los contratos nuevos de ese tipo usan esta plantilla. Los ya firmados conservan su texto.</p>
+            </div>
+          ) : null}
+
+          {esContrato ? <PanelContrato onInsert={insertarVariable} /> : null}
+
           {/* Panel IA */}
           <PanelIA
             onApply={aplicarIA}
@@ -634,7 +659,7 @@ export default function EditorPlantillaPage() {
           />
 
           {/* Variables disponibles — panel desplegable */}
-          <PanelVariables onInsert={insertarVariable} />
+          {esContrato ? null : <PanelVariables onInsert={insertarVariable} />}
         </motion.div>
 
         {/* ── Panel derecho: editor ── */}
@@ -675,13 +700,18 @@ export default function EditorPlantillaPage() {
               />
             </div>
 
+            {/* Contrato: vista previa con los datos de un contrato real de la empresa. */}
+            {esContrato ? (
+              <VistaPreviaContrato obtenerHtml={() => editorRef.current?.innerHTML || form.contenido_html} empresa={dataUser?.empresas?.[0]} />
+            ) : null}
+
             {/* Vista previa */}
             {preview && (
               <div
                 className="flex-1 p-4 sm:p-8 text-sm text-gray-800 leading-relaxed prose prose-sm max-w-none"
                 style={{ fontFamily: "Georgia, serif" }}
                 dangerouslySetInnerHTML={{
-                  __html: form.contenido_html.replace(
+                  __html: esContrato ? resaltarVariables(form.contenido_html) : form.contenido_html.replace(
                     /\{\{([^}]+)\}\}/g,
                     '<span class="bg-blue-100 text-blue-700 px-1 rounded font-mono text-xs border border-blue-200">{{$1}}</span>',
                   ),

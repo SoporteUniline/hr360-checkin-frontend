@@ -1,13 +1,13 @@
 ---
 titulo: Plantillas de documentos — las de ADAMIA y las tuyas
-resumen: Usa los 21 formatos listos de ADAMIA o crea tus propias plantillas con variables que se llenan solas con los datos del empleado y de la empresa.
+resumen: Usa los 21 formatos listos de ADAMIA, copia las plantillas base de contrato o crea tus propias plantillas con datos que se llenan solos con los del empleado, del contrato y de la empresa.
 modulo: documentos
 audiencia: [rh, dueno]
 pantallas: [/panel/gestion-documental/plantillas, /panel/gestion-documental/plantillas/editor, /panel/gestion-documental/plantillas/adamia/lectura-politicas]
-palabras: [plantillas, formatos, variables, carta de trabajo, constancia laboral, confidencialidad, responsiva, acuse de políticas, editor, asistente ia, plantillas adamia]
+palabras: [plantillas, formatos, variables, plantilla de contrato, contrato base, sueldo con letra, carta de trabajo, constancia laboral, confidencialidad, responsiva, acuse de políticas, editor, asistente ia, plantillas adamia]
 orden: 20
 actualizado: 2026-11-27
-fuentes: [src/app/panel/gestion-documental/plantillas/page.jsx, src/app/panel/gestion-documental/plantillas/editor/page.jsx, src/components/documentos/CatalogoAdamia.jsx, src/app/panel/gestion-documental/plantillas/adamia/lectura-politicas/page.jsx]
+fuentes: [src/app/panel/gestion-documental/plantillas/page.jsx, src/app/panel/gestion-documental/plantillas/editor/page.jsx, src/components/documentos/EditorContrato.jsx, src/components/documentos/PlantillasContratoBase.jsx, src/lib/contratos/variablesContrato.mjs, src/components/documentos/CatalogoAdamia.jsx, src/app/panel/gestion-documental/plantillas/adamia/lectura-politicas/page.jsx]
 ---
 
 ## Para qué sirve
@@ -77,6 +77,23 @@ En el documento se ven entre llaves, por ejemplo `{{empleado.nombre}}`, y se ree
 
 > **Ojo:** `Aplicar al editor` **reemplaza** el contenido actual del editor. Revisa siempre el texto antes de usarlo.
 
+## Cómo usar las plantillas de contrato
+
+ADAMIA trae una **plantilla base** por tipo de contrato: tiempo indeterminado, tiempo determinado, obra determinada, periodo de prueba y capacitación inicial, con cláusulas estándar de la Ley Federal del Trabajo (arts. 24, 25, 35, 39-A, 39-B, 61, 69, 76, 80, 87…). Son una **base sugerida: revísala con tu abogado**.
+
+1. En **Plantillas** abre la pestaña **Contratos**.
+2. Toca `Ver texto` para leer una base y `Copiar y editar` para copiarla a tu empresa.
+3. En el editor elige en **Se usa para** el tipo de contrato.
+4. Ajusta el texto. En **Datos que se llenan solos** toca un dato (Sueldo, **Sueldo con letra**, Periodicidad, Fecha de inicio, Horario, Prestaciones, Nombre completo, CURP, RFC, Domicilio, Razón social, Representante, Domicilio fiscal…) para ponerlo donde está el cursor. `Ver todos los datos` muestra el resto (día de descanso, vacaciones por ley, prima vacacional, aguinaldo…).
+5. Elige un contrato en **Vista previa con el contrato de** y toca `Vista previa con un empleado` para verla llena con datos reales.
+6. Toca `Guardar`.
+
+![Plantillas base de contrato de ADAMIA](/ayuda/capturas/documentos/plantillas-contrato-base.webp "Una base por tipo de contrato")
+
+![Editor de una plantilla de contrato con los datos que se llenan solos](/ayuda/capturas/documentos/editor-plantilla-contrato.webp "Toca un dato para insertarlo")
+
+> **Importante:** los contratos nuevos de ese tipo usan tu plantilla. **Un contrato que ya se mandó a firmar o se firmó conserva su texto**: cambiar la plantilla no lo cambia. Ve [Contratos laborales](/ayuda/documentos/contratos).
+
 ## Cómo administrar tus plantillas
 
 En **Mis plantillas** ves **Total plantillas**, **Activas**, **Inactivas** y **Categorías**.
@@ -93,12 +110,17 @@ En **Mis plantillas** ves **Total plantillas**, **Activas**, **Inactivas** y **C
 
 Genera el documento con ella o guarda una copia en tu empresa. Si una base ADAMIA guardada en tu empresa fue modificada, al generar verás un aviso para que la revises en **Mis plantillas**; para un formato propio, crea una plantilla nueva.
 
+### ¿El sueldo con letra se escribe solo?
+
+Sí. **Sueldo con letra** pone el importe en pesos con letra, por ejemplo «DIEZ MIL QUINIENTOS PESOS 00/100 M.N.».
+
 ### ¿Dónde uso mis plantillas para la inducción?
 
 Los formatos que la persona firma en su [Inducción digital](/ayuda/induccion/plantillas-de-induccion) salen de **Mis plantillas**.
 
 ## Qué pasa si…
 
+- **…una plantilla de contrato no tiene «Se usa para»:** verás «Elige para qué tipo de contrato se usa esta plantilla».
 - **…falta código, nombre o categoría:** verás «Completa los campos requeridos: código, nombre y categoría».
 - **…el contenido está vacío:** verás «El contenido del documento no puede estar vacío».
 - **…una variable no tiene dato en la ficha:** el documento sale sin ese dato, y las líneas que solo tenían una etiqueta (como «RFC:») se quitan. Completa la ficha y genera de nuevo.
@@ -108,3 +130,4 @@ Los formatos que la persona firma en su [Inducción digital](/ayuda/induccion/pl
 - [Cómo generar un documento](/ayuda/documentos/generar-documento)
 - [Cómo mandar a firmar un documento](/ayuda/documentos/mandar-a-firmar)
 - [Biblioteca documental](/ayuda/documentos/biblioteca-documental)
+- [Contratos laborales](/ayuda/documentos/contratos)
