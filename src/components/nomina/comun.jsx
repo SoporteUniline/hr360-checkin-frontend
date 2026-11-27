@@ -27,13 +27,14 @@ export function Kpi({ titulo, valor, nota, clase = "text-gray-900" }) {
 }
 
 // Empresa sobre la que se trabaja: la primera de la sesión, o la que elija el usuario si tiene varias.
-export function useEmpresaNomina() {
+// preferida: la empresa con la que se llega (p. ej. ?empresa= desde la lista), si el usuario la tiene.
+export function useEmpresaNomina(preferida = null) {
   const { dataUser } = useAuth();
   const empresas = useMemo(() => (dataUser?.empresas_detalle ?? []).map((e) => ({ id: Number(e.id_empresa), nombre: e.nombre })), [dataUser]);
   const [idEmpresa, setIdEmpresa] = useState(null);
   useEffect(() => {
-    if (!idEmpresa && empresas.length) setIdEmpresa(empresas[0].id);
-  }, [empresas, idEmpresa]);
+    if (!idEmpresa && empresas.length) setIdEmpresa(empresas.find((e) => e.id === Number(preferida))?.id ?? empresas[0].id);
+  }, [empresas, idEmpresa, preferida]);
   return { empresas, idEmpresa, setIdEmpresa };
 }
 

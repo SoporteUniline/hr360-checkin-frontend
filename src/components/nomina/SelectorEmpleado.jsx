@@ -1,7 +1,7 @@
 "use client";
 
 // Elegir a una persona escribiendo su nombre: lista filtrada (nombre, puesto y departamento), clic o ↑ ↓ Enter.
-// Solo personas activas.
+// Solo personas activas. grande: letra de 17/16 px y controles de 48 px (formularios con la regla de legibilidad del dueño).
 import { useId, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
 import { Search, X } from "lucide-react";
@@ -11,7 +11,7 @@ const get = (url) => axios.get(url).then((r) => r.data);
 export const nombreDe = (e) => [e?.nombre, e?.apellido_paterno, e?.apellido_materno].filter(Boolean).join(" ");
 const sinAcentos = (t) => String(t ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
-export default function SelectorEmpleado({ idEmpresa, value, onChange, etiqueta = "Persona", requerido = false }) {
+export default function SelectorEmpleado({ idEmpresa, value, onChange, etiqueta = "Persona", requerido = false, grande = false }) {
   const { data, error } = useSWR(idEmpresa ? `/checador/empleados?empresa=${idEmpresa}&estado=Activo&limit=1000&page=1` : null, get);
   const [texto, setTexto] = useState("");
   const [abierto, setAbierto] = useState(false);
@@ -34,12 +34,12 @@ export default function SelectorEmpleado({ idEmpresa, value, onChange, etiqueta 
   };
 
   return (
-    <div className="grid gap-1.5 text-sm">
-      <label htmlFor={id} className="font-medium">{etiqueta}</label>
+    <div className={`grid gap-1.5 ${grande ? "text-[17px] lg:text-[16px]" : "text-sm"}`}>
+      <label htmlFor={id} className={grande ? "font-semibold text-[#111827]" : "font-medium"}>{etiqueta}</label>
       {elegido && !abierto ? (
-        <div className="flex min-h-11 items-center justify-between gap-2 rounded-xl border border-slate-300 bg-white px-3">
-          <span className="min-w-0"><b className="block truncate text-[#080d36]">{nombreDe(elegido)}</b>{elegido.puesto ? <span className="block truncate text-xs text-slate-500">{elegido.puesto}</span> : null}</span>
-          <button type="button" className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-brand hover:bg-blue-50" onClick={() => { setAbierto(true); setActivo(0); }}>Cambiar</button>
+        <div className={`flex items-center justify-between gap-2 rounded-xl border border-slate-300 bg-white px-3 ${grande ? "min-h-12" : "min-h-11"}`}>
+          <span className="min-w-0"><b className="block truncate text-[#080d36]">{nombreDe(elegido)}</b>{elegido.puesto ? <span className={`block truncate ${grande ? "text-[#4B5563]" : "text-xs text-slate-500"}`}>{elegido.puesto}</span> : null}</span>
+          <button type="button" className={`shrink-0 rounded-lg px-2 font-semibold text-brand hover:bg-blue-50 ${grande ? "min-h-12 px-3" : "py-1 text-xs"}`} onClick={() => { setAbierto(true); setActivo(0); }}>Cambiar</button>
         </div>
       ) : (
         <div className="relative">
@@ -48,7 +48,7 @@ export default function SelectorEmpleado({ idEmpresa, value, onChange, etiqueta 
             id={id} role="combobox" aria-expanded={abierto} aria-controls={`${id}-lista`} aria-autocomplete="list" autoComplete="off"
             aria-activedescendant={abierto && filtrados[activo] ? `${id}-${filtrados[activo].id_empleado}` : undefined}
             required={requerido && !value} placeholder={data ? `Escribe el nombre (${empleados.length} personas)` : "Cargando personas…"}
-            className="min-h-11 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-9 text-base focus:border-brand focus:outline-none"
+            className={`w-full rounded-xl border border-slate-300 bg-white pl-9 pr-9 focus:border-brand focus:outline-none ${grande ? "min-h-12 text-[17px] lg:text-[16px]" : "min-h-11 text-base"}`}
             value={texto} onChange={(e) => { setTexto(e.target.value); setAbierto(true); setActivo(0); }}
             onFocus={() => setAbierto(true)} onBlur={() => setTimeout(() => setAbierto(false), 150)} onKeyDown={teclas}
           />
