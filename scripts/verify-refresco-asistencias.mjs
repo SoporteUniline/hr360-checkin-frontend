@@ -6,8 +6,8 @@
 //   3) un cambio de otro usuario (evento SSE «asistencia») recarga sin el aviso «Nueva checada»;
 //   4) con una edición con cambios sin guardar no se recarga nada; al cerrarla, sí;
 //   5) con la pestaña oculta no se pide nada; al volver, se recarga una vez;
-//   6) «checada» sigue recargando con su aviso; 7) el Monitor también; 8) en celular (página de 500) también el
-//      periodo completo de las tarjetas y filtros.
+//   6) «checada» sigue recargando con su aviso; 7) el Monitor también; 8) en celular, con un periodo que NO cabe en la
+//      página de 500, también el periodo completo de las tarjetas y filtros (una petición: 27/11/2026, INC-010).
 // Mide cuántas peticiones hace un ciclo de refresco. Backend simulado con page.route; EventSource simulado (se emiten
 // los eventos desde la prueba); ninguna petición sale a internet. Junta TODOS los defectos antes de fallar.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build && node scripts/verify-refresco-asistencias.mjs
@@ -53,6 +53,9 @@ const fila = (id, nombre, apellido, o = {}) => ({
 });
 // «version» = cuántos cambios hubo en el servidor; cada cambio le pone horas extra por autorizar a una persona más.
 let version = 0;
+// (INC-010) Celular con periodo paginado: la tabla (página de 500) reporta más registros de los que trae, como en un
+// periodo largo; si cabe en la página ya no se descarga el periodo aparte.
+let paginarCelular = false;
 const CON_EXTRA = [504, 509, 507, 508, 501];
 const extra = (id) => (CON_EXTRA.indexOf(id) !== -1 && CON_EXTRA.indexOf(id) <= version
   ? { salida: `${F} 19:00:00`, minutos_extra_por_autorizar: 180, minutos_trabajados: 600 } : {});
@@ -78,9 +81,10 @@ const chec = (id, e, s, o = {}) => ({ id, entrada: e, salida: s, entrada_reloj: 
 const pedidos = [];
 const tipoDe = (p, q) => {
   if (/\/checador\/asistencias$/.test(p)) {
-    if (q.get("limit") === "1") return "periodo-conteo";
-    // El periodo completo pide «limit = total» (6); la tabla, su página (o «Todos» en el Monitor).
-    return Number(q.get("limit")) === filas().length ? "periodo-completo" : "tabla";
+    if (q.get("limit") === "1") return "periodo-conteo"; // Exportar (cargarPeriodoCompleto)
+    // (INC-010) El periodo completo de la pantalla va en una petición sin orden (parametrosPeriodo); la tabla siempre
+    // lleva sortBy (su página o «Todos» en el Monitor).
+    return q.has("sortBy") ? "tabla" : "periodo-completo";
   }
   if (/\/asistencias\/\d+\/reloj$/.test(p)) return "reloj-dia";
   if (/\/asistencias\/\d+\/cambios$/.test(p)) return "historial";
@@ -126,7 +130,8 @@ async function simular(page) {
     if (p.endsWith("/checador/asistencias") && req.method() === "GET") {
       const regs = filas();
       const limite = Number(url.searchParams.get("limit"));
-      return json({ registros: limite === 1 ? regs.slice(0, 1) : regs, total: regs.length, page: 1, aplicarPaginacion: true });
+      const total = paginarCelular && limite === 500 ? regs.length + 1000 : regs.length;
+      return json({ registros: limite === 1 ? regs.slice(0, 1) : regs, total, page: 1, aplicarPaginacion: true });
     }
     if (p.endsWith("/cuenta-horas/por-reponer")) return json({ ok: true, data: { filas: [], totales: {} } });
     if (p.endsWith("/checador/cuenta-horas")) return json({ ok: true, data: {} });
@@ -311,9 +316,17 @@ try {
   await movil.addInitScript(sseFalso);
   const cel = await movil.newPage();
   await simular(cel);
+  paginarCelular = true;
+  const nEntrada = pedidos.length;
   await cel.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
   await esperar(() => pedidos.slice(-6).includes("periodo-completo"), "periodo completo en celular", 30000);
   await dormir(2000);
+  const entradaMovil = desde(nEntrada);
+  await revisar("8a) celular: al entrar, una tabla y UN periodo completo (sin conteo aparte)", async () => {
+    assert.equal(entradaMovil.tabla, 1, JSON.stringify(entradaMovil));
+    assert.equal(entradaMovil["periodo-completo"], 1, JSON.stringify(entradaMovil));
+    assert.equal(entradaMovil["periodo-conteo"] ?? 0, 0, JSON.stringify(entradaMovil));
+  });
   version += 1;
   n = pedidos.length;
   await emitir(cel, "asistencia");
@@ -321,11 +334,12 @@ try {
   const cicloMovil = desde(n);
   await revisar("8) celular: «asistencia» recarga tabla y periodo completo, una vez cada uno", async () => {
     assert.equal(cicloMovil.tabla, 1, JSON.stringify(cicloMovil));
-    assert.equal(cicloMovil["periodo-conteo"], 1, JSON.stringify(cicloMovil));
+    assert.equal(cicloMovil["periodo-conteo"] ?? 0, 0, JSON.stringify(cicloMovil));
     assert.equal(cicloMovil["periodo-completo"], 1, JSON.stringify(cicloMovil));
   });
   await revisar("8b) celular: una conexión SSE", async () => { assert.equal((await abiertas(cel)).length, 1); });
   await movil.close();
+  paginarCelular = false;
 
   console.log(`Peticiones por ciclo — guardado: ${JSON.stringify(cicloGuardado)} · SSE asistencia: ${JSON.stringify(cicloSse)} · checada: ${JSON.stringify(cicloChecada)} · Monitor: ${JSON.stringify(cicloMonitor)} · celular: ${JSON.stringify(cicloMovil)}`);
   await revisar("sin errores de JavaScript", async () => { assert.deepEqual(errores, []); });

@@ -22,6 +22,12 @@ Moderación) + portada del muro y publicaciones fijadas. Reglas y API: `docs/com
 < 900 KB, enderezadas, sin metadatos) al elegirlas; la vista previa es la convertida. Un 413 de nginx sin JSON dice
 «El archivo pesa demasiado para subirlo. Prueba con uno más ligero.». Ver `docs/fotos-web.md`.
 
+**Carga de imágenes (27/11/2026, INC-010):** la portada del muro es lo primero visible: sin `loading="lazy"`, con
+`decoding="async"` y `width`/`height` declarados (su caja ya tiene proporción fija). La foto del aviso emergente lleva
+`loading="lazy"`, `decoding="async"`, tamaño declarado y `h-auto` (sigue limitada a 224 px de alto). Las fotos de
+publicaciones ya eran perezosas. **Pendiente:** el backend no da miniaturas ni URL con tamaño; se usa la foto original
+(ya en WebP ≤ 2000 px por INC-009). Prueba: `scripts/verify-panel-rapido.mjs`.
+
 ## Muro del panel (27/11/2026, pedido del dueño)
 - **Primera pantalla**: el login, el middleware y el reloj mandan a `/panel`; `src/lib/inicioPanel.mjs` decide: el muro
   (`/panel/muro`) si la empresa tiene el módulo `comunicados` y el usuario puede verlo (dueño, RH o acceso con «ver» o

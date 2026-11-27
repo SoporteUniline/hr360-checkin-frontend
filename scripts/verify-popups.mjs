@@ -201,7 +201,7 @@ try {
   await wa.close();
   await p2.getByRole("dialog", { name: "¡Gracias, Ana!" }).waitFor({ timeout: 3000 });
   await dormir(400);
-  assert.deepEqual(aceptaciones.at(-1), { contexto: "contacto", documentos: [{ id: "aviso_privacidad", version: "2026-11-25" }], nombre: "Ana López", telefono: "+525512345678" });
+  assert.deepEqual(aceptaciones.at(-1), { contexto: "contacto", documentos: [{ id: "aviso_privacidad", version: "2026-11-28" }], nombre: "Ana López", telefono: "+525512345678" });
   assert.equal(eventos.at(-1).tipo, "clic");
   assert.equal(eventos.at(-1).id, 8);
   await capturar(p2, "escritorio-gracias");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
+import { memo, useCallback, useState, useMemo, useEffect, useRef } from "react";
 import {
   Search,
   ChevronUp,
@@ -98,7 +98,9 @@ const GRUPO_CONFIG = {
   },
 };
 
-function EmpleadoCard({ registro, index, totalCount, onClick }) {
+// memo: con 200 personas, cada render del padre (llegada de datos, abrir filtros, escribir en el buscador) volvía a
+// pintar todas las tarjetas (cada una con dayjs.tz). Solo se repinta la tarjeta cuyo registro cambió.
+const EmpleadoCard = memo(function EmpleadoCard({ registro, index, totalCount, onClick }) {
   const nombreCompleto = [
     registro.nombre,
     registro.apellido_paterno,
@@ -203,9 +205,9 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
       </div>
     </button>
   );
-}
+});
 
-function GrupoSection({
+const GrupoSection = memo(function GrupoSection({
   estado,
   registros,
   allRegistros,
@@ -257,7 +259,7 @@ function GrupoSection({
         })}
     </div>
   );
-}
+});
 
 export default function MobileAsistenciaView({
   localEvents = [],
@@ -291,12 +293,8 @@ export default function MobileAsistenciaView({
   const [selectedEmpleado, setSelectedEmpleado] = useState(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [showDetalle, setShowDetalle] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(Date.now());
-
-  // Track last data update
-  useEffect(() => {
-    setLastUpdated(Date.now());
-  }, [registros]);
+  // (27/11/2026) Se quitó «lastUpdated»: no se mostraba en ningún lado y su efecto repintaba toda la lista cada vez
+  // que llegaban datos.
 
   const today = dayjs().tz(DB_TZ).format("YYYY-MM-DD");
   const isToday = fechaInicio === today && fechaFin === today;
@@ -410,11 +408,12 @@ export default function MobileAsistenciaView({
     !isToday,
   ].filter(Boolean).length;
 
-  const handleEmpleadoClick = (registro, index) => {
+  // Estable (solo usa setters): así las tarjetas memoizadas no se repintan por recibir una función nueva.
+  const handleEmpleadoClick = useCallback((registro, index) => {
     setSelectedEmpleado(registro);
     setSelectedIndex(index);
     setShowDetalle(true);
-  };
+  }, []);
 
   // Pagination info
   const totalRegistros = data?.total ?? registros.length;
@@ -821,6 +820,7 @@ export default function MobileAsistenciaView({
         currentIndex={selectedIndex}
         totalCount={registros.length}
         mutateAsistencia={mutate}
+        idEmpresa={empresaActiva}
       />
     </div>
   );
