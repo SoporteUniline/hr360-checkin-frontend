@@ -139,6 +139,9 @@ jobs:
       - name: Integraciones — llaves de API por empresa (panel del dueño) y documentación /desarrolladores
         run: node --test scripts/test-integraciones.mjs
 
+      - name: Inducción digital — plantillas, tablero, liga del celular y ruta de bienvenida (reglas de presentación)
+        run: node --test scripts/test-induccion.mjs
+
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación
   # ─────────────────────────────────────────────
