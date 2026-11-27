@@ -103,14 +103,57 @@ export const PRESTAMO = {
 
 export const MOVIMIENTO = { abono_nomina: "Descuento en nómina", abono_efectivo: "Abono en efectivo", reverso: "Regresado (nómina cancelada)" };
 
-// Pagos estimados y porcentaje pagado de un préstamo.
-export function avancePrestamo({ monto, abono, saldo }) {
+// Porcentaje pagado de un préstamo y pagos que faltan. Los pagos restantes los da el servidor (`plan.pagos_restantes`,
+// con la regla del redondeo y el último pago ajustado); sin plan se estiman con el abono como antes.
+export function avancePrestamo({ monto, abono, saldo }, plan = null) {
   const m = Number(monto) || 0;
   const s = Number(saldo ?? m) || 0;
   const a = Number(abono) || 0;
   return {
     pagado: Math.max(0, m - s),
     porcentaje: m > 0 ? Math.round(((m - s) / m) * 100) : 0,
-    pagosRestantes: a > 0 ? Math.ceil(s / a) : null,
+    pagosRestantes: plan?.pagos_restantes ?? (a > 0 ? Math.ceil(s / a) : null),
   };
+}
+
+// ——— (27/11/2026) «¿En cuántos pagos?»: palabras del periodo y calendario. Solo ponen en palabras lo que calcula el
+// servidor (plan y calendario de /checador/nomina/prestamos y /mis-prestamos); el dinero no se calcula aquí. ———
+const PALABRAS = { Semanal: ["semana", "semanas"], Catorcenal: ["catorcena", "catorcenas"], Quincenal: ["quincena", "quincenas"], Mensual: ["mes", "meses"], Diario: ["día", "días"] };
+/** «quincena» / «quincenas» según cuántos; sin periodicidad (o por hora): «nómina(s)». */
+export const palabraSola = (periodo, n = 2) => (PALABRAS[periodo] ?? ["nómina", "nóminas"])[Number(n) === 1 ? 0 : 1];
+/** «6 quincenas», «1 mes», «12 semanas». */
+export const palabraPeriodo = (periodo, n) => `${n} ${palabraSola(periodo, n)}`;
+const MASCULINO = new Set(["Mensual", "Diario"]);
+/** «¿En cuántas quincenas…?» / «¿En cuántos meses…?». */
+export const cuantos = (periodo) => `${MASCULINO.has(periodo) ? "cuántos" : "cuántas"} ${palabraSola(periodo, 2)}`;
+/** «la última» (quincena, semana…) / «el último» (mes, día). */
+export const elUltimo = (periodo) => (MASCULINO.has(periodo) ? "el último" : "la última");
+/** «Abono por quincena», «Abono por mes»… («por nómina» sin periodicidad). */
+export const abonoPor = (periodo) => `Abono por ${palabraSola(periodo, 1)}`;
+
+const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const partes = (s) => { const [a, m, d] = String(s).slice(0, 10).split("-").map(Number); return { a, m, d }; };
+/** «16 al 31 dic 2026», «30 nov al 6 dic 2026», «28 dic 2026 al 3 ene 2027», «27 nov 2026». */
+export function textoPeriodo(p) {
+  if (!p?.inicio || !p?.fin) return "—";
+  const x = partes(p.inicio);
+  const y = partes(p.fin);
+  if (p.inicio === p.fin) return `${x.d} ${MESES[x.m - 1]} ${x.a}`;
+  if (x.a !== y.a) return `${x.d} ${MESES[x.m - 1]} ${x.a} al ${y.d} ${MESES[y.m - 1]} ${y.a}`;
+  if (x.m !== y.m) return `${x.d} ${MESES[x.m - 1]} al ${y.d} ${MESES[y.m - 1]} ${y.a}`;
+  return `${x.d} al ${y.d} ${MESES[y.m - 1]} ${y.a}`;
+}
+
+/** «6 quincenas de $833.33 · la última de $833.35» (o «1 quincena de $500.00»). */
+export function resumenPlan(plan) {
+  if (!plan?.num_pagos) return "";
+  const n = Number(plan.num_pagos);
+  const distinto = plan.ultimo != null && Math.round(Number(plan.ultimo) * 100) !== Math.round(Number(plan.abono) * 100);
+  return `${palabraPeriodo(plan.periodo_pago, n)} de ${dinero(plan.abono)}${distinto && n > 1 ? ` · ${elUltimo(plan.periodo_pago)} de ${dinero(plan.ultimo)}` : ""}`;
+}
+
+/** Calendario en palabras: { primero, ultimo, aproximado } con los textos de cada periodo. null si no hay. */
+export function textoCalendario(c) {
+  if (!c?.primero) return null;
+  return { primero: textoPeriodo(c.primero), ultimo: textoPeriodo(c.ultimo), aproximado: Boolean(c.aproximado), mismo: c.ultimo && c.primero.inicio === c.ultimo.inicio };
 }

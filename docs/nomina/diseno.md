@@ -43,6 +43,20 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
 - Mi espacio → **Mis préstamos**: pedirlo (monto, abono y motivo), firmar el acuerdo, ver saldo y abonos. Uno abierto a la vez.
 - Prueba en navegador: `scripts/verify-prestamos.mjs`.
 
+### «¿En cuántos pagos?» (aprobado por el dueño, 27/11/2026)
+- Registrar (RH) es una **página** `/panel/nomina/prestamos/nuevo?empresa=` (ya no ventana; `docs/vistas-de-detalle.md`
+  regla 7): encabezado de las vistas de detalle, Guardar/Cancelar a la vista (barra fija en celular) y guardia de salida.
+- El dato principal es **«¿En cuántos pagos?»** con la palabra del periodo de la persona al lado («quincenas», «semanas»,
+  «catorcenas», «meses»); la opción **«Prefiero poner cuánto por nómina»** es el modo del abono. Lo mismo al aprobar (detalle)
+  y en Mi espacio («¿En cuántas quincenas lo quieres pagar?»). Sin máximo de pagos; entero ≥ 1.
+- El plan («6 quincenas de $833.33 · la última de $833.35»), el calendario («Primer descuento · Último», «aproximado» si la
+  empresa no tiene nóminas de ese periodo), los avisos de la ley y `pagos_minimos` («Usar 14 quincenas») los da el servidor
+  (`simular`, también en `POST /mis-prestamos`). El frontend solo los pone en palabras (`src/lib/nomina/nomina.mjs`:
+  `palabraPeriodo`, `resumenPlan`, `textoCalendario`; `src/components/nomina/PlanPrestamo.jsx`). Regla del redondeo: backend
+  `docs/nomina-r1.md` (R2 · Número de pagos).
+- Detalle: «Acordado en …» (o «calculado con el abono» en los de antes), pagos restantes con su palabra, último descuento y
+  calendario. Letra 17/16 px, títulos 700, botones ≥ 48 px, sin degradados (lo revisa `verify-prestamos`, en `ci-dev.yml`).
+
 ## Detalle de la asistencia en la nómina (21/11/2026, pedido del dueño)
 - Misma tipografía que Asistencias: franja de totales con cuadritos de color y encabezados en versalitas.
 - Cada día dice **lo que se pagó de más**: horas extra al doble o al triple, prima dominical 25 %, festivo o descanso trabajado +200 %.
