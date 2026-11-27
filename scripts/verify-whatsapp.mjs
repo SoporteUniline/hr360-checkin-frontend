@@ -162,7 +162,7 @@ function estadoInicial() {
   const vac55 = { id_vacante: 55, titulo: "Operador de montacargas" };
   const citas = [
     { id: 71, inicio: `${hoy} 10:00`, fin: `${hoy} 10:30`, estado: "confirmada", origen: "agente", modalidad: "presencial", lugar: "Av. Industrial 120, Apodaca", vacante: vac55, candidato: { nombre: "Ana Ruiz", telefono: "5215512345678" }, id_conversacion: 1 },
-    { id: 72, inicio: `${hoy} 10:00`, fin: `${hoy} 10:30`, estado: "agendada", origen: "agente", modalidad: "presencial", lugar: "Av. Industrial 120, Apodaca", vacante: vac55, candidato: { nombre: "Luis Pérez", telefono: "5215511112222" }, id_conversacion: 1002 },
+    { id: 72, inicio: `${hoy} 10:00`, fin: `${hoy} 10:30`, estado: "agendada", origen: "agente", modalidad: "presencial", lugar: "Av. Industrial 120, Apodaca", vacante: vac55, candidato: { nombre: "Raúl Pérez", telefono: "5215511112222" }, id_conversacion: 1002 },
     { id: 73, inicio: `${hoy} 16:00`, fin: `${hoy} 16:30`, estado: "cancelada", origen: "manual", modalidad: "video", lugar: "https://meet.google.com/abc-defg-hij", vacante: { id_vacante: 56, titulo: "Auxiliar de almacén turno nocturno" }, candidato: { nombre: "Marta Díaz", telefono: "5215533334444" }, id_conversacion: 1003 },
     { id: 74, inicio: `${otroDia} 12:00`, fin: `${otroDia} 12:30`, estado: "agendada", origen: "agente", modalidad: "presencial", lugar: "Av. Industrial 120, Apodaca", vacante: vac55, candidato: { nombre: "Jorge Salas", telefono: "5215555556666" }, id_conversacion: 1004 },
   ];

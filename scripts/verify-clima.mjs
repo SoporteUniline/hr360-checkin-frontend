@@ -275,7 +275,7 @@ try {
   await rh.getByText("3 personas requieren valoración clínica.").waitFor();
   await rh.getByRole("button", { name: "Ver y canalizar →" }).click();
   const dlg = rh.getByRole("dialog");
-  await dlg.getByText("Luis Pérez").waitFor();
+  await dlg.getByText("Raúl Pérez").waitFor();
   await dlg.getByRole("checkbox").first().check();
   for (let i = 0; i < 30 && !S.estado.canalizados.length; i++) await dormir(100);
   assert.deepEqual(S.estado.canalizados, [{ id: 1, canalizado: true }]);

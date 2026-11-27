@@ -158,6 +158,22 @@ jobs:
           mkdir -p capturas-comunicados
           CAPTURAS=capturas-comunicados node scripts/verify-comunicados.mjs
 
+      # (27/11/2026) Centro de ayuda: formato de las guías (frontmatter y Markdown del subconjunto), imágenes y enlaces que
+      # existen, pantallas y fuentes que existen, nada interno en lo público y cobertura de pantallas (COBERTURA_ESTRICTA
+      # en el script). Avisa —sin fallar— si una fuente cambió después de «actualizado».
+      - name: Centro de ayuda — formato, enlaces, capturas, cobertura y vigencia
+        run: node --test scripts/test-ayuda.mjs
+
+      # Con el build del paso anterior (backend inexistente): /ayuda público, búsqueda, guía, ruta, PDF, botón «?» en el
+      # panel y en Mi espacio, filtro por rol y módulos, y «Cómo usar ADAMIA» en Adamia AI (1440 y 390).
+      - name: Centro de ayuda — verificación en navegador (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-ayuda
+          CAPTURAS=capturas-ayuda node scripts/verify-ayuda.mjs
+
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación
   # ─────────────────────────────────────────────

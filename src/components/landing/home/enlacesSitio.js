@@ -32,7 +32,7 @@ export const PIE = [
     titulo: "Recursos",
     enlaces: [
       { href: "/blog", texto: "Blog" },
-  { href: "/bolsa-de-trabajo", texto: "Bolsa de trabajo" },
+      { href: "/ayuda", texto: "Centro de ayuda" },
       { href: "/blog/registro-electronico-jornada-2027", texto: "Guía Ley 2027" },
       { href: "/calculadora-aguinaldos", texto: "Calculadora de aguinaldos" },
       { href: "/bolsa-de-trabajo", texto: "Bolsa de trabajo" },

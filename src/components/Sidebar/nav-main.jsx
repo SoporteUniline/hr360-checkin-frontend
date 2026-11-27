@@ -73,6 +73,7 @@ import {
   ClipboardPen,
   Sparkles,
   ShieldAlert,
+  CircleHelp,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -611,6 +612,13 @@ const menuGroups = [
         rol: "Recruiter",
       },
     ],
+  },
+  {
+    // (27/11/2026) Centro de ayuda: las guías filtradas por rol y módulos (src/components/ayuda/CentroAyudaApp.jsx). El
+    // botón «?» del encabezado abre la guía de cada pantalla.
+    group: "AYUDA",
+    groupIcon: CircleHelp,
+    items: [{ title: "Centro de ayuda", url: "/panel/ayuda", rol: "Recruiter", icon: BookOpen }],
   },
   {
     group: "AJUSTES",

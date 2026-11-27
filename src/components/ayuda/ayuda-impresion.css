@@ -1,0 +1,36 @@
+/* Centro de ayuda · hoja de impresión de las páginas públicas /ayuda (solo se carga ahí, para no cambiar cómo se
+   imprime el resto del sistema). Logo arriba, «Página X de Y» abajo (márgenes de @page, Chrome y Edge) e imágenes
+   completas sin cortarse entre páginas. */
+/* ——— Impresión / PDF («Descargar PDF» usa la impresión del navegador) ——— */
+/* Página con nombre: solo las hojas con contenido .ay llevan estos márgenes y el pie (aunque el CSS siga cargado al
+   navegar a otra parte del sistema). */
+.ay { page: ayuda; }
+@page ayuda { size: letter; margin: 16mm 14mm 18mm; }
+@page ayuda {
+  @bottom-right { content: "Página " counter(page) " de " counter(pages); font: 9pt/1 sans-serif; color: #6b7190; }
+  @bottom-left { content: "ADAMIA · Centro de ayuda"; font: 9pt/1 sans-serif; color: #6b7190; }
+}
+@media print {
+  .ay-solo-impresion { display: block; }
+  .ay-no-imprimir, .sitio-fijo, .lh .top, .lh .pie, .ay .ay-toc, .ay .ay-toc-movil, .ay .ay-acciones, .ay .ay-util, .ay .ay-vecinas, .ay .ay-final, .ay .ay-buscador, .ay .ay-ruta-barra, [aria-label="Aviso de cookies"] { display: none !important; }
+  .lh, .lh.ay { overflow: visible !important; }
+  .ay .wrap { max-width: none; padding: 0; }
+  .ay .ay-guia-grid { display: block; padding: 0; }
+  .ay .ay-hero { background: none; border: 0; padding: 0 0 12px; }
+  .ay h1 { font-size: 22pt; }
+  .ay-md { font-size: 10.5pt; line-height: 1.55; color: #1f2437; }
+  .ay-md h2 { font-size: 15pt; margin-top: 18pt; break-after: avoid; }
+  .ay-md h3 { font-size: 12pt; break-after: avoid; }
+  .ay-md .ay-figura { break-inside: avoid; margin: 10pt 0; }
+  .ay-md .ay-figura img { box-shadow: none; max-height: 220mm; width: auto; max-width: 100%; }
+  .ay-md .ay-aviso, .ay-md table, .ay-md li { break-inside: avoid; }
+  /* En papel la tabla ocupa el ancho de la hoja (sin desplazamiento): se quitan los mínimos del teléfono. */
+  .ay-md .ay-tabla { overflow: visible; }
+  .ay-md .ay-tabla th, .ay-md .ay-tabla td { min-width: 0; overflow-wrap: anywhere; }
+  .ay-md a { color: #1f44c8; text-decoration: none; }
+  .ay-md a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 8.5pt; color: #6b7190; font-weight: 400; overflow-wrap: anywhere; }
+  .ay .ay-impresion-cabeza { display: flex; align-items: center; justify-content: space-between; border-bottom: 1.5pt solid #2c56e8; padding-bottom: 8pt; margin-bottom: 14pt; font: 600 9pt/1.2 sans-serif; color: #6b7190; }
+  .ay .ay-impresion-cabeza img { height: 22pt; width: auto; }
+  .ay .ay-manual-guia { break-before: page; border: 0; padding-top: 0; }
+  .ay .ay-manual-portada { break-after: page; }
+}

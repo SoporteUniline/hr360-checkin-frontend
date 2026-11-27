@@ -92,6 +92,8 @@ const nextConfig = {
       a("/empleado/panel/evaluaciones/:vista(tablero|resultados|seguimiento)", "/empleado/panel/evaluaciones"),
       // El blog vive en /blog; la página vieja estaba apagada.
       a("/blog-y-noticias", "/blog"),
+      // (27/11/2026) La página vieja de capacitación (redirigía al inicio) ahora es el Centro de ayuda.
+      { source: "/capacitacion/:resto*", destination: "/ayuda", permanent: true },
     ];
   },
 
