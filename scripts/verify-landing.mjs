@@ -141,8 +141,9 @@ try {
   // El asistente comercial de antes sigue en la página.
   await page.getByText("asistente comercial de ADAMIA").first().waitFor({ timeout: 4000 });
 
-  // Enlaces: demo → /demo (demo pública, 25/11/2026), sesión → /login. Al salir no quedan animaciones vivas (sin errores).
-  assert.equal(await page.locator(".top-actions a.btn-primary").getAttribute("href"), "/demo");
+  // Encabezado (27/11/2026): solo «Iniciar sesión» (fondo azul) y «Contratar» (contorno azul); sin «Probar demo».
+  assert.equal(await page.locator(".top-actions a.btn-primary").getAttribute("href"), "/login");
+  assert.equal(await page.locator(".top-actions").getByText("Probar demo").count(), 0, "sin «Probar demo» en el encabezado");
   await page.locator(".top-actions .login").click();
   await page.waitForURL("**/login");
   await dormir(3000);
