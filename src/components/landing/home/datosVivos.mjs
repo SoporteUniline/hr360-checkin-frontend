@@ -40,3 +40,14 @@ export function textoParcial(partes, n) {
 export function estadoInicial({ reducido, visible }) {
   return reducido || visible ? "final" : "espera";
 }
+
+/**
+ * Paso siguiente de un ciclo de estados (Ciclo, DatosVivos.jsx): da la vuelta al llegar al último. El HTML del servidor y
+ * «reducir movimiento» se quedan en el último estado (`pasoFinal`), que es el que describe la tarjeta.
+ */
+export const pasoFinal = (total) => Math.max(0, Math.floor(total) - 1);
+export function siguientePaso(paso, total) {
+  const n = Math.floor(total);
+  if (!(n > 1)) return 0;
+  return (((Math.floor(paso) + 1) % n) + n) % n;
+}

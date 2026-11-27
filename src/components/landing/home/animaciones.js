@@ -273,6 +273,8 @@ if ("IntersectionObserver" in window && !quieto) {
 if ("IntersectionObserver" in window && !quieto) {
   var ioF = observa(function (es) { es.forEach(function (e) { e.target.classList.toggle("en-vista", e.isIntersecting); }); });
   document.querySelectorAll(".flota").forEach(function (el) { ioF.observe(el); });
+  // Al abrir «Ver todos los módulos» (celular, MosaicoPlegable) las tarjetas que estaban ocultas se vuelven a observar.
+  escucha(window, "mz-abierto", function () { document.querySelectorAll("#modulos-adamia .flota").forEach(function (el) { ioF.unobserve(el); ioF.observe(el); }); });
 }
 
   return () => {

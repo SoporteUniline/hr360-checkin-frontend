@@ -8,7 +8,6 @@ import Link from "next/link";
 import { iniciarAnimaciones } from "./animaciones";
 import HeroCarrusel from "./HeroCarrusel";
 import SeccionLey from "./SeccionLey";
-import MosaicoModulos from "./MosaicoModulos";
 import SitioEncabezado from "./SitioEncabezado";
 import SitioPie from "./SitioPie";
 import SeccionReclutadorIA from "./SeccionReclutadorIA";
@@ -23,11 +22,14 @@ import "./novedades.css";
 const MARQUESINA = [
   "Reclutador IA en WhatsApp", "Reconocimiento facial", "Validación GPS", "Clima laboral y NOM-035", "Horas extra según la LFT",
   "Vacaciones y permisos", "Aprobación por WhatsApp", "Muro de la empresa", "Contratos y actas", "Activos y uniformes",
-  "Aguinaldos y finiquitos", "Evaluaciones 360°", "Varias sucursales",
+  "Aguinaldos y finiquitos", "Evaluaciones 360°", "Varias sucursales", "Monitor en vivo", "Préstamos sin intereses",
+  "Mapa de rutas", "Bolsa de trabajo", "API e integraciones",
 ];
 
 // modulos: { total, categorias } de src/lib/sitio/modulos.js (modulosPortada), armado en el servidor.
-export default function LandingHome({ modulos }) {
+// mosaico: <MosaicoModulos /> (componente de servidor) ya renderizado en src/app/(landing)/page.jsx, para que sus 24
+// tarjetas no viajen en el JavaScript de la portada.
+export default function LandingHome({ modulos, mosaico }) {
   const raiz = useRef(null);
   const diapositivas = useMemo(() => diapositivasPortada(modulos.total), [modulos.total]);
   useEffect(() => iniciarAnimaciones(raiz.current), []);
@@ -105,7 +107,7 @@ export default function LandingHome({ modulos }) {
             <div className="marq" aria-hidden="true"><div className="marq-in" id="marq">{[...MARQUESINA, ...MARQUESINA].map((t, k) => <span key={k}>{t}</span>)}</div></div>
           </section>
           <SeccionReclutadorIA />
-          <MosaicoModulos />
+          {mosaico}
           <SeccionClimaIA />
           <SeccionTablero />
           <SeccionMuro />

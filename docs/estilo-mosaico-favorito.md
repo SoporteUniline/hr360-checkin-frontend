@@ -4,8 +4,9 @@
 > presentar módulos y funciones en la página pública, en portadas de módulo y en tarjetas de resumen dentro del panel.
 > Antes de inventar otro estilo para una pantalla de presentación, parte de este.
 
-Implementación de referencia: `src/components/landing/home/MosaicoModulos.jsx` + `landing-home.css` (clases `.mz-*`),
-datos vivos en `DatosVivos.jsx`, entrada al hacer scroll en `animaciones.js`.
+Implementación de referencia: `src/components/landing/home/MosaicoModulos.jsx` (componente de servidor) + `landing-home.css`
+(clases `.mz-*`); lista y textos en `mosaico.mjs`, mini pantallas en `MinisMosaico.jsx`, datos vivos y ciclos en
+`DatosVivos.jsx`, entrada al hacer scroll en `animaciones.js`, botón del celular en `MosaicoPlegable.jsx`.
 
 ## Qué lo hace funcionar
 1. **Mosaico tipo «bento»**: rejilla de tarjetas grandes con esquinas muy redondeadas (≈ 28 px), fondo gris muy claro
@@ -37,3 +38,18 @@ datos vivos en `DatosVivos.jsx`, entrada al hacer scroll en `animaciones.js`.
   sin el degradado salvo para la tarjeta principal.
 - Accesibilidad: la mini pantalla es decorativa (`aria-hidden`) y el texto de la tarjeta explica lo mismo; contraste
   ≥ 4.5:1 también sobre el degradado.
+
+## Mosaico completo (27/11/2026)
+Pedido del dueño: «pon todos los módulos con el estilo que pusiste de los demás, bien animado». 24 tarjetas (las 9 de
+antes + 15) en 5 grupos con subtítulo: Nómina y dinero · Tiempo · Personas · Talento y cultura · Plataforma.
+- Anchos `.mz-g2` / `.mz-g3` / `.mz-g4` / `.mz-g6`; cada grupo llena filas completas de 6 columnas. Tarjeta ancha clara
+  (`.mz-ancha`) para Aguinaldos y finiquitos. Solo Nómina lleva el degradado.
+- Títulos en peso 700, beneficio a 16 px, color secundario `--body` (#4b5270); contraste ≥ 4.5:1 medido en la prueba.
+- Ciclos pequeños (`Ciclo`): la solicitud se aprueba, el monitor suma llegadas, otra búsqueda en el Centro de ayuda…
+  Corren solo a la vista; el HTML y «reducir movimiento» muestran el último estado. La ruta del mapa se dibuja en CSS.
+- Celular: 8 tarjetas (`movil: true`) y «Ver todos los módulos (24)»; sin JavaScript se ven todas.
+- Regla: módulo nuevo en producción = renglón en `src/lib/sitio/modulos.js` + tarjeta en `mosaico.mjs` (con su guía o
+  página real y textos verificados). `scripts/test-mosaico.mjs` revisa que coincidan con la lista, el catálogo y los
+  enlaces; `scripts/verify-landing.mjs` lo prueba en navegador.
+- No entra: Inducción digital (no está en producción). Vacaciones dice «el jefe aprueba desde su celular» (Solicitudes
+  de mi equipo); no promete aprobación por WhatsApp en la tarjeta.
