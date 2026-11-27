@@ -23,7 +23,6 @@ import {
   TIPOS, estadoContrato, estaCerrado, vigenciaTexto, alertaVence, firmaResumen, firmantes, accionPrimaria, ETIQUETA_ACCION, lineaDeTiempo,
   sueldoTarjeta, iniciales, horarioCorto, dinero, porPeriodo, fechaCorta, mensajeDeError,
 } from "@/lib/contratos/detalleContrato.mjs";
-import ContratoDialog from "../ContratoDialog";
 import { ConvenioDialog, RenovarDialog, TerminarDialog, FirmarEmpresaDialog, MandarAFirmarDialog } from "./DialogosContrato";
 
 const separarPrestaciones = (t) => String(t ?? "").split(/\s*(?:,|;|\n|\by\b)\s*/i).map((x) => x.trim()).filter(Boolean);
@@ -86,7 +85,8 @@ export default function DetalleContrato({ id }) {
       !cerrado ? { clave: "renovar", texto: "Renovar", onClick: () => setDialogo("renovar") } : null,
       !cerrado ? { clave: "terminar", texto: "Terminar contrato", onClick: () => setDialogo("terminar") } : null,
       {
-        clave: "editar", texto: "Editar datos", tipo: "texto", onClick: () => setDialogo("editar"), deshabilitada: c.congelado || cerrado,
+        // (27/11/2026) Se edita en su página con pestañas (antes, una ventana que se veía con campos en blanco).
+        clave: "editar", texto: "Editar datos", tipo: "texto", href: `/panel/contratos/${c.id}/editar`, deshabilitada: c.congelado || cerrado,
         ayuda: c.congelado ? "Ya se mandó a firmar o está firmado: su texto no cambia. Usa «Cambiar sueldo (convenio)» o «Renovar»." : undefined,
       },
     ].filter(Boolean);
@@ -268,8 +268,6 @@ export default function DetalleContrato({ id }) {
       <RenovarDialog abierto={dialogo === "renovar"} alCerrar={() => setDialogo(null)} contrato={c}
         alGuardar={(nuevo) => { setDialogo(null); enqueueSnackbar(`Contrato renovado: ${nuevo.folio}.`, { variant: "success" }); router.push(`/panel/contratos/${nuevo.id}`); }} />
       <TerminarDialog abierto={dialogo === "terminar"} alCerrar={() => setDialogo(null)} contrato={c} alGuardar={actualizar} />
-      <ContratoDialog open={dialogo === "editar"} setOpen={(v) => { if (!v) setDialogo(null); }} editItem={dialogo === "editar" ? c : null}
-        empresas={dataUser?.empresas_detalle || []} onSaved={() => actualizar("Contrato actualizado.")} />
     </div>
   );
 }

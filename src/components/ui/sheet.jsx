@@ -46,8 +46,11 @@ const sheetVariants = cva(
   }
 );
 
+// (27/11/2026, regla del dueño, docs/vistas-de-detalle.md) Un panel lateral con contenido (formularios, ayuda, chat,
+// detalle) es una ventana: NO se cierra con un clic o toque afuera, solo con Esc, sus botones o la X. Los paneles que
+// son un MENÚ (navegación, «Más acciones») pasan `menu` y sí se cierran al tocar afuera, como cualquier menú.
 const SheetContent = (
-  { side = "right", className, children, ...props },
+  { side = "right", className, children, menu = false, onPointerDownOutside, onInteractOutside, ...props },
   ref
 ) => (
   <SheetPortal>
@@ -55,6 +58,8 @@ const SheetContent = (
     <SheetPrimitive.Content
       ref={ref}
       className={cn(sheetVariants({ side }), className)}
+      onPointerDownOutside={(e) => { onPointerDownOutside?.(e); if (!menu) e.preventDefault(); }}
+      onInteractOutside={(e) => { onInteractOutside?.(e); if (!menu) e.preventDefault(); }}
       {...props}
     >
       <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">

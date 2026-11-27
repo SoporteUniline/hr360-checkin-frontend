@@ -40,7 +40,7 @@ function SueldoDelContrato({ salario }) {
 }
 
 function SinContratoVigente({ form, empleadoId }) {
-  const q = new URLSearchParams({ nuevo: String(empleadoId) });
+  const q = new URLSearchParams({ empleado: String(empleadoId) });
   if (form.getValues("id_empresa")) q.set("empresa", String(form.getValues("id_empresa")));
   if (form.getValues("sueldo")) q.set("sueldo", String(form.getValues("sueldo")));
   if (form.getValues("periodo_pago")) q.set("periodicidad", String(form.getValues("periodo_pago")));
@@ -48,7 +48,7 @@ function SinContratoVigente({ form, empleadoId }) {
     <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-[16px] text-amber-900 md:col-span-2" data-sin-contrato>
       <p className="m-0 font-semibold">Sin contrato vigente</p>
       <p className="m-0 mt-1">Mientras no tenga contrato, la nómina, los finiquitos y los aguinaldos usan el sueldo de esta ficha (marcado «sin contrato vigente»).</p>
-      <Link href={`/panel/contratos?${q}`} className="mt-2 inline-flex min-h-12 items-center font-semibold text-[#1E40C4] underline">Crear contrato con este sueldo</Link>
+      <Link href={`/panel/contratos/nuevo?${q}`} className="mt-2 inline-flex min-h-12 items-center font-semibold text-[#1E40C4] underline">Crear contrato con este sueldo</Link>
     </div>
   );
 }

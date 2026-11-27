@@ -52,6 +52,14 @@ test("sueldo en palabras: al mes, el pago y el diario (lo que manda el servidor)
   assert.deepEqual(sueldoTarjeta({ salario_base: 5250, periodicidad_pago: "Quincenal", salario_diario: 350, salario_mensual: 10500 }),
     { principal: "$10,500", sufijo: "al mes", detalle: "Pago quincenal · $5,250.00 a la quincena · $350.00 diarios" });
   assert.equal(sueldoTarjeta({ salario_base: 10500, periodicidad_pago: "Mensual", salario_diario: 350, salario_mensual: 10500 }).detalle, "Pago mensual · $350.00 diarios");
+  // (27/11/2026) CT-2026-0007: 5,000 con «quincenal» en minúsculas, que los cálculos leen como mensual ($166.67 diarios):
+  // la quincena es $2,500 (el servidor la manda en `pago`); antes decía «Pago quincenal · $5,000.00».
+  const ct7 = { salario_base: 5000, periodicidad_pago: "quincenal", salario_diario: 166.67, salario_mensual: 5000 };
+  assert.deepEqual(sueldoTarjeta({ ...ct7, pago: { periodicidad: "Quincenal", monto: 2500 } }),
+    { principal: "$5,000", sufijo: "al mes", detalle: "Pago quincenal · $2,500.00 a la quincena · $166.67 diarios" });
+  assert.equal(sueldoTarjeta(ct7).detalle, "Pago quincenal · $166.67 diarios", "sin `pago`, no se inventa el monto");
+  assert.equal(sueldoTarjeta({ salario_base: 10500, periodicidad_pago: "Mensual", salario_diario: 350, salario_mensual: 10500, pago: { periodicidad: "Quincenal", monto: 5250 } }).detalle,
+    "Pago quincenal · $5,250.00 a la quincena · $350.00 diarios", "el vigente se paga en el periodo de la ficha");
   assert.equal(dinero(11142.86), "$11,142.86");
   assert.equal(porPeriodo("Semanal"), "a la semana");
   assert.equal(iniciales("Ana Torres Ruiz"), "AT");

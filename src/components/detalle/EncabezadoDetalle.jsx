@@ -35,7 +35,7 @@ export default function EncabezadoDetalle({ volver, iniciales, etiqueta, titulo,
             {estado ? <Pastilla texto={estado.texto} tono={estado.tono} className="mt-3 lg:hidden" /> : null}
           </div>
         </div>
-        <dl className="m-0 hidden flex-col gap-2.5 rounded-[20px] border border-[#E5E7EB] bg-[#F9FAFB] px-5 py-4 text-[#111827] lg:flex">
+        {estado || filas.length || alerta ? <dl className="m-0 hidden flex-col gap-2.5 rounded-[20px] border border-[#E5E7EB] bg-[#F9FAFB] px-5 py-4 text-[#111827] lg:flex">
           {estado ? (
             <div className="flex items-center justify-between gap-3">
               <dt className="text-[16px] text-[#374151]">Estado</dt>
@@ -53,7 +53,7 @@ export default function EncabezadoDetalle({ volver, iniciales, etiqueta, titulo,
               {alerta.texto}
             </dd>
           ) : null}
-        </dl>
+        </dl> : null}
       </section>
     </div>
   );

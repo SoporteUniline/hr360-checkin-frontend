@@ -602,7 +602,7 @@ const CONTRATO_ANA = {
 const TEXTO_CONTRATO = `<h1 style="text-align:center">CONTRATO INDIVIDUAL DE TRABAJO POR TIEMPO INDETERMINADO</h1><p>Que celebran, por una parte, <strong>Uniline, S.A. de C.V.</strong>, representada por Laura Ríos, y por la otra <strong>Ana Torres Ruiz</strong>, al tenor de las siguientes cláusulas:</p><p><strong>PRIMERA. Puesto y servicios.</strong> La persona trabajadora prestará sus servicios como <strong>Cajera</strong> en <strong>Matriz</strong> (arts. 20 y 25 de la Ley).</p><p><strong>SEXTA. Salario.</strong> La empresa pagará un salario de <strong>$4,800.00 (CUATRO MIL OCHOCIENTOS PESOS 00/100 M.N.)</strong> por cada periodo de pago quincenal.</p>`;
 ruta("GET", /^\/checador\/contratos\/40\/detalle$/, () => json({
   contrato: CONTRATO_ANA, vigencia: { dias_para_vencer: null }, vacaciones_ley: 16,
-  sueldo: { salario_base: 4800, periodicidad_pago: "Quincenal", salario_diario: 320, salario_mensual: 9600, es_el_vigente: true, diferencia_ficha: null },
+  sueldo: { salario_base: 4800, periodicidad_pago: "Quincenal", salario_diario: 320, salario_mensual: 9600, es_el_vigente: true, diferencia_ficha: null, pago: { periodicidad: "Quincenal", monto: 4800 } },
   firma: { empleado: { firmado: true, fecha: dia(-3) }, empresa: { firmado: false, fecha: null, nombre: null }, solicitud: { id: 7, estatus: "firmado", creada: `${dia(-4)} 10:00`, firmada: `${dia(-3)} 10:42` } },
   otros_vigentes: [], cadena: { anterior: null, siguiente: null }, migracion: true,
   convenios: [{ id: 1, salario_anterior: 4500, salario_nuevo: 4800, fecha_efectiva: dia(-30), nombre_usuario: "Laura Ríos" }],
@@ -613,6 +613,14 @@ ruta("GET", /^\/checador\/contratos\/40\/detalle$/, () => json({
     { id: 1, tipo: "creado", titulo: "Contrato creado", fecha: "2023-02-13 09:00", nombre_usuario: "Laura Ríos" },
   ],
 }));
+// (27/11/2026) Un contrato que aún no se manda a firmar, para la página de editar (INC-CONTRATO-EDITAR-001).
+ruta("GET", /^\/checador\/contratos\/42\/detalle$/, () => json({
+  contrato: { ...CONTRATO_ANA, id: 42, id_contrato: 42, folio: "CT-0042", congelado: false, tiene_pdf: false, fecha_inicio: dia(-10), jefe_inmediato_id: null, moneda: "MXN" },
+  vigencia: { dias_para_vencer: null }, vacaciones_ley: 16,
+  sueldo: { salario_base: 4800, periodicidad_pago: "Quincenal", salario_diario: 320, salario_mensual: 9600, es_el_vigente: true, diferencia_ficha: null, pago: { periodicidad: "Quincenal", monto: 4800 } },
+  firma: { empleado: { firmado: false }, empresa: { firmado: false }, solicitud: null }, otros_vigentes: [], cadena: {}, migracion: true, convenios: [], eventos: [],
+}));
+ruta("GET", /^\/checador\/calculos-lft\/publico\/vacaciones-ley$/, () => json({ dias: 16, anio_servicio: 3 }));
 ruta("GET", /^\/checador\/contratos\/40\/documento$/, () => json({ congelado: true, html: TEXTO_CONTRATO, faltantes: [], plantilla: { id_plantilla: null, nombre: "Indeterminado Uniline" } }));
 ruta("GET", /^\/checador\/contratos\/revisar-sueldos$/, () => json({ migracion: true, duplicados: [],
   diferencias: [{ id_empleado: 18, nombre: "Frida Serrano Gil", id_contrato: 41, folio: "CT-0041", sueldo_ficha: 4500, periodo_ficha: "Quincenal", salario_contrato: 9600, periodicidad_contrato: "Mensual", contrato_en_periodo_ficha: 4800, diferencia: 300 }] }));
@@ -676,9 +684,17 @@ GRUPOS.documentos = async () => {
     await page.goto(base + "/panel/contratos", { waitUntil: "domcontentloaded" });
     await page.getByText("CT-0041").first().waitFor({ timeout: 30000 });
     await guardar(page, "documentos", "contratos");
+    // (27/11/2026) El alta y la edición son páginas con pestañas (ya no ventanas).
     await page.getByRole("button", { name: "Nuevo contrato" }).first().click();
-    await guardar(page, "documentos", "nuevo-contrato", { zona: page.getByRole("dialog") });
-    await page.keyboard.press("Escape");
+    await page.waitForURL(/\/panel\/contratos\/nuevo$/, { timeout: 30000 });
+    await page.locator("#ct-id_empleado").waitFor({ timeout: 30000 });
+    await dormir(600);
+    await guardar(page, "documentos", "nuevo-contrato");
+    await page.goto(base + "/panel/contratos/42/editar", { waitUntil: "domcontentloaded" });
+    await page.locator("#ct-puesto").waitFor({ timeout: 30000 });
+    await page.getByRole("tab", { name: "Jornada" }).click();
+    await dormir(600);
+    await guardar(page, "documentos", "editar-contrato");
     // (27/11/2026) Vista de detalle, «Revisar sueldos» y plantillas de contrato.
     await page.goto(base + "/panel/contratos/40", { waitUntil: "domcontentloaded" });
     await page.locator("[data-tarjeta='sueldo']").waitFor({ timeout: 30000 });
@@ -711,6 +727,10 @@ GRUPOS.documentos = async () => {
     await page.locator("[data-tarjeta='sueldo']").waitFor({ timeout: 30000 });
     await dormir(600);
     await guardar(page, "documentos", "contrato-detalle-celular");
+    await page.goto(base + "/panel/contratos/42/editar", { waitUntil: "domcontentloaded" });
+    await page.locator("#ct-puesto").waitFor({ timeout: 30000 });
+    await dormir(600);
+    await guardar(page, "documentos", "editar-contrato-celular");
     await ctx.close();
   });
   await escena("documentos firmar celular", async () => {
