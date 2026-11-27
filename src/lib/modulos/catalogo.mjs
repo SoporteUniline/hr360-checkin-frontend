@@ -15,6 +15,8 @@ export const MODULOS = Object.freeze([
   { clave: "activos", nombre: "Activos y uniformes", descripcion: "Inventario, entregas y resguardos de activos y uniformes." },
   { clave: "documentos", nombre: "Gestión documental", descripcion: "Biblioteca, plantillas, generar documentos y enviarlos a firmar." },
   { clave: "turnos_extra", nombre: "Turnos extra", descripcion: "Programar turnos extra con avisos de ley y seguirlos en vivo." },
+  // (27/12/2026) Inducción digital (backend docs/induccion-digital.md).
+  { clave: "induccion", nombre: "Inducción digital", descripcion: "Nuevos ingresos: datos, documentos y firma desde el celular, checklist del primer día y ruta de bienvenida." },
 ].map((m) => Object.freeze({ base: false, ...m })));
 
 export const CLAVES = MODULOS.map((m) => m.clave);
@@ -49,6 +51,9 @@ export const RUTAS_MODULO = Object.freeze([
   ["/empleado/panel/mis-recursos", "activos"],
   ["/panel/gestion-documental", "documentos"],
   ["/panel/turnos-extra", "turnos_extra"],
+  ["/panel/nuevos-ingresos", "induccion"],
+  ["/panel/plantillas-induccion", "induccion"],
+  ["/empleado/panel/bienvenida", "induccion"],
 ]);
 
 const sinConsulta = (url) => String(url ?? "").split(/[?#]/)[0].replace(/\/+$/, "") || "/";
