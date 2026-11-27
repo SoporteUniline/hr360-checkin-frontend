@@ -1,25 +1,28 @@
-// Verificación en navegador de la bolsa de trabajo pública: /bolsa-de-trabajo y /vacante/[slug].
+// Verificación en navegador de la bolsa de trabajo v2 (27/11/2026): /bolsa-de-trabajo, /vacante/[slug] y la solicitud.
 // Backend simulado (nada sale a internet): el navegador pide a https://api.prueba.invalid (interceptado) y el servidor
 // de Next pide la vacante a un servidor local (RUTA_BACKEND_SERVIDOR) para el título y el JSON-LD.
-// Cubre: escritorio 1440 y celular 390 sin desborde; buscar y filtrar con los parámetros exactos del API; paginación;
-// vacío y error con «Reintentar»; tira de empresas (?bolsa=1); hoja de filtros en celular; abrir una vacante y
-// postularse (preguntas propias, CV, OTP incorrecto y correcto, token y multipart); vacante inexistente y error;
-// controles de al menos 44 px; y que no aparezca «HR360» en el texto, el título ni las imágenes.
-// Carrusel de la portada: avanza solo de lado a lado, puntos, flechas, teclado, pausa (botón, cursor y
-// tocar), deslizar con el dedo, «reducir movimiento», buscador fijo mientras cambian las diapositivas, y el enlace
-// «Bolsa de trabajo» del menú del sitio (escritorio y celular) lleva a /bolsa-de-trabajo.
+// Cubre a 1440, 390 y 360 px: lista + vacante elegida (?v=slug sin recargar, teclado ↑ ↓ y Enter), chips con los
+// parámetros exactos del API (ordenar, publicada, sueldo, modalidad, jornada, empresa, sin experiencia, WhatsApp, cerca
+// de mí con la ubicación redondeada y nunca en la dirección), hoja «Filtros» del celular (foco atrapado, Esc, «Ver N
+// vacantes»), tarjetas (Nueva ≤ 48 h, sueldo o «Sueldo a convenir», distancia, «Postúlate por WhatsApp» solo con
+// asistente), acción principal (verde a WhatsApp fija abajo en celular; «Postularme» con QR en computadora), solicitud
+// corta (Sí/No, SMS incorrecto y correcto, token, multipart sin CV), JSON-LD JobPosting, vacía/error/no existe, sesión de
+// RH, letra base ≥ 17 px en celular (≥ 16 en computadora), botones ≥ 48 px (principal ≥ 56), títulos de peso 700,
+// contraste del texto, sin fondos degradados, reducir movimiento y sin desborde horizontal.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx \
-//      NEXT_PUBLIC_RECRUITMENT_ENABLED=true npm run build
+//      NEXT_PUBLIC_RECRUITMENT_ENABLED=true npx next build
 //      CAPTURAS=/ruta/capturas node scripts/verify-bolsa.mjs
 import { spawn } from "node:child_process";
 import { createServer as servidorNet } from "node:net";
 import { createServer as servidorHttp } from "node:http";
 import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
+import { mkdirSync } from "node:fs";
 import assert from "node:assert/strict";
 
 const REPO = process.cwd();
 const OUT = process.env.CAPTURAS || null;
+if (OUT) mkdirSync(OUT, { recursive: true });
 const API_ORIGEN = "https://api.prueba.invalid";
 const require = createRequire(REPO + "/package.json");
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -32,51 +35,75 @@ const puertoLibre = async () => {
   return p;
 };
 
-// ——— Datos simulados ———
-const hoy = new Date();
-const diasAtras = (n) => new Date(hoy.getTime() - n * 86400000).toISOString();
-const LOGO = (color) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="112" height="44"><rect rx="8" width="112" height="44" fill="${color}"/></svg>`)}`;
+// ——— Datos de demostración (ficticios) ———
+const ahora = Date.now();
+const haceHoras = (h) => new Date(ahora - h * 3600000).toISOString();
+const enUnMes = new Date(ahora + 30 * 86400000).toISOString().slice(0, 10);
+const enlaceWa = (token, titulo) => `https://wa.me/5215550000000?text=${encodeURIComponent(`Hola, me interesa la vacante de ${titulo}. ID: ${token}`)}`;
 const EMPRESAS = [
-  { id_empresa: 1, nombre_empresa: "Empacadora del Norte", giro: "Logística", url_imagen: LOGO("#2c56e8") },
-  { id_empresa: 2, nombre_empresa: "Farmacias Lupita", giro: "Comercio", url_imagen: LOGO("#5a3cf4") },
-  { id_empresa: 3, nombre_empresa: "Constructora Avance", giro: "Construcción", url_imagen: LOGO("#0b1033") },
+  { id_empresa: 1, nombre_empresa: "Empacadora del Norte", giro: "Logística", url_imagen: "" },
+  { id_empresa: 2, nombre_empresa: "Farmacias Lupita", giro: "Comercio", url_imagen: "" },
+  { id_empresa: 3, nombre_empresa: "Constructora Avance", giro: "Construcción", url_imagen: "" },
   { id_empresa: 4, nombre_empresa: "Hotel Costa Alegre", giro: "Turismo", url_imagen: "" },
 ];
-const PUESTOS = ["Chofer repartidor", "Cajera de piso", "Auxiliar de almacén", "Recepcionista bilingüe", "Becario de sistemas", "Operador de montacargas", "Practicante de contabilidad", "Ayudante general"];
-const LUGARES = [["Monterrey", "Nuevo León"], ["Guadalajara", "Jalisco"], ["Zapopan", "Jalisco"], ["Autlán de Navarro", "Jalisco"], ["Querétaro", "Querétaro"]];
+const PUESTOS = ["Chofer repartidor", "Cajera de piso", "Auxiliar de almacén", "Recepcionista bilingüe", "Becario de sistemas", "Operador de montacargas", "Ayudante general"];
+const LUGARES = [["Monterrey", "Nuevo León"], ["Guadalajara", "Jalisco"], ["Zapopan", "Jalisco"], ["Querétaro", "Querétaro"]];
+const MODAL = ["Presencial", "Presencial", "Híbrida", "Remota"];
+const JORN = ["Tiempo completo", "Medio tiempo", "Tiempo completo", "Prácticas profesionales"];
 const VACANTES = Array.from({ length: 23 }, (_, i) => {
   const e = EMPRESAS[i % 4];
   const [ciudad, entidad] = LUGARES[i % LUGARES.length];
-  const titulo = i === 0 ? "Chofer repartidor" : `${PUESTOS[i % PUESTOS.length]} ${i + 1}`;
+  const titulo = i === 0 ? "Chofer repartidor" : i === 1 ? "Cajera de piso" : `${PUESTOS[i % PUESTOS.length]} ${i + 1}`;
+  const slug = i === 0 ? "chofer-repartidor-monterrey" : i === 1 ? "cajera-de-piso" : `vacante-${i + 1}`;
+  const conSueldo = i % 3 !== 2;
   return {
-    id_vacante: 100 + i, id_empresa: e.id_empresa, nombre_empresa: e.nombre_empresa, giro: e.giro, url_imagen: e.url_imagen,
-    titulo, slug: i === 0 ? "chofer-repartidor-monterrey" : `vacante-${i + 1}`,
-    descripcion: i === 0 ? '<p>Reparte <strong>pedidos</strong> en la zona metropolitana.</p><img src=x onerror="window.__xss=1">' : `<p>Únete al equipo de ${e.nombre_empresa}. Ofrecemos prestaciones de ley, capacitación y crecimiento.</p>`,
-    responsabilidades: "<ul><li>Cargar y descargar la unidad</li><li>Entregar a tiempo</li></ul>",
-    escolaridad: "<p>Secundaria terminada</p>", experiencia: "<p>1 año manejando unidad de reparto</p>", habilidades: "<ul><li>Orientación a resultados</li></ul>", idiomas: i % 3 ? "Español" : "",
-    horario: "Lunes a viernes de 8:00 a 17:00", direccion: i === 0 ? "Av. Constitución 100, Centro" : "", ciudad, entidad, pais: "México",
-    modalidad: i % 5 === 0 ? "Remoto" : "Presencial", salario: i % 3 === 0 ? "$12,000 a $14,000 mensuales" : i % 3 === 1 ? "9500" : "No establecido",
-    tipo_contrato: "Tiempo completo", tipo_contratacion: /Becario/.test(titulo) ? "Becario" : /Practicante/.test(titulo) ? "Practicante" : "Empleado",
-    fecha_publicacion: diasAtras(i), puestos_disponibles: 2,
+    id_vacante: 100 + i, id_empresa: e.id_empresa, nombre_empresa: e.nombre_empresa, giro: e.giro, url_imagen: e.url_imagen, estado: "Abierta",
+    titulo, slug,
+    descripcion: i === 0 ? '<p>Reparte <strong>pedidos</strong> en la zona metropolitana.</p><img src=x onerror="window.__xss=1">' : `<p>Únete al equipo de ${e.nombre_empresa}.</p>`,
+    responsabilidades: i === 1 ? "<ul><li>Cobrar en caja.</li><li>Atender a los clientes.</li><li>Acomodar los productos.</li></ul>" : "<ul><li>Cargar y descargar la unidad</li><li>Entregar a tiempo</li></ul>",
+    escolaridad: "<p>Secundaria terminada</p>", experiencia: i % 2 ? "<p>No necesaria</p>" : "<p>1 año en un puesto parecido</p>", habilidades: "", idiomas: "",
+    horario: "Lunes a sábado, 8 a 16 h", direccion: i === 1 ? "Av. Vallarta 1450" : "", ciudad, entidad, pais: "México",
+    modalidad: MODAL[i % 4], salario: conSueldo ? null : "No establecido", tipo_contrato: "", tipo_contratacion: JORN[i % 4], tipo_jornada: JORN[i % 4],
+    sueldo_desde: conSueldo ? String(8000 + i * 500) : null, sueldo_hasta: conSueldo && i % 2 ? String(10000 + i * 500) : null,
+    cierra_el: i === 1 ? enUnMes : null,
+    fecha_publicacion: haceHoras(i === 0 ? 2 : i === 1 ? 30 : i * 20), puestos_disponibles: 2,
+    distancia: [0.4, 4.2, 12, null][i % 4],
+    // Cajera y la 5: asistente encendido; la 3: WhatsApp sin asistente; las demás sin WhatsApp.
+    whatsapp: i === 1 || i === 5 ? { enlace: enlaceWa(`${"ab12".repeat(6)}`, titulo), asistente: true } : i === 3 ? { enlace: enlaceWa("cd34".repeat(6), titulo), asistente: false } : null,
   };
 });
 const PREGUNTAS = [
-  { id: "p1", label: "¿Tienes licencia de manejo vigente?", type: "select", required: true, options: ["Sí, tipo B", "Sí, tipo C", "No"] },
-  { id: "p2", label: "¿Qué turnos puedes cubrir?", type: "multiselect", required: false, options: ["Mañana", "Tarde"] },
-  { id: "p3", label: "Cuéntanos de tu último reparto", type: "textarea", required: false },
+  { id: "p1", label: "¿Tienes disponibilidad los sábados?", type: "select", required: true, options: ["Sí", "No"] },
+  { id: "p2", label: "¿Terminaste la secundaria?", type: "select", required: true, options: ["Sí", "No"] },
+  { id: "p3", label: "¿Qué turnos puedes cubrir?", type: "multiselect", required: false, options: ["Mañana", "Tarde"] },
 ];
-const detalle = (v) => ({ ...v, preguntas_formulario: v.slug === "chofer-repartidor-monterrey" ? PREGUNTAS : [], version_formulario: 1, recibe_postulaciones: true });
+const detalle = (v) => {
+  const { distancia: _d, ...resto } = v;
+  return { ...resto, preguntas_formulario: ["cajera-de-piso", "chofer-repartidor-monterrey"].includes(v.slug) ? PREGUNTAS : [], version_formulario: 1, recibe_postulaciones: true };
+};
 
-const S = { falla: 0, slugFalla: 0, empresas: EMPRESAS };
-const filtros = []; // parámetros de cada GET /vacantes/filter
-const publicos = []; // demás llamadas públicas (ruta + consulta)
+const S = { falla: 0, slugFalla: 0, sesion: null };
+const filtros = []; // consulta de cada GET /vacantes/filter
+const publicos = []; // demás llamadas públicas
 const envios = { otpSend: [], otpVerify: [], create: [] };
 
 function filtrar(q) {
   const like = (campo, v) => !v || String(campo ?? "").toLowerCase().includes(v.toLowerCase());
-  const lista = VACANTES.filter((v) => like(v.titulo, q.get("titulo")) && like(v.entidad, q.get("entidad")) && like(v.ciudad, q.get("ciudad"))
-    && like(v.pais, q.get("pais")) && like(v.tipo_contratacion, q.get("tipo_contratacion")) && like(v.giro, q.get("giro"))
-    && (!q.get("id_empresa") || String(v.id_empresa) === q.get("id_empresa")));
+  const pref = { presencial: "presencial", remoto: "remot", hibrido: "híbrid" };
+  const jor = { "tiempo-completo": ["Tiempo completo"], "medio-tiempo": ["Medio tiempo"], "por-proyecto": ["Por proyecto"], practicas: ["Prácticas profesionales", "Becario", "Practicante"] };
+  const dias = { hoy: 1, "3d": 3, "7d": 7, "30d": 30 }[q.get("publicada")];
+  const cerca = q.get("orden") === "cerca" && q.get("lat");
+  let lista = VACANTES.filter((v) => like(v.titulo, q.get("titulo")) && like(v.entidad, q.get("entidad")) && like(v.ciudad, q.get("ciudad"))
+    && (!q.get("id_empresa") || String(v.id_empresa) === q.get("id_empresa"))
+    && (!q.get("sueldo_min") || Number(v.sueldo_hasta ?? v.sueldo_desde ?? 0) >= Number(q.get("sueldo_min")))
+    && (!q.get("modalidad") || v.modalidad.toLowerCase().startsWith(pref[q.get("modalidad")]))
+    && (!q.get("jornada") || jor[q.get("jornada")].includes(v.tipo_jornada))
+    && (!dias || ahora - Date.parse(v.fecha_publicacion) <= dias * 86400000)
+    && (q.get("sin_experiencia") !== "1" || /no necesaria/i.test(v.experiencia))
+    && (q.get("whatsapp") !== "1" || v.whatsapp?.asistente === true))
+    .map((v) => ({ ...detalle(v), preguntas_formulario: undefined, recibe_postulaciones: undefined, distancia_km: cerca ? v.distancia : null }));
+  if (q.get("orden") === "sueldo") lista = lista.sort((a, b) => Number(b.sueldo_hasta ?? b.sueldo_desde ?? -1) - Number(a.sueldo_hasta ?? a.sueldo_desde ?? -1));
+  if (cerca) lista = lista.sort((a, b) => (a.distancia_km ?? 1e9) - (b.distancia_km ?? 1e9));
   const limit = Number(q.get("limit")) || 10;
   const page = Number(q.get("page")) || 1;
   if (!lista.length) return { message: "No se encontraron vacantes activas con esos filtros.", total: 0, page: 1, limit: 0, data: [] };
@@ -106,6 +133,7 @@ async function instalarMocks(ctx) {
     const url = new URL(req.url());
     if (url.origin === base) return route.continue();
     if (url.protocol === "data:") return route.continue();
+    if (url.hostname === "wa.me") return route.fulfill({ status: 200, contentType: "text/html", body: "<title>WhatsApp</title>" });
     const cors = { "Access-Control-Allow-Origin": base, "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Headers": "authorization,content-type", "Access-Control-Allow-Methods": "GET,POST,OPTIONS" };
     const json = (data, status = 200) => route.fulfill({ status, contentType: "application/json", headers: cors, body: JSON.stringify(data) });
     if (url.origin !== API_ORIGEN) return route.abort();
@@ -117,16 +145,14 @@ async function instalarMocks(ctx) {
       return json(filtrar(url.searchParams));
     }
     publicos.push({ ruta: p, params: url.search });
-    if (p === "/empresas/activas") return json({ total: S.empresas.length, page: 1, limit: 4, data: S.empresas });
-    if (p === "/vacantes/entidades") return json({ entidades: ["Jalisco", "Nuevo León", "Querétaro"], ciudades: ["Autlán de Navarro", "Guadalajara", "Monterrey", "Querétaro", "Zapopan"], paises: ["México"] });
-    if (p === "/empresas/giros") return json({ giros: ["Comercio", "Construcción", "Logística", "Turismo"] });
+    if (p === "/empresas/activas") return json({ total: EMPRESAS.length, page: 1, limit: 50, data: EMPRESAS });
+    if (p === "/vacantes/entidades") return json({ entidades: ["Jalisco", "Nuevo León", "Querétaro"], ciudades: ["Guadalajara", "Monterrey", "Querétaro", "Zapopan"], paises: ["México"] });
     if (p.startsWith("/vacantes/slug/")) {
       if (S.slugFalla > 0) { S.slugFalla -= 1; return json({ error: "Error interno" }, 500); }
       const v = VACANTES.find((x) => x.slug === decodeURIComponent(p.slice("/vacantes/slug/".length)));
       return v ? json(detalle(v)) : json({ error: "Vacante no encontrada" }, 404);
     }
     if (p.startsWith("/vacantes/check-positions/")) return json({ available: true });
-    // Sesión abierta de RH o dueño viendo la página pública: sus postulaciones no le corresponden (403).
     if (p === "/users/verify/token") return S.sesion ? json({ user: S.sesion, modulos: null }) : json({ error: "Sin sesión" }, 401);
     if (p.startsWith("/postulaciones/by-correo/")) return json({ error: "No tienes permiso sobre este registro." }, 403);
     if (p === "/otp/send") { envios.otpSend.push(req.postDataJSON()); return json({ message: "Código de verificación enviado" }); }
@@ -137,7 +163,7 @@ async function instalarMocks(ctx) {
     }
     if (p === "/postulaciones/create") {
       envios.create.push({ tipo: req.headers()["content-type"] || "", cuerpo: (req.postDataBuffer() || Buffer.alloc(0)).toString("latin1") });
-      return json({ message: "Postulación enviada exitosamente" });
+      return json({ message: "Postulación enviada exitosamente" }, 201);
     }
     return json({});
   });
@@ -145,118 +171,102 @@ async function instalarMocks(ctx) {
 
 const errores = [];
 const problemas = [];
+const hechos = [];
+const ok = (m) => { hechos.push(m); console.log(`  ✓ ${m}`); };
 const ultimo = () => filtros[filtros.length - 1] || "";
-async function esperarFiltro(predicado, msg) {
-  for (let i = 0; i < 100; i++) { if (filtros.some(predicado)) return; await dormir(100); }
+async function esperarFiltro(predicado, msg, desde = 0) {
+  for (let i = 0; i < 100; i++) { if (filtros.slice(desde).some(predicado)) return; await dormir(100); }
   throw new Error(`No llegó la consulta esperada: ${msg}. Última: ${ultimo()}`);
 }
 const q = (s) => new URLSearchParams(s);
+const BASE_Q = "giro=&ciudad=&entidad=&pais=&titulo=&id_empresa=&tipo_contratacion=&page=1&limit=10";
 
-// ——— Carrusel ———
-const CARR = 'section[aria-roledescription="carrusel"]';
-const slideActual = (pg) => pg.evaluate((sel) => [...document.querySelectorAll(`${sel} .slide`)].findIndex((d) => d.classList.contains("on")), CARR);
-const esperarSlide = (pg, n, timeout = 4000) => pg.waitForFunction(([sel, i]) => document.querySelectorAll(`${sel} .slide`)[i]?.classList.contains("on"), [CARR, n], { timeout });
-// Desplazamiento horizontal (px) de cada diapositiva cuando termina la transición.
-const posiciones = (pg) => pg.evaluate((sel) => [...document.querySelectorAll(`${sel} .slide`)].map((d) => Math.round(new DOMMatrixReadOnly(getComputedStyle(d).transform).m41)), CARR);
-const cajaBuscador = async (pg) => { const b = await pg.locator(".bt-buscar").boundingBox(); return `${Math.round(b.x)},${Math.round(b.y)},${Math.round(b.width)},${Math.round(b.height)}`; };
-async function deslizar(pg, dx) {
-  await pg.evaluate(([sel, d]) => {
-    const el = document.querySelector(`${sel} .slide.on .slide-txt`);
-    const r = el.getBoundingClientRect();
-    const x = r.left + r.width / 2;
-    const y = r.top + 20;
-    const t = (cx) => new Touch({ identifier: 1, target: el, clientX: cx, clientY: y });
-    el.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true, touches: [t(x)], changedTouches: [t(x)] }));
-    el.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true, touches: [], changedTouches: [t(x + d)] }));
-  }, [CARR, dx]);
-}
-async function revisarCarrusel(pg, ancho) {
-  const carr = pg.locator(CARR);
-  assert.equal(await carr.getAttribute("aria-label"), "Bolsa de trabajo de ADAMIA");
-  assert.equal(await carr.locator(".slide").count(), 4, "4 diapositivas");
-  assert.equal(await carr.locator('.slide[aria-roledescription="diapositiva"]').count(), 4);
-  for (const n of ["Anterior", "Siguiente", "Pausar"]) await carr.getByRole("button", { name: n }).waitFor();
-  assert.equal(await carr.getByRole("tab").count(), 4, "un punto por diapositiva");
-  // Solo la diapositiva visible está expuesta y sus botones se alcanzan con el tabulador.
-  assert.equal(await carr.locator('.slide[aria-hidden="false"]').count(), 1);
-  assert.equal(await carr.locator('.slide[aria-hidden="true"] a[tabindex="0"]').count(), 0);
-  // No hay imágenes externas: todas vienen de /landing o /assets.
-  for (const src of await carr.locator("img").evaluateAll((im) => im.map((i) => i.getAttribute("src")))) assert.match(src, /^\/(landing|assets)\//, `imagen externa en el carrusel: ${src}`);
-  const caja = await cajaBuscador(pg);
-  // Avanza solo (cursor fuera) y de lado a lado: la anterior queda a la izquierda y la siguiente a la derecha.
-  await pg.mouse.move(ancho - 5, 880 > ancho ? 830 : 880);
-  await pg.locator("body").evaluate(() => document.activeElement?.blur());
-  assert.equal(await slideActual(pg), 0);
-  await esperarSlide(pg, 1, 9000);
-  await dormir(1000);
-  const pos = await posiciones(pg);
-  assert.ok(pos[0] < 0 && pos[1] === 0 && pos[2] > 0, `se recorre de lado a lado: ${pos.join(", ")}`);
-  assert.equal(await cajaBuscador(pg), caja, "el buscador no se mueve con las diapositivas");
-  // Flechas (con vuelta al inicio) y puntos.
-  await carr.getByRole("button", { name: "Siguiente" }).click();
-  await esperarSlide(pg, 2);
-  await carr.getByRole("button", { name: "Anterior" }).click();
-  await esperarSlide(pg, 1);
-  await carr.getByRole("tab", { name: /^Ir a 4: ¿Tu empresa contrata\?/ }).click();
-  await esperarSlide(pg, 3);
-  assert.equal(await carr.getByRole("tab", { name: /^Ir a 4/ }).getAttribute("aria-selected"), "true");
-  const s4 = carr.locator(".slide.on");
-  assert.equal(await s4.getByRole("link", { name: /Solicitar demo/ }).getAttribute("href"), "/contacto");
-  assert.equal(await s4.getByRole("link", { name: "Contratar" }).getAttribute("href"), "/contratar-plan");
-  await carr.getByRole("button", { name: "Siguiente" }).click();
-  await esperarSlide(pg, 0);
-  await carr.getByRole("button", { name: "Anterior" }).click();
-  await esperarSlide(pg, 3);
-  // Teclado: flechas sobre el carrusel.
-  await carr.getByRole("tab", { name: /^Ir a 2/ }).focus();
-  await pg.keyboard.press("ArrowRight");
-  await esperarSlide(pg, 0);
-  await pg.keyboard.press("ArrowLeft");
-  await esperarSlide(pg, 3);
-  // Pausa con el botón: no avanza aunque pase el tiempo; «Reanudar» lo vuelve a mover.
-  await carr.getByRole("button", { name: "Pausar" }).click();
-  await carr.getByRole("button", { name: "Reanudar" }).waitFor();
-  await pg.mouse.move(ancho - 5, 600);
-  await pg.locator("body").evaluate(() => document.activeElement?.blur());
-  assert.match(await carr.getAttribute("class"), /parado/);
-  await dormir(6800);
-  assert.equal(await slideActual(pg), 3, "pausado no avanza");
-  await carr.getByRole("button", { name: "Reanudar" }).click();
-  await pg.mouse.move(ancho - 5, 880 > ancho ? 830 : 880);
-  await pg.locator("body").evaluate(() => document.activeElement?.blur());
-  await esperarSlide(pg, 0, 9000);
-  return caja;
-}
-
-// Sin desborde horizontal, controles de al menos 44 px (casillas: 24 px) y sin rastro de HR360 en texto ni imágenes.
+// Legibilidad y tamaño: letra base, botones ≥ 48 px (principal ≥ 56), títulos 700, contraste del texto y sin desborde.
 async function revisar(pg, pantalla, ancho) {
   const r = await pg.evaluate(() => {
-    const visible = (el) => { const b = el.getBoundingClientRect(); const cs = getComputedStyle(el); return b.width > 0 && b.height > 0 && cs.visibility !== "hidden" && cs.display !== "none" && cs.opacity !== "0" && el.getAttribute("aria-hidden") !== "true"; };
-    const raices = [...document.querySelectorAll(".lh.bt, .lh.vc, [role=dialog]")];
-    const ctrls = [...new Set(raices.flatMap((r) => [...r.querySelectorAll("button, a[href], select, input:not([type=hidden]):not([type=file]), textarea")]))]
-      .filter(visible)
-      .filter((el) => !el.classList.contains("bt-vac-link") && !el.closest(".vc-acepto-txt") && !el.closest("[data-input-otp-container]") && !(el.tagName === "INPUT" && el.type === "radio")
-        // Casilla nativa dentro de una etiqueta de 44 px: el objetivo táctil es la etiqueta.
-        && !(el.tagName === "INPUT" && el.type === "checkbox" && (el.closest("label")?.getBoundingClientRect().height ?? 0) >= 43.5));
-    const chicos = ctrls.map((el) => ({ el, b: el.getBoundingClientRect() }))
-      .filter(({ el, b }) => (el.getAttribute("role") === "checkbox" ? b.height < 23.5 : b.height < 43.5))
-      .map(({ el, b }) => `${el.tagName.toLowerCase()} «${(el.getAttribute("aria-label") || el.textContent || el.name || "").trim().slice(0, 40)}» ${Math.round(b.width)}×${Math.round(b.height)}`);
-    const imagenes = [...document.querySelectorAll("img")].map((i) => i.currentSrc || i.src)
-      .concat([...document.querySelectorAll("*")].map((el) => getComputedStyle(el).backgroundImage).filter((b) => b && b !== "none"));
-    return { ancho: document.documentElement.scrollWidth, chicos, texto: document.body.innerText, titulo: document.title, imagenes, descripcion: document.querySelector('meta[name="description"]')?.content || "" };
+    const visible = (el) => { const b = el.getBoundingClientRect(); const cs = getComputedStyle(el); return b.width > 0 && b.height > 0 && cs.visibility !== "hidden" && cs.display !== "none" && !el.closest("[aria-hidden=true]"); };
+    const raices = [...document.querySelectorAll(".bt2")];
+    const todos = [...new Set(raices.flatMap((r) => [...r.querySelectorAll("button, a.bt2-btn, a.bt2-regresar, select, input:not([type=hidden]):not([type=radio]):not([type=checkbox]):not([type=file]), textarea, .bt2-opcion span, .bt2-boton-op span, .bt2-casilla, .bt2-casilla-op, .bt2-acepto, .bt2-empresa a")]))].filter(visible);
+    const chicos = todos.map((el) => ({ el, b: el.getBoundingClientRect() })).filter(({ b }) => b.height < 47.5)
+      .map(({ el, b }) => `${el.tagName.toLowerCase()}.${String(el.className).split(" ")[0]} «${(el.getAttribute("aria-label") || el.textContent || el.name || "").trim().slice(0, 40)}» ${Math.round(b.width)}×${Math.round(b.height)}`);
+    const principales = [...document.querySelectorAll("[data-boton-principal]")].filter(visible).map((el) => ({ t: el.textContent.trim(), h: el.getBoundingClientRect().height }));
+    const titulos = [...document.querySelectorAll(".bt2 h1, .bt2 h2, .bt2 h3")].filter(visible).map((h) => ({ t: h.textContent.trim().slice(0, 30), w: Number(getComputedStyle(h).fontWeight) })).filter((h) => h.w !== 700);
+    const rgb = (c) => (c.match(/\d+(\.\d+)?/g) || []).slice(0, 3).map(Number);
+    const lum = ([R, G, B]) => [R, G, B].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0);
+    const fondoDe = (el) => { for (let e = el; e; e = e.parentElement) { const b = getComputedStyle(e).backgroundColor; const m = rgb(b); const a = (b.match(/rgba\([^)]*,\s*([\d.]+)\)/) || [])[1]; if (b !== "rgba(0, 0, 0, 0)" && (a === undefined || Number(a) > 0.9) && !getComputedStyle(e).backgroundImage.includes("gradient")) return m; if (getComputedStyle(e).backgroundImage.includes("gradient")) return null; } return [255, 255, 255]; };
+    const bajos = [];
+    for (const el of raices.flatMap((r) => [...r.querySelectorAll("p, li, dt, dd, span, b, label, a, h1, h2, h3")])) {
+      if (!visible(el) || !el.childNodes.length || ![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+      const f = fondoDe(el);
+      if (!f) continue;
+      const [a, b] = [lum(rgb(getComputedStyle(el).color)), lum(f)].sort((x, y) => y - x);
+      const c = (a + 0.05) / (b + 0.05);
+      if (c < 4.5) bajos.push(`«${el.textContent.trim().slice(0, 30)}» ${c.toFixed(2)}:1`);
+    }
+    const letra = raices.length ? parseFloat(getComputedStyle(raices[0]).fontSize) : 0;
+    const chicaLetra = raices.flatMap((r) => [...r.querySelectorAll("p, li, dd, dt, label, a, button, span")]).filter(visible)
+      .filter((el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim()) && !el.closest(".sr-only")).map((el) => parseFloat(getComputedStyle(el).fontSize)).filter((t) => t < 14);
+    // El dueño (27/11/2026): «jamás fondos degradados». Ningún elemento de la bolsa lleva gradiente.
+    const degradados = [...document.querySelectorAll(".bt2, .bt2 *")].filter((el) => /gradient/.test(getComputedStyle(el).backgroundImage)).map((el) => String(el.className).slice(0, 40));
+    return { degradados, ancho: document.documentElement.scrollWidth, chicos, principales, titulos, bajos, letra, chicaLetra: chicaLetra.length, texto: document.body.innerText };
   });
+  for (const d of r.degradados) problemas.push(`${pantalla}: fondo degradado en «${d}»`);
   if (r.ancho > ancho) problemas.push(`${pantalla}: desborde horizontal (${r.ancho} px > ${ancho})`);
-  for (const c of r.chicos) problemas.push(`${pantalla}: control chico ${c}`);
-  if (/hr\s?360/i.test(r.texto + r.titulo + r.descripcion)) problemas.push(`${pantalla}: aparece «HR360» en el texto o el título`);
-  for (const src of r.imagenes) if (/hr360|bg_bolsa_trabajo|logo2\.png|favicon10/i.test(src)) problemas.push(`${pantalla}: imagen de HR360 (${src.slice(0, 80)})`);
-  if (/Request failed|status code|Ops, hubo un error/i.test(r.texto)) problemas.push(`${pantalla}: error crudo en pantalla`);
+  for (const c of r.chicos) problemas.push(`${pantalla}: control de menos de 48 px ${c}`);
+  for (const p of r.principales) if (p.h < 55.5) problemas.push(`${pantalla}: acción principal «${p.t}» de ${Math.round(p.h)} px (< 56)`);
+  for (const t of r.titulos) problemas.push(`${pantalla}: título «${t.t}» con peso ${t.w} (debe ser 700)`);
+  for (const b of r.bajos.slice(0, 5)) problemas.push(`${pantalla}: contraste bajo ${b}`);
+  if (r.chicaLetra) problemas.push(`${pantalla}: ${r.chicaLetra} textos de menos de 14 px`);
+  const minimo = ancho < 1024 ? 17 : 16;
+  if (r.letra < minimo) problemas.push(`${pantalla}: letra base ${r.letra}px (< ${minimo})`);
+  if (/hr\s?360/i.test(r.texto)) problemas.push(`${pantalla}: aparece «HR360»`);
+  if (/Request failed|status code|undefined|NaN/i.test(r.texto)) problemas.push(`${pantalla}: texto crudo en pantalla`);
   return r;
 }
-const foto = (pg, nombre) => (OUT ? pg.screenshot({ path: `${OUT}/${nombre}.png`, fullPage: true }) : null);
-const cerrarCookies = async (pg) => {
-  const b = pg.getByRole("button", { name: "Solo necesarias" });
-  if (await b.isVisible({ timeout: 2500 }).catch(() => false)) await b.click();
-};
+const foto = (pg, nombre, completa = true) => (OUT ? pg.screenshot({ path: `${OUT}/${nombre}.png`, fullPage: completa }) : null);
+const enfocado = (pg) => pg.evaluate(() => ({ texto: document.activeElement?.textContent?.trim().slice(0, 60), clase: document.activeElement?.className, enDialogo: Boolean(document.activeElement?.closest("[role=dialog]")) }));
+
+// Solicitud corta: datos → SMS incorrecto → correcto → «¡Listo!». Devuelve el cuerpo multipart.
+async function postularConFormulario(pg, dialogo, { telefono, nombre, slug }) {
+  const antesCreate = envios.create.length;
+  const antesSms = envios.otpSend.length;
+  await dialogo.getByRole("button", { name: "Enviar postulación" }).click();
+  await dialogo.getByText("Revisa lo que está marcado en rojo.").waitFor();
+  assert.equal(envios.otpSend.length, antesSms, "sin datos no se manda el SMS");
+  await pg.waitForFunction(() => document.activeElement?.id === "sol-nombre", null, { timeout: 3000 }).catch(() => { throw new Error("el foco no fue al primer campo marcado"); });
+  await dialogo.getByLabel("Nombre completo").fill(nombre);
+  await dialogo.getByLabel("Celular").fill(telefono);
+  await dialogo.getByRole("group", { name: "¿Tienes disponibilidad los sábados?" }).getByRole("radio", { name: "Sí" }).click();
+  await dialogo.getByRole("group", { name: "¿Terminaste la secundaria?" }).getByRole("radio", { name: "No" }).click();
+  await dialogo.getByRole("checkbox", { name: "Mañana" }).check();
+  await dialogo.getByRole("checkbox", { name: /aviso de privacidad/ }).check();
+  await dialogo.getByRole("button", { name: "Enviar postulación" }).click();
+  await dialogo.getByText("Te mandamos un código de 6 números").waitFor({ timeout: 15000 });
+  assert.deepEqual(envios.otpSend.at(-1), { telefono: telefono.replace(/\D/g, "").slice(-10) });
+  await pg.waitForFunction(() => document.activeElement?.id === "sol-codigo", null, { timeout: 3000 }).catch(() => { throw new Error("el foco no fue al código"); });
+  return async () => {
+    await dialogo.getByLabel("Código del SMS").fill("111111");
+    await dialogo.getByRole("button", { name: "Confirmar y enviar" }).click();
+    await dialogo.getByText("El código no es correcto.").waitFor({ timeout: 10000 });
+    assert.equal(envios.create.length, antesCreate, "código incorrecto: no se envía");
+    await dialogo.getByLabel("Código del SMS").fill("123456");
+    await dialogo.getByRole("button", { name: "Confirmar y enviar" }).click();
+    await dialogo.getByRole("heading", { name: "¡Listo! Enviamos tu postulación" }).waitFor({ timeout: 15000 });
+    assert.equal(envios.create.length, antesCreate + 1);
+    const { tipo, cuerpo } = envios.create.at(-1);
+    assert.match(tipo, /multipart\/form-data/);
+    const campo = (n) => (cuerpo.match(new RegExp(`name="${n}"\\r\\n\\r\\n([^\\r]*)`)) || [])[1];
+    const v = VACANTES.find((x) => x.slug === slug);
+    assert.equal(campo("id_vacante"), String(v.id_vacante));
+    assert.equal(Buffer.from(campo("nombre_completo"), "latin1").toString("utf8"), nombre);
+    assert.equal(campo("telefono"), telefono.replace(/\D/g, "").slice(-10));
+    assert.equal(campo("correo"), "", "correo opcional vacío");
+    assert.equal(campo("telefono_verificacion_token"), "tok-verificado-1");
+    assert.deepEqual(JSON.parse(Buffer.from(campo("respuestas"), "latin1").toString("utf8")), { p1: "Sí", p2: "No", p3: ["Mañana"] });
+    assert.doesNotMatch(cuerpo, /name="cv"/, "sin CV (opcional)");
+    return cuerpo;
+  };
+}
 
 let browser;
 try {
@@ -264,361 +274,380 @@ try {
   browser = await chromium.launch();
 
   // ═════════ Escritorio 1440 ═════════
-  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: "es-MX", timezoneId: "America/Mexico_City",
+    permissions: ["geolocation"], geolocation: { latitude: 20.676543, longitude: -103.347891 } });
   await instalarMocks(ctx);
   const pg = await ctx.newPage();
   pg.on("pageerror", (e) => errores.push(e.message));
   pg.on("dialog", (d) => { errores.push(`diálogo inesperado: ${d.message()}`); d.dismiss(); });
   await pg.goto(base + "/bolsa-de-trabajo", { waitUntil: "domcontentloaded" });
-  await cerrarCookies(pg);
-  await pg.getByRole("heading", { level: 1, name: "Encuentra tu próximo trabajo" }).waitFor({ timeout: 30000 });
+  await pg.getByRole("heading", { level: 1, name: "Bolsa de trabajo" }).waitFor({ timeout: 30000 });
   await pg.getByRole("link", { name: "Chofer repartidor", exact: true }).waitFor({ timeout: 20000 });
   assert.equal(await pg.title(), "Bolsa de trabajo | ADAMIA");
-  assert.match(await pg.locator('meta[name="description"]').getAttribute("content"), /Encuentra tu próximo trabajo/);
-  assert.equal(await pg.locator(".bt-conteo b").innerText(), "23 vacantes abiertas");
-  assert.match(await pg.locator(".bt-conteo").innerText(), /en 3 estados/);
-  assert.equal(filtros[0], "giro=&ciudad=&entidad=&pais=&titulo=&id_empresa=&tipo_contratacion=&page=1&limit=10", "primera consulta igual que antes");
-  assert.equal(await pg.locator(".bt-vac").count(), 10);
-  // Tarjeta: puesto, empresa, ubicación, modalidad, sueldo y fecha.
+  assert.match(await pg.locator('link[rel="canonical"]').getAttribute("href"), /^https:\/\/[^/]+\/bolsa-de-trabajo$/);
+  assert.equal(filtros[0], `${BASE_Q}&orden=recientes`, "primera consulta: la de antes + orden");
+  assert.equal(await pg.locator(".bt2-tarjeta").count(), 10);
+  assert.equal(await pg.locator(".bt2-conteo b").innerText(), "23 vacantes abiertas");
+  // Tarjetas: lo que hay en el API y nada más.
   const t1 = await pg.locator('[data-vacante="chofer-repartidor-monterrey"]').innerText();
-  for (const t of ["Empacadora del Norte", "Monterrey, Nuevo León", "Remoto", "Empleado", "$12,000 a $14,000 mensuales", "Publicada hoy", "Nueva"]) assert.ok(t1.includes(t), `tarjeta sin «${t}»: ${t1}`);
-  assert.ok((await pg.locator('[data-vacante="vacante-2"]').innerText()).includes("$9,500"), "sueldo numérico formateado");
-  assert.ok(!(await pg.locator('[data-vacante="vacante-3"]').innerText()).includes("No establecido"), "sin sueldo no se muestra «No establecido»");
-  // Tira de empresas (?bolsa=1, nunca la lista global).
-  await pg.getByRole("heading", { name: "Empresas que están contratando" }).waitFor();
-  assert.ok(publicos.some((x) => x.ruta === "/empresas/activas" && x.params === "?bolsa=1&limit=4&page=1"));
-  assert.equal(publicos.filter((x) => x.ruta === "/empresas/activas" && !/bolsa=1/.test(x.params)).length, 0);
-  assert.equal(await pg.locator(".bt-logo").count(), 4);
-  await revisar(pg, "bolsa escritorio", 1440);
-  await foto(pg, "bolsa-escritorio");
+  for (const t of ["Nueva", "Empacadora del Norte · Monterrey, Nuevo León", "$8,000 al mes", "Presencial", "Tiempo completo", "Hace 2 horas"]) assert.ok(t1.includes(t), `tarjeta sin «${t}»: ${t1}`);
+  assert.ok(!t1.includes("WhatsApp"), "sin asistente no dice «Postúlate por WhatsApp»");
+  const t2 = await pg.locator('[data-vacante="cajera-de-piso"]').innerText();
+  for (const t of ["Nueva", "$8,500 a $10,500 al mes", "Postúlate por WhatsApp", "Medio tiempo"]) assert.ok(t2.includes(t), `tarjeta cajera sin «${t}»: ${t2}`);
+  assert.ok((await pg.locator('[data-vacante="vacante-3"]').innerText()).includes("Sueldo a convenir"));
+  assert.ok(!(await pg.locator('[data-vacante="vacante-4"]').innerText()).includes("WhatsApp"), "WhatsApp sin asistente: sin la insignia");
+  assert.ok(!(await pg.locator('[data-vacante="vacante-4"]').innerText()).includes("Nueva"), "60 h: ya no es nueva");
+  assert.ok(!/se postularon|inmediata/i.test(await pg.locator(".bt2-lista").innerText()), "sin datos que el API no da");
+  assert.ok(publicos.some((x) => x.ruta === "/empresas/activas" && x.params === "?bolsa=1&limit=50&page=1"), "empresas de la bolsa (?bolsa=1)");
+  ok("1440: lista con datos reales del API (Nueva ≤ 48 h, sueldo o «Sueldo a convenir», WhatsApp solo con asistente)");
+
+  // Lista + vacante elegida: la primera se ve a la derecha; elegir otra cambia ?v= sin recargar.
+  const panel = pg.locator(".bt2-panel");
+  await panel.getByRole("heading", { level: 2, name: "Chofer repartidor" }).waitFor();
+  await panel.locator("[data-acciones-postular]").waitFor();
+  await pg.evaluate(() => { window.__sinRecargar = 1; });
+  await pg.getByRole("link", { name: "Cajera de piso", exact: true }).click();
+  await panel.getByRole("heading", { level: 2, name: "Cajera de piso" }).waitFor();
+  assert.equal(new URL(pg.url()).pathname, "/bolsa-de-trabajo");
+  assert.equal(new URL(pg.url()).searchParams.get("v"), "cajera-de-piso");
+  assert.equal(await pg.evaluate(() => window.__sinRecargar), 1, "sin navegación completa");
+  assert.equal(await pg.getByRole("link", { name: "Cajera de piso", exact: true }).getAttribute("aria-current"), "true");
+  const ptexto = await panel.innerText();
+  for (const t of ["Farmacias Lupita", "$8,500 a $10,500 al mes", "Av. Vallarta 1450, Guadalajara, Jalisco", "Lunes a sábado, 8 a 16 h", "No necesaria", "Qué harás", "Cobrar en caja.", "Cómo postularte", "Toca el botón verde", "Ver más vacantes de esta empresa"]) assert.ok(ptexto.includes(t), `panel sin «${t}»`);
+  ok("1440: elegir una vacante la muestra a la derecha y cambia ?v=cajera-de-piso sin recargar");
+  await panel.locator("[data-acciones-postular]").waitFor();
+  await revisar(pg, "bolsa 1440", 1440);
+  await foto(pg, "bolsa-1440", false);
   if (OUT) await pg.screenshot({ path: `${OUT}/bolsa-escritorio-portada.png` });
 
-  // Carrusel: avanza, flechas, puntos, teclado y pausa; el buscador queda fijo. Pausa con el cursor encima.
-  await revisarCarrusel(pg, 1440);
-  await pg.locator(CARR).hover();
-  assert.match(await pg.locator(CARR).getAttribute("class"), /parado/, "el cursor encima pausa");
-  const quieta = await slideActual(pg);
-  await dormir(6800);
-  assert.equal(await slideActual(pg), quieta, "con el cursor encima no avanza");
-  await pg.mouse.move(1435, 880);
-  await pg.locator(CARR).getByRole("tab", { name: /^Ir a 4/ }).click();
-  await esperarSlide(pg, 3);
-  await dormir(1000);
-  if (OUT) await pg.screenshot({ path: `${OUT}/bolsa-escritorio-empresas.png` });
-  await pg.locator(CARR).getByRole("tab", { name: /^Ir a 1/ }).click();
-  await esperarSlide(pg, 0);
-  // «Ver vacantes» baja a la lista.
-  await pg.locator(`${CARR} .slide.on`).getByRole("link", { name: /Ver vacantes/ }).click();
-  await pg.waitForFunction(() => { const b = document.getElementById("vacantes").getBoundingClientRect(); return b.top >= 0 && b.top < 200; }, null, { timeout: 5000 });
-  await pg.evaluate(() => window.scrollTo(0, 0));
+  // Teclado: ↓ pasa a la siguiente tarjeta y Enter la elige.
+  await pg.getByRole("link", { name: "Chofer repartidor", exact: true }).focus();
+  await pg.keyboard.press("ArrowDown");
+  assert.equal((await enfocado(pg)).texto, "Cajera de piso");
+  await pg.keyboard.press("ArrowDown");
+  await pg.keyboard.press("Enter");
+  await pg.waitForFunction(() => new URLSearchParams(location.search).get("v") === "vacante-3");
+  await panel.getByRole("heading", { level: 2, name: "Auxiliar de almacén 3" }).waitFor();
+  await pg.keyboard.press("End");
+  assert.match((await enfocado(pg)).texto, /10$/, "Fin: la última tarjeta");
+  await pg.keyboard.press("Home");
+  assert.equal((await enfocado(pg)).texto, "Chofer repartidor");
+  ok("1440: lista con teclado (↓ ↑ Inicio Fin, Enter elige)");
 
-  await pg.getByRole("button", { name: "Ver vacantes de Farmacias Lupita" }).click();
-  await esperarFiltro((s) => q(s).get("id_empresa") === "2" && q(s).get("page") === "1", "id_empresa=2");
-  await pg.getByRole("button", { name: "Quitar filtro: Farmacias Lupita" }).waitFor();
-  assert.equal(await pg.locator(".bt-logo[aria-pressed=true]").count(), 1);
-  await pg.locator(".bt-activos").getByRole("button", { name: "Quitar filtro Farmacias Lupita" }).waitFor();
-  assert.match(await pg.locator("#bt-res-titulo + p").innerText(), /6 vacantes con tu búsqueda/);
-  await pg.getByRole("button", { name: "Quitar filtro: Farmacias Lupita" }).click();
-  // Volver a una consulta ya pedida usa la caché de SWR (no siempre hay petición nueva): se revisa la pantalla.
-  await pg.waitForFunction(() => !document.querySelector(".bt-logo[aria-pressed=true]") && document.querySelectorAll(".bt-vac").length === 10 && !location.search);
+  // Chips con menú: sueldo, publicada, modalidad, jornada, empresa; Esc cierra y devuelve el foco.
+  const chips = pg.getByRole("group", { name: "Filtros" });
+  await chips.getByRole("button", { name: "Sueldo" }).click();
+  const menu = pg.locator(".bt2-menu");
+  await menu.waitFor();
+  if (OUT) await pg.screenshot({ path: `${OUT}/bolsa-1440-menu-sueldo.png` });
+  await menu.getByRole("radio", { name: "Desde $10,000 al mes", exact: true }).click();
+  await esperarFiltro((s) => q(s).get("sueldo_min") === "10000", "sueldo_min=10000");
+  await menu.waitFor({ state: "detached" });
+  await chips.getByRole("button", { name: "Sueldo: desde $10,000 al mes" }).waitFor();
+  assert.match(pg.url(), /sueldo=10000/);
+  await chips.getByRole("button", { name: "Publicada" }).click();
+  await menu.waitFor();
+  await pg.keyboard.press("Escape");
+  await menu.waitFor({ state: "detached" });
+  await pg.waitForFunction(() => document.activeElement?.textContent?.trim() === "Publicada", null, { timeout: 3000 }).catch(() => { throw new Error("Esc no devolvió el foco al chip"); });
+  await chips.getByRole("button", { name: "Publicada" }).click();
+  await menu.getByRole("radio", { name: "Esta semana", exact: true }).click();
+  await esperarFiltro((s) => q(s).get("publicada") === "7d" && q(s).get("sueldo_min") === "10000", "publicada=7d");
+  await chips.getByRole("button", { name: "Modalidad" }).click();
+  await menu.getByRole("radio", { name: "Presencial", exact: true }).click();
+  await esperarFiltro((s) => q(s).get("modalidad") === "presencial", "modalidad=presencial");
+  await chips.getByRole("button", { name: "Jornada" }).click();
+  await menu.getByRole("radio", { name: "Medio tiempo", exact: true }).click();
+  await esperarFiltro((s) => q(s).get("jornada") === "medio-tiempo" && q(s).get("modalidad") === "presencial", "jornada=medio-tiempo");
+  await pg.getByRole("heading", { name: "No hay vacantes con esos filtros" }).or(pg.locator(".bt2-tarjeta").first()).first().waitFor();
+  await chips.getByRole("button", { name: "Limpiar filtros" }).click();
+  await pg.waitForFunction(() => !location.search.replace(/[?&]v=[^&]*/, "") && document.querySelectorAll(".bt2-tarjeta").length === 10);
+  await chips.getByRole("button", { name: "Empresa" }).click();
+  await menu.getByRole("radio", { name: "Farmacias Lupita", exact: true }).click();
+  await esperarFiltro((s) => q(s).get("id_empresa") === "2", "id_empresa=2");
+  await pg.locator(".bt2-activos").getByRole("button", { name: "Quitar filtro Farmacias Lupita" }).click();
+  await pg.waitForFunction(() => !/empresa=/.test(location.search));
+  // Interruptores de un toque.
+  const sinExp = chips.getByRole("button", { name: "Sin experiencia" });
+  await sinExp.click();
+  await esperarFiltro((s) => q(s).get("sin_experiencia") === "1", "sin_experiencia=1");
+  assert.equal(await sinExp.getAttribute("aria-pressed"), "true");
+  await chips.getByRole("button", { name: "Postúlate por WhatsApp" }).click();
+  await esperarFiltro((s) => q(s).get("whatsapp") === "1" && q(s).get("sin_experiencia") === "1", "whatsapp=1");
+  await pg.waitForFunction(() => document.querySelectorAll(".bt2-tarjeta").length === 2);
+  assert.match(pg.url(), /whatsapp=1&sinexp=1/);
+  await chips.getByRole("button", { name: "Limpiar filtros" }).click();
+  await pg.waitForFunction(() => document.querySelectorAll(".bt2-tarjeta").length === 10);
+  // Ordenar: mejor sueldo y más cerca (ubicación del navegador redondeada, nunca en la dirección).
+  await chips.getByRole("button", { name: "Ordenar" }).click();
+  await menu.getByRole("radio", { name: "Mejor sueldo", exact: true }).click();
+  await esperarFiltro((s) => q(s).get("orden") === "sueldo", "orden=sueldo");
+  await chips.getByRole("button", { name: "Ordenar: Mejor sueldo" }).click();
+  await menu.getByRole("radio", { name: "Más cerca de mí", exact: true }).click();
+  await esperarFiltro((s) => q(s).get("orden") === "cerca" && q(s).get("lat") === "20.68" && q(s).get("lng") === "-103.35", "orden=cerca&lat=20.68&lng=-103.35");
+  await pg.waitForFunction(() => document.querySelector(".bt2-tarjeta")?.innerText.includes("a menos de 1 km"));
+  assert.ok((await pg.locator(".bt2-lista").innerText()).includes("a 4.2 km"));
+  assert.ok(!/lat|lng|cerca/.test(new URL(pg.url()).search), `la ubicación no va en la dirección: ${pg.url()}`);
+  await chips.getByRole("button", { name: "Limpiar filtros" }).click();
+  ok("1440: chips (sueldo, publicada, modalidad, jornada, empresa, sin experiencia, WhatsApp, mejor sueldo, cerca de mí) con los parámetros exactos y Esc");
 
-  // Buscar por puesto (con pausa al escribir) y por ubicación; tipo de contratación y giro en la columna.
+  // Buscar por puesto y lugar; paginación.
   await pg.getByRole("searchbox", { name: "Puesto" }).fill("chofer");
   await esperarFiltro((s) => q(s).get("titulo") === "chofer", "titulo=chofer");
-  await pg.waitForFunction(() => document.querySelectorAll(".bt-vac").length === 3);
-  assert.match(pg.url(), /\?q=chofer$/);
-  await pg.getByRole("combobox", { name: "Estado o ciudad" }).selectOption("estado:Nuevo León");
-  await esperarFiltro((s) => q(s).get("titulo") === "chofer" && q(s).get("entidad") === "Nuevo León" && q(s).get("ciudad") === "", "entidad=Nuevo León");
-  await pg.getByRole("combobox", { name: "Estado o ciudad" }).selectOption("ciudad:Zapopan");
-  await esperarFiltro((s) => q(s).get("ciudad") === "Zapopan" && q(s).get("entidad") === "", "ciudad=Zapopan sin entidad");
-  await pg.locator(".bt-lateral").getByText("Becario", { exact: true }).click();
-  await esperarFiltro((s) => q(s).get("tipo_contratacion") === "Becario" && q(s).get("ciudad") === "Zapopan", "tipo_contratacion=Becario");
-  // Sin resultados: estado vacío con «Limpiar filtros».
-  await pg.getByRole("heading", { name: "No hay vacantes con esos filtros" }).waitFor();
-  await foto(pg, "bolsa-vacio");
-  await pg.locator(".bt-estado").getByRole("button", { name: "Limpiar filtros" }).click();
-  await pg.waitForFunction(() => !location.search && document.querySelectorAll(".bt-vac").length === 10 && !document.querySelector(".bt-activos"));
+  await pg.getByRole("combobox", { name: "Lugar" }).selectOption("estado:Nuevo León");
+  await esperarFiltro((s) => q(s).get("titulo") === "chofer" && q(s).get("entidad") === "Nuevo León", "entidad=Nuevo León");
+  assert.match(pg.url(), /q=chofer&estado=Nuevo\+Le%C3%B3n|q=chofer&estado=Nuevo%20Le%C3%B3n/);
+  await pg.locator(".bt2-activos").getByRole("button", { name: "Quitar filtro «chofer»" }).click();
+  await pg.locator(".bt2-activos").getByRole("button", { name: "Quitar filtro Nuevo León" }).click();
+  await pg.waitForFunction(() => document.querySelectorAll(".bt2-tarjeta").length === 10 && !document.querySelector(".bt2-activos"));
   assert.equal(await pg.getByRole("searchbox", { name: "Puesto" }).inputValue(), "");
-  await pg.locator(".bt-lateral").getByText("Logística", { exact: true }).click();
-  await esperarFiltro((s) => q(s).get("giro") === "Logística", "giro=Logística");
-  await pg.locator(".bt-activos").getByRole("button", { name: "Quitar filtro Logística" }).click();
-  await pg.waitForFunction(() => !location.search && !document.querySelector(".bt-activos"));
-  await pg.waitForFunction(() => document.querySelectorAll(".bt-vac").length === 10);
-
-  // Paginación: 23 vacantes = 3 páginas.
   await pg.getByRole("button", { name: "Página 2" }).click();
-  await esperarFiltro((s) => q(s).get("page") === "2" && q(s).get("limit") === "10", "page=2");
-  await pg.locator('.bt-pag button[aria-current="page"]').filter({ hasText: "2" }).waitFor();
-  await pg.getByRole("button", { name: "Página siguiente" }).click();
+  await esperarFiltro((s) => q(s).get("page") === "2", "page=2");
+  await pg.getByRole("button", { name: "Siguiente" }).click();
   await esperarFiltro((s) => q(s).get("page") === "3", "page=3");
-  await pg.waitForFunction(() => document.querySelectorAll(".bt-vac").length === 3);
-  assert.equal(await pg.getByRole("button", { name: "Página siguiente" }).isDisabled(), true);
+  await pg.waitForFunction(() => document.querySelectorAll(".bt2-tarjeta").length === 3);
   assert.match(pg.url(), /pagina=3/);
+  ok("1440: búsqueda por puesto y lugar, quitar filtros y paginación");
 
-  // Error del API: mensaje amable y «Reintentar».
+  // Postular desde el panel: vacante con asistente → diálogo con QR y «Abrir WhatsApp» + formulario corto.
+  await pg.goto(base + "/bolsa-de-trabajo?v=cajera-de-piso", { waitUntil: "domcontentloaded" });
+  await panel.getByRole("heading", { level: 2, name: "Cajera de piso" }).waitFor({ timeout: 20000 });
+  const accionesP = panel.locator("[data-acciones-postular] .solo-escritorio");
+  await accionesP.getByRole("button", { name: "Postularme", exact: true }).click();
+  const dlg = pg.getByRole("dialog", { name: "O con un formulario corto" });
+  await dlg.waitFor();
+  const qr = dlg.getByRole("img", { name: "Código QR para abrir WhatsApp en tu celular" });
+  assert.match(await qr.getAttribute("src"), /^data:image\/gif;base64,/, "QR hecho en el navegador");
+  assert.ok((await qr.boundingBox()).width >= 170);
+  const abrirWa = dlg.getByRole("link", { name: "Abrir WhatsApp" });
+  assert.equal(await abrirWa.getAttribute("href"), VACANTES[1].whatsapp.enlace, "el enlace wa.me exacto del API");
+  assert.equal(await abrirWa.getAttribute("target"), "_blank");
+  assert.match(await abrirWa.getAttribute("rel"), /noopener/);
+  await revisar(pg, "postular 1440", 1440);
+  if (OUT) await pg.screenshot({ path: `${OUT}/postular-1440-whatsapp-qr.png` });
+  const terminar = await postularConFormulario(pg, dlg, { telefono: "33 1234 5678", nombre: "Rosa Martínez Peña", slug: "cajera-de-piso" });
+  if (OUT) await pg.screenshot({ path: `${OUT}/postular-1440-codigo.png` });
+  await terminar();
+  if (OUT) await pg.screenshot({ path: `${OUT}/postular-1440-listo.png` });
+  await pg.keyboard.press("Escape");
+  await dlg.waitFor({ state: "detached" });
+  await panel.getByText("Ya enviamos tu postulación").waitFor();
+  ok("1440: «Postularme» abre el diálogo con QR + «Abrir WhatsApp» (href exacto) y la solicitud corta (SMS, token, sin CV)");
+
+  // Vacante sin asistente: solo el formulario; «Preguntar por WhatsApp» aparte cuando hay WhatsApp sin asistente.
+  await pg.goto(base + "/bolsa-de-trabajo?v=vacante-4", { waitUntil: "domcontentloaded" });
+  await panel.getByRole("heading", { level: 2, name: "Recepcionista bilingüe 4" }).waitFor({ timeout: 20000 });
+  await panel.locator("[data-acciones-postular]").waitFor();
+  assert.equal(await panel.locator("[data-acciones-postular] .solo-escritorio").getByRole("button").count(), 1, "una sola acción: Postularme");
+  const dudas = panel.getByRole("link", { name: /Pedir información por WhatsApp sobre la vacante Recepcionista bilingüe 4/ });
+  assert.equal(await dudas.getAttribute("href"), VACANTES[3].whatsapp.enlace);
+  assert.ok((await panel.innerText()).includes("Te responde el equipo de reclutamiento."));
+  await panel.locator("[data-acciones-postular] .solo-escritorio").getByRole("button", { name: "Postularme" }).click();
+  const dlg2 = pg.getByRole("dialog", { name: "Postularme a Recepcionista bilingüe 4" });
+  await dlg2.waitFor();
+  assert.equal(await dlg2.locator("[data-postular-whatsapp]").count(), 0, "sin asistente no hay lado de WhatsApp");
+  await pg.keyboard.press("Escape");
+  await dlg2.waitFor({ state: "detached" });
+  ok("1440: sin asistente, «Postularme» abre solo el formulario y «Preguntar por WhatsApp» queda aparte");
+
+  // Vacía, error y reintentar.
+  await pg.goto(base + "/bolsa-de-trabajo?q=astronauta", { waitUntil: "domcontentloaded" });
+  await pg.getByRole("heading", { name: "No hay vacantes con esos filtros" }).waitFor({ timeout: 20000 });
+  await foto(pg, "bolsa-1440-vacia", false);
   S.falla = 1;
   await pg.goto(base + "/bolsa-de-trabajo", { waitUntil: "domcontentloaded" });
   await pg.getByRole("heading", { name: "No pudimos cargar las vacantes" }).waitFor({ timeout: 20000 });
-  await revisar(pg, "bolsa error", 1440);
-  await foto(pg, "bolsa-error");
+  await revisar(pg, "bolsa error 1440", 1440);
   await pg.getByRole("button", { name: "Reintentar" }).click();
   await pg.getByRole("link", { name: "Chofer repartidor", exact: true }).waitFor({ timeout: 15000 });
+  ok("1440: sin resultados con «Limpiar filtros», error con «Reintentar»");
 
-  // La búsqueda vive en la dirección: volver de una vacante la conserva.
-  const antes = filtros.length;
-  await pg.goto(base + "/bolsa-de-trabajo?q=chofer&estado=Nuevo%20Le%C3%B3n", { waitUntil: "domcontentloaded" });
-  for (let i = 0; i < 100 && !filtros.slice(antes).some((s) => q(s).get("titulo") === "chofer" && q(s).get("entidad") === "Nuevo León"); i++) await dormir(100);
-  assert.ok(filtros.slice(antes).some((s) => q(s).get("titulo") === "chofer" && q(s).get("entidad") === "Nuevo León"), "filtros desde la dirección");
-  assert.equal(filtros.slice(antes).filter((s) => q(s).get("titulo") === "").length, 0, "no se pide primero la lista sin filtros");
-  assert.equal(await pg.getByRole("searchbox", { name: "Puesto" }).inputValue(), "chofer");
-  assert.equal(await pg.getByRole("combobox", { name: "Estado o ciudad" }).inputValue(), "estado:Nuevo León");
-
-  // Sin empresas publicadas: no hay tira.
-  S.empresas = [];
-  const p2 = await ctx.newPage();
-  await p2.goto(base + "/bolsa-de-trabajo", { waitUntil: "domcontentloaded" });
-  await p2.getByRole("link", { name: "Chofer repartidor", exact: true }).waitFor({ timeout: 20000 });
-  await dormir(400);
-  assert.equal(await p2.getByRole("heading", { name: "Empresas que están contratando" }).count(), 0, "sin empresas, sin tira");
-  await p2.close();
-  S.empresas = EMPRESAS;
-
-  // CTA para empresas.
-  await pg.locator(".bt-cta").getByRole("heading", { name: "¿Tu empresa contrata? Publica tus vacantes con ADAMIA." }).waitFor();
-  assert.equal(await pg.locator(".bt-cta").getByRole("link", { name: /Solicitar demo/ }).getAttribute("href"), "/contacto");
-  assert.equal(await pg.locator(".bt-cta").getByRole("link", { name: "Contratar" }).getAttribute("href"), "/contratar-plan");
-
-  // ═════════ Vacante (escritorio) ═════════
+  // Página de la vacante en computadora: JSON-LD JobPosting válido, sin ejecutar el HTML de la vacante.
+  await pg.goto(base + "/vacante/cajera-de-piso", { waitUntil: "domcontentloaded" });
+  await pg.getByRole("heading", { level: 1, name: "Cajera de piso" }).waitFor({ timeout: 30000 });
+  assert.equal(await pg.title(), "Cajera de piso en Farmacias Lupita | Bolsa de trabajo | ADAMIA");
+  assert.match(await pg.locator('link[rel="canonical"]').getAttribute("href"), /^https:\/\/[^/]+\/vacante\/cajera-de-piso$/);
+  const ld = JSON.parse(await pg.locator('script[type="application/ld+json"]').textContent());
+  for (const k of ["title", "description", "datePosted", "hiringOrganization", "jobLocation", "validThrough", "baseSalary"]) assert.ok(ld[k], `JobPosting sin ${k}`);
+  assert.equal(ld["@type"], "JobPosting");
+  assert.equal(ld.hiringOrganization.name, "Farmacias Lupita");
+  assert.deepEqual(ld.baseSalary, { "@type": "MonetaryAmount", currency: "MXN", value: { "@type": "QuantitativeValue", minValue: 8500, maxValue: 10500, unitText: "MONTH" } });
+  assert.equal(ld.validThrough, `${enUnMes}T23:59:59-06:00`);
+  assert.equal(ld.employmentType, "PART_TIME");
+  assert.equal(ld.jobLocation.address.addressRegion, "Jalisco");
+  assert.match(ld.datePosted, /^\d{4}-\d{2}-\d{2}$/);
+  await revisar(pg, "vacante 1440", 1440);
+  await foto(pg, "vacante-1440");
   await pg.goto(base + "/vacante/chofer-repartidor-monterrey", { waitUntil: "domcontentloaded" });
   await pg.getByRole("heading", { level: 1, name: "Chofer repartidor" }).waitFor({ timeout: 30000 });
-  assert.equal(await pg.title(), "Chofer repartidor en Empacadora del Norte | Bolsa de trabajo | ADAMIA");
-  const ld = JSON.parse(await pg.locator('script[type="application/ld+json"]').textContent());
-  assert.equal(ld["@type"], "JobPosting");
-  assert.equal(ld.title, "Chofer repartidor");
-  assert.equal(ld.hiringOrganization.name, "Empacadora del Norte");
-  assert.equal(ld.jobLocation.address.addressRegion, "Nuevo León");
-  assert.equal(ld.baseSalary.value.unitText, "MONTH");
-  assert.equal(ld.url, "https://dev.adamia.com.mx/vacante/chofer-repartidor-monterrey");
   assert.equal(await pg.evaluate(() => window.__xss), undefined, "el HTML de la vacante no ejecuta código");
-  const vtexto = await pg.locator(".vc").innerText();
-  for (const t of ["Descripción del puesto", "Actividades y responsabilidades", "Lo que buscamos", "$12,000 a $14,000 mensuales", "Lunes a viernes", "Av. Constitución 100", "Compartir vacante"]) assert.ok(vtexto.includes(t), `vacante sin «${t}»`);
-  await revisar(pg, "vacante escritorio", 1440);
-  await foto(pg, "vacante-escritorio");
-
-  // Vacante inexistente y error del API.
+  assert.equal(JSON.parse(await pg.locator('script[type="application/ld+json"]').textContent()).validThrough, undefined, "sin fecha de cierre no se inventa");
+  // No existe y error.
   await pg.goto(base + "/vacante/ya-no-existe", { waitUntil: "domcontentloaded" });
   await pg.getByRole("heading", { name: "Esta vacante ya no está disponible" }).waitFor({ timeout: 20000 });
-  assert.equal(await pg.getByRole("link", { name: "Ver vacantes" }).getAttribute("href"), "/bolsa-de-trabajo");
   assert.equal(await pg.title(), "Vacante no disponible | ADAMIA");
   S.slugFalla = 1;
-  await pg.goto(base + "/vacante/vacante-2", { waitUntil: "domcontentloaded" });
+  await pg.goto(base + "/vacante/cajera-de-piso", { waitUntil: "domcontentloaded" });
   await pg.getByRole("heading", { name: "No pudimos cargar la vacante" }).waitFor({ timeout: 20000 });
-  await revisar(pg, "vacante error", 1440);
   await pg.getByRole("button", { name: "Reintentar" }).click();
-  await pg.getByRole("heading", { level: 1, name: /Cajera de piso/ }).waitFor({ timeout: 15000 });
-
-  // (25/11/2026) Con sesión de RH o dueño abierta, la consulta de «mis postulaciones» responde 403: la vacante se ve
-  // igual (antes salía «No pudimos cargar la vacante»).
+  await pg.getByRole("heading", { level: 1, name: "Cajera de piso" }).waitFor({ timeout: 15000 });
+  // Con sesión de RH abierta (sus «mis postulaciones» dan 403) la vacante se ve, sin botón de postularse.
   S.sesion = { id_usuario: 5, tipo_usuario: "Recruiter", correo: "rh@prueba.invalid", nombre: "RH" };
   await ctx.addCookies([{ name: "token", value: "sesion-rh-prueba", url: base }]);
   await pg.goto(base + "/vacante/chofer-repartidor-monterrey", { waitUntil: "domcontentloaded" });
-  await pg.getByRole("heading", { level: 1, name: /Chofer/ }).waitFor({ timeout: 20000 });
-  assert.equal(await pg.getByRole("heading", { name: "No pudimos cargar la vacante" }).count(), 0, "con sesión de RH la vacante se ve");
+  await pg.getByRole("heading", { level: 1, name: "Chofer repartidor" }).waitFor({ timeout: 20000 });
+  await dormir(800);
+  assert.equal(await pg.locator("[data-acciones-postular]").count(), 0, "RH no ve «Postularme»");
   await ctx.clearCookies();
   S.sesion = null;
+  ok("1440: /vacante/[slug] con JSON-LD JobPosting (requeridos, sueldo, validThrough), canonical, no existe, error y sesión de RH");
 
-  // ═════════ Menú del sitio: «Bolsa de trabajo» desde el inicio (escritorio) ═════════
+  // Menú del sitio: «Bolsa de trabajo».
   await pg.goto(base + "/", { waitUntil: "domcontentloaded" });
-  const navEsc = pg.getByRole("navigation", { name: "Secciones" });
-  const enlaceEsc = navEsc.getByRole("link", { name: "Bolsa de trabajo" });
+  const enlaceEsc = pg.getByRole("navigation", { name: "Secciones" }).getByRole("link", { name: "Bolsa de trabajo" });
   await enlaceEsc.waitFor({ timeout: 30000 });
-  assert.deepEqual(await navEsc.getByRole("link").allInnerTexts(), ["Funciones", "Cotizar", "Ley 2027", "Blog", "Bolsa de trabajo", "Nosotros"]);
   await enlaceEsc.click();
   await pg.waitForURL(/\/bolsa-de-trabajo$/, { timeout: 20000 });
-  await pg.getByRole("heading", { level: 1, name: "Encuentra tu próximo trabajo" }).waitFor({ timeout: 20000 });
-  assert.equal(await pg.getByRole("navigation", { name: "Secciones" }).getByRole("link", { name: "Bolsa de trabajo" }).getAttribute("aria-current"), "page");
-  // El menú con un enlace más cabe en anchos intermedios (antes de pasar al menú ☰ en 980 px).
-  for (const w of [1440, 1280, 1100, 1024, 990]) {
-    await pg.setViewportSize({ width: w, height: 900 });
-    await dormir(150);
-    const m = await pg.evaluate(() => {
-      const nav = document.querySelector(".top .nav").getBoundingClientRect();
-      const acc = document.querySelector(".top .top-actions").getBoundingClientRect();
-      const altos = [...document.querySelectorAll(".top .nav a")].map((a) => a.getBoundingClientRect().height);
-      return { navDer: nav.right, accIzq: acc.left, ancho: document.documentElement.scrollWidth, alto: Math.max(...altos) };
-    });
-    if (m.navDer > m.accIzq + 0.5) problemas.push(`encabezado ${w}: el menú se encima con los botones (${Math.round(m.navDer)} > ${Math.round(m.accIzq)})`);
-    if (m.ancho > w) problemas.push(`encabezado ${w}: desborde horizontal (${m.ancho})`);
-    if (m.alto > 30) problemas.push(`encabezado ${w}: un enlace del menú se parte en dos líneas`);
-  }
-  await pg.setViewportSize({ width: 1440, height: 900 });
+  await pg.getByRole("heading", { level: 1, name: "Bolsa de trabajo" }).waitFor({ timeout: 20000 });
   await ctx.close();
 
-  // ═════════ Reducir movimiento: no avanza solo ═════════
-  const cr = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "es-MX", reducedMotion: "reduce" });
+  // ═════════ Reducir movimiento ═════════
+  const cr = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: "es-MX", reducedMotion: "reduce", isMobile: true, hasTouch: true });
   await instalarMocks(cr);
   const pr = await cr.newPage();
   pr.on("pageerror", (e) => errores.push(e.message));
   await pr.goto(base + "/bolsa-de-trabajo", { waitUntil: "domcontentloaded" });
-  await pr.locator(CARR).waitFor({ timeout: 30000 });
-  await pr.mouse.move(1435, 880);
-  await pr.waitForFunction((sel) => document.querySelector(sel).classList.contains("parado"), CARR);
-  await dormir(6800);
-  assert.equal(await slideActual(pr), 0, "con reducir movimiento no avanza solo");
-  assert.equal(await pr.locator(`${CARR} .slide`).first().evaluate((d) => getComputedStyle(d).transitionDuration.split(",").every((t) => parseFloat(t) < 0.01)), true, "sin transición al cambiar");
-  await pr.locator(CARR).getByRole("button", { name: "Siguiente" }).click();
-  await esperarSlide(pr, 1);
+  await pr.getByRole("link", { name: "Chofer repartidor", exact: true }).waitFor({ timeout: 30000 });
+  await pr.getByRole("button", { name: /^Filtros/ }).click();
+  const hojaR = pr.getByRole("dialog", { name: "Filtros" });
+  await hojaR.waitFor();
+  const duracion = await hojaR.evaluate((el) => parseFloat(getComputedStyle(el).animationDuration) || 0);
+  assert.ok(duracion < 0.01, `con reducir movimiento la hoja no se anima (${duracion}s)`);
   await cr.close();
+  ok("390: con «reducir movimiento» la hoja de filtros no se anima");
 
-  // ═════════ Celular 390 ═════════
-  const cm = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: "es-MX", timezoneId: "America/Mexico_City", hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
-  await instalarMocks(cm);
-  const pm = await cm.newPage();
-  pm.on("pageerror", (e) => errores.push(e.message));
-  pm.on("dialog", (d) => { errores.push(`diálogo inesperado: ${d.message()}`); d.dismiss(); });
-  await pm.goto(base + "/bolsa-de-trabajo", { waitUntil: "domcontentloaded" });
-  await cerrarCookies(pm);
-  await pm.getByRole("link", { name: "Chofer repartidor", exact: true }).waitFor({ timeout: 30000 });
-  await pm.getByRole("heading", { name: "Empresas que están contratando" }).waitFor();
-  assert.equal(await pm.locator(".bt-lateral").isVisible(), false, "en celular la columna de filtros se oculta");
-  await pm.locator(".bt-pag .movil").getByText("Página 1 de 3").waitFor();
-  await revisar(pm, "bolsa celular", 390);
-  await foto(pm, "bolsa-celular");
-  if (OUT) await pm.screenshot({ path: `${OUT}/bolsa-celular-portada.png` });
-  // Carrusel en celular: deslizar con el dedo cambia de diapositiva y tocar lo pausa; el buscador no se mueve.
-  const cajaM = await cajaBuscador(pm);
-  assert.equal(await slideActual(pm), 0);
-  await deslizar(pm, -120);
-  await esperarSlide(pm, 1);
-  assert.equal(await pm.locator(CARR).getByRole("button", { name: "Reanudar" }).count(), 1, "tocar pausa el avance");
-  await deslizar(pm, -120);
-  await esperarSlide(pm, 2);
-  await deslizar(pm, 120);
-  await esperarSlide(pm, 1);
-  await deslizar(pm, -15); // un toque sin arrastrar no cambia
-  await dormir(300);
-  assert.equal(await slideActual(pm), 1);
-  await dormir(1000);
-  assert.equal(await cajaBuscador(pm), cajaM, "el buscador no se mueve con las diapositivas (celular)");
-  const anchoM = await pm.evaluate(() => document.documentElement.scrollWidth);
-  assert.ok(anchoM <= 390, `sin desborde con el carrusel recorrido (${anchoM})`);
-  if (OUT) await pm.screenshot({ path: `${OUT}/bolsa-celular-diapositiva-2.png` });
-  await pm.locator(CARR).getByRole("tab", { name: /^Ir a 4/ }).tap();
-  await esperarSlide(pm, 3);
-  await dormir(1000);
-  await revisar(pm, "bolsa celular empresas", 390);
-  if (OUT) await pm.screenshot({ path: `${OUT}/bolsa-celular-empresas.png` });
-  // El buscador sigue funcionando en celular.
-  await pm.getByRole("searchbox", { name: "Puesto" }).fill("cajera");
-  await pm.getByRole("button", { name: "Buscar", exact: true }).tap();
-  await esperarFiltro((s) => q(s).get("titulo") === "cajera", "titulo=cajera (celular)");
-  await pm.waitForFunction(() => /q=cajera/.test(location.search));
-  await pm.getByRole("searchbox", { name: "Puesto" }).fill("");
-  await pm.waitForFunction(() => !location.search, null, { timeout: 5000 });
-  await pm.evaluate(() => window.scrollTo(0, 0));
-  await pm.getByRole("button", { name: /^Filtros/ }).click();
-  const hojaF = pm.getByRole("dialog", { name: "Filtros" });
-  await hojaF.waitFor();
-  await hojaF.getByText("Practicante", { exact: true }).click();
-  await esperarFiltro((s) => q(s).get("tipo_contratacion") === "Practicante", "tipo_contratacion=Practicante (hoja)");
-  await hojaF.getByRole("button", { name: /^Ver \d+ vacantes?$/ }).waitFor();
-  await revisar(pm, "hoja de filtros", 390);
-  await dormir(400); // termina la transición de la píldora elegida
-  if (OUT) await pm.screenshot({ path: `${OUT}/bolsa-celular-filtros.png` });
-  await hojaF.getByRole("button", { name: /^Ver \d+ vacantes?$/ }).click();
-  await hojaF.waitFor({ state: "detached" });
-  await pm.getByRole("button", { name: /Filtros\s*1/ }).waitFor();
-  await pm.locator(".bt-activos").getByRole("button", { name: "Quitar filtro Practicante" }).click();
-  await pm.waitForFunction(() => !location.search && !document.querySelector(".bt-activos"));
+  // ═════════ Celular 390 y 360 ═════════
+  for (const ancho of [390, 360]) {
+    const cm = await browser.newContext({ viewport: { width: ancho, height: 800 }, locale: "es-MX", timezoneId: "America/Mexico_City", hasTouch: true, isMobile: true, deviceScaleFactor: 2,
+      permissions: ["geolocation"], geolocation: { latitude: 25.6866, longitude: -100.3161 } });
+    await instalarMocks(cm);
+    const pm = await cm.newPage();
+    pm.on("pageerror", (e) => errores.push(e.message));
+    pm.on("dialog", (d) => { errores.push(`diálogo inesperado: ${d.message()}`); d.dismiss(); });
+    await pm.goto(base + "/bolsa-de-trabajo", { waitUntil: "domcontentloaded" });
+    await pm.getByRole("link", { name: "Chofer repartidor", exact: true }).waitFor({ timeout: 30000 });
+    assert.equal(await pm.locator(".bt2-panel").isVisible(), false, "en celular no hay panel derecho");
+    assert.equal(publicos.filter((x) => x.ruta === "/vacantes/slug/chofer-repartidor-monterrey" && x.params === "").length >= 0, true);
+    assert.equal(await pm.getByRole("group", { name: "Filtros", exact: true }).isVisible(), false, "chips de escritorio ocultos");
+    const r = await revisar(pm, `bolsa ${ancho}`, ancho);
+    assert.ok(r.letra >= 17, `letra base ${r.letra}px`);
+    await foto(pm, `bolsa-${ancho}`, false);
+    if (OUT && ancho === 390) await pm.screenshot({ path: `${OUT}/bolsa-celular.png`, fullPage: true });
+    // Chips rápidos: cerca de mí y WhatsApp.
+    const rapidos = pm.getByRole("group", { name: "Filtros rápidos" });
+    const n0 = filtros.length; // solo cuentan las consultas de este ancho
+    await rapidos.getByRole("button", { name: "Cerca de mí" }).click();
+    await esperarFiltro((s) => q(s).get("orden") === "cerca" && q(s).get("lat") === "25.69" && q(s).get("lng") === "-100.32", `cerca ${ancho}`, n0);
+    assert.equal(await rapidos.getByRole("button", { name: "Cerca de mí" }).getAttribute("aria-pressed"), "true");
+    await rapidos.getByRole("button", { name: "Cerca de mí" }).click();
+    await rapidos.getByRole("button", { name: "Por WhatsApp" }).click();
+    await esperarFiltro((s) => q(s).get("whatsapp") === "1" && q(s).get("orden") === "recientes", `whatsapp ${ancho}`, n0);
+    await rapidos.getByRole("button", { name: "Por WhatsApp" }).click();
+    await pm.waitForFunction(() => !/whatsapp/.test(location.search));
+    // Hoja «Filtros»: foco atrapado, Esc, opción y «Ver N vacantes».
+    const abrirHoja = rapidos.getByRole("button", { name: /^Filtros/ });
+    await abrirHoja.click();
+    const hoja = pm.getByRole("dialog", { name: "Filtros" });
+    await hoja.waitFor();
+    for (let i = 0; i < 40; i++) await pm.keyboard.press("Tab");
+    assert.equal((await enfocado(pm)).enDialogo, true, "el foco no sale de la hoja");
+    await pm.keyboard.press("Escape");
+    await hoja.waitFor({ state: "detached" });
+    await pm.waitForFunction(() => /^Filtros/.test(document.activeElement?.textContent?.trim() ?? ""), null, { timeout: 3000 }).catch(() => { throw new Error("al cerrar, el foco no volvió a «Filtros»"); });
+    await abrirHoja.click();
+    await hoja.waitFor();
+    await hoja.getByRole("radio", { name: "Desde casa", exact: true }).click();
+    await esperarFiltro((s) => q(s).get("modalidad") === "remoto", `modalidad=remoto (hoja ${ancho})`, n0);
+    await hoja.getByRole("checkbox", { name: "Sin experiencia" }).check();
+    await esperarFiltro((s) => q(s).get("modalidad") === "remoto" && q(s).get("sin_experiencia") === "1", "hoja: sin experiencia", n0);
+    const esperado = filtrar(q(filtros.at(-1))).total;
+    const ver = hoja.getByRole("button", { name: esperado === 1 ? "Ver 1 vacante" : `Ver ${esperado} vacantes` });
+    await ver.waitFor();
+    await revisar(pm, `hoja de filtros ${ancho}`, ancho);
+    await dormir(300);
+    if (OUT) await pm.screenshot({ path: `${OUT}/bolsa-${ancho}-filtros.png` });
+    await ver.click();
+    await hoja.waitFor({ state: "detached" });
+    await rapidos.getByRole("button", { name: "Filtros · 2" }).waitFor();
+    await hoja.waitFor({ state: "detached" });
+    await abrirHoja.click();
+    await hoja.getByRole("button", { name: "Limpiar" }).click();
+    await pm.waitForFunction(() => !location.search);
+    await pm.keyboard.press("Escape");
+    ok(`${ancho}: chips rápidos (cerca de mí, WhatsApp) y hoja «Filtros» (foco atrapado, Esc, «Ver N vacantes», Limpiar)`);
 
-  // Abrir la vacante desde la lista y postularse.
-  await pm.getByRole("link", { name: "Chofer repartidor", exact: true }).click();
-  await pm.waitForURL(/\/vacante\/chofer-repartidor-monterrey$/);
-  await pm.getByRole("heading", { level: 1, name: "Chofer repartidor" }).waitFor({ timeout: 20000 });
-  await cerrarCookies(pm);
-  const boton = pm.getByRole("button", { name: "Postularme ahora" });
-  await boton.waitFor();
-  const caja = await boton.boundingBox();
-  assert.ok(caja.y + caja.height <= 844 && caja.y > 844 - 110, `«Postularme ahora» fijo abajo en celular (y=${Math.round(caja.y)})`);
-  await revisar(pm, "vacante celular", 390);
-  await foto(pm, "vacante-celular");
-  await boton.click();
-  const hoja = pm.getByRole("dialog", { name: "Solicitud de empleo" });
-  await hoja.waitFor();
-  const llenar = (n, v) => hoja.locator(`[name="${n}"]`).fill(v);
-  await llenar("nombre_completo", "Ana María García López");
-  await llenar("correo", "ana.g@x.mx");
-  await llenar("telefono", "3312345678");
-  await llenar("sexo", "Mujer");
-  await hoja.getByRole("combobox").filter({ hasText: "Selecciona uno" }).click();
-  await pm.getByRole("option", { name: "Soltero(a)" }).click();
-  await llenar("curp", "GAPA900101MJCRRN09");
-  await hoja.getByRole("combobox").filter({ hasText: "Selecciona un nivel" }).click();
-  await pm.getByRole("option", { name: "Preparatoria" }).click();
-  await llenar("institucion", "CBTIS 1");
-  await llenar("carrera", "Técnico");
-  for (const [n, v] of [["ultimo_puesto", "Repartidora"], ["empresa_anterior", "Tienda"], ["duracion_puesto", "2 años"], ["ultimo_salario", "10000"], ["motivo_salida", "Crecer"]]) await llenar(n, v);
-  await hoja.getByRole("checkbox", { name: /Acepto los Términos y condiciones/ }).click();
-  // 1) Sin CV: aviso. 2) Con CV pero sin la pregunta obligatoria: aviso junto a la pregunta.
-  await hoja.getByRole("button", { name: "Enviar solicitud" }).click();
-  await pm.getByText("CV es obligatorio").waitFor();
-  await hoja.locator('input[type="file"]').setInputFiles({ name: "cv.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 prueba") });
-  await hoja.getByText("cv.pdf").waitFor();
-  await hoja.getByRole("button", { name: "Enviar solicitud" }).click();
-  await hoja.getByText("Responde esta pregunta.").waitFor();
-  assert.equal(envios.otpSend.length, 0, "sin responder no se manda el SMS");
-  await hoja.getByLabel("¿Tienes licencia de manejo vigente? *").selectOption("Sí, tipo B");
-  await hoja.getByRole("checkbox", { name: "Mañana" }).check();
-  await hoja.getByLabel("Cuéntanos de tu último reparto").fill("Repartí en la zona centro.");
-  await revisar(pm, "solicitud celular", 390);
-  if (OUT) await pm.screenshot({ path: `${OUT}/vacante-celular-solicitud.png` });
-  await hoja.getByRole("button", { name: "Enviar solicitud" }).click();
-  await hoja.getByText("Ingresa el código para continuar").waitFor({ timeout: 15000 });
-  assert.deepEqual(envios.otpSend, [{ telefono: "3312345678" }]);
-  await revisar(pm, "verificación OTP", 390);
-  await dormir(700); // la verificación se desplaza sola a la vista
-  if (OUT) await pm.screenshot({ path: `${OUT}/vacante-celular-otp.png` });
-  const otp = hoja.locator('input[autocomplete="one-time-code"], input[data-input-otp]').first();
-  await otp.fill("111111");
-  await hoja.getByRole("button", { name: "Verificar código" }).dispatchEvent("click");
-  await pm.getByText("El código no es correcto.").waitFor({ timeout: 10000 });
-  assert.equal(envios.create.length, 0, "código incorrecto: no se envía la postulación");
-  await otp.fill("123456");
-  await hoja.getByRole("button", { name: "Verificar código" }).dispatchEvent("click");
-  await pm.getByText("Postulación enviada exitosamente").waitFor({ timeout: 15000 });
-  assert.deepEqual(envios.otpVerify.map((x) => x.code), ["111111", "123456"]);
-  assert.equal(envios.create.length, 1);
-  const { tipo, cuerpo } = envios.create[0];
-  assert.match(tipo, /multipart\/form-data/);
-  const campo = (n) => (cuerpo.match(new RegExp(`name="${n}"\\r\\n\\r\\n([^\\r]*)`)) || [])[1];
-  assert.equal(campo("id_vacante"), "100");
-  assert.equal(campo("telefono"), "3312345678");
-  assert.equal(campo("curp"), "GAPA900101MJCRRN09");
-  assert.equal(campo("telefono_verificacion_token"), "tok-verificado-1");
-  assert.deepEqual(JSON.parse(Buffer.from(campo("respuestas"), "latin1").toString("utf8")), { p1: "Sí, tipo B", p2: ["Mañana"], p3: "Repartí en la zona centro." });
-  assert.match(cuerpo, /name="cv"; filename="cv.pdf"/);
-  await pm.getByText("Enviamos tu postulación").waitFor({ timeout: 10000 });
-  assert.equal(await pm.getByRole("button", { name: "Postularme ahora" }).count(), 0, "después de enviar ya no se ofrece postularse otra vez");
-  await revisar(pm, "vacante enviada", 390);
-  await foto(pm, "vacante-celular-enviada");
+    // Tocar una tarjeta abre la página de la vacante (con asistente): botón verde fijo abajo + «No tengo WhatsApp».
+    await pm.getByRole("link", { name: "Cajera de piso", exact: true }).click();
+    await pm.waitForURL(/\/vacante\/cajera-de-piso$/, { timeout: 20000 });
+    await pm.getByRole("heading", { level: 1, name: "Cajera de piso" }).waitFor({ timeout: 20000 });
+    const verde = pm.locator(".bt2-acciones.barra .solo-movil").getByRole("link", { name: "Postularme por WhatsApp" });
+    await verde.waitFor();
+    const caja = await verde.boundingBox();
+    assert.ok(caja.height >= 56, `botón verde de ${caja.height}px`);
+    assert.ok(caja.y + caja.height <= 800 && caja.y > 800 - 160, `fijo abajo (y=${Math.round(caja.y)})`);
+    assert.equal(await verde.getAttribute("href"), VACANTES[1].whatsapp.enlace, "el enlace wa.me exacto del agente");
+    assert.equal(await verde.evaluate((el) => getComputedStyle(el).backgroundColor), "rgb(21, 128, 61)");
+    const [popup] = await Promise.all([cm.waitForEvent("page"), verde.click()]);
+    await popup.waitForLoadState("domcontentloaded");
+    assert.equal(popup.url(), VACANTES[1].whatsapp.enlace);
+    assert.equal(await popup.evaluate(() => window.opener), null, "sin opener");
+    await popup.close();
+    const vtexto = await pm.locator(".bt2-ficha").innerText();
+    for (const t of ["Sueldo", "Dónde", "Horario", "Experiencia", "No necesaria", "Qué harás", "Cómo postularte", "Toca el botón verde «Postularme por WhatsApp».", "Te damos día y hora de entrevista."]) assert.ok(vtexto.includes(t), `vacante sin «${t}»`);
+    await pm.getByRole("link", { name: "Regresar a las vacantes" }).waitFor();
+    await revisar(pm, `vacante ${ancho}`, ancho);
+    await foto(pm, `vacante-${ancho}`, false);
+    if (OUT && ancho === 390) await pm.screenshot({ path: `${OUT}/vacante-${ancho}-completa.png`, fullPage: true });
+    // «No tengo WhatsApp: llenar formulario» → solicitud a pantalla completa.
+    await pm.getByRole("button", { name: "No tengo WhatsApp: llenar formulario" }).click();
+    const dm = pm.getByRole("dialog", { name: "Postularme a Cajera de piso" });
+    await dm.waitFor();
+    assert.equal(await dm.locator("[data-postular-whatsapp]").count(), 0, "en celular el formulario va solo");
+    const cajaD = await dm.boundingBox();
+    assert.ok(cajaD.width >= ancho - 1, "a pantalla completa");
+    const terminarM = await postularConFormulario(pm, dm, { telefono: "+52 81 5555 0101", nombre: "Ana Torres Ruiz", slug: "cajera-de-piso" });
+    await revisar(pm, `código ${ancho}`, ancho);
+    if (OUT) await pm.screenshot({ path: `${OUT}/vacante-${ancho}-codigo.png` });
+    if (OUT && ancho === 390) await pm.screenshot({ path: `${OUT}/vacante-celular-otp.png` });
+    await terminarM();
+    await revisar(pm, `enviada ${ancho}`, ancho);
+    if (OUT) await pm.screenshot({ path: `${OUT}/vacante-${ancho}-enviada.png` });
+    await dm.getByRole("button", { name: "Cerrar" }).click();
+    await pm.locator(".bt2-acciones").getByText("Ya enviamos tu postulación").waitFor();
+    ok(`${ancho}: tarjeta → página; verde «Postularme por WhatsApp» fijo abajo (wa.me exacto, sin opener) y «No tengo WhatsApp» → solicitud con SMS`);
 
-  // Menú ☰ del celular: «Bolsa de trabajo» desde el inicio.
-  await pm.goto(base + "/", { waitUntil: "domcontentloaded" });
-  await pm.getByRole("button", { name: "Abrir menú" }).waitFor({ timeout: 30000 });
-  assert.equal(await pm.getByRole("navigation", { name: "Secciones" }).isVisible(), false, "en celular el menú va dentro de ☰");
-  await pm.getByRole("button", { name: "Abrir menú" }).tap();
-  const menuM = pm.locator("#menu-movil");
-  await menuM.getByRole("link", { name: "Bolsa de trabajo" }).waitFor();
-  if (OUT) await pm.screenshot({ path: `${OUT}/menu-celular.png` });
-  await menuM.getByRole("link", { name: "Bolsa de trabajo" }).tap();
-  await pm.waitForURL(/\/bolsa-de-trabajo$/, { timeout: 20000 });
-  await pm.getByRole("heading", { level: 1, name: "Encuentra tu próximo trabajo" }).waitFor({ timeout: 20000 });
-  assert.equal(await pm.locator("#menu-movil").count(), 0, "el menú se cierra al navegar");
-  await cm.close();
+    // Sin asistente: la acción principal es «Postularme» (formulario), también fija abajo.
+    await pm.goto(base + "/vacante/chofer-repartidor-monterrey", { waitUntil: "domcontentloaded" });
+    await pm.getByRole("heading", { level: 1, name: "Chofer repartidor" }).waitFor({ timeout: 20000 });
+    const postular = pm.locator(".bt2-acciones.barra .solo-movil").getByRole("button", { name: "Postularme" });
+    await postular.waitFor();
+    assert.ok((await postular.boundingBox()).height >= 56);
+    assert.equal(await pm.getByRole("link", { name: "Postularme por WhatsApp" }).count(), 0);
+    assert.ok((await pm.locator(".bt2-ficha").innerText()).includes("Confirma con el código que te llega por SMS."));
+    await postular.click();
+    const dm2 = pm.getByRole("dialog", { name: "Postularme a Chofer repartidor" });
+    await dm2.waitFor();
+    await revisar(pm, `solicitud ${ancho}`, ancho);
+    if (OUT) await pm.screenshot({ path: `${OUT}/vacante-${ancho}-formulario.png` });
+    await pm.keyboard.press("Escape");
+    await dm2.waitFor({ state: "detached" });
+    ok(`${ancho}: sin asistente, «Postularme» fijo abajo abre la solicitud corta`);
+    await cm.close();
+  }
 
   assert.deepEqual(errores, [], `errores en la página: ${errores.join(" | ")}`);
   assert.deepEqual(problemas, [], `problemas:\n${problemas.join("\n")}`);
-  console.log(`OK verify-bolsa: ${filtros.length} consultas a /vacantes/filter, postulación con OTP y preguntas, carrusel (avance, flechas, puntos, teclado, pausa, dedo y reducir movimiento), menú «Bolsa de trabajo» en escritorio y celular, escritorio 1440 y celular 390 sin desborde.`);
+  console.log(`OK verify-bolsa: ${hechos.length} comprobaciones, ${filtros.length} consultas a /vacantes/filter, ${envios.create.length} postulaciones con SMS; 1440, 390 y 360 sin desborde.`);
 } catch (e) {
   console.error(e);
   if (problemas.length) console.error(problemas.join("\n"));
