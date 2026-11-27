@@ -326,7 +326,7 @@ const MenuResposive = ({
           height="24"
         />
       </DrawerTrigger>
-      <DrawerContent className="mt-0 inset-y-0 w-60 bottom-0 z-50 rounded-r-sm rounded-l-none px-4 py-4">
+      <DrawerContent menu className="mt-0 inset-y-0 w-60 bottom-0 z-50 rounded-r-sm rounded-l-none px-4 py-4">
         <div className="flex flex-col h-full justify-between">
           <div className="flex flex-col space-y-3 mt-2">
             {mobilePublicLinks.map((item) => (

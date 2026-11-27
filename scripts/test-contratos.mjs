@@ -12,6 +12,7 @@ import {
 } from "../src/lib/contratos/detalleContrato.mjs";
 import { limpiarHtmlContrato, resaltarVariables, variablesUsadas } from "../src/lib/contratos/htmlContrato.mjs";
 import { VARIABLES_CONTRATO, RAPIDAS, CLAVES_CONTRATO } from "../src/lib/contratos/variablesContrato.mjs";
+import { textoPeriodicidad, explicaDecision } from "../src/lib/contratos/periodicidadPorConfirmar.mjs";
 
 const RAIZ = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 
@@ -112,4 +113,20 @@ test("horario corto para la tarjeta Jornada", async () => {
   const { horarioCorto } = await import("../src/lib/contratos/detalleContrato.mjs");
   assert.equal(horarioCorto("Entrada: 08:00 | Salida: 16:00 | Comida: 12:00 - 12:30"), "08:00 a 16:00 · comida 12:00 a 12:30");
   assert.equal(horarioCorto("L a S de 8 a 16"), "L a S de 8 a 16");
+});
+
+test("periodicidad por confirmar: cómo se paga hoy, cómo quedaría y las dos opciones", () => {
+  // Lo que manda el servidor para CT-2026-0007 (5,000 «quincenal», ficha quincenal).
+  const p = { folio: "CT-2026-0007", salario_contrato: 5000, periodicidad_guardada: "quincenal", periodicidad_como_dice: "Quincenal",
+    hoy: { periodicidad: "Quincenal", mensual: 5000, monto: 2500 }, como_dice: { periodicidad: "Quincenal", mensual: 10000, monto: 5000 } };
+  const t = textoPeriodicidad(p);
+  assert.equal(t.guardado, "$5,000.00 «quincenal»");
+  assert.equal(t.hoy, "Se paga como mensual: $5,000.00 al mes = $2,500.00 a la quincena");
+  assert.equal(t.comoDice, "Si es por quincena (como dice): $10,000.00 al mes = $5,000.00 a la quincena");
+  assert.deepEqual(t.opciones.map((o) => [o.decision, o.texto]), [["como_dice", "Es por quincena (como dice)"], ["mensual", "Era mensual"]]);
+  assert.match(explicaDecision(p, "como_dice"), /queda en \$5,000\.00 quincenal \(\$10,000\.00 al mes = \$5,000\.00 a la quincena\)\. El monto no cambia/);
+  assert.match(explicaDecision(p, "mensual"), /queda en \$5,000\.00 mensual \(\$5,000\.00 al mes = \$2,500\.00 a la quincena\)/);
+  // Sin etiqueta reconocible solo se puede confirmar mensual.
+  assert.deepEqual(textoPeriodicidad({ ...p, periodicidad_guardada: null, periodicidad_como_dice: null, como_dice: null }).opciones.map((o) => o.decision), ["mensual"]);
+  assert.deepEqual(textoPeriodicidad({ ...p, periodicidad_guardada: "mensual", periodicidad_como_dice: "Mensual" }).opciones.map((o) => o.texto), ["Es mensual (confirmar)"]);
 });

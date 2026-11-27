@@ -5,7 +5,8 @@
 //   3. Firmar como empresa → «Mandar a firmar» genera el PDF en el navegador y pide el enlace al flujo de firma digital
 //      (tipo CONTRATO) → la tarjeta de la persona pasa a «enviado».
 //   4. Cambiar sueldo con convenio: el servidor recibe el sueldo, la fecha y el motivo; la tarjeta y el historial cambian.
-//   5. «Revisar sueldos»: la diferencia ficha ≠ contrato y su solución; la nómina muestra el aviso y no deja autorizar.
+//   5. «Revisar sueldos»: la diferencia ficha ≠ contrato y su solución; la «periodicidad por confirmar» (hoy / como dice
+//      y la decisión); la nómina muestra el aviso (con los dos motivos) y no deja autorizar.
 //   2b. Editar en página con pestañas (solo manda lo que cambió; sueldo de solo lectura; aviso al salir con cambios).
 //   2c. Ventanas: no se cierran con clic o toque afuera; sí con Esc y la X. «Más acciones» (menú) sí.
 //   2d. Alta en página: errores por pestaña; duplicar copia condiciones y encadena la renovación.
@@ -46,7 +47,11 @@ function estadoInicial() {
     eventos: [{ id: 1, tipo: "creado", titulo: "Contrato creado · renovación de CT-2024-0098", fecha: "2025-01-10 09:00", nombre_usuario: "Laura Ríos" }],
     convenios: [],
     diferencias: [{ id_empleado: 17, nombre: "Carla Paz Medina", id_contrato: 77, folio: "CT-2025-0077", sueldo_ficha: 6000, periodo_ficha: "Quincenal", salario_contrato: 13000, periodicidad_contrato: "Mensual", contrato_en_periodo_ficha: 6500, diferencia: 500 }],
-    pedidos: { convenio: [], solicitud: 0, preparar: 0, resolver: [], vistaPrevia: [], editar: [], crear: [] },
+    // (27/11/2026, opción C) Un contrato con «quincenal» en minúsculas: hoy se paga como mensual.
+    periodicidades: [{ motivo: "periodicidad_por_confirmar", id_empleado: 18, nombre: "Dora Gil Mora", id_contrato: 7, folio: "CT-2026-0007", salario_contrato: 5000,
+      periodicidad_guardada: "quincenal", periodicidad_como_dice: "Quincenal", hoy: { periodicidad: "Quincenal", mensual: 5000, monto: 2500 },
+      como_dice: { periodicidad: "Quincenal", mensual: 10000, monto: 5000 } }],
+    pedidos: { periodicidad: [], convenio: [], solicitud: 0, preparar: 0, resolver: [], vistaPrevia: [], editar: [], crear: [] },
   };
 }
 let E = estadoInicial();
@@ -70,7 +75,7 @@ const BASES = [
   { clave: "determinado", tipo_contrato: "temporal", nombre: "Contrato por tiempo determinado (base ADAMIA)", descripcion: "Base sugerida por ADAMIA con cláusulas estándar de la Ley Federal del Trabajo. Revísala con tu abogado antes de usarla.", contenido_html: "<p>{{contrato.causa}}</p>" },
 ];
 const evento = (tipo, titulo) => E.eventos.push({ id: E.eventos.length + 1, tipo, titulo, fecha: `${hoy} 10:42`, nombre_usuario: "Laura Ríos" });
-const NOMINA = () => ({ ok: true, puede_autorizar: true, sueldos_por_revisar: E.diferencias,
+const NOMINA = () => ({ ok: true, puede_autorizar: true, sueldos_por_revisar: [...E.diferencias.map((d) => ({ motivo: "diferencia", ...d })), ...E.periodicidades],
   periodo: { id: 5, id_empresa: 7, periodicidad: "Quincenal", fecha_inicio: "2026-11-16", fecha_fin: "2026-11-30", estado: "por_autorizar", version: 3, total_neto: 0, total_transferencia: 0, total_efectivo: 0, creado_por_nombre: "Laura Ríos" },
   recibos: [] });
 
@@ -115,7 +120,12 @@ function manejar({ ruta, metodo, cuerpo, json }) {
   }
   if (r.startsWith("/empleados/puestos")) return json([{ id: 1, nombre: "Cajera" }, { id: 2, nombre: "Almacenista" }]);
   if (r.startsWith("/calculos-lft/publico/vacaciones-ley")) return json({ dias: 14, anio_servicio: 2 });
-  if (r === "/contratos/revisar-sueldos") return json({ diferencias: E.diferencias, duplicados: [], migracion: true });
+  if (r === "/contratos/revisar-sueldos") return json({ diferencias: E.diferencias, periodicidades: E.periodicidades, duplicados: [], migracion: true });
+  if (r === "/contratos/periodicidad/resolver" && metodo === "POST") {
+    E.pedidos.periodicidad.push(cuerpo);
+    E.periodicidades = E.periodicidades.filter((x) => x.id_contrato !== cuerpo.id_contrato);
+    return json({ ok: true, antes: "quincenal", despues: cuerpo.decision === "mensual" ? "Mensual" : "Quincenal", salario_base: 5000 });
+  }
   if (r === "/contratos/revisar-sueldos/resolver" && metodo === "POST") {
     E.pedidos.resolver.push(cuerpo);
     E.diferencias = E.diferencias.filter((d) => d.id_empleado !== cuerpo.id_empleado);
@@ -271,6 +281,12 @@ try {
     await page.locator("#ct-puesto").fill("Cajera principal");
     await cancelarE.click();
     await page.locator("[data-dialogo-cambios]").waitFor({ timeout: 15000 });
+    // La ventana compartida «Tienes cambios sin guardar» se lee a los 60 años: letra ≥ 16 px y botones ≥ 48 px.
+    const guardia = await page.locator("[data-dialogo-cambios]").evaluate((el) => ({
+      letra: Math.min(...[...el.querySelectorAll("p, button")].map((x) => parseFloat(getComputedStyle(x).fontSize))),
+      alto: Math.min(...[...el.querySelectorAll("button")].map((x) => x.offsetHeight)), // offsetHeight: sin la animación de entrada (zoom)
+    }));
+    assert.ok(guardia.letra >= 16 && guardia.alto >= 47.5, `ventana de cambios sin guardar: ${JSON.stringify(guardia)}`);
     await page.locator("[data-dialogo-cambios]").getByRole("button", { name: "Seguir editando" }).click();
     await page.locator("[data-dialogo-cambios]").waitFor({ state: "detached" });
     assert.match(page.url(), /\/142\/editar$/);
@@ -366,16 +382,30 @@ try {
     await page.goto(base + "/panel/nomina/5", { waitUntil: "domcontentloaded" });
     await page.locator("[data-aviso='sueldos-por-revisar']").waitFor({ timeout: 60000 });
     await page.getByText(/Carla Paz Medina/).first().waitFor();
+    await page.locator("[data-periodicidad-por-confirmar]").getByText(/Dora Gil Mora: contrato CT-2026-0007 dice «quincenal»/).waitFor();
     assert.equal(await page.getByRole("button", { name: "Autorizar y enviar recibos" }).isDisabled(), true, "no se autoriza con sueldos por revisar");
     await captura(page, `nomina-bloqueada-${sufijo}`);
     await page.locator("[data-aviso='sueldos-por-revisar']").getByRole("link", { name: "Revisar sueldos" }).click();
     await page.waitForURL(/\/panel\/contratos\/revisar-sueldos$/, { timeout: 30000 });
     await page.locator("[data-diferencia='17']").waitFor({ timeout: 30000 });
     await page.locator("[data-diferencia='17']").getByText("$6,000.00 a la quincena").waitFor();
+    // Periodicidad por confirmar: cómo se paga hoy y cómo quedaría como dice.
+    const per = page.locator("[data-periodicidad='7']");
+    await per.getByText("$5,000.00 «quincenal»").waitFor();
+    await per.getByText("Se paga como mensual: $5,000.00 al mes = $2,500.00 a la quincena").waitFor();
+    await per.getByText("Si es por quincena (como dice): $10,000.00 al mes = $5,000.00 a la quincena").waitFor();
+    await per.getByRole("button", { name: "Es por quincena (como dice)" }).waitFor();
+    await per.getByRole("button", { name: "Era mensual" }).waitFor();
     await page.locator("[data-diferencia='17']").getByText(/\$13,000\.00 al mes \(= \$6,500\.00 a la quincena\)/).waitFor();
     await revisarLectura(page, movil, `revisar sueldos ${sufijo}`);
     await captura(page, `revisar-sueldos-${sufijo}`, true);
     if (completo) {
+      await per.getByRole("button", { name: "Es por quincena (como dice)" }).click();
+      await page.getByRole("dialog").getByText(/queda en \$5,000\.00 quincenal \(\$10,000\.00 al mes = \$5,000\.00 a la quincena\)\. El monto no cambia/).waitFor();
+      await captura(page, `periodicidad-confirmar-${sufijo}`);
+      await page.getByRole("dialog").getByRole("button", { name: "Confirmar" }).click();
+      await page.locator("[data-seccion='periodicidad']").waitFor({ state: "detached", timeout: 15000 });
+      assert.deepEqual(E.pedidos.periodicidad[0], { id_empresa: 7, id_empleado: 18, id_contrato: 7, decision: "como_dice" });
       await page.locator("[data-diferencia='17']").getByRole("button", { name: "Usar el del contrato" }).click();
       await page.getByRole("dialog").getByText(/La ficha queda en \$6,500\.00 a la quincena/).waitFor();
       await page.getByRole("dialog").getByRole("button", { name: "Confirmar" }).click();

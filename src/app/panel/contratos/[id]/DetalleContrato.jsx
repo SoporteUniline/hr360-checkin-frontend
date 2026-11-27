@@ -130,6 +130,10 @@ export default function DetalleContrato({ id }) {
       clave: "diferencia", tono: "aviso",
       texto: <>La ficha dice {dinero(data.sueldo.diferencia_ficha.sueldo_ficha, { centavos: "siempre" })} {porPeriodo(data.sueldo.diferencia_ficha.periodo_ficha)} y el contrato {dinero(data.sueldo.diferencia_ficha.contrato_en_periodo_ficha, { centavos: "siempre" })}. Mientras no lo resuelvas no se autoriza la nómina. <Link href="/panel/contratos/revisar-sueldos" className="font-semibold text-[#1E40C4] underline">Revisar sueldos</Link></>,
     } : null,
+    data.sueldo?.periodicidad_por_confirmar ? {
+      clave: "periodicidad", tono: "aviso",
+      texto: <>Este contrato dice que se paga «{data.sueldo.periodicidad_por_confirmar.guardada ?? "sin periodicidad"}» y los cálculos lo están pagando como <b>mensual</b>. Confírmalo en <Link href="/panel/contratos/revisar-sueldos" className="font-semibold text-[#1E40C4] underline">Revisar sueldos</Link>; mientras tanto no se autoriza la nómina.</>,
+    } : null,
     data.otros_vigentes?.length ? {
       clave: "duplicado", tono: "error",
       texto: <>Esta persona tiene otro contrato vigente ({data.otros_vigentes.map((o) => o.folio).join(", ")}). Solo puede haber uno: <Link href="/panel/contratos/revisar-sueldos" className="font-semibold text-[#1E40C4] underline">elige cuál se queda</Link>.</>,
