@@ -98,7 +98,7 @@ jobs:
         run: node --test scripts/test-activos-modules.mjs scripts/test-activos-api.mjs
 
       - name: Asistencias — cálculo de horas y exportación
-        run: node --test scripts/test-fecha-input.mjs scripts/test-jornada-asistencia.mjs scripts/test-asistencias-hoy.mjs scripts/test-monitor.mjs scripts/test-situacion-hoy.mjs scripts/test-pausas-dia.mjs scripts/test-pin-rh.mjs scripts/test-pantalla-firma.mjs scripts/test-qr-imagen.mjs scripts/test-credencial.mjs scripts/test-consulta-periodo.mjs scripts/test-cambios-asistencia.mjs scripts/test-calendario-asistencia.mjs scripts/test-horas-extra.mjs scripts/test-horas-extra-dia.mjs scripts/test-reloj-dia.mjs scripts/test-tipos-goce.mjs scripts/test-quepaso-motivo.mjs scripts/test-monitor-equipo.mjs scripts/test-historial-asistencia.mjs scripts/test-semana-horas.mjs scripts/test-turnos-extra.mjs scripts/test-motivo-pendiente.mjs scripts/test-hora12.mjs scripts/test-masivo-asistencia.mjs scripts/test-control-horas-extra.mjs scripts/test-matriz-horas-extra.mjs scripts/test-permiso-horas.mjs scripts/test-horas-por-reponer.mjs scripts/test-fecha-hora.mjs scripts/test-activos.mjs scripts/test-evaluaciones.mjs scripts/test-reloj-recientes.mjs scripts/test-reloj-confirmacion.mjs scripts/test-facial-startup.mjs scripts/test-faceapi-browser.mjs scripts/test-cuerpo-bloqueado.mjs scripts/test-faceapi-preload.mjs scripts/test-local-clock-events.mjs scripts/test-diagnostico-reloj.mjs scripts/test-popups.mjs scripts/test-consentimiento.mjs scripts/test-nomina.mjs scripts/test-rutas-internas.mjs scripts/test-fetch-seguro.mjs scripts/test-pdf-marca.mjs scripts/test-html-seguro.mjs scripts/test-postulacion-token.mjs scripts/test-reporte-comida.mjs scripts/test-limite-legal.mjs scripts/test-whatsapp.mjs scripts/test-whatsapp-agente.mjs scripts/test-whatsapp-agenda.mjs scripts/test-whatsapp-adjuntos.mjs scripts/test-whatsapp-calendario.mjs scripts/test-whatsapp-salud.mjs scripts/test-modulos.mjs scripts/test-reclutamiento-adaptador.mjs scripts/test-proceso-whatsapp.mjs scripts/test-rostro-celular.mjs scripts/test-bolsa-trabajo.mjs scripts/test-cambios-pendientes.mjs scripts/test-rostro-guia.mjs scripts/test-rostro-poses.mjs scripts/test-rostro-reglas.mjs scripts/test-reloj-en-linea.mjs scripts/test-reloj-sonido.mjs scripts/test-encuadre-rostro.mjs scripts/test-pantalla-encendida.mjs scripts/test-retire-offline-worker.mjs scripts/test-mi-cuenta.mjs scripts/test-datos-vivos.mjs scripts/test-guion-landing.mjs scripts/test-clima.mjs scripts/test-clima-resultados.mjs scripts/test-clima-aviso.mjs scripts/test-clima-sugerencias.mjs scripts/test-whatsapp-atencion.mjs scripts/test-permisos.mjs scripts/test-whatsapp-lumo.mjs scripts/test-whatsapp-lumo-b.mjs scripts/test-aprobacion-whatsapp.mjs scripts/test-motivo-correccion.mjs scripts/test-calculos-lft.mjs scripts/test-mosaico.mjs scripts/test-contratos.mjs
+        run: node --test scripts/test-fecha-input.mjs scripts/test-jornada-asistencia.mjs scripts/test-asistencias-hoy.mjs scripts/test-monitor.mjs scripts/test-situacion-hoy.mjs scripts/test-pausas-dia.mjs scripts/test-pin-rh.mjs scripts/test-pantalla-firma.mjs scripts/test-qr-imagen.mjs scripts/test-credencial.mjs scripts/test-consulta-periodo.mjs scripts/test-cambios-asistencia.mjs scripts/test-calendario-asistencia.mjs scripts/test-horas-extra.mjs scripts/test-horas-extra-dia.mjs scripts/test-reloj-dia.mjs scripts/test-tipos-goce.mjs scripts/test-quepaso-motivo.mjs scripts/test-monitor-equipo.mjs scripts/test-historial-asistencia.mjs scripts/test-semana-horas.mjs scripts/test-turnos-extra.mjs scripts/test-motivo-pendiente.mjs scripts/test-hora12.mjs scripts/test-masivo-asistencia.mjs scripts/test-control-horas-extra.mjs scripts/test-matriz-horas-extra.mjs scripts/test-permiso-horas.mjs scripts/test-horas-por-reponer.mjs scripts/test-fecha-hora.mjs scripts/test-activos.mjs scripts/test-evaluaciones.mjs scripts/test-reloj-recientes.mjs scripts/test-reloj-confirmacion.mjs scripts/test-facial-startup.mjs scripts/test-faceapi-browser.mjs scripts/test-cuerpo-bloqueado.mjs scripts/test-faceapi-preload.mjs scripts/test-local-clock-events.mjs scripts/test-diagnostico-reloj.mjs scripts/test-popups.mjs scripts/test-consentimiento.mjs scripts/test-nomina.mjs scripts/test-rutas-internas.mjs scripts/test-fetch-seguro.mjs scripts/test-pdf-marca.mjs scripts/test-html-seguro.mjs scripts/test-postulacion-token.mjs scripts/test-reporte-comida.mjs scripts/test-limite-legal.mjs scripts/test-whatsapp.mjs scripts/test-whatsapp-agente.mjs scripts/test-whatsapp-agenda.mjs scripts/test-whatsapp-adjuntos.mjs scripts/test-whatsapp-calendario.mjs scripts/test-whatsapp-salud.mjs scripts/test-modulos.mjs scripts/test-reclutamiento-adaptador.mjs scripts/test-proceso-whatsapp.mjs scripts/test-rostro-celular.mjs scripts/test-bolsa-trabajo.mjs scripts/test-cambios-pendientes.mjs scripts/test-rostro-guia.mjs scripts/test-rostro-poses.mjs scripts/test-rostro-reglas.mjs scripts/test-reloj-en-linea.mjs scripts/test-reloj-sonido.mjs scripts/test-encuadre-rostro.mjs scripts/test-pantalla-encendida.mjs scripts/test-retire-offline-worker.mjs scripts/test-mi-cuenta.mjs scripts/test-datos-vivos.mjs scripts/test-guion-landing.mjs scripts/test-clima.mjs scripts/test-clima-resultados.mjs scripts/test-clima-aviso.mjs scripts/test-clima-sugerencias.mjs scripts/test-whatsapp-atencion.mjs scripts/test-permisos.mjs scripts/test-whatsapp-lumo.mjs scripts/test-whatsapp-lumo-b.mjs scripts/test-aprobacion-whatsapp.mjs scripts/test-motivo-correccion.mjs scripts/test-calculos-lft.mjs scripts/test-mosaico.mjs scripts/test-contratos.mjs scripts/test-formulario-contrato.mjs
 
       - name: Asistencias — horas extra con la jornada diaria (misma regla que el servidor)
         run: node --test scripts/test-extra-del-dia.mjs
@@ -145,6 +145,11 @@ jobs:
       - name: Centro de comunicados — reglas de presentación, liga del correo y service worker de push
         run: node --test scripts/test-comunicados.mjs
 
+      # (27/11/2026, INC-009) Fotos a formato web al elegirlas: tamaños por uso, pasos de calidad, WebP/JPEG/PNG, nombres,
+      # tipos (HEIC), EXIF y el 413 de nginx sin JSON.
+      - name: Fotos a formato web y 413 de nginx — reglas
+        run: node --test scripts/test-fotos-web.mjs
+
       # Verificación en navegador con el backend simulado (1440 y 390): panel, aviso emergente (no se cierra con clic al
       # fondo) y muro de Mi espacio. Compila con un backend inexistente para que nada salga a la red.
       - name: Centro de comunicados — verificación en navegador (Playwright)
@@ -157,6 +162,16 @@ jobs:
           npx next build
           mkdir -p capturas-comunicados
           CAPTURAS=capturas-comunicados node scripts/verify-comunicados.mjs
+
+      # (27/11/2026, INC-009) Con la compilación anterior: una foto JPEG de 4000×3000 (ruido, EXIF girada) en la portada
+      # del muro sale como WebP < 900 KB a lo derecho; un 413 de nginx en HTML muestra el mensaje claro; HEIC sin abrir avisa.
+      - name: Fotos a formato web — portada del muro (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-fotos-web
+          CAPTURAS=capturas-fotos-web node scripts/verify-fotos-web.mjs
 
       # (27/11/2026) Centro de ayuda: formato de las guías (frontmatter y Markdown del subconjunto), imágenes y enlaces que
       # existen, pantallas y fuentes que existen, nada interno en lo público y cobertura de pantallas (COBERTURA_ESTRICTA
@@ -222,13 +237,21 @@ jobs:
       # acción principal, firmar como empresa y mandar a firmar (flujo de firma digital), convenio de sueldo, «Revisar
       # sueldos» con la nómina bloqueada, editor de plantillas de contrato; letra ≥ 16/17 px, botones ≥ 48 px, sin
       # desborde ni fondos degradados. Reusa la compilación anterior.
-      - name: Contratos — vista de detalle, firmas, convenio y revisar sueldos (Playwright)
+      - name: Contratos — vista de detalle, editar en página, ventanas que no se cierran afuera, firmas, convenio y revisar sueldos (Playwright)
         env:
           NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
         run: |
           set -euo pipefail
           mkdir -p capturas-contratos
           CAPTURAS=capturas-contratos node scripts/verify-contratos.mjs
+
+      - name: Hojas de celular — no se cierran al tocar afuera; sí con la X, Esc o deslizando (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-hojas
+          CAPTURAS=capturas-hojas node scripts/verify-hojas.mjs
 
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación

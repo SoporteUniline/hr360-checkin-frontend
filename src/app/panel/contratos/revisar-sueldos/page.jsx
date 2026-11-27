@@ -2,7 +2,8 @@
 
 // «Revisar sueldos» (27/11/2026, decisión del dueño: nunca se cambia un sueldo en silencio). El sueldo vive en el
 // contrato vigente; si la ficha dice otro, RH elige cuál es el correcto. Mientras haya diferencias, la nómina de esas
-// personas no se crea ni se autoriza (se puede ver). Aquí también se corrigen las personas con más de un contrato vigente.
+// personas no se crea ni se autoriza (se puede ver). Aquí también se corrigen las personas con más de un contrato vigente
+// y (27/11/2026, opción C del dueño) se confirma la periodicidad de los contratos que los cálculos leían como mensuales.
 import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
@@ -13,6 +14,7 @@ import { TarjetaDetalle, BotonAccion, FilaDato, ListaDatos } from "@/components/
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { contratosApi } from "@/lib/contratosApi";
 import { dinero, porPeriodo, fechaCorta, TIPOS, mensajeDeError } from "@/lib/contratos/detalleContrato.mjs";
+import { textoPeriodicidad, explicaDecision } from "@/lib/contratos/periodicidadPorConfirmar.mjs";
 
 const OPCIONES = {
   usar_contrato: {
@@ -41,7 +43,10 @@ export default function RevisarSueldosPage() {
     setEnviando(true);
     setErrorDialogo("");
     try {
-      if (confirmar.tipo === "sueldo") {
+      if (confirmar.tipo === "periodicidad") {
+        const r = await contratosApi.resolverPeriodicidad({ idEmpresa, idEmpleado: confirmar.persona.id_empleado, idContrato: confirmar.persona.id_contrato, decision: confirmar.decision });
+        enqueueSnackbar(`Listo: el contrato ${confirmar.persona.folio ?? ""} quedó ${String(r.despues).toLowerCase()}.`, { variant: "success" });
+      } else if (confirmar.tipo === "sueldo") {
         await contratosApi.resolverSueldo({ idEmpresa, idEmpleado: confirmar.persona.id_empleado, decision: confirmar.decision });
         enqueueSnackbar(`Listo: el sueldo de ${confirmar.persona.nombre} ya coincide.`, { variant: "success" });
       } else {
@@ -59,13 +64,15 @@ export default function RevisarSueldosPage() {
 
   const diferencias = data?.diferencias ?? [];
   const duplicados = data?.duplicados ?? [];
+  const periodicidades = data?.periodicidades ?? [];
+  const tituloConfirmar = !confirmar ? "" : confirmar.tipo === "periodicidad" ? confirmar.texto : confirmar.tipo === "sueldo" ? OPCIONES[confirmar.decision].texto : "Conservar un contrato";
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 text-[17px] text-[#111827] lg:text-[16px]" data-vista="revisar-sueldos">
       <nav aria-label="Ruta"><Link href="/panel/contratos" className="inline-flex min-h-12 items-center text-[17px] font-semibold text-[#1E40C4] no-underline lg:text-[16px]">‹ Contratos</Link></nav>
       <header className="flex flex-col gap-1">
         <h1 className="m-0 text-[26px] font-bold lg:text-[28px]">Revisar sueldos</h1>
         <p className="m-0 max-w-3xl text-[#374151]">
-          El sueldo vive en el contrato vigente: es el que usan la nómina, los finiquitos y los aguinaldos. Estas personas tienen en su ficha un sueldo distinto. Elige cuál es el correcto; mientras no lo resuelvas, su nómina no se puede crear ni autorizar.
+          El sueldo vive en el contrato vigente: es el que usan la nómina, los finiquitos y los aguinaldos. Aquí decides los sueldos que hay que revisar; mientras no los resuelvas, la nómina de esas personas no se puede crear ni autorizar.
         </p>
       </header>
       {empresas.length > 1 ? (
@@ -83,10 +90,38 @@ export default function RevisarSueldosPage() {
         <p className="m-0 rounded-2xl bg-[#EEF2FF] px-4 py-3 text-[#1E3A8A]">Puedes ver las diferencias; para resolverlas falta que ADAMIA termine de actualizar tu cuenta.</p>
       ) : null}
 
-      {data && !diferencias.length && !duplicados.length ? (
+      {data && !diferencias.length && !duplicados.length && !periodicidades.length ? (
         <TarjetaDetalle titulo="Todo en orden" data-vacio>
           <p className="m-0 text-[#374151]">Los sueldos de las fichas coinciden con sus contratos vigentes y nadie tiene dos contratos vigentes.</p>
         </TarjetaDetalle>
+      ) : null}
+
+      {periodicidades.length ? (
+        <section aria-labelledby="h-periodicidad" className="flex flex-col gap-3" data-seccion="periodicidad">
+          <h2 id="h-periodicidad" className="m-0 text-[20px] font-bold">Periodicidad por confirmar ({periodicidades.length})</h2>
+          <p className="m-0 text-[#374151]">
+            Estos contratos dicen cada cuándo se paga de una forma que los cálculos no entienden (por ejemplo «quincenal» en minúsculas) y por eso hoy se pagan como <b>mensuales</b>. Confirma cada uno: el monto no cambia, solo cómo se lee. Mientras no lo hagas, su nómina no se puede crear ni autorizar.
+          </p>
+          {periodicidades.map((p) => {
+            const t = textoPeriodicidad(p);
+            return (
+              <TarjetaDetalle key={p.id_contrato} titulo={p.nombre} data-periodicidad={p.id_contrato}
+                accion={<Link href={`/panel/contratos/${p.id_contrato}`} className="inline-flex min-h-12 items-center font-semibold text-[#1E40C4]">Ver contrato {p.folio ?? ""}</Link>}>
+                <ListaDatos>
+                  <FilaDato etiqueta={`Guardado en el contrato ${p.folio ?? ""}`} valor={t.guardado} />
+                  <FilaDato etiqueta="Hoy" valor={t.hoy} tono="aviso" />
+                  {t.comoDice ? <FilaDato etiqueta="Como dice" valor={t.comoDice} /> : null}
+                </ListaDatos>
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                  {t.opciones.map((o, i) => (
+                    <BotonAccion key={o.decision} accion={{ clave: `periodicidad-${o.decision}`, texto: o.texto, tipo: i === 0 ? "contorno" : "normal",
+                      onClick: () => { setErrorDialogo(""); setConfirmar({ tipo: "periodicidad", decision: o.decision, texto: o.texto, persona: p }); } }} />
+                  ))}
+                </div>
+              </TarjetaDetalle>
+            );
+          })}
+        </section>
       ) : null}
 
       {diferencias.length ? (
@@ -138,9 +173,9 @@ export default function RevisarSueldosPage() {
       <Dialog open={Boolean(confirmar)} onOpenChange={(v) => { if (!v) setConfirmar(null); }}>
         <DialogContent className="w-[calc(100vw-24px)] max-w-lg rounded-3xl p-5 sm:p-6">
           <DialogHeader className="text-left">
-            <DialogTitle className="text-[20px] font-bold">{confirmar?.tipo === "sueldo" ? OPCIONES[confirmar.decision].texto : "Conservar un contrato"}</DialogTitle>
+            <DialogTitle className="text-[20px] font-bold">{tituloConfirmar}</DialogTitle>
             <DialogDescription className="text-[17px] text-[#374151] lg:text-[16px]">
-              {confirmar?.tipo === "sueldo"
+              {confirmar?.tipo === "periodicidad" ? explicaDecision(confirmar.persona, confirmar.decision) : confirmar?.tipo === "sueldo"
                 ? OPCIONES[confirmar.decision].explica(confirmar.persona)
                 : confirmar ? `Se queda vigente ${confirmar.persona.contratos.find((c) => Number(c.id) === Number(confirmar.conservar))?.folio}; los demás contratos de ${confirmar.persona.nombre} se terminan con el motivo «Duplicado».` : ""}
             </DialogDescription>

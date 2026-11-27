@@ -2,11 +2,15 @@
 // Portada del muro (agregado del dueño, 27/11/2026): una imagen por empresa + título y enlace (https) opcionales.
 // La usan «Moderar el muro» y el botón «Cambiar portada» encima de la portada del muro del panel (MuroPanel.jsx).
 // Backend: PUT /portada (multipart «imagen», «titulo», «enlace»), DELETE /portada. El servidor valida la imagen por bytes.
+// (27/11/2026) La foto se convierte a WebP (2000 px, < 900 KB) al elegirla y la vista previa es la ya convertida
+// (lib/imagenes/aWeb.mjs): así pasa el límite de 1 MB de nginx y no se sube la de 4 MB del celular.
 import { useEffect, useRef, useState } from "react";
 import { ImagePlus } from "lucide-react";
 import axios from "@/lib/axios";
 import { Ventana } from "@/components/avisos/Ventana";
-import { API, LIMITES, TIPOS_FOTO, enlaceSeguro, errorDe, validarPortada } from "@/lib/comunicados/comunicados.mjs";
+import { API, LIMITES, enlaceSeguro, errorDe, validarPortada } from "@/lib/comunicados/comunicados.mjs";
+import { ACEPTA_FOTOS } from "@/lib/imagenes/aWeb.mjs";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 import { MULTIPART, Campo, Mensaje, ariaCampo, botonPeligro, botonPrimario, botonSecundario, conEmpresa, entrada, tarjeta } from "./comun";
 
 /** marco: false dentro de una ventana (sin tarjeta ni título propio). */
@@ -20,14 +24,17 @@ export default function EditorPortada({ portada, empresa, alGuardar, marco = tru
   const [guardando, setGuardando] = useState(false);
   const [quitar, setQuitar] = useState(false);
   const archivo = useRef(null);
+  const { preparando, preparar } = usePrepararFoto("portada");
   useEffect(() => { setTitulo(portada?.titulo ?? ""); setEnlace(portada?.enlace ?? ""); }, [portada]);
   useEffect(() => () => { if (vista) URL.revokeObjectURL(vista); }, [vista]);
-  const elegir = (f) => {
+  const elegir = async (f) => {
     if (!f) return;
-    const e = validarPortada(f);
+    setErrores((x) => ({ ...x, imagen: undefined }));
+    const r = await preparar(f);
+    const e = r.error ?? validarPortada(r.archivo);
     setErrores((x) => ({ ...x, imagen: e }));
     if (e) return;
-    setImagen(f); setVista(URL.createObjectURL(f));
+    setImagen(r.archivo); setVista(URL.createObjectURL(r.archivo));
   };
   const guardar = async () => {
     const e = {};
@@ -53,13 +60,14 @@ export default function EditorPortada({ portada, empresa, alGuardar, marco = tru
   return (
     <section aria-labelledby={marco ? "portada-muro" : undefined} aria-label={marco ? undefined : "Portada del muro"} className={marco ? `${tarjeta} grid gap-3 p-4` : "grid gap-3"} data-portada-editor>
       {marco ? <h2 id="portada-muro" className="text-[15px] font-extrabold text-slate-900">Portada del muro</h2> : null}
-      <p className="text-[13px] text-slate-600">La foto fija arriba del muro de todos, como la portada de una página. JPG, PNG o WebP hasta 8 MB.</p>
+      <p className="text-[13px] text-slate-600">La foto fija arriba del muro de todos, como la portada de una página. Cualquier foto: se ajusta sola para que cargue rápido.</p>
       <div className="relative aspect-[3/1] overflow-hidden rounded-xl bg-slate-100">
         {/* eslint-disable-next-line @next/next/no-img-element -- vista previa local o URL firmada */}
         {src ? <img src={src} alt="Portada actual del muro" className="size-full object-cover" /> : <span className="grid size-full place-items-center text-sm text-slate-500">Sin portada</span>}
       </div>
-      <input ref={archivo} id="portada-imagen" type="file" accept={TIPOS_FOTO.join(",")} className="sr-only" onChange={(e) => { elegir(e.target.files?.[0]); e.target.value = ""; }} data-entrada-portada />
-      <label htmlFor="portada-imagen" className={`${botonSecundario} cursor-pointer`}><ImagePlus className="size-4" aria-hidden="true" />{src ? "Cambiar imagen" : "Elegir imagen"}</label>
+      <input ref={archivo} id="portada-imagen" type="file" accept={ACEPTA_FOTOS} className="sr-only" disabled={preparando} onChange={(e) => { elegir(e.target.files?.[0]); e.target.value = ""; }} data-entrada-portada />
+      <label htmlFor="portada-imagen" className={`${botonSecundario} cursor-pointer ${preparando ? "pointer-events-none opacity-60" : ""}`}><ImagePlus className="size-4" aria-hidden="true" />{preparando ? TEXTO_PREPARANDO : src ? "Cambiar imagen" : "Elegir imagen"}</label>
+      {preparando ? <p role="status" className="text-[13px] text-slate-600" data-preparando-foto>{TEXTO_PREPARANDO}</p> : null}
       {errores.imagen ? <p role="alert" className="text-[13px] text-red-700">{errores.imagen}</p> : null}
       <Campo id="portada-titulo" etiqueta="Título (opcional)">
         <input {...ariaCampo("portada-titulo")} className={entrada} maxLength={LIMITES.portadaTitulo} value={titulo} onChange={(e) => setTitulo(e.target.value)} />
@@ -69,7 +77,7 @@ export default function EditorPortada({ portada, empresa, alGuardar, marco = tru
       </Campo>
       <Mensaje mensaje={mensaje} />
       <div className="flex flex-wrap gap-2">
-        <button type="button" className={botonPrimario} disabled={guardando} onClick={guardar}>{guardando ? "Guardando…" : "Guardar portada"}</button>
+        <button type="button" className={botonPrimario} disabled={guardando || preparando} onClick={guardar}>{guardando ? "Guardando…" : "Guardar portada"}</button>
         {portada?.url ? <button type="button" className={botonPeligro} onClick={() => setQuitar(true)}>Quitar portada</button> : null}
       </div>
       <Ventana abierta={quitar} onOpenChange={setQuitar} titulo="Quitar la portada" className="sm:max-w-md">

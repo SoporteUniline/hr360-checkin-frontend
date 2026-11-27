@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import PopupTarjeta from "@/components/landing/popups/PopupTarjeta";
 import { PAGINAS, DISPARADORES, DISPOSITIVOS, ENLACES, VACIO, aInputFecha } from "./opciones";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 
 const OTRA = "__otra__";
 const campo = "grid gap-1.5";
@@ -20,6 +21,16 @@ export default function FormularioPopup({ abierto, popup, alCerrar, guardar }) {
   const [quitarImagen, setQuitarImagen] = useState(false);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
+  // (27/11/2026) La imagen se convierte a WebP (1600 px, < 900 KB) al elegirla y la vista previa es la convertida.
+  const { preparando, preparar } = usePrepararFoto("aviso");
+  const elegirImagen = async (elegida) => {
+    if (!elegida) { setImagen(null); return; }
+    setError("");
+    const foto = await preparar(elegida);
+    if (foto.error) { setError(foto.error); return; }
+    setImagen(foto.archivo);
+    setQuitarImagen(false);
+  };
 
   useEffect(() => {
     if (!abierto) return;
@@ -85,8 +96,9 @@ export default function FormularioPopup({ abierto, popup, alCerrar, guardar }) {
               <Textarea id="pv-texto" value={form.texto} onChange={cambia("texto")} maxLength={400} rows={3} />
             </div>
             <div className={campo}>
-              <Label htmlFor="pv-imagen">Imagen (JPG, PNG o WebP, hasta 3 MB)</Label>
-              <Input id="pv-imagen" type="file" accept="image/jpeg,image/png,image/webp" onChange={(e) => { setImagen(e.target.files?.[0] ?? null); setQuitarImagen(false); }} />
+              <Label htmlFor="pv-imagen">Imagen (cualquier foto; se ajusta sola a WebP)</Label>
+              <Input id="pv-imagen" type="file" accept="image/*" disabled={preparando} onChange={(e) => elegirImagen(e.target.files?.[0] ?? null)} />
+              {preparando ? <p role="status" className="text-sm text-slate-600">{TEXTO_PREPARANDO}</p> : null}
               {popup?.imagen_url && !imagen ? (
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" checked={quitarImagen} onChange={(e) => setQuitarImagen(e.target.checked)} /> Quitar la imagen actual
@@ -184,7 +196,7 @@ export default function FormularioPopup({ abierto, popup, alCerrar, guardar }) {
           {error ? <p role="alert" className="text-sm text-red-600 lg:col-span-2">{error}</p> : null}
           <DialogFooter className="lg:col-span-2">
             <Button type="button" variant="outline" onClick={alCerrar}>Cancelar</Button>
-            <Button type="submit" disabled={guardando}>{guardando ? "Guardando…" : "Guardar"}</Button>
+            <Button type="submit" disabled={guardando || preparando}>{guardando ? "Guardando…" : "Guardar"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

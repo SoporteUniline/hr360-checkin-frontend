@@ -20,6 +20,8 @@ import { postulaPorWhatsApp } from "@/lib/bolsaTrabajo.mjs";
 import { respuestasParaEnviar } from "@/lib/reclutamiento/respuestas.mjs";
 import IconoWhatsApp from "@/components/IconoWhatsApp";
 import PreguntasGrandes, { faltantes } from "./PreguntasGrandes";
+import { mensajeRechazoPorPeso } from "@/lib/errorSubida.mjs";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 
 // Mismas llamadas que la solicitud anterior: axios directo a NEXT_PUBLIC_RUTA_BACKEND (la instancia del panel manda JSON
 // por omisión y convertiría el FormData de /postulaciones/create).
@@ -32,7 +34,7 @@ export const celularDiez = (t) => {
 };
 const celularBonito = (d) => (d.length === 10 ? `${d.slice(0, 2)} ${d.slice(2, 6)} ${d.slice(6)}` : d);
 const CORREO = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const mensajeApi = (e, porDefecto) => e?.response?.data?.error || porDefecto;
+const mensajeApi = (e, porDefecto) => mensajeRechazoPorPeso(e) || e?.response?.data?.error || porDefecto;
 // Lleva el foco al primer campo marcado (en un grupo de botones, a su primera opción).
 export function enfocarPrimerError(raiz) {
   const el = raiz?.querySelector("[aria-invalid=true]");
@@ -91,6 +93,16 @@ function SolicitudCorta({ v, onEnviada }) {
   const [datos, setDatos] = useState({ nombre: "", telefono: "", correo: "" });
   const [respuestas, setRespuestas] = useState({});
   const [cv, setCv] = useState(null);
+  // (27/11/2026) Si el CV es una FOTO, se convierte a WebP (2400 px, se lee la letra; < 900 KB) al elegirla. El PDF va tal cual.
+  const { preparando, preparar } = usePrepararFoto("documento");
+  const [errorCv, setErrorCv] = useState("");
+  const elegirCv = async (elegido) => {
+    setErrorCv("");
+    if (!elegido || !elegido.type.startsWith("image/")) { setCv(elegido ?? null); return; }
+    const foto = await preparar(elegido);
+    if (foto.error) { setCv(null); setErrorCv(foto.error); return; }
+    setCv(foto.archivo);
+  };
   const [acepto, setAcepto] = useState(false);
   const [errores, setErrores] = useState({});
   const [sinResponder, setSinResponder] = useState([]);
@@ -231,13 +243,13 @@ function SolicitudCorta({ v, onEnviada }) {
         <span className="bt2-etiqueta" id="sol-cv-t">Tu CV <span className="bt2-opcional">(opcional)</span></span>
         <label className="bt2-btn secundario ancho bt2-archivo">
           <Paperclip aria-hidden="true" />
-          <span>{cv ? `Cambiar: ${cv.name}` : "Agregar mi CV (PDF o foto)"}</span>
-          <input type="file" className="sr-only" accept="application/pdf,image/*" aria-labelledby="sol-cv-t" disabled={enviando}
-            aria-invalid={errores.cv ? true : undefined} aria-describedby={errores.cv ? "sol-cv-error" : undefined}
-            onChange={(e) => setCv(e.target.files?.[0] ?? null)} />
+          <span role={preparando ? "status" : undefined}>{preparando ? TEXTO_PREPARANDO : cv ? `Cambiar: ${cv.name}` : "Agregar mi CV (PDF o foto)"}</span>
+          <input type="file" className="sr-only" accept="application/pdf,image/*" aria-labelledby="sol-cv-t" disabled={enviando || preparando}
+            aria-invalid={errores.cv || errorCv ? true : undefined} aria-describedby={errores.cv || errorCv ? "sol-cv-error" : undefined}
+            onChange={(e) => { elegirCv(e.target.files?.[0] ?? null); e.target.value = ""; }} />
         </label>
         {cv ? <button type="button" className="bt2-texto-btn" onClick={() => setCv(null)}>Quitar el CV</button> : null}
-        {errores.cv ? <p id="sol-cv-error" className="bt2-error">{errores.cv}</p> : null}
+        {errores.cv || errorCv ? <p id="sol-cv-error" className="bt2-error">{errores.cv || errorCv}</p> : null}
       </div>
       <div className="bt2-campo-grupo">
         <label className="bt2-acepto">
@@ -248,7 +260,7 @@ function SolicitudCorta({ v, onEnviada }) {
         {errores.acepto ? <p id="sol-acepto-error" className="bt2-error">{errores.acepto}</p> : null}
       </div>
       {aviso ? <p className="bt2-aviso-error" role="alert">{aviso}</p> : null}
-      <button type="submit" className="bt2-btn principal ancho" disabled={enviando}>
+      <button type="submit" className="bt2-btn principal ancho" disabled={enviando || preparando}>
         {enviando ? <Loader2 className="girar" aria-hidden="true" /> : null}Enviar postulación
       </button>
     </form>

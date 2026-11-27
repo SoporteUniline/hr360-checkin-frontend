@@ -12,6 +12,8 @@ import { createServer } from "node:net";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 
+// JPEG real de 2×1 px (con EXIF «girar 90°»): la conversión a WebP necesita una foto que el navegador pueda abrir.
+const JPEG_REAL = Buffer.from("/9j/4QDIRXhpZgAASUkqAAgAAAAHABIBAwABAAAABgAAABoBBQABAAAAYgAAABsBBQABAAAAagAAACgBAwABAAAAAgAAADEBAgACAAAAeAAAABMCAwABAAAAAQAAAGmHBAABAAAAcgAAAAAAAAA4YwAA6AMAADhjAADoAwAABgAAkAcABAAAADAyMTABkQcABAAAAAECAwAAoAcABAAAADAxMDABoAMAAQAAAP//AAACoAQAAQAAAAIAAAADoAQAAQAAAAEAAAAAAAAA/9sAQwBQNzxGPDJQRkFGWlVQX3jIgnhubnj1r7mRyP///////////////////////////////////////////////////9sAQwFVWlp4aXjrgoLr/////////////////////////////////////////////////////////////////////////8AAEQgAAQACAwEiAAIRAQMRAf/EABUAAQEAAAAAAAAAAAAAAAAAAAAE/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/EABQBAQAAAAAAAAAAAAAAAAAAAAD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwC0AH//2Q==", "base64");
 const REPO = process.cwd();
 const OUT = process.env.CAPTURAS || null;
 const API_ORIGEN = "https://api.prueba.invalid";
@@ -415,10 +417,12 @@ async function recorrido(browser, { ancho, alto, sufijo }) {
   await revisar(pp, "main", { movil });
   await captura(pp, `4b-preingreso-documentos-${sufijo}`);
   // Subir el comprobante (foto) y escribir el NSS.
-  await pp.locator("[data-entrada-camara='domicilio-1']").setInputFiles({ name: "agua.jpg", mimeType: "image/jpeg", buffer: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]) });
+  // (27/11/2026) La foto se convierte a WebP al tomarla (lib/imagenes/aWeb.mjs): debe ser un JPEG de verdad (2×1 px).
+  await pp.locator("[data-entrada-camara='domicilio-1']").setInputFiles({ name: "agua.jpg", mimeType: "image/jpeg", buffer: JPEG_REAL });
   await pp.locator("[data-documento='domicilio'][data-estado='recibido']").waitFor();
   const subida = S.pedidos.find((x) => x.ruta === `/publico/${TOKEN}/documentos`);
   assert.match(subida.cuerpo.texto, /name="clave"\r\n\r\ndomicilio/);
+  assert.match(subida.cuerpo.texto, /name="archivo"; filename="agua\.webp"\r\nContent-Type: image\/webp/, "la foto del documento sale en WebP");
   await pp.locator("[data-documento='nss']").getByRole("button", { name: "Escribir el número" }).click();
   await pp.getByLabel("Número de seguridad social (11 dígitos)").fill("12345678901");
   await pp.locator("[data-documento='nss']").getByRole("button", { name: "Guardar" }).click();

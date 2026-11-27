@@ -23,7 +23,7 @@ Recursos Humanos y el dueño.
 ## Antes de empezar
 
 - La persona debe estar registrada.
-- Formatos permitidos: **PDF, JPG, PNG, WEBP, DOC y DOCX**, de **máximo 10 MB**.
+- Formatos permitidos: **PDF, fotos (JPG, PNG, WEBP o HEIC), DOC y DOCX**, de **máximo 10 MB**. Una foto se ajusta sola al elegirla (formato WebP, se sigue leyendo la letra) y verás «Preparando foto…» un momento.
 
 ## Dónde está
 
@@ -83,6 +83,7 @@ Sube el nuevo con su nueva fecha de vencimiento. Si ya no necesitas el anterior,
 
 - **…el archivo pesa más de 10 MB:** verás «El archivo supera el límite de 10 MB. Comprime el archivo o usa uno más pequeño.»
 - **…el tipo de archivo no está permitido:** verás «Tipo de archivo no permitido. Solo se aceptan: PDF, JPG, PNG, WEBP, DOC, DOCX.»
+- **…sale «El archivo pesa demasiado para subirlo. Prueba con uno más ligero.»:** el servidor no aceptó un archivo tan grande; usa uno más ligero.
 - **…olvido la categoría, el nombre o la fecha de vencimiento:** el sistema te avisa antes de subir.
 - **…no tengo permiso:** verás «No tienes permisos para subir documentos a este empleado.»
 

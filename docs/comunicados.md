@@ -18,6 +18,10 @@ Moderación) + portada del muro y publicaciones fijadas. Reglas y API: `docs/com
 | Publicar (empleado → pendiente de aprobación; jefe → también a su equipo) | `/empleado/panel/muro/publicar` | `NuevaPublicacion.jsx` |
 | Liga de correos y push | `/mi-espacio/comunicados/<id>` (middleware) | empleado → detalle; panel → `/panel/muro` |
 
+**Fotos (27/11/2026, INC-009):** la portada, las fotos de Redactar y las de «Publicar» se convierten a WebP (2000 px,
+< 900 KB, enderezadas, sin metadatos) al elegirlas; la vista previa es la convertida. Un 413 de nginx sin JSON dice
+«El archivo pesa demasiado para subirlo. Prueba con uno más ligero.». Ver `docs/fotos-web.md`.
+
 ## Muro del panel (27/11/2026, pedido del dueño)
 - **Primera pantalla**: el login, el middleware y el reloj mandan a `/panel`; `src/lib/inicioPanel.mjs` decide: el muro
   (`/panel/muro`) si la empresa tiene el módulo `comunicados` y el usuario puede verlo (dueño, RH o acceso con «ver» o

@@ -13,6 +13,7 @@ import { useCapturaRostro } from "@/components/rostro/useCapturaRostro";
 import CapturaGuiada from "@/components/rostro/CapturaGuiada";
 import FirmaGrande from "@/components/firma/FirmaGrande";
 import { ESTADO_DOC, PASOS, contarListos, errorCampo, errorPublico, pasoInicial, rutaPublica } from "@/lib/induccion/induccion.mjs";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 
 // Instancia sin sesión: esta liga no usa ni manda la sesión del navegador.
 const api = axios.create({ baseURL: process.env.NEXT_PUBLIC_RUTA_BACKEND });
@@ -113,17 +114,27 @@ function Documento({ d, subir, guardarDato, datos }) {
   const [escribir, setEscribir] = useState(false);
   const [error, setError] = useState("");
   const [subiendo, setSubiendo] = useState(false);
+  // (27/11/2026) La foto del documento (no el PDF) se convierte a WebP de 2400 px (se lee la letra chica) y < 900 KB.
+  // La foto de evidencia de la firma y el rostro NO pasan por aquí (docs/fotos-web.md).
+  const { preparando, preparar } = usePrepararFoto("documento");
   const camara = useRef({});
   const archivo = useRef({});
   const listo = ["recibido", "con_dato", "aprobado"].includes(d.estado);
   const caras = d.caras === 2 ? [1, 2] : [1];
   const elegir = async (cara, e) => {
-    const file = e.target.files?.[0];
+    const elegido = e.target.files?.[0];
     e.target.value = "";
-    if (!file) return;
+    if (!elegido) return;
+    setError("");
+    const esPdf = elegido.type === "application/pdf" || /\.pdf$/i.test(elegido.name ?? "");
+    let file = elegido;
+    if (!esPdf) {
+      const foto = await preparar(elegido);
+      if (foto.error) { setError(foto.error); return; }
+      file = foto.archivo;
+    }
     if (file.size > 10 * 1024 * 1024) { setError("El archivo pesa más de 10 MB. Toma la foto otra vez o sube un PDF más ligero."); return; }
     setSubiendo(true);
-    setError("");
     const r = await subir(d.clave, cara, file);
     setSubiendo(false);
     if (!r.ok) setError(r.texto);
@@ -157,7 +168,7 @@ function Documento({ d, subir, guardarDato, datos }) {
           {caras.map((cara) => (
             <span key={cara}>
               <input ref={(el) => { archivo.current[cara] = el; }} type="file" accept="image/*,application/pdf" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => elegir(cara, e)} data-entrada-archivo={`${d.clave}-${cara}`} />
-              <button type="button" disabled={subiendo} onClick={() => archivo.current[cara]?.click()} className="min-h-11 rounded-xl px-3 text-[15px] font-semibold text-[#2563EB] underline">
+              <button type="button" disabled={subiendo || preparando} onClick={() => archivo.current[cara]?.click()} className="min-h-11 rounded-xl px-3 text-[15px] font-semibold text-[#2563EB] underline">
                 {d.con_dato || d.estado === "con_dato" ? "Subir constancia" : `Cambiar${d.caras === 2 ? (cara === 1 ? " frente" : " vuelta") : ""}`}
               </button>
             </span>
@@ -172,19 +183,19 @@ function Documento({ d, subir, guardarDato, datos }) {
             return (
               <div key={cara} className="grid gap-2">
                 <input ref={(el) => { camara.current[cara] = el; }} type="file" accept="image/*" capture="environment" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => elegir(cara, e)} data-entrada-camara={`${d.clave}-${cara}`} />
-                <input ref={(el) => { archivo.current[cara] = el; }} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => elegir(cara, e)} data-entrada-archivo={`${d.clave}-${cara}`} />
-                <button type="button" disabled={subiendo} onClick={() => camara.current[cara]?.click()} className={subida ? btnSecundario : btnPrimario}>
+                <input ref={(el) => { archivo.current[cara] = el; }} type="file" accept="image/*,application/pdf" className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => elegir(cara, e)} data-entrada-archivo={`${d.clave}-${cara}`} />
+                <button type="button" disabled={subiendo || preparando} onClick={() => camara.current[cara]?.click()} className={subida ? btnSecundario : btnPrimario}>
                   {subida ? <Check className="size-5" aria-hidden="true" /> : <Camera className="size-5" aria-hidden="true" />}{subida ? `Cambiar ${etiqueta}`.trim() : `Tomar foto${etiqueta ? ` · ${etiqueta}` : ""}`}
                 </button>
-                {caras.length === 1 ? <button type="button" disabled={subiendo} onClick={() => archivo.current[cara]?.click()} className={btnSecundario}><FileUp className="size-5" aria-hidden="true" />Subir archivo o PDF</button> : null}
+                {caras.length === 1 ? <button type="button" disabled={subiendo || preparando} onClick={() => archivo.current[cara]?.click()} className={btnSecundario}><FileUp className="size-5" aria-hidden="true" />Subir archivo o PDF</button> : null}
               </div>
             );
           })}
-          {caras.length === 2 ? <button type="button" disabled={subiendo} onClick={() => archivo.current[d.caras_subidas?.includes(1) ? 2 : 1]?.click()} className={`${btnSecundario} col-span-2`}><FileUp className="size-5" aria-hidden="true" />Subir archivo o PDF</button> : null}
+          {caras.length === 2 ? <button type="button" disabled={subiendo || preparando} onClick={() => archivo.current[d.caras_subidas?.includes(1) ? 2 : 1]?.click()} className={`${btnSecundario} col-span-2`}><FileUp className="size-5" aria-hidden="true" />Subir archivo o PDF</button> : null}
           {d.dato && !escribir ? <button type="button" onClick={() => setEscribir(true)} className={btnSecundario}><Plus className="size-5" aria-hidden="true" />Escribir el número</button> : null}
         </div>
       ) : null}
-      {subiendo ? <p role="status" className="text-[13px] text-slate-600">Subiendo…</p> : null}
+      {preparando ? <p role="status" className="text-[13px] text-slate-600" data-preparando-foto>{TEXTO_PREPARANDO}</p> : subiendo ? <p role="status" className="text-[13px] text-slate-600">Subiendo…</p> : null}
       {error ? <p role="alert" className="text-[13px] font-medium text-red-700">{error}</p> : null}
     </li>
   );

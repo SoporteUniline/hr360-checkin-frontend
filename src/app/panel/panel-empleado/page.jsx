@@ -248,6 +248,7 @@ export default function PanelEmpleadoPage() {
               </SheetTrigger>
               <SheetContent
                 side="left"
+                menu
                 className="flex w-[280px] flex-col p-0 sm:w-[320px]"
               >
                 <VisuallyHidden>

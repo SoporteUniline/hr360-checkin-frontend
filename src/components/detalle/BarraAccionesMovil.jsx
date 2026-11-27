@@ -26,7 +26,7 @@ export default function BarraAccionesMovil({ primaria, secundaria = null, mas = 
         ) : null}
       </div>
       <Sheet open={abierta} onOpenChange={setAbierta}>
-        <SheetContent side="bottom" className="rounded-t-3xl px-4 pb-6">
+        <SheetContent side="bottom" menu className="rounded-t-3xl px-4 pb-6">
           <SheetHeader className="px-0">
             <SheetTitle className="text-[20px] font-bold">{titulo}</SheetTitle>
             <SheetDescription className="text-[17px] text-[#4B5563]">Elige qué quieres hacer con este registro.</SheetDescription>

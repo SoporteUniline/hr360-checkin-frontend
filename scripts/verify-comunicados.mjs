@@ -447,6 +447,8 @@ async function recorridoPanel(browser, { ancho, alto, sufijo }) {
   await page.locator("[data-entrada-fotos]").setInputFiles([{ name: "f1.png", mimeType: "image/png", buffer: PNG }, { name: "f2.png", mimeType: "image/png", buffer: PNG }]);
   await page.locator("[data-entrada-pdf]").setInputFiles({ name: "checklist-proteccion-civil.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n%%EOF") });
   await page.locator("[data-pdf-elegido]").getByText("checklist-proteccion-civil.pdf").waitFor();
+  // (27/11/2026) Las fotos se convierten a WebP al elegirlas (lib/imagenes/aWeb.mjs): se espera a que estén listas.
+  await page.locator("[data-foto-nueva]").nth(1).waitFor({ timeout: 15000 });
   assert.equal(await page.locator("[data-foto-nueva]").count(), 2);
   await page.getByLabel("Video de YouTube (opcional)").fill("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
   await page.locator("[data-youtube-previa='dQw4w9WgXcQ']").waitFor();
@@ -465,11 +467,12 @@ async function recorridoPanel(browser, { ancho, alto, sufijo }) {
   await page.locator("[data-pantalla='seguimiento']").waitFor({ timeout: 30000 });
   const post = ultimo("POST", "/");
   assert.ok(post.cuerpo.multipart, "multipart");
+  assert.match(post.cuerpo.texto, /name="fotos"; filename="f1\.webp"\r\nContent-Type: image\/webp/, "las fotos salen en WebP");
   const d = post.cuerpo.datos;
   assert.deepEqual([d.empresa, d.tipo, d.nivel, d.publicar, d.youtube_url, d.recordatorio_auto, d.recordatorios_max], [7, "auditoria", "confirmacion", "ahora", "https://www.youtube.com/watch?v=dQw4w9WgXcQ", true, 3]);
   assert.deepEqual(d.audiencia, { todos: false, sucursales: ["Centro"], areas: [], puestos: [], empleados: [] });
   assert.deepEqual(d.canales, { push: true, correo: true, popup: true });
-  assert.equal((post.cuerpo.texto.match(/name="fotos"; filename="f\d\.png"/g) ?? []).length, 2);
+  assert.equal((post.cuerpo.texto.match(/name="fotos"; filename="f\d\.webp"/g) ?? []).length, 2);
   assert.match(post.cuerpo.texto, /name="pdf"; filename="checklist-proteccion-civil\.pdf"\r\nContent-Type: application\/pdf/);
 
   // ——— 3. Seguimiento ———
@@ -540,7 +543,7 @@ async function recorridoPanel(browser, { ancho, alto, sufijo }) {
   await page.getByRole("button", { name: "Guardar portada" }).click();
   await page.getByText("Portada guardada: ya se ve arriba del muro.").waitFor();
   const portada = ultimo("PUT", "/portada").cuerpo.texto;
-  assert.match(portada, /name="imagen"; filename="posada\.png"/);
+  assert.match(portada, /name="imagen"; filename="posada\.webp"\r\nContent-Type: image\/webp/, "la portada sale en WebP");
   assert.match(portada, /name="enlace"\r\n\r\nhttps:\/\/uniline\.mx\/posada/);
   await captura(page, `5b-panel-reglas-portada-${sufijo}`);
 

@@ -50,7 +50,7 @@ La tarjeta **Lista de verificación por numeral** muestra cada obligación con s
 
 1. En **Evidencias con archivo** presiona **Subir evidencia**.
 2. Elige la **Obligación**: política firmada o publicada, difusión de la política, difusión de resultados, constancia de canalización (Guía I), capacitación o sensibilización, avance del programa de intervención, atención de quejas del buzón u otra evidencia.
-3. Escribe la **Descripción** y la **Fecha**, y elige el **Archivo** (PDF o imagen de hasta 10 MB).
+3. Escribe la **Descripción** y la **Fecha**, y elige el **Archivo** (PDF de hasta 10 MB, o una foto: se ajusta sola a formato WebP y verás «Preparando foto…» un momento).
 4. Presiona **Guardar evidencia**.
 
 Los archivos se guardan en almacenamiento privado y solo los ven RH y el dueño. Usa **Ver** para abrir uno. Si quitas una evidencia del expediente, el archivo se conserva en el historial.
@@ -100,7 +100,7 @@ El formulario marca lo que falta («Describe la evidencia.», «Elige la fecha.�
 
 ### …el archivo pesa más de 10 MB
 
-No se sube. Reduce su tamaño o súbelo en partes.
+No se sube. Reduce su tamaño o súbelo en partes. Si ves «El archivo pesa demasiado para subirlo. Prueba con uno más ligero.», el servidor no aceptó un archivo tan grande: usa uno más ligero.
 
 ## Relacionado
 

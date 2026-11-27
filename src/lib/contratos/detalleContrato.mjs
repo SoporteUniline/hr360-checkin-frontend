@@ -121,14 +121,22 @@ export function lineaDeTiempo(eventos = []) {
   }));
 }
 
-/** Sueldo diario y mensual en palabras para la tarjeta «Sueldo». */
+/**
+ * Sueldo diario y mensual en palabras para la tarjeta «Sueldo». El monto de cada pago lo da el servidor
+ * (`sueldo.pago = { periodicidad, monto }`, la misma conversión que la nómina: D.sueldoEnPeriodo). Antes se ponía el
+ * sueldo guardado junto a «Pago quincenal» aunque los cálculos lo leyeran como mensual («$5,000 al mes · Pago
+ * quincenal · $5,000.00»). Sin `pago` (servidor anterior) solo se pone el monto si la periodicidad es una que los
+ * cálculos reconocen; si no, se omite en lugar de mostrar una cifra que no es la que se paga.
+ */
 export function sueldoTarjeta(sueldo) {
   if (!sueldo) return null;
-  const principal = sueldo.periodicidad_pago === "Mensual" ? sueldo.salario_base : sueldo.salario_mensual;
+  const pago = sueldo.pago ?? (POR_PERIODO[sueldo.periodicidad_pago] ? { periodicidad: sueldo.periodicidad_pago, monto: sueldo.salario_base } : null);
+  const mensual = sueldo.salario_mensual ?? (sueldo.periodicidad_pago === "Mensual" ? sueldo.salario_base : null);
   return {
-    principal: `${dinero(principal)}`,
+    principal: `${dinero(mensual)}`,
     sufijo: "al mes",
-    detalle: [pagoTexto(sueldo.periodicidad_pago), sueldo.periodicidad_pago !== "Mensual" ? `${dinero(sueldo.salario_base, { centavos: "siempre" })} ${porPeriodo(sueldo.periodicidad_pago)}` : null,
+    detalle: [pagoTexto(pago?.periodicidad ?? sueldo.periodicidad_pago),
+      pago && pago.periodicidad !== "Mensual" ? `${dinero(pago.monto, { centavos: "siempre" })} ${porPeriodo(pago.periodicidad)}` : null,
       `${dinero(sueldo.salario_diario, { centavos: "siempre" })} diarios`].filter(Boolean).join(" · "),
   };
 }

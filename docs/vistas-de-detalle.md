@@ -34,7 +34,22 @@ Piezas en `src/components/detalle/` (importa desde `@/components/detalle`):
    (`break-words`) y las tablas del documento son `table-fixed`.
 6. **La fila de la lista abre el detalle** (`/modulo/[id]`), con un menú «Más» para lo demás; los enlaces viejos con
    `?id=` redirigen al detalle.
-7. Los **datos y las reglas** los da el servidor (en contratos: sueldo vigente, firmas, historial); las vistas solo
+7. **Evitar ventanas flotantes: preferir una página** (27/11/2026, del dueño: «hay que evitar en lo que podamos ventanas
+   flotantes, o si sí se hacen que estén bonitas, por tabs, y que no se cierren más que con Esc o Cancelar o Guardar o la
+   X»). Editar o crear un registro es una página con el mismo encabezado, **pestañas** y Guardar / Cancelar siempre a la
+   vista (`BarraAccionesMovil` en celular), con aviso si sales con cambios sin guardar (`useGuardiaSalida`). Ejemplo:
+   `/panel/contratos/[id]/editar` y `/panel/contratos/nuevo` (`src/app/panel/contratos/formulario/`). Si de verdad hace
+   falta una ventana (una confirmación corta), con pestañas si tiene varias secciones, y **solo se cierra con Esc,
+   Cancelar, Guardar o la X**: un clic o toque afuera no la cierra. Lo hace `src/components/ui/dialog.jsx` para TODAS
+   las ventanas; `alert-dialog.jsx` (Radix) ya no se cerraba afuera; `sheet.jsx` igual, salvo los paneles que son un
+   **menú** (`<SheetContent menu>`: menú lateral, «Más acciones», menú de la página pública), que sí se cierran al tocar
+   afuera como cualquier menú. Los menús y listas desplegables (Popover, DropdownMenu, Select) no son ventanas.
+   Las hojas de celular (`drawer.jsx`, vaul: filtros, detalle) tampoco: se cierran con su X o botón de cerrar, con Esc o
+   deslizándolas hacia abajo; toda hoja sin botón de cerrar visible lleva una X de 48 px. Las que son menú
+   (`<DrawerContent menu>`: menú del Navbar en celular) sí se cierran al tocar afuera.
+   La ventana compartida «Tienes cambios sin guardar» (`CambiosPendientes.jsx`) usa letra de 16 px y botones de 48 px.
+   Pruebas: `scripts/verify-contratos.mjs` (paso 2c) y `scripts/verify-hojas.mjs` (hojas de celular).
+8. Los **datos y las reglas** los da el servidor (en contratos: sueldo vigente, firmas, historial); las vistas solo
    los ponen en palabras con funciones puras probadas (`src/lib/contratos/detalleContrato.mjs`).
 
 ## Cómo se arma (ejemplo: contrato)
@@ -50,4 +65,5 @@ Piezas en `src/components/detalle/` (importa desde `@/components/detalle`):
 ```
 
 Verificación en navegador: `scripts/verify-contratos.mjs` (1440 / 390 / 360): tamaños de letra, alto de botones,
-sin desborde horizontal y sin degradados.
+sin desborde horizontal y sin degradados; también la página de editar (solo manda lo que cambió) y las ventanas que no se
+cierran afuera. Las reglas del formulario: `node --test scripts/test-formulario-contrato.mjs`.

@@ -24,7 +24,7 @@ Recursos Humanos y el dueño de la cuenta. Para el empleado, el recibo en PDF mu
 
 El cálculo usa el **sueldo del contrato vigente** de cada persona; si no tiene contrato vigente, el de su ficha (y el recibo lo marca «sin contrato vigente»). De la ficha usa también el periodo de pago (con él entra a la nómina), el medio de pago y, si es mixto, cuánto va por transferencia, y sus horas por día. De **Asistencias** usa el horario, las checadas, faltas, permisos, festivos y horas extra autorizadas.
 
-> **Importante:** si el sueldo de la ficha de alguien no coincide con el de su contrato vigente, la nómina **no se puede crear ni autorizar** hasta que decidas cuál es el correcto en **Revisar sueldos**. Puedes ver la nómina mientras tanto. Ve [Contratos laborales](/ayuda/documentos/contratos#como-revisar-sueldos).
+> **Importante:** si el sueldo de la ficha de alguien no coincide con el de su contrato vigente, la nómina **no se puede crear ni autorizar** hasta que decidas cuál es el correcto en **Revisar sueldos**. Lo mismo si su contrato tiene la **periodicidad por confirmar** (se estaba pagando como mensual). Puedes ver la nómina mientras tanto. Ve [Contratos laborales](/ayuda/documentos/contratos#como-revisar-sueldos).
 
 ![Aviso de sueldos por revisar en la nómina](/ayuda/capturas/nomina/nomina-sueldos-por-revisar.webp "La nómina no se autoriza con sueldos por revisar")
 

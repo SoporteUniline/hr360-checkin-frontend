@@ -6,6 +6,7 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from "@/components/ui/drawer";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function FilterSection({ title, options, selected, onChange }) {
@@ -85,8 +86,8 @@ export default function MobileEmpleadosFiltersDrawer({
         <div className="w-10 h-1.5 rounded-full bg-gray-300 mx-auto mt-3 shrink-0" />
 
         <div className="px-6 pt-4 pb-2 shrink-0">
-          <div className="flex items-start justify-between gap-3">
-            <div>
+          <div className="flex items-start gap-3">
+            <div className="mr-auto">
               <DrawerTitle className="text-xl font-bold text-gray-900">
                 Filtros
               </DrawerTitle>
@@ -100,6 +101,15 @@ export default function MobileEmpleadosFiltersDrawer({
               className="text-sm font-medium text-blue-600"
             >
               Limpiar
+            </button>
+            <button
+              type="button"
+              aria-label="Cerrar filtros"
+              onClick={() => onOpenChange(false)}
+              data-cerrar-hoja
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-700 active:bg-gray-50"
+            >
+              <X className="h-6 w-6" aria-hidden="true" />
             </button>
           </div>
         </div>

@@ -3,13 +3,16 @@
 // que RH la apruebe (si la empresa lo permite; si no, el servidor responde 403 y se dice aquí). Jefe con equipo: además
 // puede publicar directo SOLO a su equipo (lo valida el servidor con su sesión). Texto plano, fotos (hasta 10) y video
 // de YouTube. Backend: POST /checador/comunicados/mi/publicaciones (multipart) · jefe: POST /checador/comunicados.
+// (27/11/2026) Cada foto se convierte a WebP (2000 px, < 900 KB) al elegirla (lib/imagenes/aWeb.mjs).
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR, { useSWRConfig } from "swr";
 import { ArrowLeft, ImagePlus, Trash2 } from "lucide-react";
 import axios from "@/lib/axios";
 import useMonitorEquipo from "@/hooks/useMonitorEquipo";
-import { API, API_MI, LIMITES, RUTA_MURO, TIPOS_FOTO, errorDe, urlMiniatura, validarArchivos, youtubeId } from "@/lib/comunicados/comunicados.mjs";
+import { API, API_MI, LIMITES, RUTA_MURO, errorDe, urlMiniatura, validarArchivos, youtubeId } from "@/lib/comunicados/comunicados.mjs";
+import { ACEPTA_FOTOS } from "@/lib/imagenes/aWeb.mjs";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 import { MULTIPART, Campo, ariaCampo, entrada, get, opcionesSwr } from "./comun";
 
 const ESTADO = {
@@ -51,6 +54,8 @@ export default function NuevaPublicacion() {
   const [youtube, setYoutube] = useState("");
   const [confirmacion, setConfirmacion] = useState(false);
   const [fotos, setFotos] = useState([]);
+  const [errorConversion, setErrorConversion] = useState(null);
+  const { preparando, prepararVarias } = usePrepararFoto("publicacion");
   const [errores, setErrores] = useState({});
   const [mensaje, setMensaje] = useState(null);
   const [enviando, setEnviando] = useState(false);
@@ -58,12 +63,17 @@ export default function NuevaPublicacion() {
   const urls = useRef([]);
   useEffect(() => () => urls.current.forEach((u) => URL.revokeObjectURL(u)), []);
   const yt = youtubeId(youtube);
-  const errFotos = validarArchivos({ fotos: fotos.map((f) => f.archivo) }).fotos;
+  const errFotos = validarArchivos({ fotos: fotos.map((f) => f.archivo) }).fotos ?? errorConversion;
   const equipo = esJefe && destino === "equipo";
 
-  const agregar = (lista) => {
-    const nuevas = [...lista].map((archivo) => { const url = URL.createObjectURL(archivo); urls.current.push(url); return { clave: `${archivo.name}-${archivo.size}-${Math.random()}`, archivo, url }; });
+  const agregar = async (lista) => {
+    const elegidas = [...lista];
+    if (!elegidas.length) return;
+    setErrorConversion(null);
+    const { listas, errores: fallas } = await prepararVarias(elegidas);
+    const nuevas = listas.map(({ archivo }) => { const url = URL.createObjectURL(archivo); urls.current.push(url); return { clave: `${archivo.name}-${archivo.size}-${Math.random()}`, archivo, url }; });
     setFotos((x) => [...x, ...nuevas]);
+    if (fallas.length) setErrorConversion(fallas.join(" "));
   };
   const publicar = async (e) => {
     e.preventDefault();
@@ -72,7 +82,7 @@ export default function NuevaPublicacion() {
     if (cuerpo.length > LIMITES.cuerpo) err.cuerpo = `Máximo ${LIMITES.cuerpo} caracteres.`;
     if (youtube.trim() && !yt) err.youtube = "Pega un enlace de YouTube (youtube.com o youtu.be).";
     setErrores(err);
-    if (Object.keys(err).length || errFotos) return;
+    if (Object.keys(err).length || validarArchivos({ fotos: fotos.map((f) => f.archivo) }).fotos || preparando) return;
     const datos = equipo
       ? { tipo: "publicacion", titulo: titulo.trim(), cuerpo: cuerpo.trim(), nivel: confirmacion ? "confirmacion" : "normal", youtube_url: yt ? youtube.trim() : null, permite_reacciones: true, permite_comentarios: true, canales: { push: true, correo: false, popup: confirmacion }, audiencia: { todos: true, sucursales: [], areas: [], puestos: [], empleados: [] }, publicar: "ahora", recordatorio_auto: confirmacion, recordatorios_max: confirmacion ? 3 : 0 }
       : { tipo: "publicacion", titulo: titulo.trim(), cuerpo: cuerpo.trim(), youtube_url: yt ? youtube.trim() : null };
@@ -113,8 +123,9 @@ export default function NuevaPublicacion() {
           <textarea {...ariaCampo("pub-cuerpo", errores.cuerpo, true)} rows={5} className={`${entrada} py-2 text-base`} maxLength={LIMITES.cuerpo} value={cuerpo} onChange={(e) => { setCuerpo(e.target.value); setErrores((x) => ({ ...x, cuerpo: undefined })); }} />
         </Campo>
         <div className="grid gap-2">
-          <input id="pub-fotos" type="file" accept={TIPOS_FOTO.join(",")} multiple className="sr-only" onChange={(e) => { agregar(e.target.files ?? []); e.target.value = ""; }} />
-          <label htmlFor="pub-fotos" className={`${boton} w-fit cursor-pointer border border-slate-300 bg-white text-slate-800`}><ImagePlus className="size-5" aria-hidden="true" />Agregar fotos</label>
+          <input id="pub-fotos" type="file" accept={ACEPTA_FOTOS} multiple className="sr-only" disabled={preparando} onChange={(e) => { agregar(e.target.files ?? []); e.target.value = ""; }} />
+          <label htmlFor="pub-fotos" className={`${boton} w-fit cursor-pointer border border-slate-300 bg-white text-slate-800 ${preparando ? "pointer-events-none opacity-60" : ""}`}><ImagePlus className="size-5" aria-hidden="true" />{preparando ? TEXTO_PREPARANDO : "Agregar fotos"}</label>
+          {preparando ? <p role="status" className="text-[13px] text-slate-600" data-preparando-foto>{TEXTO_PREPARANDO}</p> : null}
           {errFotos ? <p role="alert" className="text-[13px] text-red-700">{errFotos}</p> : null}
           {fotos.length ? (
             <ul className="grid grid-cols-3 gap-2" aria-label="Fotos elegidas">
@@ -122,7 +133,7 @@ export default function NuevaPublicacion() {
                 <li key={f.clave} className="relative aspect-square overflow-hidden rounded-lg bg-slate-100">
                   {/* eslint-disable-next-line @next/next/no-img-element -- vista previa local (blob:) */}
                   <img src={f.url} alt={`Foto ${i + 1}`} className="size-full object-cover" />
-                  <button type="button" aria-label={`Quitar foto ${i + 1}`} onClick={() => setFotos((x) => x.filter((y) => y.clave !== f.clave))} className="absolute right-1 top-1 grid size-11 place-items-center rounded-full bg-white/90 text-red-700 shadow"><Trash2 className="size-4" aria-hidden="true" /></button>
+                  <button type="button" aria-label={`Quitar foto ${i + 1}`} onClick={() => { setErrorConversion(null); setFotos((x) => x.filter((y) => y.clave !== f.clave)); }} className="absolute right-1 top-1 grid size-11 place-items-center rounded-full bg-white/90 text-red-700 shadow"><Trash2 className="size-4" aria-hidden="true" /></button>
                 </li>
               ))}
             </ul>
@@ -140,7 +151,7 @@ export default function NuevaPublicacion() {
           </label>
         ) : null}
         {mensaje ? <p role={mensaje.tipo === "ok" ? "status" : "alert"} className={`rounded-xl p-3 text-[15px] ${mensaje.tipo === "ok" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`} data-resultado={mensaje.tipo}>{mensaje.texto}</p> : null}
-        <button type="submit" disabled={enviando} className={`${boton} bg-[#2563EB] text-white`}>{enviando ? "Publicando…" : equipo ? "Publicar a mi equipo" : "Enviar a revisión"}</button>
+        <button type="submit" disabled={enviando || preparando} className={`${boton} bg-[#2563EB] text-white`}>{enviando ? "Publicando…" : equipo ? "Publicar a mi equipo" : "Enviar a revisión"}</button>
       </form>
       <MisPublicaciones />
     </div>

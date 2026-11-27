@@ -110,6 +110,10 @@ export const contratosApi = {
   async resolverSueldo({ idEmpresa, idEmpleado, decision }) {
     return (await axios.post("/checador/contratos/revisar-sueldos/resolver", { id_empresa: idEmpresa, id_empleado: idEmpleado, decision }, { headers: authHeaders() })).data;
   },
+  // (27/11/2026) Periodicidad por confirmar: decision "como_dice" | "mensual". Nunca cambia el monto.
+  async resolverPeriodicidad({ idEmpresa, idEmpleado, idContrato, decision }) {
+    return (await axios.post("/checador/contratos/periodicidad/resolver", { id_empresa: idEmpresa, id_empleado: idEmpleado, id_contrato: idContrato, decision }, { headers: authHeaders() })).data;
+  },
   async resolverDuplicado({ idEmpresa, idEmpleado, conservar }) {
     return (await axios.post("/checador/contratos/duplicados/resolver", { id_empresa: idEmpresa, id_empleado: idEmpleado, conservar }, { headers: authHeaders() })).data;
   },

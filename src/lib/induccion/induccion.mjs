@@ -3,6 +3,8 @@
 // específica, plazos, responsables, congelado, validaciones) viven en el backend (modules/induccion/services/reglas.js);
 // aquí solo se repite lo necesario para avisar ANTES de mandar (el servidor vuelve a validar todo).
 
+import { mensajeRechazoPorPeso } from "../errorSubida.mjs";
+
 export const RUTA_TABLERO = "/panel/nuevos-ingresos";
 export const RUTA_PLANTILLAS = "/panel/plantillas-induccion";
 export const RUTA_BIENVENIDA = "/empleado/panel/bienvenida";
@@ -152,6 +154,9 @@ export function errorPublico(e) {
     return { fin: true, codigo, titulo: { ENLACE_INVALIDO: "Esta liga no es válida", ENLACE_VENCIDO: "Esta liga ya venció", ENLACE_USADO: "Este ingreso ya se cerró", NO_DISPONIBLE: "No disponible por ahora" }[codigo], texto };
   }
   if (e?.response?.status === 429) return { fin: false, texto: texto || "Demasiados intentos. Espera unos minutos." };
+  // 413 de nginx en HTML (no llegó al backend): «El archivo pesa demasiado…».
+  const pesado = mensajeRechazoPorPeso(e);
+  if (pesado) return { fin: false, texto: pesado };
   if (!e?.response) return { fin: false, texto: "Sin conexión. Revisa tu internet e intenta de nuevo; lo que ya guardaste no se pierde." };
   return { fin: false, texto: texto || "No se pudo guardar. Intenta de nuevo.", campos: e?.response?.data?.campos ?? null };
 }
