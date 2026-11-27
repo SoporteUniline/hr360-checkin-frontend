@@ -41,6 +41,19 @@ export function prefijo(patron, ruta) {
   return coincide(limpio, `/${r.slice(0, p.length).join("/")}`) ? p.length : 0;
 }
 
+const esComodin = (s) => /^\[\[?\.\.\..+\]\]?$/.test(s);
+/**
+ * Qué tan precisa es una coincidencia EXACTA del patrón. Un segmento fijo pesa más que uno [id]: en
+ * /panel/comunicados/nuevo gana la guía de «nuevo» sobre la de «[id]». Un patrón con comodín ([...x] o [[...x]]) cubre
+ * muchas pantallas, así que cuenta como un prefijo de sus segmentos fijos (+0.5): pierde ante una ruta exacta
+ * (/panel/evaluaciones) y ante un prefijo más largo (/panel/evaluaciones/campanas en /panel/evaluaciones/campanas/5).
+ */
+function puntosExacta(patron) {
+  const s = segmentos(patron);
+  if (s.some(esComodin)) return s.filter((x) => !esDinamico(x)).length + 0.5;
+  return 1000 + s.reduce((t, x) => t + (esDinamico(x) ? 5 : 10), 0);
+}
+
 /**
  * Guías de una pantalla, de la más precisa a la menos: primero las que la nombran exactamente y luego las del prefijo más
  * largo (p. ej. /panel/nomina cubre /panel/nomina/5). Empate (misma ruta): gana el «orden» más bajo (contrato con los
@@ -52,7 +65,7 @@ export function guiasDePantalla(guias = [], ruta) {
   for (const g of guias) {
     let puntos = 0;
     for (const p of g.pantallas ?? []) {
-      if (coincide(p, ruta)) puntos = Math.max(puntos, 1000 + segmentos(p).length);
+      if (coincide(p, ruta)) puntos = Math.max(puntos, puntosExacta(p));
       else puntos = Math.max(puntos, prefijo(p, ruta));
     }
     if (puntos) puntuadas.push({ g, puntos });
