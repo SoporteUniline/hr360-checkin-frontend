@@ -109,3 +109,19 @@ También en esta versión:
 
 ❓ PENDIENTE (dueño): el muro/comunicados y el Centro de ayuda están en `dev` pero no en `main` al 27/11/2026; esta
 versión de la portada debe pasar a producción junto con ellos (y el backend de comunicados), no antes.
+
+> Estilo visual favorito del dueño para presentar módulos: ver `docs/estilo-mosaico-favorito.md`.
+
+## Versión 4 (27/11/2026): mosaico con todos los módulos
+
+- `MosaicoModulos.jsx` pasa a componente de servidor (lo arma `src/app/(landing)/page.jsx` y entra a `LandingHome` como
+  prop `mosaico`): las 24 tarjetas no van en el JavaScript de la portada (`/`: 37.1 kB → 36 kB; primera carga 207 → 206 kB).
+- Tarjetas nuevas: Préstamos y bonos, Aguinaldos y finiquitos, Monitor en vivo, Vacaciones y permisos, Horas extra y
+  turnos, Incidencias y reportes, Mapa de rutas, Empleados y expediente, Activos y uniformes, Mi espacio, Bolsa de
+  trabajo, Evaluación de desempeño, Reglas de aviso, Centro de ayuda y API e integraciones. Detalle y reglas:
+  `docs/estilo-mosaico-favorito.md`.
+- `modulos.js`: se agregan «Préstamos y bonos» y «API e integraciones» (el total de «N herramientas» pasa de 45 a 47 y
+  sale del mismo cálculo). Marquesina: Monitor en vivo, Préstamos sin intereses, Mapa de rutas, Bolsa de trabajo y API.
+- ❓ PENDIENTE (dueño): la marquesina y `modulos.js` siguen diciendo «Aprobación por WhatsApp» (función descrita en esta
+  página desde la versión 1); hoy va por el flujo externo anterior. Decidir si se mantiene o se cambia por «desde el
+  celular» hasta que la aprobación por WhatsApp propia esté en producción.

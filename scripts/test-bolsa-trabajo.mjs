@@ -7,15 +7,18 @@ import {
   opcionesUbicacion, valorUbicacion, aplicarUbicacion, formatoSueldo, haceCuanto, esNueva, diasDesde, textoPlano,
   ubicacionVacante, paginas, totalPaginas, textoConteo, sueldoEstructurado, jobPostingLd, jsonLdSeguro,
   whatsappDeVacante, etiquetaWhatsApp, apoyoWhatsApp, TEXTO_WHATSAPP,
+  vacanteDeUrl, cuantosFiltros, sueldoVacante, distanciaTexto, iniciales, colorLogo, postulaPorWhatsApp, experienciaTexto,
+  jornadaVacante, dondeVacante, horasDesde, ubicacionValida, textoSueldoMin,
 } from "../src/lib/bolsaTrabajo.mjs";
 
 test("la consulta a /vacantes/filter conserva nombres y orden del contrato", () => {
-  assert.equal(consultaVacantes(FILTROS_INICIALES), "giro=&ciudad=&entidad=&pais=&titulo=&id_empresa=&tipo_contratacion=&page=1&limit=10");
+  // Bolsa v2: lo de antes sin cambios y, al final, el orden (siempre) y solo los filtros nuevos con valor.
+  assert.equal(consultaVacantes(FILTROS_INICIALES), "giro=&ciudad=&entidad=&pais=&titulo=&id_empresa=&tipo_contratacion=&page=1&limit=10&orden=recientes");
   assert.equal(
     consultaVacantes({ titulo: "chofer & ayudante", entidad: "Nuevo León", tipo_contratacion: "Becario", id_empresa: 7, page: 3 }),
-    "giro=&ciudad=&entidad=Nuevo%20Le%C3%B3n&pais=&titulo=chofer%20%26%20ayudante&id_empresa=7&tipo_contratacion=Becario&page=3&limit=10",
+    "giro=&ciudad=&entidad=Nuevo%20Le%C3%B3n&pais=&titulo=chofer%20%26%20ayudante&id_empresa=7&tipo_contratacion=Becario&page=3&limit=10&orden=recientes",
   );
-  assert.match(consultaVacantes({ page: "x" }, 20), /&page=1&limit=20$/);
+  assert.match(consultaVacantes({ page: "x" }, 20), /&page=1&limit=20&orden=recientes$/);
 });
 
 test("filtros ↔ dirección de la página (ida y vuelta, valores inválidos descartados)", () => {
@@ -76,8 +79,19 @@ test("hace cuánto se publicó (calendario de la Ciudad de México)", () => {
   assert.equal(haceCuanto(null, ahora), "");
   // A las 23:30 de CDMX (05:30 UTC del día siguiente) sigue siendo «hoy» en México.
   assert.equal(diasDesde("2026-11-23", new Date("2026-11-24T05:30:00Z")), 0);
-  assert.equal(esNueva("2026-11-21", ahora), true);
-  assert.equal(esNueva("2026-11-20", ahora), false);
+  // «Nueva» = 48 horas o menos (con solo el día: hoy o ayer).
+  assert.equal(esNueva("2026-11-22", ahora), true);
+  assert.equal(esNueva("2026-11-21", ahora), false);
+  assert.equal(esNueva("2026-11-21 12:30:00", ahora), true, "47.5 h");
+  assert.equal(esNueva("2026-11-21 11:30:00", ahora), false, "48.5 h");
+  assert.equal(esNueva("2026-11-24 10:00:00", ahora), false, "futura");
+  // Horas el mismo día (hora de CDMX guardada sin zona) y un DATE serializado a medianoche cuenta como día.
+  assert.equal(haceCuanto("2026-11-23 10:00:00", ahora), "Hace 2 horas");
+  assert.equal(haceCuanto("2026-11-23 11:20:00", ahora), "Hace menos de una hora");
+  assert.equal(haceCuanto("2026-11-23T17:00:00.000Z", ahora), "Hace 1 hora");
+  assert.equal(haceCuanto("2026-11-22 20:00:00", ahora), "Hace 16 horas");
+  assert.equal(haceCuanto("2026-11-23T06:00:00.000Z", ahora), "Publicada hoy");
+  assert.equal(horasDesde("2026-11-23", ahora), null);
 });
 
 test("texto plano sin ejecutar HTML", () => {
@@ -176,4 +190,83 @@ test("WhatsApp de la vacante: nombre accesible y texto de apoyo", () => {
   assert.equal(apoyoWhatsApp({ asistente: true }), "Te responde nuestro asistente en minutos.");
   assert.equal(apoyoWhatsApp({ asistente: false }), "Te responde el equipo de reclutamiento.");
   assert.equal(apoyoWhatsApp(null), "Te responde el equipo de reclutamiento.");
+});
+
+// ——— Bolsa v2 (27/11/2026) ———
+
+test("v2: filtros nuevos ↔ consulta y dirección (valores inválidos descartados; «cerca» y la ubicación nunca en la dirección)", () => {
+  const f = { ...FILTROS_INICIALES, orden: "sueldo", sueldo_min: "9000", modalidad: "remoto", jornada: "medio-tiempo", publicada: "3d", whatsapp: "1", sin_experiencia: "1" };
+  assert.equal(consultaVacantes(f), "giro=&ciudad=&entidad=&pais=&titulo=&id_empresa=&tipo_contratacion=&page=1&limit=10&orden=sueldo&sueldo_min=9000&modalidad=remoto&jornada=medio-tiempo&publicada=3d&whatsapp=1&sin_experiencia=1");
+  assert.equal(urlDeFiltros(f, "cajera-1"), "?orden=sueldo&sueldo=9000&modalidad=remoto&jornada=medio-tiempo&publicada=3d&whatsapp=1&sinexp=1&v=cajera-1");
+  assert.deepEqual(filtrosDesdeUrl(urlDeFiltros(f)), f);
+  const cerca = { ...FILTROS_INICIALES, orden: "cerca" };
+  assert.match(consultaVacantes(cerca, 10, { lat: 20.676543, lng: -103.347891 }), /&orden=cerca&lat=20\.68&lng=-103\.35$/, "redondeada a ~1 km");
+  assert.match(consultaVacantes(cerca), /&orden=recientes$/, "sin ubicación: recientes");
+  assert.match(consultaVacantes(cerca, 10, { lat: 0, lng: 0 }), /&orden=recientes$/);
+  assert.equal(urlDeFiltros(cerca), "");
+  assert.equal(filtrosDesdeUrl("?orden=cerca").orden, "");
+  const malo = filtrosDesdeUrl("?orden=x&sueldo=9e3&modalidad=luna&jornada=1&publicada=ayer&whatsapp=si&sinexp=2");
+  assert.deepEqual([malo.orden, malo.sueldo_min, malo.modalidad, malo.jornada, malo.publicada, malo.whatsapp, malo.sin_experiencia], ["", "", "", "", "", "", ""]);
+  assert.equal(vacanteDeUrl("?v=cajera-de-piso-12"), "cajera-de-piso-12");
+  assert.equal(vacanteDeUrl("?v=<script>"), "");
+  assert.equal(vacanteDeUrl(""), "");
+  assert.equal(ubicacionValida({ lat: 20.6, lng: -103.3 }), true);
+  assert.equal(ubicacionValida({ lat: 120, lng: 0 }), false);
+  assert.equal(ubicacionValida(null), false);
+});
+
+test("v2: filtros activos y cuántos cuenta «Filtros»", () => {
+  const f = { ...FILTROS_INICIALES, titulo: "cajera", entidad: "Jalisco", sueldo_min: "8000", modalidad: "hibrido", whatsapp: "1", orden: "sueldo" };
+  assert.deepEqual(filtrosActivos(f).map((a) => a.etiqueta), ["«cajera»", "Jalisco", "Desde $8,000 al mes", "Mixta (casa y oficina)", "Postúlate por WhatsApp"]);
+  assert.equal(cuantosFiltros(f), 4, "sueldo, modalidad, WhatsApp y el orden; no puesto ni lugar");
+  assert.equal(cuantosFiltros(FILTROS_INICIALES), 0);
+  assert.equal(textoSueldoMin("12000"), "Desde $12,000 al mes");
+  assert.equal(textoSueldoMin(""), "");
+});
+
+test("v2: sueldo de la tarjeta (publicado en el panel, texto de la vacante o «Sueldo a convenir»)", () => {
+  assert.deepEqual(sueldoVacante({ sueldo_desde: "9500.00", sueldo_hasta: "11000.00" }), { texto: "$9,500 a $11,000 al mes", conocido: true });
+  assert.deepEqual(sueldoVacante({ sueldo_desde: 10200, sueldo_hasta: null }), { texto: "$10,200 al mes", conocido: true });
+  assert.deepEqual(sueldoVacante({ salario: "$9,500 - $11,000 MXN mensuales" }), { texto: "$9,500 - $11,000 al mes", conocido: true });
+  assert.deepEqual(sueldoVacante({ salario: "No establecido" }), { texto: "Sueldo a convenir", conocido: false });
+  assert.deepEqual(sueldoVacante({}), { texto: "Sueldo a convenir", conocido: false });
+});
+
+test("v2: distancia, iniciales, color, WhatsApp con asistente, experiencia, jornada y «Dónde»", () => {
+  assert.equal(distanciaTexto(null), "");
+  assert.equal(distanciaTexto("0.4"), "a menos de 1 km");
+  assert.equal(distanciaTexto(4.04), "a 4 km");
+  assert.equal(distanciaTexto(4.36), "a 4.4 km");
+  assert.equal(distanciaTexto(123.6), "a 124 km");
+  assert.equal(iniciales("Farmacias Lupita"), "FL");
+  assert.equal(iniciales("Hotel de la Costa"), "HC");
+  assert.equal(iniciales("ádamia"), "Á");
+  assert.equal(iniciales(""), "?");
+  assert.equal(colorLogo("Farmacias Lupita"), colorLogo("Farmacias Lupita"), "siempre el mismo color");
+  assert.match(colorLogo("X"), /^#[0-9A-F]{6}$/);
+  const enlace = "https://wa.me/5215550000000?text=Hola";
+  assert.deepEqual(postulaPorWhatsApp({ whatsapp: { enlace, asistente: true } }), { enlace, asistente: true });
+  assert.equal(postulaPorWhatsApp({ whatsapp: { enlace, asistente: false } }), null, "sin asistente no se postula por WhatsApp");
+  assert.equal(postulaPorWhatsApp({ whatsapp: { enlace: "https://evil.mx/1", asistente: true } }), null);
+  assert.equal(experienciaTexto({ experiencia: "<p>No necesaria</p>" }), "No necesaria");
+  assert.equal(experienciaTexto({ experiencia: "<p>Sin experiencia, te capacitamos</p>" }), "No necesaria");
+  assert.equal(experienciaTexto({ experiencia: "<p>1 año en caja</p>" }), "1 año en caja");
+  assert.equal(experienciaTexto({}), "");
+  assert.equal(jornadaVacante({ tipo_jornada: "Medio tiempo", tipo_contratacion: "Empleado" }), "Medio tiempo");
+  assert.equal(jornadaVacante({ tipo_contratacion: "Becario" }), "Becario");
+  assert.equal(dondeVacante({ direccion: "Av. Vallarta 1450", ciudad: "Guadalajara", entidad: "Jalisco" }), "Av. Vallarta 1450, Guadalajara, Jalisco");
+  assert.equal(dondeVacante({ direccion: "Av. Vallarta 1450, Guadalajara", ciudad: "Guadalajara", entidad: "Jalisco" }), "Av. Vallarta 1450, Guadalajara");
+  assert.equal(dondeVacante({ ciudad: "Zapopan", entidad: "Jalisco" }), "Zapopan, Jalisco");
+});
+
+test("v2: JobPosting con sueldo publicado, jornada del panel y validThrough (campos que pide Google)", () => {
+  const ld = jobPostingLd({ ...VACANTE, salario: "", sueldo_desde: "9500.00", sueldo_hasta: "11000.00", tipo_jornada: "Medio tiempo", tipo_contratacion: "Medio tiempo", tipo_contrato: "", cierra_el: "2026-12-15" }, "https://adamia.mx/vacante/x");
+  for (const campo of ["title", "description", "datePosted", "hiringOrganization", "jobLocation"]) assert.ok(ld[campo], `falta ${campo}`);
+  assert.deepEqual(ld.baseSalary, { "@type": "MonetaryAmount", currency: "MXN", value: { "@type": "QuantitativeValue", minValue: 9500, maxValue: 11000, unitText: "MONTH" } });
+  assert.equal(ld.employmentType, "PART_TIME");
+  assert.equal(ld.validThrough, "2026-12-15T23:59:59-06:00");
+  assert.equal(ld.jobLocation.address.addressCountry, "MX");
+  const sinCierre = jobPostingLd({ ...VACANTE, cierra_el: null });
+  assert.equal(sinCierre.validThrough, undefined, "sin fecha de cierre no se inventa");
+  assert.equal(jobPostingLd({ ...VACANTE, sueldo_desde: 8000 }).baseSalary.value.value, 8000);
 });

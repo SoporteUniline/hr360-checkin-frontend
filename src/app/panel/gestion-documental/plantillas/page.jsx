@@ -38,9 +38,11 @@ import {
   Gavel,
   Users,
   FolderOpen,
+  FileSignature,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import PlantillasContratoBase from "@/components/documentos/PlantillasContratoBase";
 import { useSnackbar } from "notistack";
 import CatalogoAdamia from "@/components/documentos/CatalogoAdamia";
 import { empresasDocumentales } from "@/lib/plantillasAdamia";
@@ -78,10 +80,17 @@ const CATEGORIAS = [
     icon: FolderOpen,
     color: "bg-gray-100 text-gray-700",
   },
+  // (27/11/2026) Contratos individuales de trabajo (con datos contrato.* que se llenan solos).
+  {
+    value: "Contrato",
+    label: "Contrato",
+    icon: FileSignature,
+    color: "bg-indigo-100 text-indigo-800",
+  },
 ];
 
 function getCategoriaInfo(cat) {
-  return CATEGORIAS.find((c) => c.value === cat) || CATEGORIAS[4];
+  return CATEGORIAS.find((c) => c.value === cat) || CATEGORIAS.find((c) => c.value === "Otro");
 }
 
 /* ─── Tarjeta de plantilla ─── */
@@ -196,6 +205,8 @@ export default function PlantillasPage() {
   const { dataUser } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pestanaInicial = ["adamia", "empresa", "contratos"].includes(searchParams.get("pestana")) ? searchParams.get("pestana") : "adamia";
 
   const [search, setSearch] = useState("");
   const [categoria, setCategoria] = useState("todas");
@@ -282,12 +293,14 @@ export default function PlantillasPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="adamia" className="space-y-5">
+      <Tabs defaultValue={pestanaInicial} className="space-y-5">
         <TabsList aria-label="Origen de las plantillas">
           <TabsTrigger value="adamia">Plantillas ADAMIA</TabsTrigger>
+          <TabsTrigger value="contratos">Contratos</TabsTrigger>
           <TabsTrigger value="empresa">Mis plantillas</TabsTrigger>
         </TabsList>
         <TabsContent value="adamia"><CatalogoAdamia empresa={empresa} /></TabsContent>
+        <TabsContent value="contratos"><PlantillasContratoBase empresa={empresa} /></TabsContent>
         <TabsContent value="empresa" className="space-y-5">
           {empresas.length > 1 ? (
             <Select value={empresa} onValueChange={setEmpresaElegida}>

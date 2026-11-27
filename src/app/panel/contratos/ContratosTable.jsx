@@ -2,7 +2,15 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
-import { Eye, Pencil, Trash2, Copy, RefreshCcw } from "lucide-react";
+import Link from "next/link";
+import { MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import styles from "./contratos-theme.module.css";
 import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
 import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
@@ -163,7 +171,6 @@ export default function ContratosTable({
   onEdit,
   onDelete,
   onDuplicate,
-  onView,
   onCambiarEstatus,
   page = 1,
   limit = 10,
@@ -388,64 +395,47 @@ export default function ContratosTable({
                   key={`ctr-${c.id || c.folio}`}
                   className="border-b hover:bg-slate-50"
                 >
-                  <td className="px-3 py-2 font-semibold">{c.folio || c.id}</td>
-                  <td className="px-3 py-2">
-                    <div>
+                  {/* (27/11/2026) La fila abre la vista de detalle (/panel/contratos/[id]); el resto de acciones, en el menú. */}
+                  <td className="px-3 py-3 font-semibold">
+                    <Link href={`/panel/contratos/${c.id || c.id_contrato}`} className="inline-flex min-h-12 items-center text-[#1E40C4] underline-offset-2 hover:underline" data-abrir-contrato={c.id || c.id_contrato}>
+                      {c.folio || c.id}
+                    </Link>
+                  </td>
+                  <td className="px-3 py-3">
+                    <Link href={`/panel/contratos/${c.id || c.id_contrato}`} className="font-semibold text-gray-900 hover:underline">
                       {c.nombre_empleado ||
                         c.empleado_nombre ||
                         c.nombreEmpleado}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
+                    </Link>
+                    <div className="text-sm text-gray-600">
                       {c.empresa || c.empresa_nombre}
                     </div>
                   </td>
-                  <td className="px-3 py-2">{c.puesto}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-3">{c.puesto}</td>
+                  <td className="px-3 py-3">
                     {badgeTipo(c.tipo_contrato || c.tipoContrato)}
                   </td>
-                  <td className="px-3 py-2">
+                  <td className="px-3 py-3">
                     {formatDMY(c.fecha_inicio || c.fechaInicio)}
                   </td>
-                  <td className="px-3 py-2">{vigenciaNodo}</td>
-                  <td className="px-3 py-2">{badgeEstatus(c.estatus)}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onEdit?.(c)}
-                        className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                        title="Editar"
-                      >
-                        <Pencil className="h-4 w-4 text-brand" />
-                      </button>
-                      <button
-                        onClick={() => onCambiarEstatus?.(c)}
-                        className="p-2 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
-                        title="Cambiar estatus"
-                      >
-                        <RefreshCcw className="h-4 w-4 text-amber-600" />
-                      </button>
-                      <button
-                        onClick={() => onView?.(c)}
-                        className="p-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
-                        title="Ver detalles"
-                      >
-                        <Eye className="h-4 w-4 text-green-600" />
-                      </button>
-                      <button
-                        onClick={() => onDuplicate?.(c)}
-                        className="p-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
-                        title="Duplicar"
-                      >
-                        <Copy className="h-4 w-4 text-purple-600" />
-                      </button>
-                      <button
-                        onClick={() => onDelete?.(c)}
-                        className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                        title="Eliminar"
-                      >
-                        <Trash2 className="h-4 w-4 text-red-600" />
-                      </button>
-                    </div>
+                  <td className="px-3 py-3">{vigenciaNodo}</td>
+                  <td className="px-3 py-3">{badgeEstatus(c.estatus)}</td>
+                  <td className="px-3 py-3">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button type="button" className="inline-flex min-h-12 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 text-sm font-semibold text-gray-800 hover:bg-gray-50" aria-label={`Más acciones del contrato ${c.folio || c.id}`}>
+                          <MoreHorizontal className="h-4 w-4" aria-hidden="true" /> Más
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="min-w-52">
+                        <DropdownMenuItem asChild className="min-h-11 text-[15px]"><Link href={`/panel/contratos/${c.id || c.id_contrato}`}>Ver contrato</Link></DropdownMenuItem>
+                        <DropdownMenuItem className="min-h-11 text-[15px]" onSelect={() => onEdit?.(c)}>Editar datos</DropdownMenuItem>
+                        <DropdownMenuItem className="min-h-11 text-[15px]" onSelect={() => onCambiarEstatus?.(c)}>Cambiar estatus</DropdownMenuItem>
+                        <DropdownMenuItem className="min-h-11 text-[15px]" onSelect={() => onDuplicate?.(c)}>Renovar (duplicar)</DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="min-h-11 text-[15px] text-red-700" onSelect={() => onDelete?.(c)}>Eliminar</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </td>
                 </tr>
               );

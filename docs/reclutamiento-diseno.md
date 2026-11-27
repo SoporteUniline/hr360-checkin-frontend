@@ -108,3 +108,26 @@ Resultado de esta entrega: recorrido completo aprobado en Chromium a 1440 y 390 
 - **Pruebas:** `scripts/test-bolsa-trabajo.mjs` (en CI: validación del enlace, nombre accesible, texto de apoyo) y
   `scripts/verify-whatsapp-vacante.mjs` (Playwright, API simulada, 1440 y 390: href exacto, ausente con `null` o enlace no
   wa.me, pestaña nueva sin `opener`, ≥ 44 px, contraste ≥ 4.5:1, barra del pulgar, sin scroll horizontal).
+
+## Bolsa de trabajo v2 (27/11/2026) — maqueta aprobada por el dueño
+
+> «Tiene que ser muy fácil, que hasta una persona de 60 años se pueda postular y fácil de leer.» Y: «jamás fondos
+> degradados; todo limpio pero corporativo».
+
+- **Pantallas:** `/bolsa-de-trabajo` (`BolsaTrabajo.jsx`, `Filtros.jsx`, `ListaVacantes.jsx`, `bolsa.css`) y `/vacante/[slug]`
+  (`VacanteDetalle.jsx` → `FichaVacante.jsx` + `Postular.jsx` + `PreguntasGrandes.jsx`). La ficha es la misma en la página y
+  en el panel derecho de la bolsa (escritorio ≥ 1024 px: lista + vacante elegida, `?v=slug` con `replaceState`, sin recargar).
+  Celular: chips rápidos + hoja «Filtros» (Radix Dialog: foco atrapado, Esc, «Ver N vacantes»); la tarjeta abre la página.
+- **Estándar de lectura:** base 17 px (también en computadora), títulos 700 con Inter (sin Outfit), texto #111827/#1F2937,
+  secundario ≥ #4B5563, botones ≥ 48 px y principal ≥ 56 px con texto, una acción principal por pantalla, superficies planas
+  (blanco y #F3F5FA, filo azul #2C56E8; lima solo en detalles). `verify-bolsa.mjs` lo comprueba en 1440, 390 y 360.
+- **Postularse:** con el asistente de WhatsApp encendido (`whatsapp.asistente`), la principal es «Postularme por WhatsApp»
+  (mismo enlace wa.me con código que copia RH; en computadora con QR hecho en el navegador). Si no, «Postularme» abre la
+  **solicitud corta**: nombre, celular (SMS), correo y CV opcionales, preguntas del puesto, aviso de privacidad. Mismos
+  endpoints y mismo token de un solo uso (INC-REC-002). Con sesión de candidato: confirmación + `postulacion-auth`.
+- **Filtros:** parámetros nuevos de `/vacantes/filter` (backend `services/bolsaFiltros.js`): `orden`, `sueldo_min` (solo
+  sueldo publicado), `modalidad`, `jornada`, `publicada`, `whatsapp=1`, `sin_experiencia=1`, `lat`/`lng` (redondeados a 2
+  decimales y nunca en la dirección). Empresas del chip: `/empresas/activas?bolsa=1&limit=50&page=1`.
+- **Fuera por ahora (sin datos o sin backend seguro):** «personas postuladas», «Contratación inmediata», prestaciones,
+  «Guardar vacante» y «Avísame de vacantes así» (requiere suscripción por WhatsApp con consentimiento, plantilla aprobada,
+  baja y envío programado: ❓ PENDIENTE de diseñar con el dueño).

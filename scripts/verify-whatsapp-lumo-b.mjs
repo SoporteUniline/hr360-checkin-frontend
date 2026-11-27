@@ -310,7 +310,8 @@ async function recorrido(browser, { ancho, alto, sufijo }) {
   await pub.goto(`${base}/postular/${TOKEN}`, { waitUntil: "domcontentloaded" });
   const form = pub.locator("[data-formulario-entrevista]");
   await form.waitFor({ timeout: 30000 });
-  assert.equal(await pub.locator("#pregunta-901").inputValue(), "Sí", "prellenado con lo de WhatsApp");
+  // (27/11/2026) Sí / No como botones grandes (radios): prellenado = «Sí» marcado.
+  assert.equal(await pub.locator("#pregunta-901").getByRole("radio", { name: "Sí" }).isChecked(), true, "prellenado con lo de WhatsApp");
   await pub.getByRole("button", { name: "Enviar respuestas" }).click();
   await pub.getByText("Revisa los campos marcados.").waitFor();
   assert.equal(S.pedidos.filter((x) => x.metodo === "POST" && x.ruta.startsWith("/reclutamiento/formulario")).length, 0, "no manda si falta lo obligatorio");

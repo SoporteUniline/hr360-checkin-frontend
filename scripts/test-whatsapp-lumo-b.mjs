@@ -145,6 +145,7 @@ test("B2 el formulario reutiliza las preguntas de la página de la vacante y no 
   const pagina = await readFile(`${raiz}src/app/(public)/postular/[token]/page.jsx`, "utf8");
   assert.match(pagina, /robots: \{ index: false/);
   const form = await readFile(`${raiz}src/app/(public)/postular/[token]/FormularioEntrevista.jsx`, "utf8");
-  assert.match(form, /import PreguntasVacante from "\.\.\/\.\.\/vacante\/\[slug\]\/ApplicationForm\/PreguntasVacante"/);
+  // (27/11/2026) Mismas preguntas en grande que la solicitud corta de la bolsa v2.
+  assert.match(form, /import PreguntasGrandes from "\.\.\/\.\.\/vacante\/\[slug\]\/PreguntasGrandes"/);
   assert.match(form, /credentials: "omit"/, "el formulario público no manda la sesión");
 });

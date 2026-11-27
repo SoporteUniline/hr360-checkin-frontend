@@ -3,8 +3,8 @@
 // Carrusel de la portada a todo lo ancho: fondo de color sólido, frase + botones a la izquierda y la foto
 // en la mitad derecha fundiéndose con el fondo. Pasa solo cada 6 s, se pausa al pasar el cursor o con el
 // botón (WCAG 2.2.2) y se mueve con las flechas, el teclado o deslizando el dedo. Con «reducir movimiento» no avanza solo.
-// Lo usan la portada (diapositivasPortada, cambio con fundido) y la bolsa de trabajo (`desliza`: las diapositivas se recorren
-// de lado a lado). Cada diapositiva puede traer `secundario` (botón claro); `null` lo quita.
+// Lo usa la portada (diapositivasPortada, cambio con fundido); `desliza` (la bolsa de trabajo anterior a la v2) hace que las diapositivas se recorran
+// de lado a lado. Cada diapositiva puede traer `secundario` (botón claro); `null` lo quita.
 /* eslint-disable @next/next/no-img-element -- fotos ya optimizadas (webp) con efecto de acercamiento */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";

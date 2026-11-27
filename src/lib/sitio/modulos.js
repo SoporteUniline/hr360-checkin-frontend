@@ -1,6 +1,7 @@
 // Módulos de ADAMIA para el sitio público: página de Funciones y lista «Todos los módulos» de la portada (una sola
 // fuente). Textos cortos y verificados contra el sistema. Solo funciones en producción: lo que aún no sale (p. ej.
-// Inducción digital) no se anuncia. Regla: cada módulo nuevo que llega a producción se agrega aquí (docs/pagina-inicio.md).
+// Inducción digital) no se anuncia. Regla: cada módulo nuevo que llega a producción se agrega aquí (docs/pagina-inicio.md)
+// y a su tarjeta del mosaico (src/components/landing/home/mosaico.mjs; scripts/test-mosaico.mjs revisa que coincidan).
 export const CATEGORIAS = [
   {
     id: "tiempo",
@@ -39,6 +40,7 @@ export const CATEGORIAS = [
       { nombre: "Contratos", texto: "Vigencias y avisos antes de que venzan.", href: "/funcionalidades/contratos" },
       { nombre: "Actas administrativas", texto: "Registra incidencias con formato y fírmalas en línea." },
       { nombre: "Nómina", texto: "Con las checadas reales; cada quien firma su recibo desde su celular." },
+      { nombre: "Préstamos y bonos", texto: "Préstamos sin intereses que se cobran solos en cada nómina y bonos por asistencia.", href: "/ayuda/nomina/prestamos" },
       { nombre: "Finiquitos y liquidaciones", texto: "Calcula y genera el documento de salida." },
       { nombre: "Aguinaldos", texto: "Calcula el aguinaldo de todo tu personal." },
       { nombre: "Mapa de rutas", texto: "Ve en el mapa las checadas de tu equipo en campo." },
@@ -110,6 +112,7 @@ export const CATEGORIAS = [
       { nombre: "Campos personalizados", texto: "Agrega a la ficha los datos propios de tu empresa." },
       { nombre: "Adamia AI", texto: "Resuelve dudas de la Ley Federal del Trabajo y de cómo usar ADAMIA." },
       { nombre: "Centro de ayuda", texto: "Guías paso a paso de cada pantalla, abiertas para todos.", href: "/ayuda" },
+      { nombre: "API e integraciones", texto: "Conecta tu ERP o tu nómina externa con llaves de API y los permisos que elijas.", href: "/ayuda/integraciones/llaves-de-api" },
       { nombre: "Calculadora de aguinaldos", texto: "Gratis en nuestra página, sin registrarte.", href: "/calculadora-aguinaldos" },
     ],
   },

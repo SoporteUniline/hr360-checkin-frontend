@@ -7,7 +7,7 @@ pantallas: [/panel/empleados]
 palabras: [ficha, editar, expediente, pestañas, personal, trabajo, checador, pago, documentos, credencial, qr, cambios sin guardar, ficha flotante]
 orden: 20
 actualizado: 2026-11-27
-fuentes: [src/app/panel/empleados/FormularioEmpleado.jsx, src/app/panel/empleados/EncabezadoFicha.jsx, src/components/empleado/FichaEmpleado.jsx, src/components/BotonCredencial.jsx, src/components/cambios/CambiosPendientes.jsx, src/components/cambios/EstadoCambios.jsx, src/components/BajaEmpleadoInfo.jsx]
+fuentes: [src/app/panel/empleados/FormularioEmpleado.jsx, src/app/panel/empleados/tabs/TabNomina.jsx, src/app/panel/empleados/EncabezadoFicha.jsx, src/components/empleado/FichaEmpleado.jsx, src/components/BotonCredencial.jsx, src/components/cambios/CambiosPendientes.jsx, src/components/cambios/EstadoCambios.jsx, src/components/BajaEmpleadoInfo.jsx]
 ---
 
 ## Para qué sirve
@@ -75,6 +75,8 @@ Para estos temas tienes guías propias:
 ### Pago
 
 **Datos de nómina** (periodo, forma de pago, forma de cálculo, sueldo o porcentaje), **Pago en la nómina** (medio de pago y monto por transferencia, y sus bonos y descuentos) y **Cuentas bancarias**.
+
+**El sueldo vive en el contrato.** Si la persona tiene contrato vigente, aquí ves **Sueldo del contrato** de solo lectura, con `Ver contrato`: es el que usan la nómina, los finiquitos y los aguinaldos, y se cambia con un convenio en el contrato. Si no tiene contrato vigente, ves **Sin contrato vigente**: la nómina usa el sueldo de la ficha y puedes tocar `Crear contrato con este sueldo`.
 
 ![Pestaña Pago de la ficha](/ayuda/capturas/empleados/ficha-pago.webp "Pestaña Pago")
 

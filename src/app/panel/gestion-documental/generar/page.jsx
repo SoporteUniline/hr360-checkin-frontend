@@ -36,6 +36,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSnackbar } from "notistack";
 import { motion, AnimatePresence } from "framer-motion";
 import { htmlToPdf } from "@/lib/htmlToPdf";
+import { contratosApi } from "@/lib/contratosApi";
 import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 import { Combobox } from "@/components/Combobox";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
@@ -79,11 +80,10 @@ function buildVariables(empleado, empresa, hoy) {
   const meses = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
   const d = hoy || new Date();
 
-  // Salario: campo `sueldo` de la tabla nomina (disponible tras getById)
-  const salarioRaw = empleado.sueldo ?? empleado.salario ?? empleado.salario_base ?? null;
-  const salarioFmt = salarioRaw
-    ? `$${Number(salarioRaw).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
-    : "";
+  // (27/11/2026, docs/contratos.md del backend) Salario: el VIGENTE de la persona, de la misma fuente que nómina,
+  // finiquitos y aguinaldos (contrato vigente; sin contrato, la ficha). Lo da GET /contratos/salario/:id
+  // («$10,500.00 mensual»); antes se tomaba `nomina.sueldo` aunque el contrato dijera otro.
+  const salarioFmt = empleado.salario_vigente ?? "";
 
   return {
     "empleado.nombre":        [empleado.nombre, empleado.apellido_paterno, empleado.apellido_materno].filter(Boolean).join(" "),
@@ -285,10 +285,13 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial, for
     setErroresDatos((prev) => ({ ...prev, empleado: "" }));
     if (!empleadoId) return;
     axios.get(`/checador/empleados/${empleadoId}`)
-      .then((res) => {
+      .then(async (res) => {
         if (!vigente) return;
         if (res.data.id_empresa != null && String(res.data.id_empresa) !== empresa) throw new Error("El empleado pertenece a otra empresa.");
-        setEmpleadoCompleto(res.data);
+        const salario = await contratosApi.salario(empleadoId).catch(() => null);
+        if (!vigente) return;
+        if (!salario) setErroresDatos((prev) => ({ ...prev, empleado: "No se pudo leer el sueldo vigente de la persona: el dato «salario» quedará vacío. Recarga la página." }));
+        setEmpleadoCompleto({ ...res.data, salario_vigente: salario?.texto_documento ?? "" });
       })
       .catch(() => { if (vigente) setErroresDatos((prev) => ({ ...prev, empleado: "No se pudieron cargar los datos del empleado. Vuelve a seleccionarlo o recarga la página." })); });
     return () => { vigente = false; };

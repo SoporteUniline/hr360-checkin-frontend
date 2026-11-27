@@ -5,12 +5,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const raiz = new URL("../", import.meta.url).pathname;
-const leer = (p) => readFile(`${raiz}src/app/(public)/vacante/[slug]/ApplicationForm/${p}`, "utf8");
+const leer = (p) => readFile(`${raiz}src/app/(public)/vacante/[slug]/${p}`, "utf8");
 
-test("OTPForm entrega el verification_token y el formulario lo manda al postularse", async () => {
-  const otp = await leer("OTPForm.jsx");
-  assert.match(otp, /onSubmit\(form\.getValues\(\),\s*response\?\.data\?\.verification_token/);
-  const form = await leer("index.jsx");
-  assert.match(form, /formData\.append\(\s*"telefono_verificacion_token"/);
-  assert.match(form, /typeof telefonoVerificacionToken === "string"/, "no manda el evento de submit como token");
+// (27/11/2026, bolsa v2) La solicitud corta vive en Postular.jsx: verifica el código y manda SU token (texto) al crear.
+test("la solicitud corta entrega el verification_token de /otp/verify al postularse", async () => {
+  const form = await leer("Postular.jsx");
+  assert.match(form, /axios\.post\(api\("\/otp\/verify"\), \{ telefono: tel, code:/);
+  assert.match(form, /form\.append\("telefono_verificacion_token", r\?\.data\?\.verification_token \|\| ""\)/, "token de la respuesta, nunca el evento del formulario");
+  assert.match(form, /axios\.post\(api\("\/postulaciones\/create"\), form\)/);
+  assert.match(form, /^import axios from "axios";$/m, "axios directo: la instancia del panel convertiría el FormData a JSON");
+  assert.ok(form.indexOf('"/otp/verify"') < form.indexOf('"/postulaciones/create"'), "primero verifica, luego crea");
 });

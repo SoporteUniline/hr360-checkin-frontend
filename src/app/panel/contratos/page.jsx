@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,6 @@ import StatCard from "@/components/StatCard";
 import TablePagination from "@/components/TablePagination";
 import ContratosTable from "./ContratosTable";
 import ContratoDialog from "./ContratoDialog";
-import ContratoViewDialog from "./ContratoViewDialog";
 import CambiarEstatusContrato from "./CambiarEstatusContrato";
 import {
   AlertDialog,
@@ -43,7 +43,7 @@ import AccesosRapidos from "@/components/AccesosRapidos";
  * - Relación:
  *   - Hook: `useContratosData`
  *   - API: `src/lib/contratosApi.js`
- *   - Componentes: `ContratosTable`, `ContratoDialog`, `ContratoViewDialog`
+ *   - Componentes: `ContratosTable`, `ContratoDialog`; el detalle vive en `[id]/DetalleContrato.jsx`
  */
 export default function ContratosPage() {
   const [empresaFiltro, setEmpresaFiltro] = useState("all");
@@ -67,23 +67,32 @@ export default function ContratosPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [seedItem, setSeedItem] = useState(null); // para duplicación
-  const [openView, setOpenView] = useState(false);
-  const [viewItem, setViewItem] = useState(null);
   const [openEstatus, setOpenEstatus] = useState(false);
   const [estatusRow, setEstatusRow] = useState(null);
+  const [inicial, setInicial] = useState(null);
+  const router = useRouter();
 
+  // (27/11/2026) Enlaces de antes (?id=, campana de avisos, búsqueda): ahora abren la vista de detalle.
+  // ?nuevo=<empleado>&empresa=&sueldo=&periodicidad= (desde la ficha sin contrato vigente): alta con el sueldo de la ficha.
   useEffect(() => {
     const id = searchParams.get("id");
-    if (!id) return;
-    contratosApi
-      .getById(id)
-      .then((contrato) => {
-        if (!contrato) return;
-        setViewItem(contrato);
-        setOpenView(true);
-      })
-      .catch(() => {});
-  }, [searchParams]);
+    if (id) {
+      router.replace(`/panel/contratos/${encodeURIComponent(id)}`);
+      return;
+    }
+    const nuevo = searchParams.get("nuevo");
+    if (nuevo) {
+      setInicial({
+        id_empleado: Number(nuevo),
+        id_empresa: Number(searchParams.get("empresa")) || null,
+        salario_base: searchParams.get("sueldo") || "",
+        periodicidad_pago: searchParams.get("periodicidad") || "",
+      });
+      setEditItem(null);
+      setSeedItem(null);
+      setOpenDialog(true);
+    }
+  }, [searchParams, router]);
   const [deleteRow, setDeleteRow] = useState(null);
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
   const [headerFilterMeta, setHeaderFilterMeta] = useState({
@@ -322,6 +331,9 @@ export default function ContratosPage() {
                 />
               </div>
             )}
+            <Button asChild variant="outline" className="font-semibold">
+              <Link href="/panel/contratos/revisar-sueldos">Revisar sueldos</Link>
+            </Button>
             <Button
               variant="outline"
               className="font-semibold"
@@ -335,6 +347,7 @@ export default function ContratosPage() {
               onClick={() => {
                 setSeedItem(null);
                 setEditItem(null);
+                setInicial(null);
                 setOpenDialog(true);
               }}
             >
@@ -388,10 +401,6 @@ export default function ContratosPage() {
         }}
         onDuplicate={handleDuplicate}
         onDelete={handleDelete}
-        onView={(row) => {
-          setViewItem(row);
-          setOpenView(true);
-        }}
         onCambiarEstatus={(row) => {
           setEstatusRow(row);
           setOpenEstatus(true);
@@ -413,20 +422,16 @@ export default function ContratosPage() {
         setOpen={setOpenDialog}
         editItem={editItem}
         seedItem={seedItem}
+        inicial={inicial}
         onSaved={() => {
           setEditItem(null);
           setSeedItem(null);
+          setInicial(null);
           mutate();
         }}
         empresas={dataUser?.empresas_detalle || []}
       />
 
-      {/* Ver detalles (no usado actualmente) */}
-      <ContratoViewDialog
-        open={openView}
-        setOpen={setOpenView}
-        item={viewItem}
-      />
 
       {/* Cambiar estatus (Activo / Suspendido / Terminado / Cancelado) */}
       <CambiarEstatusContrato

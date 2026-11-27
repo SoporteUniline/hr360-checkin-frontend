@@ -16,8 +16,46 @@ import {
 import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
 import { BonosEmpleado, MedioPago } from "./PagoNominaEmpleado";
 import { useModulosActivos } from "@/components/modulos/useModulos";
+import Link from "next/link";
+import useSWR from "swr";
+import { contratosApi } from "@/lib/contratosApi";
 
-export default function TabNomina({ renderCampos = () => null, form, soloLectura }) {
+const POR_PERIODO = { Mensual: "al mes", Quincenal: "a la quincena", Catorcenal: "a la catorcena", Semanal: "a la semana", Diario: "al día", "Por hora": "por hora" };
+const pesos = (n) => `$${Number(n || 0).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// (27/11/2026, decisión del dueño) El sueldo vive en el contrato vigente: con contrato, la ficha lo muestra de solo
+// lectura con liga al contrato (se cambia con un convenio). Sin contrato vigente, la nómina usa el de la ficha
+// (marcado) y se ofrece crear el contrato con ese sueldo.
+function SueldoDelContrato({ salario }) {
+  return (
+    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-[16px] text-[#1E3A8A] md:col-span-2" data-sueldo-contrato>
+      <p className="m-0 font-semibold">Sueldo del contrato {salario.folio ?? "vigente"}</p>
+      <p className="m-0 mt-1 text-[22px] font-bold text-gray-900">{pesos(salario.salario)} <span className="text-[16px] font-medium text-gray-700">{POR_PERIODO[salario.periodicidad] ?? ""}</span></p>
+      <p className="m-0 mt-1">Es el sueldo que usan la nómina, los finiquitos y los aguinaldos. Para cambiarlo, haz un convenio en el contrato.</p>
+      {salario.id_contrato ? (
+        <Link href={`/panel/contratos/${salario.id_contrato}`} className="mt-2 inline-flex min-h-12 items-center font-semibold text-[#1E40C4] underline">Ver contrato</Link>
+      ) : null}
+    </div>
+  );
+}
+
+function SinContratoVigente({ form, empleadoId }) {
+  const q = new URLSearchParams({ nuevo: String(empleadoId) });
+  if (form.getValues("id_empresa")) q.set("empresa", String(form.getValues("id_empresa")));
+  if (form.getValues("sueldo")) q.set("sueldo", String(form.getValues("sueldo")));
+  if (form.getValues("periodo_pago")) q.set("periodicidad", String(form.getValues("periodo_pago")));
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-[16px] text-amber-900 md:col-span-2" data-sin-contrato>
+      <p className="m-0 font-semibold">Sin contrato vigente</p>
+      <p className="m-0 mt-1">Mientras no tenga contrato, la nómina, los finiquitos y los aguinaldos usan el sueldo de esta ficha (marcado «sin contrato vigente»).</p>
+      <Link href={`/panel/contratos?${q}`} className="mt-2 inline-flex min-h-12 items-center font-semibold text-[#1E40C4] underline">Crear contrato con este sueldo</Link>
+    </div>
+  );
+}
+
+export default function TabNomina({ renderCampos = () => null, form, soloLectura, empleadoId = null }) {
+  const { data: salario } = useSWR(empleadoId ? ["salario-vigente", empleadoId] : null, () => contratosApi.salario(empleadoId), { revalidateOnFocus: false, shouldRetryOnError: false });
+  const conContrato = salario?.origen === "contrato";
   const periodoPago = form.watch("periodo_pago");
   // Bonos y descuentos son del módulo de Nómina: con Nómina apagado no se muestran (el sueldo sí, es de la ficha).
   const { activos } = useModulosActivos();
@@ -174,7 +212,9 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
           />
           {renderCampos("forma_calculo", true)}
 
-          {["$", "Ambos"].includes(form.watch("forma_calculo")) && (
+          {conContrato ? <SueldoDelContrato salario={salario} /> : null}
+          {!conContrato && empleadoId && salario ? <SinContratoVigente form={form} empleadoId={empleadoId} /> : null}
+          {!conContrato && ["$", "Ambos"].includes(form.watch("forma_calculo")) && (
             <FormField
               name="sueldo"
               control={form.control}

@@ -2,11 +2,11 @@ import { cache } from "react";
 import { SITIO } from "@/lib/blog/articulos";
 import { jobPostingLd, jsonLdSeguro, textoPlano } from "@/lib/bolsaTrabajo.mjs";
 import "@/components/landing/home/landing-home.css";
-import "./vacante.css";
+import "../../bolsa-de-trabajo/bolsa.css";
 import VacanteDetalle from "./VacanteDetalle";
 
 // Página de una vacante. El servidor solo pide la vacante para el título, la vista previa al
-// compartir y los datos estructurados JobPosting; todo lo demás (preguntas, postulación, OTP) sigue en el navegador,
+// compartir y los datos estructurados JobPosting (con sueldo publicado, jornada y validThrough desde 27/11/2026); todo lo demás (preguntas, postulación, OTP) sigue en el navegador,
 // con los datos al momento. Si el API no responde en 2.5 s, la página sale igual con metadatos genéricos.
 // RUTA_BACKEND_SERVIDOR (opcional) permite usar una ruta interna del backend desde el servidor.
 const backend = () => (process.env.RUTA_BACKEND_SERVIDOR || process.env.NEXT_PUBLIC_RUTA_BACKEND || "").replace(/\/$/, "");

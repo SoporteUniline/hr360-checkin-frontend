@@ -1,3 +1,5 @@
+import "@/components/landing/home/landing-home.css";
+import "../../bolsa-de-trabajo/bolsa.css";
 import FormularioEntrevista from "./FormularioEntrevista";
 
 // Lumo fase B2 (25/11/2026): formulario de la entrevista por enlace. El agente de WhatsApp (o RH desde la ficha) manda
