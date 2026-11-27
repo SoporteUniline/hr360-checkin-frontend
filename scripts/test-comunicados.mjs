@@ -63,12 +63,18 @@ test("seguimiento: estados por persona, tarjetas, faltan y entregas por canal", 
   assert.deepEqual(C.textoDestinatario({ estado: "sin_canal" }).texto, "Sin app ni correo");
   assert.match(C.textoDestinatario({ estado: "sin_canal", avisado_persona_por: "Laura Ríos", avisado_persona_en: "2026-11-27 10:05:00" }, TZ).texto, /Avisado en persona por Laura Ríos · 27\/11\/2026 10:05/);
   assert.match(C.textoDestinatario({ estado: "confirmado", confirmado_en: "2026-11-27 09:30:00" }, TZ).texto, /Confirmó 9:30/);
-  const conteos = { confirmados: 30, vistos: 5, no_vistos: 4, sin_canal: 3 };
+  const conteos = { total: 42, confirmados: 30, vistos: 35, vistos_sin_confirmar: 5, no_vistos: 4, sin_canal: 3, faltan: 12 }; // como el servidor
   assert.deepEqual(C.tarjetasSeguimiento(conteos, "confirmacion").map((t) => t.valor), [30, 5, 4, 3]);
-  assert.deepEqual(C.tarjetasSeguimiento(conteos, "normal").map((t) => [t.texto, t.valor]), [["Lo vieron", 35], ["No lo han abierto", 4], ["Sin canal (avisar en persona)", 3]]);
+  assert.deepEqual(C.tarjetasSeguimiento({ confirmados: 30, vistos: 35, no_vistos: 4, sin_canal: 3 }, "confirmacion")[1].valor, 5, "sin vistos_sin_confirmar se calcula");
+  assert.deepEqual(C.tarjetasSeguimiento({ total: 10, vistos: 7, no_vistos: 2, sin_canal: 1 }, "normal").map((t) => [t.texto, t.valor]), [["Lo vieron", 7], ["No lo han abierto", 2], ["Sin canal (avisar en persona)", 1]]);
   assert.equal(C.faltan(conteos), 12);
-  assert.deepEqual(C.textoEntregas({ app: { entregados: 39 }, push: { entregados: 37, sin_permiso: 2 }, correo: { enviados: 35, rebotados: 1 }, popup: { vistos: 4, total: 4 } }).map((f) => `${f.canal}: ${f.detalle}`),
-    ["App: 39 entregados", "Push: 37 entregados · 2 sin permiso", "Correo: 35 enviados · 1 rebotado", "Aviso en panel: 4 de 4 lo vieron"]);
+  assert.equal(C.faltan({ total: 42, confirmados: 30 }), 12);
+  assert.deepEqual(C.totalesPestanas(conteos), { faltan: 12, confirmaron: 30, todos: 42 });
+  // Forma del servidor (detalle: entregas) y forma de la maqueta.
+  assert.deepEqual(C.textoEntregas({ app: { destinatarios: 42, vistos: 35 }, push: { activo: true, enviados: 37, fallidos: 0, omitidos: 2, habilitado: true }, correo: { activo: true, enviados: 35, fallidos: 1, omitidos: 0 }, popup: { activo: true, cerrados: 4 } }).map((f) => `${f.canal}: ${f.detalle}`),
+    ["App: 42 destinatarios · 35 lo vieron", "Push: 37 entregados · 2 sin permiso", "Correo: 35 enviados · 1 rebotado", "Aviso emergente: 4 lo cerraron o confirmaron"]);
+  assert.deepEqual(C.textoEntregas({ app: { destinatarios: 3, vistos: 0 }, push: { activo: false }, correo: { activo: false }, popup: { activo: false } }).map((f) => f.canal), ["App"], "solo los canales usados");
+  assert.equal(C.textoEntregas({ push: { activo: true, habilitado: false } })[0].detalle, "No configurado en el servidor");
 });
 
 test("YouTube: solo el id de 11 caracteres; reproductor sin cookies; nada que no sea YouTube", () => {
@@ -107,15 +113,21 @@ test("redactar: validación, audiencia por ids y los campos `datos` del contrato
   assert.match(C.validarFormulario({ ...f, expira_en: "2026-11-01" }, { ahora: TZ.ahora }).expira_en, /después/);
   const d = C.datosParaEnviar(f, { empresa: 7 });
   assert.deepEqual(Object.keys(d).sort(), ["audiencia", "canales", "cuerpo", "empresa", "expira_en", "fecha_evento", "nivel", "permite_comentarios", "permite_reacciones", "publicar", "publicar_en", "recordatorio_auto", "recordatorios_max", "tipo", "titulo", "youtube_url"].sort());
-  assert.deepEqual(d.audiencia, { todos: false, sucursales: [3], areas: [], puestos: [], empleados: [44] });
+  assert.deepEqual(d.audiencia, { todos: false, sucursales: ["Centro"], areas: [], puestos: [], empleados: [44] }, "sucursal/área/puesto por nombre; personas por id");
   assert.deepEqual([d.titulo, d.nivel, d.publicar, d.recordatorio_auto, d.recordatorios_max, d.publicar_en], ["Auditoría", "confirmacion", "ahora", true, 3, null]);
+  const prog = C.datosParaEnviar({ ...f, publicar: "programar", publicar_en: "2026-12-01T07:00", expira_en: "2026-12-03", fecha_evento: "2026-12-03", recordatorios_max: 9 });
+  assert.match(prog.publicar_en, /^2026-12-01T\d{2}:00:00\.000Z$/, "instante ISO");
+  assert.match(prog.expira_en, /^2026-12-0[34]T/, "fin del día elegido");
+  assert.deepEqual([prog.fecha_evento, prog.recordatorios_max], ["2026-12-03", 3], "fecha del evento solo día; máximo 3 recordatorios");
   assert.equal(C.datosParaEnviar({ ...f, nivel: "normal" }).recordatorio_auto, false, "normal no lleva recordatorio");
   assert.equal(C.datosParaEnviar(f, { accion: "borrador" }).publicar, "borrador");
   assert.deepEqual(C.audienciaParaEnviar({ todos: true, sucursales: [1] }), { todos: true, sucursales: [], areas: [], puestos: [], empleados: [] });
+  assert.deepEqual(C.audienciaParaEnviar({ puestos: [{ id: 1, nombre: "Cajera" }, { id: 2, nombre: "cajera" }], areas: ["Ventas"] }).puestos, ["Cajera"]);
   assert.equal(C.textoPrevia({ total: 42, con_app: 39, con_correo: 35 }), "42 empleados activos · 39 con app · 35 con correo");
   assert.equal(C.textoPublicar(f, 42), "Publicar a 42 personas");
   assert.equal(C.textoPublicar({ publicar: "programar" }, 1), "Programar para 1 persona");
   assert.deepEqual(C.chipsAudiencia(f.audiencia).map((c) => c.texto), ["Sucursal: Centro", "Ana", "Ana"]);
+  assert.equal(C.localDe("2026-12-18 19:00:00"), "2026-12-18T19:00");
   const g = C.formularioDe({ tipo: "evento", titulo: "Posada", estado: "programado", publicar_en: "2026-12-18 19:00:00", nivel: "normal", audiencia: { todos: true }, youtube_id: "dQw4w9WgXcQ", permite_comentarios: 0 });
   assert.deepEqual([g.publicar, g.publicar_en, g.audiencia.todos, g.youtube_url, g.permite_comentarios], ["programar", "2026-12-18T19:00", true, "https://youtu.be/dQw4w9WgXcQ", false]);
 });
@@ -136,6 +148,7 @@ test("muro: me gusta optimista, fijados arriba (máx. 3), franja de pendientes, 
   assert.deepEqual(C.mosaico(1), { visibles: 1, resto: 0, clase: "uno" });
   assert.deepEqual(C.mosaico(4), { visibles: 4, resto: 0, clase: "cuatro" });
   assert.equal(C.porConfirmar({ nivel: "confirmacion", confirmado_en: null }), true);
+  assert.equal(C.porConfirmar({ nivel: "confirmacion", confirmado_en: null, requiere_confirmar: false }), false, "alta posterior: no se le pide");
   assert.equal(C.iniciales("Recursos Humanos"), "RH");
   assert.equal(C.lineaAutor({ publicado_en: "2026-11-26 18:20:00", tipo: "evento", audiencia_texto: "Toda la empresa" }, TZ), "Ayer 18:20 · Evento · Toda la empresa");
 });
@@ -159,6 +172,8 @@ test("reglas del muro, automáticos y respuestas del servidor", () => {
   const r = C.reglasAuto([{ regla: "cumpleanos", activo: 1, audiencia: "empresa", canales: { push: true } }]);
   assert.deepEqual(r.map((x) => [x.regla, x.activo, x.audiencia]), [["cumpleanos", true, "empresa"], ["aniversario", true, "sucursal"], ["bienvenida", false, "area"], ["festivo", true, "empresa"]]);
   assert.equal(C.cuandoAuto("cumpleanos", "08:00"), "8:00 del día");
+  assert.equal(C.cuandoAuto("cumpleanos", 9), "9:00 del día");
+  assert.equal(C.normalizarConfig({ hora_automaticos: 7 }).hora_automaticos, "07:00");
   assert.equal(C.cuandoAuto("festivo"), "2 días antes");
   assert.equal(C.textoManana({ cumpleanos: 2, aniversarios: 1 }), "Mañana: 2 cumpleaños y 1 aniversario");
   assert.equal(C.textoManana({}), "Mañana: nada programado.");

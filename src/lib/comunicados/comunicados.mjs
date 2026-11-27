@@ -39,7 +39,7 @@ export const textoTipo = (clave) => CORTO[String(clave ?? "")] ?? "Comunicado";
 // Tipos que RH elige al redactar (los automáticos los publica el sistema, pero también se pueden escribir a mano).
 export const TIPOS_REDACTAR = TIPOS;
 
-export const LIMITES = Object.freeze({ fotos: 10, fotoBytes: 8 * 1024 * 1024, pdfBytes: 15 * 1024 * 1024, titulo: 150, cuerpo: 5000, comentario: 1000, motivo: 300, fijados: 3 });
+export const LIMITES = Object.freeze({ fotos: 10, fotoBytes: 8 * 1024 * 1024, pdfBytes: 15 * 1024 * 1024, titulo: 150, cuerpo: 5000, comentario: 1000, motivo: 300, fijados: 3, recordatorios: 3, portadaTitulo: 120 });
 export const TIPOS_FOTO = Object.freeze(["image/jpeg", "image/png", "image/webp"]);
 
 export const FILTROS_PANEL = Object.freeze([
@@ -195,27 +195,46 @@ export function textoDestinatario(d, opciones) {
   if (d.estado === "sin_canal") return { texto: "Sin app ni correo", tono: "text-red-700" };
   return { texto: "No lo ha abierto", tono: "text-slate-600" };
 }
-/** Tarjetas del seguimiento (confirmación o normal). */
+/** Tarjetas del seguimiento (confirmación o normal). conteos del servidor: { total, confirmados, vistos (incluye a los que
+ *  confirmaron), vistos_sin_confirmar, no_vistos, sin_canal, faltan }. */
 export function tarjetasSeguimiento(conteos = {}, nivel = "normal") {
   const n = (v) => Number(v) || 0;
+  const sinConfirmar = conteos.vistos_sin_confirmar != null ? n(conteos.vistos_sin_confirmar) : Math.max(0, n(conteos.vistos) - n(conteos.confirmados));
   const base = nivel === "confirmacion"
     ? [{ clave: "confirmados", texto: "Confirmaron «Enterado»", valor: n(conteos.confirmados), tono: "text-green-700" },
-      { clave: "vistos", texto: "Lo abrieron sin confirmar", valor: n(conteos.vistos), tono: "text-amber-700" }]
-    : [{ clave: "vistos", texto: "Lo vieron", valor: n(conteos.vistos) + n(conteos.confirmados), tono: "text-green-700" }];
+      { clave: "vistos", texto: "Lo abrieron sin confirmar", valor: sinConfirmar, tono: "text-amber-700" }]
+    : [{ clave: "vistos", texto: "Lo vieron", valor: n(conteos.vistos), tono: "text-green-700" }];
   return [...base,
     { clave: "no_vistos", texto: "No lo han abierto", valor: n(conteos.no_vistos), tono: "text-slate-900" },
     { clave: "sin_canal", texto: "Sin canal (avisar en persona)", valor: n(conteos.sin_canal), tono: "text-red-700" }];
 }
-export const faltan = (conteos = {}) => (Number(conteos.vistos) || 0) + (Number(conteos.no_vistos) || 0) + (Number(conteos.sin_canal) || 0);
+/** Cuántos faltan (confirmación: sin confirmar; normal: sin ver). */
+export function faltan(conteos = {}, nivel = "confirmacion") {
+  if (conteos.faltan != null) return Number(conteos.faltan) || 0;
+  const n = (v) => Number(v) || 0;
+  return nivel === "confirmacion" ? Math.max(0, n(conteos.total) - n(conteos.confirmados)) : n(conteos.no_vistos) + n(conteos.sin_canal);
+}
+/** Totales de las pestañas Faltan / Confirmaron (o Ya lo vieron) / Todos. */
+export function totalesPestanas(conteos = {}, nivel = "confirmacion") {
+  const total = Number(conteos.total) || 0;
+  const f = faltan(conteos, nivel);
+  return { faltan: f, confirmaron: Math.max(0, total - f), todos: total };
+}
 
-/** Entregas por canal: [{ canal, texto, detalle }]. */
+/** Entregas por canal: [{ canal, detalle }]. Solo los canales que usó el comunicado (App siempre). */
 export function textoEntregas(e = {}) {
   const filas = [];
   const n = (v) => Number(v) || 0;
-  if (e.app) filas.push({ canal: "App", detalle: `${n(e.app.entregados ?? e.app.total)} entregados` });
-  if (e.push) filas.push({ canal: "Push", detalle: [`${n(e.push.entregados)} entregados`, n(e.push.sin_permiso) ? `${n(e.push.sin_permiso)} sin permiso` : null, n(e.push.fallidos) ? `${n(e.push.fallidos)} fallidos` : null].filter(Boolean).join(" · ") });
-  if (e.correo) filas.push({ canal: "Correo", detalle: [`${n(e.correo.enviados)} enviados`, n(e.correo.rebotados) ? `${n(e.correo.rebotados)} ${n(e.correo.rebotados) === 1 ? "rebotado" : "rebotados"}` : null].filter(Boolean).join(" · ") });
-  if (e.popup) filas.push({ canal: "Aviso en panel", detalle: `${n(e.popup.vistos)} de ${n(e.popup.total)} lo vieron` });
+  const usado = (x) => x && x.activo !== false;
+  if (e.app) filas.push({ canal: "App", detalle: e.app.destinatarios != null ? `${n(e.app.destinatarios)} destinatarios · ${n(e.app.vistos)} lo vieron` : `${n(e.app.entregados)} entregados` });
+  if (usado(e.push)) {
+    filas.push({ canal: "Push", detalle: e.push.habilitado === false ? "No configurado en el servidor" : [`${n(e.push.enviados ?? e.push.entregados)} entregados`, n(e.push.sin_permiso ?? e.push.omitidos) ? `${n(e.push.sin_permiso ?? e.push.omitidos)} sin permiso` : null, n(e.push.fallidos) ? `${n(e.push.fallidos)} fallidos` : null].filter(Boolean).join(" · ") });
+  }
+  if (usado(e.correo)) {
+    const reb = n(e.correo.rebotados ?? e.correo.fallidos);
+    filas.push({ canal: "Correo", detalle: [`${n(e.correo.enviados)} enviados`, reb ? `${reb} ${reb === 1 ? "rebotado" : "rebotados"}` : null, n(e.correo.omitidos) ? `${n(e.correo.omitidos)} sin correo` : null].filter(Boolean).join(" · ") });
+  }
+  if (usado(e.popup)) filas.push({ canal: "Aviso emergente", detalle: e.popup.cerrados != null ? `${n(e.popup.cerrados)} lo cerraron o confirmaron` : `${n(e.popup.vistos)} de ${n(e.popup.total)} lo vieron` });
   return filas;
 }
 
@@ -279,17 +298,23 @@ export const GRUPOS_AUDIENCIA = Object.freeze([
   { clave: "puestos", texto: "Puesto", plural: "Puestos" },
   { clave: "empleados", texto: "Persona", plural: "Personas" },
 ]);
-/** La audiencia que va al servidor: solo ids (números). */
+/** La audiencia que va al servidor: sucursales, áreas y puestos por NOMBRE (como en la ficha del empleado) y las personas
+ *  por id. Sin nada elegido el servidor entiende «toda la empresa», por eso aquí se exige elegir. */
 export function audienciaParaEnviar(a = {}) {
+  const nombres = (l) => {
+    const vistos = new Set();
+    return (l ?? []).map((x) => String(typeof x === "object" ? x.nombre : x).trim())
+      .filter((n) => n && !vistos.has(n.toLocaleLowerCase("es-MX")) && vistos.add(n.toLocaleLowerCase("es-MX")));
+  };
   const ids = (l) => [...new Set((l ?? []).map((x) => Number(typeof x === "object" ? x.id : x)).filter((n) => Number.isInteger(n) && n > 0))];
   if (a.todos) return { todos: true, sucursales: [], areas: [], puestos: [], empleados: [] };
-  return { todos: false, sucursales: ids(a.sucursales), areas: ids(a.areas), puestos: ids(a.puestos), empleados: ids(a.empleados) };
+  return { todos: false, sucursales: nombres(a.sucursales), areas: nombres(a.areas), puestos: nombres(a.puestos), empleados: ids(a.empleados) };
 }
 export const audienciaElegida = (a = {}) => Boolean(a.todos) || GRUPOS_AUDIENCIA.some((g) => (a[g.clave] ?? []).length > 0);
 /** Chips de la audiencia: [{ grupo, id, texto }]. */
 export function chipsAudiencia(a = {}) {
-  if (a.todos) return [{ grupo: "todos", id: 0, texto: "Toda la empresa" }];
-  return GRUPOS_AUDIENCIA.flatMap((g) => (a[g.clave] ?? []).map((x) => ({ grupo: g.clave, id: x.id, texto: g.clave === "empleados" ? x.nombre : `${g.texto}: ${x.nombre}` })));
+  if (a.todos) return [{ grupo: "todos", id: 0, nombre: "", texto: "Toda la empresa" }];
+  return GRUPOS_AUDIENCIA.flatMap((g) => (a[g.clave] ?? []).map((x) => ({ grupo: g.clave, id: x.id, nombre: x.nombre, texto: g.clave === "empleados" ? x.nombre : `${g.texto}: ${x.nombre}` })));
 }
 /** «42 empleados activos · 39 con app · 35 con correo» */
 export function textoPrevia(p) {
@@ -297,6 +322,12 @@ export function textoPrevia(p) {
   return [plural(Number(p.total) || 0, "empleado activo", "empleados activos"), `${Number(p.con_app) || 0} con app`, `${Number(p.con_correo) || 0} con correo`].join(" · ");
 }
 
+/** «2026-12-01T07:00» (hora de quien escribe) → instante ISO; el servidor guarda en UTC y muestra en la zona de la empresa. */
+export function instante(local) {
+  if (!local) return null;
+  const d = new Date(String(local).length === 10 ? `${local}T23:59:59` : local);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
 export const formularioVacio = () => ({
   tipo: "aviso", titulo: "", cuerpo: "", nivel: "normal", fecha_evento: "", youtube_url: "",
   permite_reacciones: true, permite_comentarios: true,
@@ -333,16 +364,26 @@ export function datosParaEnviar(f, { accion = "publicar", empresa = null } = {})
   return {
     ...(empresa ? { empresa: Number(empresa) } : {}),
     tipo: f.tipo, titulo: String(f.titulo ?? "").trim(), cuerpo: String(f.cuerpo ?? "").trim(), nivel: conf ? "confirmacion" : "normal",
-    fecha_evento: f.fecha_evento || null, youtube_url: yt || null,
+    fecha_evento: f.fecha_evento ? String(f.fecha_evento).slice(0, 10) : null, youtube_url: yt || null,
     permite_reacciones: Boolean(f.permite_reacciones), permite_comentarios: Boolean(f.permite_comentarios),
     canales: { push: Boolean(f.canales?.push), correo: Boolean(f.canales?.correo), popup: Boolean(f.canales?.popup) },
     audiencia: audienciaParaEnviar(f.audiencia),
     publicar: accion === "borrador" ? "borrador" : f.publicar === "programar" ? "programar" : "ahora",
-    publicar_en: f.publicar === "programar" && f.publicar_en ? f.publicar_en : null,
-    expira_en: f.expira_en || null,
+    publicar_en: f.publicar === "programar" && f.publicar_en ? instante(f.publicar_en) : null,
+    expira_en: f.expira_en ? instante(f.expira_en) : null,
     recordatorio_auto: conf ? Boolean(f.recordatorio_auto) : false,
-    recordatorios_max: conf && f.recordatorio_auto ? Math.min(5, Math.max(1, Number(f.recordatorios_max) || 3)) : 0,
+    recordatorios_max: conf && f.recordatorio_auto ? Math.min(LIMITES.recordatorios, Math.max(1, Number(f.recordatorios_max) || LIMITES.recordatorios)) : 0,
   };
+}
+/** Valor del servidor (ISO con zona o «YYYY-MM-DD HH:MM») → «YYYY-MM-DDTHH:MM» para un input datetime-local. */
+export function localDe(v) {
+  if (!v) return "";
+  const t = String(v).trim();
+  if (!CON_ZONA.test(t)) return t.slice(0, 16).replace(" ", "T");
+  const d = new Date(t);
+  if (Number.isNaN(d.getTime())) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 /** Formulario a partir de un comunicado guardado (editar borrador o programado). */
 export function formularioDe(c) {
@@ -352,12 +393,12 @@ export function formularioDe(c) {
   const lista = (l) => (l ?? []).map((x) => (typeof x === "object" ? { id: Number(x.id), nombre: x.nombre ?? String(x.id) } : { id: Number(x), nombre: String(x) }));
   return {
     ...f, tipo: c.tipo ?? f.tipo, titulo: c.titulo ?? "", cuerpo: c.cuerpo ?? "", nivel: c.nivel === "confirmacion" ? "confirmacion" : "normal",
-    fecha_evento: String(c.fecha_evento ?? "").slice(0, 16).replace(" ", "T"), youtube_url: c.youtube_id ? `https://youtu.be/${c.youtube_id}` : c.youtube_url ?? "",
+    fecha_evento: String(c.fecha_evento ?? "").slice(0, 10), youtube_url: c.youtube_id ? `https://youtu.be/${c.youtube_id}` : c.youtube_url ?? "",
     permite_reacciones: c.permite_reacciones !== false && c.permite_reacciones !== 0, permite_comentarios: c.permite_comentarios !== false && c.permite_comentarios !== 0,
     canales: { push: Boolean(c.canales?.push), correo: Boolean(c.canales?.correo), popup: Boolean(c.canales?.popup) },
     audiencia: { todos: Boolean(a.todos), sucursales: lista(a.sucursales), areas: lista(a.areas), puestos: lista(a.puestos), empleados: lista(a.empleados) },
-    publicar: c.estado === "programado" ? "programar" : "ahora", publicar_en: String(c.publicar_en ?? "").slice(0, 16).replace(" ", "T"),
-    expira_en: String(c.expira_en ?? "").slice(0, 10), recordatorio_auto: c.recordatorio_auto !== false && c.recordatorio_auto !== 0,
+    publicar: c.estado === "programado" ? "programar" : "ahora", publicar_en: localDe(c.publicar_en),
+    expira_en: localDe(c.expira_en).slice(0, 10), recordatorio_auto: c.recordatorio_auto !== false && c.recordatorio_auto !== 0,
     recordatorios_max: Number(c.recordatorios_max) || 3,
   };
 }
@@ -391,7 +432,8 @@ export function ordenarMuro(items = []) {
   const ids = new Set(fijados.map((i) => i.id));
   return { fijados, resto: unicos.filter((i) => !ids.has(i.id)) };
 }
-export const porConfirmar = (it) => it?.nivel === "confirmacion" && !it.confirmado_en;
+/** ¿Le toca confirmar? (las altas posteriores ven los avisos generales, pero no se les pide confirmar los viejos). */
+export const porConfirmar = (it) => (it?.requiere_confirmar != null ? Boolean(it.requiere_confirmar) : it?.nivel === "confirmacion" && !it?.confirmado_en);
 /** Franja «1 comunicado por confirmar: Auditoría del jueves 3». */
 export function textoPendientes(n, primero) {
   const total = Number(n) || 0;
@@ -467,7 +509,7 @@ export function normalizarConfig(c = {}) {
     publican_jefes: truthy(v.publican_jefes), publican_empleados: truthy(v.publican_empleados),
     permitir_reacciones: truthy(v.permitir_reacciones), permitir_comentarios: truthy(v.permitir_comentarios),
     palabras_bloqueadas: Array.isArray(v.palabras_bloqueadas) ? v.palabras_bloqueadas : palabrasDe(v.palabras_bloqueadas),
-    umbral_reportes: Math.min(20, Math.max(1, Number(v.umbral_reportes) || 3)), hora_automaticos: String(v.hora_automaticos ?? "08:00").slice(0, 5),
+    umbral_reportes: Math.min(50, Math.max(1, Number(v.umbral_reportes) || 3)), hora_automaticos: horaHH(v.hora_automaticos),
   };
 }
 
@@ -479,11 +521,17 @@ export const REGLAS_AUTO = Object.freeze([
   { regla: "festivo", titulo: "Días festivos oficiales", cuando: "dos_dias", detalle: "Del calendario de festivos de la empresa" },
 ]);
 export const AUDIENCIAS_AUTO = Object.freeze([{ clave: "empresa", texto: "Toda la empresa" }, { clave: "sucursal", texto: "Su sucursal" }, { clave: "area", texto: "Su área" }]);
-export function cuandoAuto(regla, hora = "08:00") {
+export function cuandoAuto(regla, hora = 8) {
   const r = REGLAS_AUTO.find((x) => x.regla === regla);
   if (r?.cuando === "dos_dias") return "2 días antes";
   if (r?.cuando === "primer_dia") return "Su primer día";
-  return `${hora12(hora)} del día`;
+  return `${hora12(horaHH(hora))} del día`;
+}
+/** 8, «8» u «08:00» → «08:00». */
+export function horaHH(h) {
+  const m = String(h ?? "").trim().match(/^(\d{1,2})(?::\d{2})?$/);
+  const n = m ? Number(m[1]) : 8;
+  return `${String(n >= 0 && n <= 23 ? n : 8).padStart(2, "0")}:00`;
 }
 export function hora12(h) {
   const m = String(h ?? "").match(/^(\d{1,2}):(\d{2})/);
@@ -526,6 +574,15 @@ export function principal(data, ...claves) {
   if (!data || typeof data !== "object") return null;
   for (const c of [...claves, "comunicado", "item"]) if (c in data) return data[c] ?? null;
   return data.id != null ? data : null;
+}
+/** Rutas del aviso emergente: Mi espacio (/mi) o panel (usuario del panel ligado a un empleado). */
+export function rutasPopup(modo = "empleado") {
+  const base = modo === "panel" ? API : API_MI;
+  return {
+    popup: `${base}/popup`,
+    confirmar: (id) => `${base}/${encodeURIComponent(id)}/confirmar`,
+    posponer: (id) => `${base}/${encodeURIComponent(id)}/posponer`,
+  };
 }
 /** Aviso emergente pendiente o null. */
 export const popupDe = (data) => principal(data, "popup", "aviso");

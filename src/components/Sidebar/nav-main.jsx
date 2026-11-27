@@ -70,6 +70,8 @@ import {
   MessageSquareHeart,
   UserPlus,
   ClipboardPen,
+  Sparkles,
+  ShieldAlert,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -557,6 +559,16 @@ const menuGroups = [
       icon: ICONOS_EVALUACION[v.path],
       vistaEvaluacion: v,
     })),
+  },
+  {
+    // (27/11/2026) Centro de comunicados: muro de la empresa y avisos con confirmación de leído (src/components/comunicados).
+    group: "COMUNICADOS",
+    groupIcon: Megaphone,
+    items: [
+      { title: "Comunicados", url: "/panel/comunicados", matchPrefix: true, rol: "Recruiter", icon: Megaphone },
+      { title: "Automáticos", url: "/panel/comunicados/automaticos", rol: "Recruiter", icon: Sparkles },
+      { title: "Moderar el muro", url: "/panel/comunicados/moderacion", rol: "Recruiter", icon: ShieldAlert },
+    ],
   },
   {
     // Clima organizacional y NOM-035 (src/components/clima/ModuloClima.jsx): una dirección por vista.
