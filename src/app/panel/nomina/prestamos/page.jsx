@@ -2,16 +2,15 @@
 
 // Nómina → Préstamos (R2). RH o el dueño aprueba lo que piden los empleados (D-9), registra préstamos y abonos en
 // efectivo. El descuento sale solo en cada nómina cuando la persona ya firmó su acuerdo. Clic en el renglón → su detalle.
+// (27/11/2026) «Registrar préstamo» abre su página (/panel/nomina/prestamos/nuevo), ya no una ventana.
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import useSWR from "swr";
-import { useSnackbar } from "notistack";
 import { Plus } from "lucide-react";
 import axios from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Chip, Kpi, SelectorEmpresa, useEmpresaNomina } from "@/components/nomina/comun";
 import { ModuloNomina, Tabla, FilaEnlace, celda, Cargando, ErrorCarga, Vacio } from "@/components/nomina/ModuloNomina";
-import RegistrarPrestamo from "@/components/nomina/RegistrarPrestamo";
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { PRESTAMO, avancePrestamo, dinero } from "@/lib/nomina/nomina.mjs";
 
@@ -19,19 +18,18 @@ const get = (url) => axios.get(url).then((r) => r.data);
 const FILTROS = [["", "Todos"], ["solicitado", "Por aprobar"], ["por_firmar", "Por firmar"], ["vigente", "Vigentes"], ["liquidado", "Pagados"]];
 
 export default function PrestamosPage() {
-  const router = useRouter();
-  const { enqueueSnackbar } = useSnackbar();
   const empresa = useEmpresaNomina();
   const [filtro, setFiltro] = useState("");
-  const [registrar, setRegistrar] = useState(false);
-  const { data, error, isLoading, mutate } = useSWR(empresa.idEmpresa ? `/checador/nomina/prestamos?empresa=${empresa.idEmpresa}` : null, get);
+  const { data, error, isLoading } = useSWR(empresa.idEmpresa ? `/checador/nomina/prestamos?empresa=${empresa.idEmpresa}` : null, get);
   const todos = useMemo(() => data?.prestamos ?? [], [data]);
   const lista = filtro ? todos.filter((p) => p.estado === filtro) : todos;
   const cuenta = (e) => todos.filter((p) => p.estado === e).length;
   const porCobrar = todos.filter((p) => ["vigente", "por_firmar"].includes(p.estado)).reduce((t, p) => t + Number(p.saldo), 0);
 
   return (
-    <ModuloNomina acciones={<><SelectorEmpresa {...empresa} /><Button onClick={() => setRegistrar(true)} disabled={!empresa.idEmpresa}><Plus className="size-4" /> Registrar préstamo</Button></>}>
+    <ModuloNomina acciones={<><SelectorEmpresa {...empresa} />{empresa.idEmpresa
+        ? <Button asChild className="min-h-12 text-base"><Link href={`/panel/nomina/prestamos/nuevo?empresa=${empresa.idEmpresa}`}><Plus className="size-4" /> Registrar préstamo</Link></Button>
+        : <Button disabled className="min-h-12 text-base"><Plus className="size-4" /> Registrar préstamo</Button>}</>}>
       {error ? <ErrorCarga error={error} texto="No se pudieron cargar los préstamos." /> : isLoading || !empresa.idEmpresa ? <Cargando /> : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -78,18 +76,6 @@ export default function PrestamosPage() {
           )}
         </>
       )}
-
-      <RegistrarPrestamo
-        abierto={registrar}
-        idEmpresa={empresa.idEmpresa}
-        onCerrar={() => setRegistrar(false)}
-        onListo={(r) => {
-          setRegistrar(false);
-          mutate();
-          enqueueSnackbar(r.aviso_acuerdo ?? "Préstamo registrado. Se envió el acuerdo para que lo firme en Mi espacio.", { variant: r.aviso_acuerdo ? "warning" : "success" });
-          router.push(`/panel/nomina/prestamos/${r.id}`);
-        }}
-      />
     </ModuloNomina>
   );
 }

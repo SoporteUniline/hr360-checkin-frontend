@@ -253,6 +253,18 @@ jobs:
           mkdir -p capturas-hojas
           CAPTURAS=capturas-hojas node scripts/verify-hojas.mjs
 
+      # (27/11/2026) Préstamos «¿En cuántos pagos?» con el backend simulado (1440 y 390): registrar en su página (no
+      # ventana), plan al centavo ($5,000 en 6 = 5 × $833.33 + $833.35), calendario, aviso del tope con «Usar N quincenas»,
+      # modo «Prefiero poner cuánto por nómina», aprobar en N pagos y pedirlo desde Mi espacio; letra ≥ 16/17 px, botones
+      # ≥ 48 px, títulos 700, sin degradados ni desborde. Reusa la compilación anterior.
+      - name: Préstamos — formularios en pagos, calendario y legibilidad (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-prestamos
+          CAPTURAS=capturas-prestamos node scripts/verify-prestamos.mjs
+
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación
   # ─────────────────────────────────────────────

@@ -133,10 +133,10 @@ const PERSONAS_BONO = [
   { id_empleado: 16, nombre: "Valeria Castillo", puesto: "Compras", lo_tiene: false, quitado: false, valor: null },
 ];
 const PRESTAMOS = [
-  { id: 3, id_empresa: 7, id_empleado: 15, empleado: "Ana Torres", monto: 3000, abono: 500, saldo: 3000, motivo: "Consulta médica", origen: "empleado", estado: "solicitado", version: 1, firma_estatus: null, creado_en: "2026-11-21T16:00:00Z", solicitado_por_nombre: "Ana Torres" },
-  { id: 4, id_empresa: 7, id_empleado: 13, empleado: "Frida Serrano", monto: 2000, abono: 400, saldo: 2000, motivo: "Útiles escolares", origen: "rh", estado: "por_firmar", version: 2, firma_estatus: "pendiente", creado_en: "2026-11-20T17:00:00Z", solicitado_por_nombre: "Laura Ríos" },
-  { id: 2, id_empresa: 7, id_empleado: 12, empleado: "Carlos Terriquez", monto: 1000, abono: 250, saldo: 500, motivo: "Reparación del auto", origen: "rh", estado: "vigente", version: 4, firma_estatus: "firmado", creado_en: "2026-10-30T16:00:00Z", solicitado_por_nombre: "Laura Ríos" },
-  { id: 1, id_empresa: 7, id_empleado: 14, empleado: "Héctor León", monto: 1500, abono: 300, saldo: 0, motivo: null, origen: "empleado", estado: "liquidado", version: 7, firma_estatus: "firmado", creado_en: "2026-08-01T16:00:00Z", solicitado_por_nombre: "Héctor León" },
+  { id: 3, id_empresa: 7, id_empleado: 15, empleado: "Ana Torres", monto: 3000, abono: 500, num_pagos: 6, saldo: 3000, motivo: "Consulta médica", origen: "empleado", estado: "solicitado", version: 1, firma_estatus: null, creado_en: "2026-11-21T16:00:00Z", solicitado_por_nombre: "Ana Torres" },
+  { id: 4, id_empresa: 7, id_empleado: 13, empleado: "Frida Serrano", monto: 2000, abono: 400, num_pagos: 5, saldo: 2000, motivo: "Útiles escolares", origen: "rh", estado: "por_firmar", version: 2, firma_estatus: "pendiente", creado_en: "2026-11-20T17:00:00Z", solicitado_por_nombre: "Laura Ríos" },
+  { id: 2, id_empresa: 7, id_empleado: 12, empleado: "Carlos Terriquez", monto: 1000, abono: 250, num_pagos: 4, saldo: 500, motivo: "Reparación del auto", origen: "rh", estado: "vigente", version: 4, firma_estatus: "firmado", creado_en: "2026-10-30T16:00:00Z", solicitado_por_nombre: "Laura Ríos" },
+  { id: 1, id_empresa: 7, id_empleado: 14, empleado: "Héctor León", monto: 1500, abono: 300, num_pagos: 5, saldo: 0, motivo: null, origen: "empleado", estado: "liquidado", version: 7, firma_estatus: "firmado", creado_en: "2026-08-01T16:00:00Z", solicitado_por_nombre: "Héctor León" },
 ];
 const MOVIMIENTOS = {
   2: [
@@ -145,6 +145,29 @@ const MOVIMIENTOS = {
   ],
 };
 let escenaPrestamosEmpleada = "pedir";
+// (27/11/2026) «¿En cuántos pagos?»: plan con la MISMA regla del servidor (centavos enteros, el último lleva el resto) y
+// un calendario de demostración. Héctor (quincenal, $6,000) tiene tope de $382.32 por quincena.
+const QUINCENAL = new Set([14]);
+function planDemo({ monto, num_pagos, abono, saldo = monto, id_empleado }) {
+  const total = Math.round(monto * 100);
+  let n = Number(num_pagos) || 0;
+  let a;
+  if (n) a = Math.floor(total / n);
+  else { a = Math.round(abono * 100); n = total - a <= 99 ? 1 : 1 + Math.ceil((total - a - 99) / a); }
+  const s = Math.round(saldo * 100);
+  const restantes = s <= 0 ? 0 : s - a <= 99 ? 1 : 1 + Math.ceil((s - a - 99) / a);
+  return { num_pagos: n, abono: a / 100, ultimo: (total - a * (n - 1)) / 100, pagos_restantes: restantes, ultimo_restante: restantes ? (s - a * (restantes - 1)) / 100 : null,
+    num_pagos_calculado: !num_pagos, periodo_pago: QUINCENAL.has(Number(id_empleado)) ? "Quincenal" : "Semanal" };
+}
+const calendarioDemo = (plan) => (plan.pagos_restantes ? { primero: { inicio: "2026-12-01", fin: "2026-12-15" }, ultimo: plan.periodo_pago === "Quincenal" ? { inicio: "2027-02-16", fin: "2027-02-28" } : { inicio: "2027-01-05", fin: "2027-01-11" }, aproximado: false, pagos: plan.pagos_restantes } : null);
+function simulacionDemo(b, alEmpleado = false) {
+  const plan = planDemo(b);
+  const tope = plan.periodo_pago === "Quincenal" ? 382.32 : null;
+  const alto = Math.max(plan.abono, plan.ultimo);
+  const minimos = tope ? Math.ceil((b.monto * 100) / (tope * 100)) : null;
+  const avisos = tope && alto > tope ? [`El abono de $${alto.toFixed(2)} pasa del tope de la ley para cada quincena ($382.32: 30 % de ${alEmpleado ? "lo que ganas" : "lo que gana"} arriba del salario mínimo). Con ${minimos} quincenas o más sí cabe.`] : [];
+  return { ok: true, plazo: plan.num_pagos, avisos, tope_periodo: tope, pagos_minimos: tope && alto > tope ? minimos : null, plan, calendario: calendarioDemo(plan) };
+}
 
 const SUCURSALES = { sucursales: [{ id_sucursal: 1, nombre: "Matriz Colima", id_empresa: 7, empresa_nombre: "Uniline" }, { id_sucursal: 2, nombre: "Sucursal Manzanillo", id_empresa: 7, empresa_nombre: "Uniline" }] };
 const EMPLEADOS_AGUINALDO = [
@@ -346,11 +369,12 @@ async function rutas(ctx, usuario) {
     }
     if (p === "/checador/nomina/prestamos" && m === "GET") return ok({ ok: true, prestamos: PRESTAMOS, puede_cancelar_vigente: puedeAutorizar });
     if (p === "/checador/nomina/prestamos" && m === "POST") {
-      return ok({ ok: true, plazo: Math.ceil(cuerpo.monto / cuerpo.abono), avisos: cuerpo.monto > 9000 ? ["Pasa de un mes de salario ($9,000.00). La ley no permite exigir más de un mes."] : [] });
+      return ok(simulacionDemo(cuerpo));
     }
     if ((r = /^\/checador\/nomina\/prestamos\/(\d+)$/.exec(p))) {
       const pr = PRESTAMOS.find((x) => x.id === Number(r[1]));
-      return ok({ ok: true, prestamo: pr, movimientos: MOVIMIENTOS[pr.id] ?? [], avisos: [], plazo: Math.ceil(pr.monto / pr.abono), puede_cancelar_vigente: puedeAutorizar });
+      const plan = planDemo(pr);
+      return ok({ ok: true, prestamo: pr, movimientos: MOVIMIENTOS[pr.id] ?? [], avisos: [], plazo: plan.num_pagos, plan, calendario: calendarioDemo(plan), puede_cancelar_vigente: puedeAutorizar });
     }
     if (p === "/checador/nomina/mis-recibos") {
       return ok({ ok: true, recibos: [
@@ -359,10 +383,14 @@ async function rutas(ctx, usuario) {
       ] });
     }
     if (p === "/checador/nomina/mis-prestamos" && m === "GET") {
+      const conPlan = (x) => { const plan = planDemo({ ...x, id_empleado: 14 }); return { ...x, plan, calendario: calendarioDemo(plan) }; };
       const lista = escenaPrestamosEmpleada === "pedir"
-        ? [{ ...PRESTAMOS[3], id_empleado: 15, movimientos: [{ tipo: "abono_nomina", importe: 300, saldo_despues: 1200, creado_en: "2026-08-10T18:00:00Z" }, { tipo: "abono_nomina", importe: 1200, saldo_despues: 0, creado_en: "2026-09-10T18:00:00Z" }] }]
-        : [{ ...PRESTAMOS[0], estado: "por_firmar", firma_estatus: "pendiente", movimientos: [] }];
-      return ok({ ok: true, prestamos: lista });
+        ? [{ ...conPlan(PRESTAMOS[3]), id_empleado: 15, movimientos: [{ tipo: "abono_nomina", importe: 300, saldo_despues: 1200, creado_en: "2026-08-10T18:00:00Z" }, { tipo: "abono_nomina", importe: 1200, saldo_despues: 0, creado_en: "2026-09-10T18:00:00Z" }] }]
+        : [{ ...conPlan({ ...PRESTAMOS[0], num_pagos: 6 }), estado: "por_firmar", firma_estatus: "pendiente", movimientos: [] }];
+      return ok({ ok: true, periodo_pago: "Quincenal", prestamos: lista });
+    }
+    if (p === "/checador/nomina/mis-prestamos" && m === "POST") {
+      return ok(simulacionDemo({ ...cuerpo, id_empleado: 14 }, true));
     }
     if (p === "/checador/firma-digital/solicitudes/documento") {
       const tipo = url.searchParams.get("tipo_documento");
@@ -572,16 +600,15 @@ const ESCENAS = {
     await page.goto(base + "/panel/nomina/prestamos/2", { waitUntil: "domcontentloaded" });
     await page.getByText("Historial").waitFor({ timeout: 30000 });
     await guardar(page, "nomina", "prestamo-vigente");
-    await page.goto(base + "/panel/nomina/prestamos", { waitUntil: "domcontentloaded" });
-    await page.getByRole("button", { name: "Registrar préstamo" }).click();
-    const dlg = page.getByRole("dialog");
-    await dlg.getByText("Monto prestado").waitFor();
-    await dlg.getByRole("combobox").first().fill("Héctor");
+    // (27/11/2026) Registrar es una página: Héctor (quincenal), $5,000 en 6 quincenas con su calendario.
+    await page.goto(base + "/panel/nomina/prestamos/nuevo?empresa=7", { waitUntil: "domcontentloaded" });
+    const form = page.locator("[data-formulario-prestamo]");
+    await form.getByRole("combobox").first().fill("Héctor", { timeout: 30000 });
     await page.getByRole("option", { name: /Héctor León/ }).dispatchEvent("mousedown");
-    await dlg.getByLabel("Monto prestado").fill("10000");
-    await dlg.getByLabel("Abono por nómina").fill("500");
-    await dlg.getByText("Pasa de un mes de salario").waitFor({ timeout: 8000 }).catch(() => {});
-    await guardar(page, "nomina", "prestamo-registrar", { clip: await areaDe(page, dlg, 24) });
+    await form.getByLabel("Monto prestado").fill("5000");
+    await form.getByLabel("¿En cuántos pagos?").fill("6");
+    await form.getByText("6 quincenas de $833.33 · la última de $833.35").waitFor({ timeout: 8000 });
+    await guardar(page, "nomina", "prestamo-registrar", { clip: await areaDe(page, form, 24) });
     await ctx.close();
   },
   async miEspacioNomina(b) {
@@ -593,7 +620,8 @@ const ESCENAS = {
     await page.goto(base + "/empleado/panel/mis-prestamos", { waitUntil: "domcontentloaded" });
     await page.getByRole("button", { name: "Pedir un préstamo" }).click({ timeout: 30000 });
     await page.getByLabel("¿Cuánto necesitas?").fill("3000");
-    await page.getByLabel("¿Cuánto te pueden descontar en cada nómina?").fill("500");
+    await page.getByLabel("¿En cuántas quincenas lo quieres pagar?").fill("6");
+    await page.getByText("6 quincenas de $500.00").waitFor({ timeout: 8000 });
     await page.getByLabel("¿Para qué lo necesitas?").fill("Consulta médica");
     await guardar(page, "nomina", "pedir-prestamo-celular");
     escenaPrestamosEmpleada = "firmar";

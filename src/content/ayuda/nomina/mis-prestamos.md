@@ -4,15 +4,15 @@ resumen: Pide un préstamo sin intereses desde tu celular, firma tu acuerdo y si
 modulo: nomina
 audiencia: [empleado]
 pantallas: [/empleado/panel/mis-prestamos]
-palabras: [mis préstamos, pedir préstamo, solicitar préstamo, adelanto, firmar acuerdo, saldo, abonos, mi espacio]
+palabras: [mis préstamos, pedir préstamo, solicitar préstamo, adelanto, firmar acuerdo, saldo, abonos, mi espacio, cuántas quincenas, calendario de pagos]
 orden: 75
 actualizado: 2026-11-27
-fuentes: [src/app/empleado/panel/mis-prestamos/page.jsx, src/app/empleado/panel/mi-espacio/page.jsx, src/lib/nomina/nomina.mjs]
+fuentes: [src/app/empleado/panel/mis-prestamos/page.jsx, src/app/empleado/panel/mi-espacio/page.jsx, src/components/nomina/PlanPrestamo.jsx, src/lib/nomina/nomina.mjs]
 ---
 
 ## Para qué sirve
 
-Si necesitas dinero, puedes pedirle a tu empresa un préstamo **sin intereses**. Recursos Humanos lo revisa; si lo aprueba, firmas un acuerdo desde tu celular y se te descuenta un abono en cada nómina hasta terminar.
+Si necesitas dinero, puedes pedirle a tu empresa un préstamo **sin intereses** y decir **en cuántas quincenas** (o semanas, o meses, según cómo te pagan) lo quieres pagar. Recursos Humanos lo revisa; si lo aprueba, firmas un acuerdo desde tu celular y se te descuenta un abono en cada pago hasta terminar.
 
 ## Quién la usa
 
@@ -27,13 +27,17 @@ Cualquier empleado activo, si su empresa usa el módulo de Nómina.
 
 1. Entra a **Mi espacio** y toca **Mis préstamos**.
 2. Toca **Pedir un préstamo**.
-3. Llena los tres datos:
+3. Llena los datos:
    - **¿Cuánto necesitas?**
-   - **¿Cuánto te pueden descontar en cada nómina?** Abajo verás en cuántas nóminas lo terminarías de pagar.
+   - **¿En cuántas quincenas lo quieres pagar?** (dice «semanas», «catorcenas» o «meses» si así te pagan). Abajo verás el plan, por ejemplo «Lo pagarías en **6 quincenas de $500.00**», y el calendario: «Primer descuento: … · Último: …».
    - **¿Para qué lo necesitas?**
 4. Toca **Enviar solicitud**. Verás «Listo, tu solicitud se envió a Recursos Humanos.».
 
-![Formulario para pedir un préstamo en el celular](/ayuda/capturas/nomina/pedir-prestamo-celular.webp "Con $3,000 y $500 por nómina lo terminas en 6 nóminas")
+![Formulario para pedir un préstamo en el celular](/ayuda/capturas/nomina/pedir-prestamo-celular.webp "Con $3,000 en 6 quincenas: 6 pagos de $500.00 y el calendario")
+
+Si prefieres decir cuánto te pueden descontar, toca **Prefiero poner cuánto por nómina** y escribe **¿Cuánto te pueden descontar en cada quincena?**: ADAMIA calcula en cuántos pagos lo terminas.
+
+Si los centavos no salen exactos, todos los pagos son iguales y **el último** lleva los centavos que sobran: $5,000 en 6 quincenas son 5 pagos de $833.33 y el último de $833.35.
 
 Mientras lo revisan, tu préstamo dice **Por aprobar** y «Recursos Humanos está revisando tu solicitud.».
 
@@ -53,7 +57,8 @@ Mientras lo revisan, tu préstamo dice **Por aprobar** y «Recursos Humanos est�
 En cada préstamo ves:
 
 - **Préstamo de** (el monto que te prestaron);
-- tu **saldo** por pagar y el abono por nómina;
+- tu **saldo** por pagar y el abono por quincena (o por semana, por mes);
+- cuántos pagos te faltan («Te faltan 4 quincenas») y el calendario con tu **último descuento**;
 - una barra con el avance del pago;
 - **Abonos** (toca para ver la lista): cada «Descuento en nómina», «Abono en efectivo» o «Regresado (nómina cancelada)» con su fecha.
 
@@ -69,6 +74,10 @@ No. Pagas exactamente lo que te prestaron.
 
 No. Al contrario: por ley, cada descuento no puede pasar del 30 % de lo que ganas arriba del salario mínimo, así que en una nómina baja podría descontarse menos.
 
+### ¿Qué quiere decir «aproximado» en el calendario?
+
+Que tu empresa todavía no tiene nóminas de tu periodo en ADAMIA, así que las fechas se calcularon con el calendario normal. Pueden moverse un poco.
+
 ### ¿Puedo pagar en efectivo?
 
 Habla con Recursos Humanos: ellos pueden registrar un abono en efectivo y tu saldo baja de inmediato.
@@ -76,6 +85,7 @@ Habla con Recursos Humanos: ellos pueden registrar un abono en efectivo y tu sal
 ## Qué pasa si…
 
 - **…ya tienes un préstamo abierto.** No ves el botón **Pedir un préstamo**; si lo intentas verás «Ya tienes un préstamo abierto. Cuando lo termines puedes pedir otro.».
+- **…el abono pasa de lo que la ley permite descontarte.** Verás un aviso con cuántos pagos sí caben y el botón para usarlos (por ejemplo **Usar 8 quincenas**).
 - **…no escribes para qué lo necesitas.** Verás «Cuéntanos para qué lo necesitas.».
 - **…tu ficha no está activa.** Verás «Tu ficha no está activa.».
 - **…no te lo aprueban.** El préstamo dice **Rechazado** y «No se aprobó:» con el motivo.
