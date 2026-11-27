@@ -88,7 +88,9 @@ Si dice «No configurado», las notificaciones todavía no están listas en tu c
 - **…sale «Elige para quién es: toda la empresa, una sucursal, área, puesto o persona».** Falta elegir la audiencia en **Para quién**.
 - **…sale «La fecha de publicación debe ser futura».** Elegiste **Programar** con una fecha u hora que ya pasó.
 - **…sale «Debe ser después de la publicación».** La fecha de **Quitar del muro después del** es anterior a la publicación.
-- **…sale «Cada foto puede pesar hasta 8 MB» o «El PDF puede pesar hasta 15 MB».** Reduce el archivo y vuelve a subirlo.
+- **…sale «El PDF puede pesar hasta 15 MB».** Reduce el PDF y vuelve a subirlo. Las fotos no tienen ese problema: al elegirlas se ajustan solas (formato WebP, menos de 1 MB cada una) y verás «Preparando foto…» mientras tanto.
+- **…sale «Esta foto está en formato HEIC; en el iPhone ve a Ajustes › Cámara › Formatos › Más compatible, o elige otra».** Tu navegador no puede abrir fotos HEIC del iPhone. Cambia ese ajuste en el iPhone o elige otra foto.
+- **…sale «El archivo pesa demasiado para subirlo. Prueba con uno más ligero.».** El servidor no aceptó un archivo tan grande. Elige uno más ligero (las fotos ya se ajustan solas; esto pasa sobre todo con PDFs grandes o con muchas fotos a la vez).
 - **…sale «Alguien más cambió este comunicado».** Otra persona lo editó mientras lo tenías abierto. Vuelve a abrirlo para ver lo último.
 - **…sale «Este comunicado ya se publicó: solo se pueden editar borradores y programados».** Ya está publicado; ve la primera pregunta frecuente.
 - **…cierro la pestaña con cambios sin guardar.** El navegador te pregunta antes de salir.

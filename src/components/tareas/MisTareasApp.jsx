@@ -13,6 +13,7 @@ import { dePreguntaApi } from "@/lib/tareas/api.mjs";
 import { CampoRespuesta } from "./Preguntas";
 import { TareasProvider, errorDe, useTareas } from "./store";
 import { Barra, ChipPrioridad, FotoSegura, fechaRelativa } from "./comun";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 
 const vacia = (r) => !r || (!r.na && (r.valor == null || r.valor === "" || (Array.isArray(r.valor) && !r.valor.length)));
 
@@ -22,6 +23,9 @@ function DetalleTarea({ id, alVolver }) {
   const [texto, setTexto] = useState("");
   const [aviso, setAviso] = useState("");
   const [subiendo, setSubiendo] = useState(false);
+  // (27/11/2026) La evidencia se convierte a WebP (1600 px, < 900 KB) al tomarla, antes de subir (lib/imagenes/aWeb.mjs).
+  const { preparando, preparar } = usePrepararFoto("evidencia");
+  const [errorFoto, setErrorFoto] = useState("");
   if (!t) return <button type="button" onClick={alVolver} className="text-sm font-semibold text-brand">Volver</button>;
   const avance = avancePasos(t.pasos);
   const fecha = fechaRelativa(t.fecha, hoy, t.estado === "hecho");
@@ -53,13 +57,20 @@ function DetalleTarea({ id, alVolver }) {
           <div className="flex flex-wrap items-center gap-2">
             {t.fotos.map((f, i) => <FotoSegura key={f} llave={f} alt={`Evidencia ${i + 1}`} className="size-20 rounded-xl object-cover" />)}
             {editable ? (
-              <label className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-amber-400 bg-amber-50 px-3 text-[13px] font-semibold text-amber-900 ${subiendo ? "opacity-60" : ""}`}>
-                <Camera className="size-4" /> {subiendo ? "Subiendo…" : "Tomar foto"}
-                <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={subiendo}
-                  onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (!f) return; setSubiendo(true); await subirFotoTarea(t, f); setSubiendo(false); }} />
+              <label className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-amber-400 bg-amber-50 px-3 text-[13px] font-semibold text-amber-900 ${subiendo || preparando ? "opacity-60" : ""}`}>
+                <Camera className="size-4" /> <span role={preparando ? "status" : undefined}>{preparando ? TEXTO_PREPARANDO : subiendo ? "Subiendo…" : "Tomar foto"}</span>
+                <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={subiendo || preparando}
+                  onChange={async (e) => {
+                    const f = e.target.files?.[0]; e.target.value = ""; if (!f) return;
+                    setErrorFoto("");
+                    const foto = await preparar(f);
+                    if (foto.error) { setErrorFoto(foto.error); return; }
+                    setSubiendo(true); await subirFotoTarea(t, foto.archivo); setSubiendo(false);
+                  }} />
               </label>
             ) : null}
           </div>
+          {errorFoto ? <p role="alert" className="text-[13px] text-red-700">{errorFoto}</p> : null}
         </section>
       ) : null}
       <section aria-label="Comentarios" className="space-y-2">

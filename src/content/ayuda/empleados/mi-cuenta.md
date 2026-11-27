@@ -28,7 +28,7 @@ Cualquier usuario del panel (RH, dueño y usuarios con acceso). La pestaña **Mi
 ## Cómo cambiar tu información (pestaña Mi cuenta)
 
 1. Cambia **Nombre** o **Correo** (ambos obligatorios).
-2. Para la foto, toca `Cambiar foto`, elige la imagen y revisa la vista previa («Vista previa. La foto aún no se guarda.»). Toca `Guardar foto` o `Cancelar`.
+2. Para la foto, toca `Cambiar foto`, elige la imagen y revisa la vista previa («Vista previa. La foto aún no se guarda.»). La foto se ajusta sola al elegirla (verás «Preparando foto…»); el logo de la empresa también, pero queda en JPG o PNG porque va en tus PDF. Toca `Guardar foto` o `Cancelar`.
 3. Toca `Guardar`.
 
 ## Cómo cambiar tu contraseña (pestaña Seguridad)

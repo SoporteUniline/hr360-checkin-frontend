@@ -11,9 +11,11 @@ import { ChevronLeft, FileText, ImagePlus, Trash2, Youtube } from "lucide-react"
 import axios from "@/lib/axios";
 import { SelectorEmpresa } from "@/components/nomina/comun";
 import {
-  API, LIMITES, RUTA_PANEL, TIPOS_FOTO, TIPOS_REDACTAR, datosParaEnviar, errorDe, formularioDe, formularioVacio, principal, rutaSeguimiento,
+  API, LIMITES, RUTA_PANEL, TIPOS_REDACTAR, datosParaEnviar, errorDe, formularioDe, formularioVacio, principal, rutaSeguimiento,
   tamanoLegible, textoPublicar, urlMiniatura, validarArchivos, validarFormulario, youtubeId,
 } from "@/lib/comunicados/comunicados.mjs";
+import { ACEPTA_FOTOS } from "@/lib/imagenes/aWeb.mjs";
+import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
 import SelectorAudiencia, { usePreviaAudiencia } from "./SelectorAudiencia";
 import { MULTIPART, AvisoError, Campo, Interruptor, Mensaje, ariaCampo, botonPrimario, botonSecundario, botonTexto, entrada, get, opcionesSwr, tarjeta, useEmpresa, usePuedeEditar } from "./comun";
 
@@ -57,6 +59,9 @@ export default function Redactar({ id = null }) {
   const cargado = useRef(false);
   const entradaFotos = useRef(null);
   const entradaPdf = useRef(null);
+  // (27/11/2026) Cada foto se convierte a WebP (2000 px, < 900 KB) al elegirla (lib/imagenes/aWeb.mjs).
+  const { preparando, prepararVarias } = usePrepararFoto("publicacion");
+  const [errorConversion, setErrorConversion] = useState(null);
 
   useEffect(() => {
     if (guardado && !cargado.current) { cargado.current = true; setF(formularioDe(guardado)); }
@@ -82,17 +87,26 @@ export default function Redactar({ id = null }) {
   const puedeEditar = usePuedeEditar();
   const editable = puedeEditar && (!editando || ["borrador", "programado"].includes(guardado?.estado));
 
-  const agregarFotos = (lista) => {
-    const nuevas = [...lista].map((archivo) => { const url = URL.createObjectURL(archivo); urls.current.push(url); return { clave: `${archivo.name}-${archivo.size}-${Math.random()}`, archivo, url }; });
-    setFotos((x) => [...x, ...nuevas]);
-    setSucio(true);
+  const agregarFotos = async (lista) => {
+    const elegidas = [...lista];
     if (entradaFotos.current) entradaFotos.current.value = "";
+    if (!elegidas.length) return;
+    setErrorConversion(null);
+    const { listas, errores: fallas } = await prepararVarias(elegidas);
+    const nuevas = listas.map(({ archivo }) => { const url = URL.createObjectURL(archivo); urls.current.push(url); return { clave: `${archivo.name}-${archivo.size}-${Math.random()}`, archivo, url }; });
+    setFotos((x) => [...x, ...nuevas]);
+    if (nuevas.length) setSucio(true);
+    if (fallas.length) setErrorConversion(fallas.join(" "));
   };
-  const quitarFoto = (clave) => setFotos((x) => x.filter((y) => { if (y.clave === clave) URL.revokeObjectURL(y.url); return y.clave !== clave; }));
+  const quitarFoto = (clave) => {
+    setErrorConversion(null);
+    setFotos((x) => x.filter((y) => { if (y.clave === clave) URL.revokeObjectURL(y.url); return y.clave !== clave; }));
+  };
 
   const enviar = async (accion) => {
     setMensaje(null);
     const e = validarFormulario(f, { accion });
+    if (preparando) return;
     if (Object.keys(e).length || Object.keys(errArchivos).length) {
       setErrores(e);
       setMensaje({ tipo: "error", texto: Object.values(e)[0] ?? Object.values(errArchivos)[0] });
@@ -120,8 +134,8 @@ export default function Redactar({ id = null }) {
   const titulo = editando ? (f.titulo ? `Editar: ${f.titulo}` : "Editar comunicado") : "Nuevo comunicado";
   const acciones = (
     <div className="flex flex-wrap gap-2">
-      <button type="button" className={botonSecundario} disabled={Boolean(enviando) || !editable} onClick={() => enviar("borrador")}>{enviando === "borrador" ? "Guardando…" : "Guardar borrador"}</button>
-      <button type="button" className={botonPrimario} disabled={Boolean(enviando) || !editable} onClick={() => enviar("publicar")} data-publicar>{enviando === "publicar" ? "Publicando…" : textoPublicar(f, previa?.total)}</button>
+      <button type="button" className={botonSecundario} disabled={Boolean(enviando) || preparando || !editable} onClick={() => enviar("borrador")}>{enviando === "borrador" ? "Guardando…" : "Guardar borrador"}</button>
+      <button type="button" className={botonPrimario} disabled={Boolean(enviando) || preparando || !editable} onClick={() => enviar("publicar")} data-publicar>{enviando === "publicar" ? "Publicando…" : textoPublicar(f, previa?.total)}</button>
     </div>
   );
 
@@ -162,12 +176,13 @@ export default function Redactar({ id = null }) {
           <section className={seccion} aria-labelledby="sec-adjuntos">
             <h2 id="sec-adjuntos" className={tituloSeccion}>Fotos, documento y video</h2>
             <div className="flex flex-wrap gap-2">
-              <input ref={entradaFotos} id="c-fotos" type="file" accept={TIPOS_FOTO.join(",")} multiple className="sr-only" onChange={(e) => agregarFotos(e.target.files ?? [])} data-entrada-fotos />
-              <label htmlFor="c-fotos" className={`${botonSecundario} cursor-pointer`}><ImagePlus className="size-4" aria-hidden="true" />Fotos (hasta {LIMITES.fotos})</label>
+              <input ref={entradaFotos} id="c-fotos" type="file" accept={ACEPTA_FOTOS} multiple className="sr-only" disabled={preparando} onChange={(e) => agregarFotos(e.target.files ?? [])} data-entrada-fotos />
+              <label htmlFor="c-fotos" className={`${botonSecundario} cursor-pointer ${preparando ? "pointer-events-none opacity-60" : ""}`}><ImagePlus className="size-4" aria-hidden="true" />{preparando ? TEXTO_PREPARANDO : `Fotos (hasta ${LIMITES.fotos})`}</label>
               <input ref={entradaPdf} id="c-pdf" type="file" accept="application/pdf,.pdf" className="sr-only" onChange={(e) => { setPdf(e.target.files?.[0] ?? null); setSucio(true); e.target.value = ""; }} data-entrada-pdf />
               <label htmlFor="c-pdf" className={`${botonSecundario} cursor-pointer`}><FileText className="size-4" aria-hidden="true" />{pdf || pdfGuardado ? "Cambiar PDF" : "PDF"}</label>
             </div>
-            {errArchivos.fotos ? <p role="alert" className="text-[13px] text-red-700">{errArchivos.fotos}</p> : null}
+            {preparando ? <p role="status" className="text-[13px] text-slate-600" data-preparando-foto>{TEXTO_PREPARANDO}</p> : null}
+            {errArchivos.fotos || errorConversion ? <p role="alert" className="text-[13px] text-red-700">{errArchivos.fotos ?? errorConversion}</p> : null}
             {errArchivos.pdf ? <p role="alert" className="text-[13px] text-red-700">{errArchivos.pdf}</p> : null}
             {fotos.length || fotosGuardadas.length ? (
               <ul className="grid grid-cols-3 gap-2 sm:grid-cols-5" aria-label="Fotos">

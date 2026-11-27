@@ -3,10 +3,11 @@
 // Reglas de texto y formato en src/lib/induccion/induccion.mjs.
 import axios from "@/lib/axios";
 import { TONO_CHIP, chipsAvance, colorAvatar, iniciales } from "@/lib/induccion/induccion.mjs";
+import { mensajeRechazoPorPeso } from "@/lib/errorSubida.mjs";
 
 export const get = (url) => axios.get(url).then((r) => r.data);
 export const opcionesSwr = { revalidateOnFocus: false, shouldRetryOnError: false };
-export const errorDe = (e, porDefecto = "No se pudo completar la acción. Intenta de nuevo.") => e?.response?.data?.error || porDefecto;
+export const errorDe = (e, porDefecto = "No se pudo completar la acción. Intenta de nuevo.") => mensajeRechazoPorPeso(e) || e?.response?.data?.error || porDefecto;
 export const camposDe = (e) => e?.response?.data?.campos ?? null;
 
 export const boton = "inline-flex min-h-11 items-center justify-center gap-2 rounded-[10px] px-4 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-60";

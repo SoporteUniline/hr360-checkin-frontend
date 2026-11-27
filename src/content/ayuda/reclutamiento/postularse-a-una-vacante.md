@@ -71,7 +71,7 @@ Cuando el agente de WhatsApp le pide documentos o datos que no se piden por chat
 
 1. Abre el enlace. Verá «Completa o corrige tus datos para la entrevista. Lo que ya nos dijiste por WhatsApp aparece aquí».
 2. Revisa o completa sus respuestas. Las de Sí o No son botones grandes.
-3. En **Documentos** sube los archivos que se piden (PDF, Word o foto, hasta 10 MB).
+3. En **Documentos** sube los archivos que se piden (PDF, Word o foto, hasta 10 MB). Las fotos se ajustan solas para que se suban rápido.
 4. Toca **Enviar respuestas**. Verá «¡Listo! Recibimos tus respuestas. Seguimos por WhatsApp».
 
 Mientras el enlace esté vigente puede volver para corregir algo con **Guardar cambios**. Lo que envía aparece en su ficha de la bandeja de WhatsApp.

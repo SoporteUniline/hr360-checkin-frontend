@@ -5,6 +5,7 @@ import { demoBasePath, rutaDeInstancia } from "./demo-base-path.mjs";
 import { esSesionCerrada, RUTA_LOGIN_SESION_CERRADA } from "./passkeys/modelo.mjs";
 import { alResponderAxios } from "./asistencia/refrescoAsistencias";
 import { debeAvisarSinCreditos, EVENTO_SIN_CREDITOS, MENSAJE_SIN_CREDITOS } from "./ia/creditos.mjs";
+import { normalizarRechazoPorPeso } from "./errorSubida.mjs";
 
 let offlineReady;
 export function ensureOfflineCache() {
@@ -39,7 +40,10 @@ function avisarSinCreditos(error) {
     }
   } catch { /* el aviso nunca rompe la respuesta */ }
 }
+// (27/11/2026) 413 de nginx en HTML (archivo más grande que su límite): se le pone el mensaje claro en data.error y
+// data.mensaje para que lo muestre cualquier pantalla (lib/errorSubida.mjs).
 function alCerrarseLaSesion(error) {
+  normalizarRechazoPorPeso(error);
   avisarSinCreditos(error);
   const r = error?.response;
   if (typeof window !== "undefined" && !saliendo && esSesionCerrada(r?.status, r?.data)) {
