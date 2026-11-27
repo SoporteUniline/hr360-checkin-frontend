@@ -121,7 +121,7 @@ try {
   await page.evaluate(() => document.fonts.ready);
   await dormir(500);
   assert.ok(await dialogo.getByText("BUENFIN26").isVisible());
-  assert.ok(await dialogo.getByText("Checador, nómina y firma en una sola app").isVisible(), "franja con la frase de valor");
+  assert.ok(await dialogo.getByText("Checador, contratos y firma en una sola app").isVisible(), "franja con la frase de valor");
   assert.ok(await page.locator(".pv-collage").isVisible(), "collage de marca sin imagen");
   assert.equal(await page.locator(".pv-collage img").count(), 0, "el collage no usa fotos");
   const caja1 = await dialogo.boundingBox();
@@ -228,7 +228,7 @@ try {
     els.filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && (r.right > 390.5 || r.left < -0.5); }).map((el) => el.className));
   assert.deepEqual(desbordes, [], "nada del pop-up se sale de los 390 px");
   assert.equal(await p3.locator(".pv-collage").isVisible(), false, "el collage se oculta en celular");
-  assert.ok(await d3.getByText("Checador, nómina y firma en una sola app").isVisible(), "queda la franja");
+  assert.ok(await d3.getByText("Checador, contratos y firma en una sola app").isVisible(), "queda la franja");
   const franja = await p3.locator(".pv-franja").boundingBox();
   const form = await p3.locator(".pv-form").boundingBox();
   assert.ok(franja.y < form.y, "la franja va arriba del formulario");

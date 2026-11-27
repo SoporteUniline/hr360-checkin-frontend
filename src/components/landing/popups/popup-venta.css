@@ -43,6 +43,8 @@
 .pv-lada:focus-within { border-color: var(--pv-azul); box-shadow: 0 0 0 3px rgba(122, 151, 255, .55); }
 .pv-campo small { color: rgba(255, 255, 255, .62); font-size: .82rem; }
 .pv-campo small.pv-error { color: #fca5a5; font-weight: 600; }
+.pv-opcional { font-weight: 500; color: rgba(255, 255, 255, .7); }
+.pv-gracias p b.pv-correo { white-space: normal; overflow-wrap: anywhere; }
 
 .pv-acepto { display: flex; align-items: flex-start; gap: 10px; color: rgba(255, 255, 255, .82); font-size: .88rem; line-height: 1.45; cursor: pointer; }
 .pv-acepto input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--pv-azul); }

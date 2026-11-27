@@ -1,5 +1,6 @@
 // Reglas del lado del navegador para los pop-ups de venta (docs/popups-sitio.md del backend).
 // Puras: se prueban con scripts/test-popups.mjs.
+import { estadoCorreo, limpiarCorreo } from "../prospectos/reglas.mjs";
 
 export const CLAVE_HISTORIAL = "adamia_popups_vistos";
 const DIA_MS = 86400000;
@@ -94,18 +95,21 @@ export const celularValido = (iso, celular) => ladaDe(iso).digitos.includes(solo
 export const celularInternacional = (iso, celular) => `+${ladaDe(iso).codigo}${soloDigitos(celular)}`;
 
 // El botón se habilita con nombre (2+ caracteres), celular válido para su lada y el aviso de privacidad aceptado.
-export const datosContactoValidos = ({ nombre, iso, celular, acepta }) =>
-  String(nombre ?? "").trim().length >= 2 && celularValido(iso, celular) && acepta === true;
+// El correo es opcional: solo detiene si está mal escrito o si marcó «Quiero recibir noticias» sin escribirlo.
+export const datosContactoValidos = ({ nombre, iso, celular, acepta, correo = "", noticias = false }) =>
+  String(nombre ?? "").trim().length >= 2 && celularValido(iso, celular) && acepta === true && estadoCorreo({ correo, noticias }).valido;
 
 // Mismo canal que /contacto: los datos llegan al WhatsApp de ventas de ADAMIA.
 export const WHATSAPP_VENTAS = "523171288029";
-export function mensajeContacto({ nombre, iso, celular, titulo, cupon }) {
+export function mensajeContacto({ nombre, iso, celular, correo, titulo, cupon }) {
   const lada = ladaDe(iso);
+  const conCorreo = estadoCorreo({ correo }).valido && limpiarCorreo(correo);
   return [
     "Hola ADAMIA, quiero conocerla con una llamada.",
     "",
     `Nombre: ${String(nombre ?? "").trim()}`,
     `Celular: +${lada.codigo} ${soloDigitos(celular)} (${lada.pais})`,
+    ...(conCorreo ? [`Correo: ${limpiarCorreo(correo)}`] : []),
     `Promoción: ${titulo}${cupon ? ` (cupón ${cupon})` : ""}`,
   ].join("\n");
 }

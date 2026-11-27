@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import AceptoLegal from "@/components/legal/AceptoLegal";
 import { DOCS_AVISO, registrarAceptacion } from "@/lib/legal/aceptacion";
+import { NOTICIAS, celularDeTextoLibre } from "@/lib/prospectos/reglas.mjs";
+import { guardarProspecto } from "@/lib/prospectos/guardar";
 
 const canales = [
   {
@@ -38,6 +40,8 @@ export default function ContactoPage() {
   });
 
   const [aceptaAviso, setAceptaAviso] = useState(false);
+  // Aparte del aviso y desmarcada: permiso para mandarle noticias al correo (constancia propia en el backend).
+  const [noticias, setNoticias] = useState(false);
   const whatsappNumber = "523171288029";
 
   const handleChange = (field) => (event) => {
@@ -81,6 +85,8 @@ export default function ContactoPage() {
       body,
     )}`;
     window.open(url, "_blank", "noopener,noreferrer");
+    // Después de abrir WhatsApp y sin esperar: el prospecto (mismo guardado que el pop-up), origen «contacto».
+    guardarProspecto({ nombre, celular: celularDeTextoLibre(telefono), correo: email, noticias, origen: { tipo: "contacto" } });
   };
 
   return (
@@ -209,7 +215,17 @@ export default function ContactoPage() {
               </label>
 
               <div className="md:col-span-2">
-                <AceptoLegal id="contacto-acepto" className="mb-4" checked={aceptaAviso} onChange={setAceptaAviso} />
+                <AceptoLegal id="contacto-acepto" className="mb-3" checked={aceptaAviso} onChange={setAceptaAviso} />
+                <label htmlFor="contacto-noticias" className="mb-4 flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-[#4b5270]">
+                  <input
+                    id="contacto-noticias"
+                    type="checkbox"
+                    checked={noticias}
+                    onChange={(e) => setNoticias(e.target.checked)}
+                    className="mt-0.5 size-5 shrink-0 accent-[#2c56e8]"
+                  />
+                  <span>{NOTICIAS.texto}</span>
+                </label>
                 <button
                   type="submit"
                   className="inline-flex items-center rounded-xl bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-3 font-bold text-white shadow-lg transition hover:-translate-y-0.5"

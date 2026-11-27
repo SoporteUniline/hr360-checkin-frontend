@@ -31,6 +31,7 @@ import {
   Gift,
   Wallet,
   Megaphone,
+  Contact,
   HandCoins,
   MapPin,
   Route,
@@ -192,6 +193,13 @@ const dashboardItems = [
     url: "/dashboard/popups",
     rol: "Admin",
     icon: Megaphone,
+  },
+  // (27/11/2026) Quienes dejaron sus datos en los pop-ups y en Contacto, con su permiso de noticias y CSV.
+  {
+    title: "Prospectos",
+    url: "/dashboard/prospectos",
+    rol: "Admin",
+    icon: Contact,
   },
   {
     title: "Mensajes sistema",
