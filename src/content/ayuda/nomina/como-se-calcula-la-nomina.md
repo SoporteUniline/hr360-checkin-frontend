@@ -14,7 +14,7 @@ fuentes: [src/components/nomina/AsistenciaRecibo.jsx, src/components/nomina/Edit
 
 Esta guía explica, regla por regla, cómo arma ADAMIA cada recibo. Te sirve para revisar la nómina con confianza y para contestarle a un empleado que pregunta «¿por qué me pagaron esto?». En el detalle de cada nómina, al hacer clic en una persona, ADAMIA te muestra estas mismas cuentas día por día.
 
-> **Importante:** Todo lo que calcula ADAMIA es una **sugerencia editable**: Recursos Humanos puede cambiar cualquier importe con un motivo. El cálculo solo incluye los conceptos de esta guía; **no calcula ISR ni cuotas del IMSS** y el recibo no es un CFDI. Si tu empresa hace esas retenciones, agrégalas como descuento a mano. Te recomendamos validar tus reglas con tu contador.
+> **Importante:** Todo lo que calcula ADAMIA es una **sugerencia editable**: Recursos Humanos puede cambiar cualquier importe con un motivo. El recibo no es un CFDI. Mientras la **nómina formal** esté apagada, el cálculo solo incluye los conceptos de esta guía: **no calcula ISR ni cuotas del IMSS**. Si tu empresa hace esas retenciones, enciende la nómina formal en **Nómina › Configuración** para que se calculen solas (ve [Cómo manejar la nómina formal](/ayuda/nomina/nomina-formal)). Te recomendamos validar tus reglas con tu contador.
 
 ## Quién la usa
 

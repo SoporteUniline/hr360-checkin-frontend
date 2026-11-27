@@ -12,6 +12,8 @@ export const PESTANAS = [
   { href: "/panel/nomina", texto: "Nóminas", subtitulo: "Calcula, revisa y autoriza el pago de tu equipo. Recibos sin timbrar." },
   { href: "/panel/nomina/bonos", texto: "Bonos y descuentos", subtitulo: "Catálogo de bonos y descuentos y a quién se le aplican." },
   { href: "/panel/nomina/prestamos", texto: "Préstamos", subtitulo: "Sin intereses. Se descuentan en la nómina cuando la persona firma su acuerdo." },
+  // (27/11/2026) Nómina formal: el interruptor, datos fiscales de la empresa y de cada persona, y lo que falta.
+  { href: "/panel/nomina/configuracion", texto: "Configuración", subtitulo: "Nómina formal (ISR e IMSS), datos fiscales y lo que falta para calcularla." },
 ];
 
 export function ModuloNomina({ acciones, children }) {
