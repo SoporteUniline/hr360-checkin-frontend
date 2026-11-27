@@ -36,6 +36,7 @@ import PermisosCalendario from "./PermisosCalendario";
 import PermisoDialog from "./PermisoDialog";
 import PermisoDeleteDialog from "./PermisoDeleteDialog";
 import PermisoViewDialog from "./PermisoViewDialog";
+import RespuestasWhatsapp from "./RespuestasWhatsapp";
 import styles from "./permisos-theme.module.css";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { Combobox } from "@/components/Combobox";
@@ -616,6 +617,18 @@ export default function PermisosPage() {
           icon={XCircle}
         />
       </div>
+
+      {/* (29/12/2026) Respuestas de WhatsApp que parecen aprobar/rechazar solicitudes que siguen Pendiente. Solo aparece si
+          el servidor encontró alguna (a un empleado el servidor le responde 403 y no se muestra); aplicar usa la misma acción
+          de la tabla (con confirmación). */}
+      <RespuestasWhatsapp
+        idEmpresa={idEmpresa}
+        idUsuario={dataUser?.id_usuario}
+        onAplicado={() => {
+          mutate();
+          mutateCalendario && mutateCalendario();
+        }}
+      />
 
       {/* Fila de filtros homologada */}
       <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
