@@ -83,7 +83,7 @@ Quien entra o sale a mitad del periodo aparece con un aviso como «Ingresó el 2
 
 ### ¿La nómina se timbra ante el SAT?
 
-No. Los recibos de ADAMIA no son CFDI. Si timbras con otro sistema, usa el botón **Excel de pagos** del detalle como base.
+No. Los recibos de ADAMIA no son CFDI. Si tu empresa maneja nómina formal, ADAMIA puede calcular el ISR y el IMSS de cada recibo (pre-nómina, no timbrada): ve [Cómo manejar la nómina formal](/ayuda/nomina/nomina-formal).
 
 ### ¿Cuánto puede durar un periodo?
 

@@ -7,24 +7,25 @@ pantallas: []
 palabras: [nómina, nomina, pago, recibos, sueldo, bonos, préstamos, aguinaldo, finiquito, liquidación]
 orden: 32
 actualizado: 2026-11-27
-fuentes: [src/components/nomina/ModuloNomina.jsx, src/lib/nomina/nomina.mjs, src/lib/modulos/catalogo.mjs, src/components/Sidebar/nav-main.jsx]
+fuentes: [src/components/nomina/ModuloNomina.jsx, src/lib/nomina/nomina.mjs, src/lib/nomina/formal.mjs, src/lib/modulos/catalogo.mjs, src/components/Sidebar/nav-main.jsx]
 ---
 
 ## Para qué sirve
 
 El módulo **Nómina** te ayuda a pagarle a tu equipo sin hacer cuentas a mano. ADAMIA toma la asistencia del periodo (días trabajados, faltas, retardos, horas extra autorizadas, festivos y permisos), le suma los bonos y le resta los descuentos y préstamos. Tú revisas, ajustas lo que haga falta y el dueño de la cuenta autoriza. Al autorizar, cada persona recibe su recibo en PDF por correo y lo firma desde su celular.
 
-> **Importante:** Los recibos de ADAMIA **no están timbrados**: no son un CFDI de nómina. Te sirven para calcular, controlar y comprobar lo que pagas. Si tu empresa timbra con un contador o con otro sistema, puedes descargar el Excel de pagos y usarlo como base.
+> **Importante:** Los recibos de ADAMIA **no están timbrados**: no son un CFDI de nómina. Te sirven para calcular, controlar y comprobar lo que pagas. Si tu empresa maneja nómina formal, ADAMIA puede calcular el ISR y el IMSS de cada recibo: ve [Cómo manejar la nómina formal](/ayuda/nomina/nomina-formal).
 
 ## Qué incluye
 
-En el menú lateral, dentro de **Nómina**, encuentras cinco secciones. Las tres primeras comparten la misma pantalla con pestañas arriba: **Nóminas**, **Bonos y descuentos** y **Préstamos**.
+En el menú lateral, dentro de **Nómina**, encuentras estas secciones. Cuatro comparten la misma pantalla con pestañas arriba: **Nóminas**, **Bonos y descuentos**, **Préstamos** y **Configuración**.
 
 | Sección | Qué haces ahí | Guía |
 | --- | --- | --- |
 | Nóminas | Crear, calcular, revisar, autorizar y cancelar nóminas | [Cómo crear y calcular una nómina](/ayuda/nomina/crear-y-calcular-nomina) |
 | Bonos y descuentos | Tu catálogo de bonos y descuentos y a quién se le aplica cada uno | [Cómo crear bonos y descuentos](/ayuda/nomina/bonos-y-descuentos) |
 | Préstamos | Aprobar, registrar y cobrar préstamos sin intereses | [Cómo manejar préstamos a empleados](/ayuda/nomina/prestamos) |
+| Configuración | Encender la nómina formal (ISR e IMSS), datos fiscales de la empresa y de cada persona, y lo que falta | [Cómo manejar la nómina formal](/ayuda/nomina/nomina-formal) |
 | Finiquitos y liquidaciones | Calcular, guardar y mandar a firmar el finiquito o la liquidación | [Cómo calcular un finiquito o una liquidación](/ayuda/nomina/finiquitos-y-liquidaciones) |
 | Aguinaldos | Calcular el aguinaldo de varias personas a la vez, guardarlo y descargar PDF | [Cómo calcular aguinaldos](/ayuda/nomina/aguinaldos) |
 

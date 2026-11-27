@@ -14,6 +14,8 @@ import { Chip, descargar, mensajeError } from "./comun";
 import { dinero } from "@/lib/nomina/nomina.mjs";
 import AsistenciaRecibo from "./AsistenciaRecibo";
 import FormConcepto, { VACIO } from "./FormConcepto";
+import DesgloseFiscal from "./DesgloseFiscal";
+import { esFiscal } from "@/lib/nomina/formal.mjs";
 import { Plus } from "lucide-react";
 
 const get = (url) => axios.get(url).then((r) => r.data);
@@ -95,7 +97,8 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
             {l.nota ? <p className="text-xs text-amber-700">{l.nota}</p> : null}
             {Number(l.editado) ? <p className="text-xs text-gray-500">Editado{l.editado_por_nombre ? ` por ${l.editado_por_nombre}` : ""}{l.motivo ? `: ${l.motivo}` : ""} · sugerido {dinero(l.importe_sugerido)}</p> : null}
           </div>
-          {editable ? (
+          {/* (27/11/2026) Nómina formal: ISR e IMSS se calculan solos (no se editan a mano). */}
+          {editable && !esFiscal(l.clave) ? (
             <input
               aria-label={`Importe de ${l.concepto}`}
               type="number" min="0" step="0.01" inputMode="decimal"
@@ -103,8 +106,9 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
               value={c ? c.importe : Number(l.importe)}
               onChange={(e) => setCambios({ ...cambios, [l.clave]: { importe: e.target.value, motivo: c?.motivo ?? "" } })}
             />
-          ) : <b className="tabular-nums">{dinero(l.importe)}</b>}
+          ) : <b className="tabular-nums" data-importe-fijo={esFiscal(l.clave) ? l.clave : undefined}>{dinero(l.importe)}</b>}
         </div>
+        {editable && esFiscal(l.clave) ? <p className="mt-1 text-xs text-gray-500">Se calcula solo con la nómina formal: cambia los renglones de los que sale.</p> : null}
         {c ? (
           <input className="mt-2 h-9 w-full rounded-lg border border-gray-300 px-2 text-sm" placeholder="Motivo del cambio (opcional)" value={c.motivo} onChange={(e) => setCambios({ ...cambios, [l.clave]: { ...c, motivo: e.target.value } })} />
         ) : null}
@@ -146,6 +150,7 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
           </Seccion>
           <Seccion titulo="Percepciones"><ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">{percepciones.map(fila)}</ul></Seccion>
           <Seccion titulo="Descuentos">{descuentos.length ? <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">{descuentos.map(fila)}</ul> : <p className="text-slate-500">Sin descuentos.</p>}</Seccion>
+          <DesgloseFiscal fiscal={d.fiscal} idEmpleado={recibo.id_empleado} />
           {editable && lineasCambiadas.length ? (
             <Button disabled={guardando} onClick={() => enviar({ lineas: lineasCambiadas }, "Cambios guardados.")}>Guardar cambios ({lineasCambiadas.length})</Button>
           ) : null}
