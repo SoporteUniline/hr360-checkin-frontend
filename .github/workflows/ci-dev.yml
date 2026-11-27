@@ -277,6 +277,19 @@ jobs:
           mkdir -p capturas-hojas
           CAPTURAS=capturas-hojas node scripts/verify-hojas.mjs
 
+      # (27/11/2026, INC-010) Panel de RH en celular con 200 personas (perfil iPhone 13): al entrar a Asistencias ningún
+      # endpoint se pide dos veces (antes asistencias ×4, empleados ×2), tocar un módulo del menú lateral deja el <body>
+      # libre ≤ 150 ms (antes 0.7–1.5 s con pointer-events:none: se perdían los toques), la foto del usuario no se vuelve a
+      # pedir al reabrir el menú, y portada del muro / foto del aviso emergente con tamaño y decodificación asíncrona.
+      # Reusa la compilación anterior.
+      - name: Panel en celular — Asistencias sin peticiones repetidas y menú que no se come toques (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-panel-rapido
+          CAPTURAS=capturas-panel-rapido node scripts/verify-panel-rapido.mjs
+
       # (27/11/2026) Préstamos «¿En cuántos pagos?» con el backend simulado (1440 y 390): registrar en su página (no
       # ventana), plan al centavo ($5,000 en 6 = 5 × $833.33 + $833.35), calendario, aviso del tope con «Usar N quincenas»,
       # modo «Prefiero poner cuánto por nómina», aprobar en N pagos y pedirlo desde Mi espacio; letra ≥ 16/17 px, botones

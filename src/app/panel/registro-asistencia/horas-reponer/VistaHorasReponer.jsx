@@ -16,7 +16,6 @@ import axios from "@/lib/axios";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { permisosApi } from "@/lib/permisosApi";
 import { refrescarAsistencias } from "@/lib/asistencia/refrescoAsistencias";
-import { exportToExcel } from "@/utils/exportExcelJS";
 import { useAuth } from "@/context/AuthContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
@@ -25,6 +24,9 @@ import {
 } from "@/lib/asistencia/horasPorReponer.mjs";
 import DetalleCuentaReponer from "./DetalleCuentaReponer";
 import { ConfirmarCancelarPermiso, DialogoCierre, DialogoReposicion } from "./DialogosReponer";
+
+// ExcelJS (~900 KB) se descarga y evalúa solo al exportar, no al entrar a Asistencias (27/11/2026, rendimiento en celular).
+const cargarExportador = () => import("@/utils/exportExcelJS").then((m) => m.exportToExcel);
 
 const auth = () => ({ headers: { Authorization: `Bearer ${Cookies.get("token")}` } });
 export const urlPorReponer = (idEmpresa) => `/checador/cuenta-horas/por-reponer?empresa=${idEmpresa && idEmpresa !== "all" ? idEmpresa : "all"}`;
@@ -220,7 +222,7 @@ export default function VistaHorasReponer({ idEmpresa, movil = false }) {
   );
   const exportar = async () => {
     if (!filas.length) { enqueueSnackbar("No hay personas con estos filtros.", { variant: "info" }); return; }
-    await exportToExcel(filasExcel(filas), COLUMNAS_EXCEL, `Horas por reponer ${datos?.hoy ?? ""}`.trim(), { sheetName: "Por reponer", headerColor: "2563EB" });
+    await (await cargarExportador())(filasExcel(filas), COLUMNAS_EXCEL, `Horas por reponer ${datos?.hoy ?? ""}`.trim(), { sheetName: "Por reponer", headerColor: "2563EB" });
   };
 
   const control = `min-h-11 rounded-xl border border-slate-300 bg-white px-3.5 text-[15px] text-slate-900 ${movil ? "w-full" : ""}`;
