@@ -1,10 +1,12 @@
-// Verificación en navegador de «Pedir información por WhatsApp» (25/11/2026) en /vacante/[slug] y en /bolsa-de-trabajo.
+// Verificación en navegador del WhatsApp de la vacante en /vacante/[slug] y en /bolsa-de-trabajo.
+// (27/11/2026, bolsa v2) Con el asistente encendido el enlace es la acción principal «Postularme por WhatsApp» (verde,
+// fija abajo en celular; en computadora dentro del diálogo con QR). Con WhatsApp sin asistente queda aparte como
+// «Preguntar por WhatsApp» (te responde el equipo). En la bolsa ya no hay enlace en la tarjeta: solo la insignia
+// «Postúlate por WhatsApp» cuando hay asistente (la tarjeta entera abre la vacante).
 // Backend simulado (nada sale a internet): el navegador pide a https://api.prueba.invalid (interceptado) y el servidor
 // de Next pide la vacante a un servidor local (RUTA_BACKEND_SERVIDOR). wa.me también se intercepta.
-// Cubre, a 1440 y 390 px: botón visible con el href exacto del API cuando hay enlace y ausente cuando es null; pestaña
-// nueva sin opener (rel="noopener noreferrer"); nombre accesible con el título; texto de apoyo según el asistente;
-// ≥ 44 px; contraste ≥ 4.5:1; en celular, en la barra fija junto a «Postularme ahora»; enlaces de la API que no son wa.me
-// no se muestran; en la bolsa, acceso por tarjeta sin abrir la vacante; sin scroll horizontal.
+// Cubre, a 1440 y 390 px: href exacto del API cuando hay enlace y nada cuando es null o no es wa.me; pestaña nueva sin
+// opener; nombre accesible; texto de apoyo sin asistente; ≥ 48 px (principal ≥ 56); contraste ≥ 4.5:1; sin scroll horizontal.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx \
 //      NEXT_PUBLIC_RECRUITMENT_ENABLED=true npx next build
 //      CAPTURAS=/ruta/capturas node scripts/verify-whatsapp-vacante.mjs
@@ -130,99 +132,70 @@ try {
     // ——— Vacante con enlace y asistente ———
     const v1 = VACANTES[0];
     await pg.goto(`${base}/vacante/${v1.slug}`, { waitUntil: "networkidle" });
-    await pg.locator(".vc-lado h1, .vc-cab h1").first().waitFor();
-    const tarjeta = pg.locator(".vc-wa-bloque .vc-wa");
-    await tarjeta.waitFor({ state: "visible" });
-    assert.equal(await tarjeta.getAttribute("href"), v1.whatsapp.enlace, "href exacto del API");
-    assert.equal(await tarjeta.getAttribute("target"), "_blank");
-    assert.deepEqual((await tarjeta.getAttribute("rel")).split(/\s+/).sort(), ["noopener", "noreferrer"]);
-    assert.equal(await tarjeta.getAttribute("aria-label"), etiqueta(v1.titulo));
-    assert.equal(await pg.getByRole("link", { name: etiqueta(v1.titulo) }).first().getAttribute("href"), v1.whatsapp.enlace);
-    assert.equal((await tarjeta.innerText()).trim(), "Pedir información por WhatsApp");
-    assert.equal(await pg.locator("#vc-wa-apoyo").innerText(), "Te responde nuestro asistente en minutos.");
-    assert.equal(await tarjeta.getAttribute("aria-describedby"), "vc-wa-apoyo");
-    const cajaT = await tarjeta.boundingBox();
-    assert.ok(cajaT.height >= 44 && cajaT.width >= 44, `tamaño táctil ${cajaT.width}x${cajaT.height}`);
-    const cr = await contraste(pg, tarjeta);
-    assert.ok(cr >= 4.5, `contraste ${cr.toFixed(2)}`);
-    assert.ok(await tarjeta.locator("svg").isVisible(), "con icono");
-    const postular = pg.locator(".vc-btn-postular");
-    const barra = pg.locator(".vc-postular .vc-wa-barra");
+    await pg.getByRole("heading", { level: 1, name: v1.titulo }).waitFor();
+    await pg.locator("[data-acciones-postular]").waitFor();
+    let principal;
     if (movil) {
-      await barra.waitFor({ state: "visible" });
-      assert.equal(await barra.getAttribute("href"), v1.whatsapp.enlace);
-      assert.equal(await barra.getAttribute("aria-label"), etiqueta(v1.titulo));
-      const cb = await barra.boundingBox();
-      const cp = await postular.boundingBox();
-      assert.ok(cb.height >= 44, `barra ${cb.height}px`);
-      assert.ok(cb.y + cb.height <= alto && cb.y >= alto - 110, `al alcance del pulgar (y=${cb.y})`);
-      assert.ok(Math.abs(cb.y - cp.y) < 4 && cb.x > cp.x, "junto a «Postularme ahora», en la misma fila");
+      principal = pg.locator(".bt2-acciones.barra .solo-movil").getByRole("link", { name: "Postularme por WhatsApp" });
+      await principal.waitFor({ state: "visible" });
+      const cb = await principal.boundingBox();
+      assert.ok(cb.height >= 56, `principal ${cb.height}px`);
+      assert.ok(cb.y + cb.height <= alto && cb.y >= alto - 170, `fija abajo, al alcance del pulgar (y=${cb.y})`);
       assert.ok(cb.x + cb.width <= ancho, "no se sale de la pantalla");
-      assert.ok((await contraste(pg, barra)) >= 4.5);
-      assert.equal((await barra.innerText()).trim(), "WhatsApp");
-      ok(`${ancho}: barra fija con «Postularme ahora» + WhatsApp (${Math.round(cb.width)}x${Math.round(cb.height)}, y=${Math.round(cb.y)})`);
+      await pg.getByRole("button", { name: "No tengo WhatsApp: llenar formulario" }).waitFor();
     } else {
-      assert.equal(await barra.isVisible(), false, "en escritorio no hay barra");
-      const cp = await postular.boundingBox();
-      assert.ok(cajaT.y > cp.y && cajaT.y - (cp.y + cp.height) < 24, "justo debajo de «Postularme»");
+      await pg.locator("[data-acciones-postular] .solo-escritorio").getByRole("button", { name: "Postularme por WhatsApp" }).click();
+      const dlg = pg.getByRole("dialog");
+      await dlg.getByRole("img", { name: "Código QR para abrir WhatsApp en tu celular" }).waitFor();
+      principal = dlg.getByRole("link", { name: "Abrir WhatsApp" });
+      assert.ok((await principal.boundingBox()).height >= 56);
     }
+    assert.equal(await principal.getAttribute("href"), v1.whatsapp.enlace, "href exacto del API");
+    assert.equal(await principal.getAttribute("target"), "_blank");
+    assert.deepEqual((await principal.getAttribute("rel")).split(/\s+/).sort(), ["noopener", "noreferrer"]);
+    const cr = await contraste(pg, principal);
+    assert.ok(cr >= 4.5, `contraste ${cr.toFixed(2)}`);
+    assert.ok(await principal.locator("svg").isVisible(), "con icono y texto");
     assert.ok(await sinScrollHorizontal(pg), "sin scroll horizontal");
-    ok(`${ancho}: /vacante/${v1.slug} botón visible, href exacto, aria-label, ${Math.round(cajaT.height)}px, contraste ${cr.toFixed(2)}:1, apoyo del asistente`);
-    if (OUT) {
-      await pg.screenshot({ path: `${OUT}/vacante-con-wa-${ancho}.png` });
-      await pg.locator(".vc-tarjeta").screenshot({ path: `${OUT}/vacante-con-wa-tarjeta-${ancho}.png` });
-    }
-    await abreSinOpener(ctx, pg, movil ? barra : tarjeta, v1.whatsapp.enlace);
+    if (OUT) await pg.screenshot({ path: `${OUT}/vacante-con-wa-${ancho}.png` });
+    await abreSinOpener(ctx, pg, principal, v1.whatsapp.enlace);
     assert.equal(new URL(pg.url()).pathname, `/vacante/${v1.slug}`, "la página se queda donde estaba");
-    ok(`${ancho}: abre wa.me en pestaña nueva sin opener`);
+    ok(`${ancho}: con asistente, «Postularme por WhatsApp» con el href exacto, ≥ 56 px, contraste ${cr.toFixed(2)}:1, abre wa.me sin opener`);
+    if (!movil) await pg.keyboard.press("Escape");
 
-    // ——— Sin asistente: otro texto de apoyo ———
+    // ——— WhatsApp sin asistente: aparte, «Preguntar por WhatsApp» (te responde el equipo) ———
     await pg.goto(`${base}/vacante/${VACANTES[1].slug}`, { waitUntil: "networkidle" });
-    await pg.locator(".vc-wa-bloque .vc-wa").waitFor();
-    assert.equal(await pg.locator("#vc-wa-apoyo").innerText(), "Te responde el equipo de reclutamiento.");
-    ok(`${ancho}: sin agente encendido → «Te responde el equipo de reclutamiento.»`);
+    const dudas = pg.getByRole("link", { name: etiqueta(VACANTES[1].titulo) });
+    await dudas.waitFor();
+    assert.equal(await dudas.getAttribute("href"), VACANTES[1].whatsapp.enlace);
+    assert.ok((await dudas.boundingBox()).height >= 48);
+    assert.ok((await pg.locator(".bt2-ficha").innerText()).includes("Te responde el equipo de reclutamiento."));
+    assert.equal(await pg.getByRole("link", { name: "Postularme por WhatsApp" }).count(), 0, "sin asistente no se postula por WhatsApp");
+    ok(`${ancho}: sin agente encendido → «Preguntar por WhatsApp» aparte y «Te responde el equipo de reclutamiento.»`);
 
     // ——— Sin enlace (null) y enlace que no es wa.me: no se muestra ———
     for (const v of [VACANTES[2], VACANTES[3]]) {
       await pg.goto(`${base}/vacante/${v.slug}`, { waitUntil: "networkidle" });
-      await postular.waitFor({ state: "visible" });
+      await pg.locator("[data-acciones-postular]").waitFor();
       await dormir(300);
-      assert.equal(await pg.locator(".vc-wa, #vc-wa-apoyo").count(), 0, `${v.slug}: sin botón`);
-      assert.equal(await pg.locator('a[href^="https://wa.me/"], a[href^="javascript:"]').count(), 0);
+      assert.equal(await pg.locator('a[href^="https://wa.me/"], a[href^="javascript:"]').count(), 0, `${v.slug}: sin WhatsApp`);
       assert.ok(await sinScrollHorizontal(pg));
       if (OUT && v === VACANTES[2]) await pg.screenshot({ path: `${OUT}/vacante-sin-wa-${ancho}.png` });
     }
     ok(`${ancho}: whatsapp null y enlace «javascript:» → no hay botón`);
 
-    // ——— Bolsa ———
+    // ——— Bolsa: insignia solo con asistente; ningún enlace a wa.me en la lista ———
     await pg.goto(`${base}/bolsa-de-trabajo`, { waitUntil: "networkidle" });
-    await pg.locator(".bt-vac").first().waitFor();
-    const accesos = pg.locator(".bt-vac-wa");
-    assert.equal(await accesos.count(), 2, "solo las tarjetas con enlace wa.me");
+    await pg.locator(".bt2-tarjeta").first().waitFor();
     for (const v of VACANTES) {
-      const t = pg.locator(`.bt-vac[data-vacante="${v.slug}"] .bt-vac-wa`);
-      if (v.whatsapp?.enlace?.startsWith("https://wa.me/")) {
-        assert.equal(await t.getAttribute("href"), v.whatsapp.enlace, `${v.slug}: href exacto`);
-        assert.equal(await t.getAttribute("aria-label"), etiqueta(v.titulo));
-        assert.deepEqual((await t.getAttribute("rel")).split(/\s+/).sort(), ["noopener", "noreferrer"]);
-        const c = await t.boundingBox();
-        assert.ok(c.height >= 44, `${v.slug}: ${c.height}px`);
-        assert.ok(c.x + c.width <= ancho);
-        assert.ok((await contraste(pg, t)) >= 4.5, `${v.slug}: contraste`);
-      } else {
-        assert.equal(await t.count(), 0, `${v.slug}: sin acceso`);
-      }
+      const t = pg.locator(`.bt2-tarjeta[data-vacante="${v.slug}"]`);
+      const dice = (await t.innerText()).includes("Postúlate por WhatsApp");
+      assert.equal(dice, v.slug === "chofer-wa", `${v.slug}: insignia ${dice}`);
     }
+    assert.equal(await pg.locator('.bt2-lista a[href^="https://wa.me/"], .bt2-lista a[href^="javascript:"]').count(), 0);
     assert.ok(await sinScrollHorizontal(pg), "bolsa sin scroll horizontal");
-    if (OUT) {
-      await pg.locator(".bt-lista").screenshot({ path: `${OUT}/bolsa-${ancho}.png` });
-      await pg.screenshot({ path: `${OUT}/bolsa-pantalla-${ancho}.png` });
-    }
-    // Tocar WhatsApp no abre la vacante (queda por encima del enlace de toda la tarjeta).
-    await abreSinOpener(ctx, pg, pg.locator(`.bt-vac[data-vacante="${VACANTES[0].slug}"] .bt-vac-wa`), VACANTES[0].whatsapp.enlace);
-    await dormir(300);
-    assert.equal(new URL(pg.url()).pathname, "/bolsa-de-trabajo", "la tarjeta no navegó");
-    ok(`${ancho}: bolsa con 2 accesos discretos (href exacto, ≥44 px, contraste), ninguno en null/«javascript:», no abre la vacante`);
+    if (OUT) await pg.screenshot({ path: `${OUT}/bolsa-pantalla-${ancho}.png` });
+    ok(`${ancho}: bolsa con «Postúlate por WhatsApp» solo donde hay asistente (enlace raro o null: nada)`);
 
     assert.deepEqual(errores, [], "sin errores en la página");
     await ctx.close();
