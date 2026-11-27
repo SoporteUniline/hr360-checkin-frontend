@@ -1,4 +1,6 @@
-// Módulos de ADAMIA para el sitio público (página de Funciones). Textos cortos y verificados contra el sistema.
+// Módulos de ADAMIA para el sitio público: página de Funciones y lista «Todos los módulos» de la portada (una sola
+// fuente). Textos cortos y verificados contra el sistema. Solo funciones en producción: lo que aún no sale (p. ej.
+// Inducción digital) no se anuncia. Regla: cada módulo nuevo que llega a producción se agrega aquí (docs/pagina-inicio.md).
 export const CATEGORIAS = [
   {
     id: "tiempo",
@@ -12,6 +14,7 @@ export const CATEGORIAS = [
       { nombre: "Reloj checador facial", texto: "Tu gente checa con su rostro desde el celular o una tablet." },
       { nombre: "Validación GPS y geocercas", texto: "Solo registra si la persona está dentro del área de trabajo." },
       { nombre: "Rostro, QR o código", texto: "Cada quien checa como le funcione mejor: rostro, QR del gafete o código." },
+      { nombre: "Monitor en vivo", texto: "Quién trabaja, quién va a llegar y quién pide atención, al momento.", href: "/ayuda/monitor/usar-el-monitor" },
       { nombre: "Asistencias", texto: "El día de cada persona: presente, retardo, falta o permiso." },
       { nombre: "Entradas y salidas", texto: "Cada checada con hora, lugar y quién la corrigió." },
       { nombre: "Horas extra", texto: "Autoriza, paga o repón tiempo; dobles y triples según la ley." },
@@ -35,6 +38,7 @@ export const CATEGORIAS = [
       { nombre: "Departamentos y puestos", texto: "Organiza tu estructura y a quién reporta cada quien." },
       { nombre: "Contratos", texto: "Vigencias y avisos antes de que venzan.", href: "/funcionalidades/contratos" },
       { nombre: "Actas administrativas", texto: "Registra incidencias con formato y fírmalas en línea." },
+      { nombre: "Nómina", texto: "Con las checadas reales; cada quien firma su recibo desde su celular." },
       { nombre: "Finiquitos y liquidaciones", texto: "Calcula y genera el documento de salida." },
       { nombre: "Aguinaldos", texto: "Calcula el aguinaldo de todo tu personal." },
       { nombre: "Mapa de rutas", texto: "Ve en el mapa las checadas de tu equipo en campo." },
@@ -58,20 +62,36 @@ export const CATEGORIAS = [
     ],
   },
   {
-    id: "documentos",
-    nombre: "Documentos y gente",
-    lema: "Orden y crecimiento.",
-    texto: "Genera y firma documentos en línea, controla uniformes y equipo, evalúa y contrata.",
-    color: "#d97706",
+    id: "talento",
+    nombre: "Talento y cultura",
+    lema: "Contrata y cuida a tu gente.",
+    texto: "Un reclutador con IA en WhatsApp, clima laboral con NOM-035, evaluaciones y un muro para comunicar.",
+    color: "#0f766e",
     fondo: "blanco",
+    detalle: { href: "/ayuda/reclutamiento/agente-de-whatsapp", texto: "Conoce el reclutador con IA" },
+    modulos: [
+      { nombre: "Reclutador IA por WhatsApp", texto: "Contesta, filtra y agenda entrevistas por WhatsApp; tú tomas el control cuando quieras.", href: "/#reclutador-ia" },
+      { nombre: "Vacantes y bolsa de trabajo", texto: "Publica vacantes, compártelas y recibe candidatos en un solo lugar." },
+      { nombre: "Clima laboral con IA", texto: "Encuestas anónimas y un plan de acción sugerido por Adamia AI.", href: "/#clima-ia" },
+      { nombre: "NOM-035", texto: "Cuestionario oficial, nivel de riesgo, buzón y expediente para inspección.", href: "/ayuda/clima/nom-035" },
+      { nombre: "Evaluación de desempeño", texto: "Campañas de evaluación con resultados por persona." },
+      { nombre: "Muro y comunicados", texto: "Publica avisos, fotos y eventos; ve quién confirmó de leído.", href: "/#muro" },
+    ],
+  },
+  {
+    id: "documentos",
+    nombre: "Documentos y equipo",
+    lema: "Todo en orden.",
+    texto: "Genera y firma documentos en línea, controla uniformes y equipo, y revisa el trabajo del día con checklists.",
+    color: "#d97706",
+    fondo: "gris",
     detalle: null,
     modulos: [
       { nombre: "Biblioteca documental", texto: "Plantillas y documentos de la empresa ordenados." },
       { nombre: "Generar documentos", texto: "Llena plantillas con los datos del empleado en segundos." },
       { nombre: "Firma en línea", texto: "Firma con trazo y foto como evidencia, desde el celular." },
       { nombre: "Activos y uniformes", texto: "Qué tiene cada quien: entregas, devoluciones y tallas." },
-      { nombre: "Evaluación de desempeño", texto: "Campañas de evaluación con resultados por persona." },
-      { nombre: "Reclutamiento y vacantes", texto: "Publica vacantes y recibe candidatos." },
+      { nombre: "Tareas y checklists", texto: "Checklists con foto y firma que se califican solos." },
     ],
   },
   {
@@ -88,12 +108,26 @@ export const CATEGORIAS = [
       { nombre: "Usuarios y permisos", texto: "Da acceso a RH y a jefes con lo que cada uno necesita." },
       { nombre: "Reglas de aviso", texto: "Correos automáticos de retardos, faltas, contratos y cumpleaños." },
       { nombre: "Campos personalizados", texto: "Agrega a la ficha los datos propios de tu empresa." },
+      { nombre: "Adamia AI", texto: "Resuelve dudas de la Ley Federal del Trabajo y de cómo usar ADAMIA." },
+      { nombre: "Centro de ayuda", texto: "Guías paso a paso de cada pantalla, abiertas para todos.", href: "/ayuda" },
       { nombre: "Calculadora de aguinaldos", texto: "Gratis en nuestra página, sin registrarte.", href: "/calculadora-aguinaldos" },
     ],
   },
 ];
 
 export const TOTAL_MODULOS = CATEGORIAS.reduce((t, c) => t + c.modulos.length, 0);
+
+// Lo mínimo para la lista «Todos los módulos» de la portada. Se arma en el servidor (src/app/(landing)/page.jsx) y
+// llega como prop: así los textos largos de cada módulo no viajan en el JavaScript de la portada.
+export function modulosPortada() {
+  return {
+    total: TOTAL_MODULOS,
+    categorias: CATEGORIAS.map((c) => ({
+      id: c.id, nombre: c.nombre, lema: c.lema.replace(/\.$/, ""), color: c.color,
+      modulos: c.modulos.map((m) => (m.href ? { nombre: m.nombre, href: m.href } : { nombre: m.nombre })),
+    })),
+  };
+}
 
 // Páginas de detalle de Funciones.
 export const DETALLES = [
