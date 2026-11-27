@@ -13,7 +13,7 @@ const acceso = (base, cambios = {}) => ({ plantilla: "personalizado", modulos: m
 
 test("áreas: los módulos del catálogo (misma fuente) + Clima y Ajustes; mismas claves que el backend", () => {
   assert.deepEqual(CLAVES_AREA, [...CLAVES, "clima", "configuracion"]);
-  assert.equal(AREAS.length, 13);
+  assert.equal(AREAS.length, 14);
   assert.deepEqual(NIVELES.map((n) => n.clave), ["sin_acceso", "ver", "editar"]);
   assert.deepEqual(NIVELES.map((n) => n.nombre), ["Sin acceso", "Ver", "Ver y editar"]);
   assert.deepEqual(PLANTILLAS.map((p) => p.clave), ["administrador", "recursos_humanos", "reclutador", "solo_lectura", "personalizado"]);
@@ -37,11 +37,13 @@ test("resumen: «Ve 8 módulos, edita 5, 2 empresas»", () => {
   const p = matriz("sin_acceso", { asistencias: "editar", empleados: "editar", nomina: "editar", clima: "editar", tareas: "editar", vacaciones: "ver", permisos: "ver", reclutamiento: "ver" });
   assert.equal(resumen(p, [7, 8]), "Ve 8 módulos, edita 5, 2 empresas");
   assert.equal(resumen(matriz("sin_acceso", { nomina: "ver" }), [7]), "Ve 1 módulo, edita 0, 1 empresa");
-  assert.equal(resumen(matriz("editar"), []), "Ve 13 módulos, edita 13, todas las empresas");
+  assert.equal(resumen(matriz("editar"), []), "Ve 14 módulos, edita 14, todas las empresas");
 });
 
 test("rutas → área: base, opcionales (desde RUTAS_MODULO), libres y solo del dueño", () => {
   assert.deepEqual(areaDeRuta("/panel/registro-asistencia?fecha=hoy"), ["asistencias"]);
+  assert.deepEqual(areaDeRuta("/panel/nuevos-ingresos/3"), ["induccion"]);
+  assert.deepEqual(areaDeRuta("/panel/plantillas-induccion"), ["induccion"]);
   assert.deepEqual(areaDeRuta("/panel/empleados/15"), ["empleados"]);
   assert.deepEqual(areaDeRuta("/panel/catalogos/areas-check"), ["asistencias"], "gana el prefijo más largo");
   assert.deepEqual(areaDeRuta("/panel/catalogos/puestos"), ["empleados"]);

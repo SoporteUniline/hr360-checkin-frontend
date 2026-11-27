@@ -68,6 +68,8 @@ import {
   Target,
   Grid3x3,
   MessageSquareHeart,
+  UserPlus,
+  ClipboardPen,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -316,6 +318,14 @@ const menuGroups = [
         url: "/panel/empleados",
         rol: "Recruiter",
         icon: UsersIcon,
+      },
+      // (27/12/2026) Inducción digital: tablero de quienes están por entrar y su checklist del primer día.
+      {
+        title: "Nuevos ingresos",
+        url: "/panel/nuevos-ingresos",
+        matchPrefix: true,
+        rol: "Recruiter",
+        icon: UserPlus,
       },
       // {
       //   title: "Reclutamiento",
@@ -596,6 +606,14 @@ const menuGroups = [
         url: "/panel/plantillas-felicitacion",
         rol: "Recruiter",
         icon: PartyPopper,
+      },
+      // (27/12/2026) Inducción digital: qué pide, qué se firma, la ruta de bienvenida y las tareas (por empresa).
+      {
+        title: "Plantillas de inducción",
+        url: "/panel/plantillas-induccion",
+        matchPrefix: true,
+        rol: "Recruiter",
+        icon: ClipboardPen,
       },
       {
         title: "Campos personalizados",
