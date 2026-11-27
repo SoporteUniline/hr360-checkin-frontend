@@ -29,7 +29,8 @@ const MARQUESINA = [
 // modulos: { total, categorias } de src/lib/sitio/modulos.js (modulosPortada), armado en el servidor.
 // mosaico: <MosaicoModulos /> (componente de servidor) ya renderizado en src/app/(landing)/page.jsx, para que sus 24
 // tarjetas no viajen en el JavaScript de la portada.
-export default function LandingHome({ modulos, mosaico }) {
+// descargas: <DescargasAdamia /> (brochure y tríptico en PDF), también armado en el servidor por la misma razón.
+export default function LandingHome({ modulos, mosaico, descargas }) {
   const raiz = useRef(null);
   const diapositivas = useMemo(() => diapositivasPortada(modulos.total), [modulos.total]);
   useEffect(() => iniciarAnimaciones(raiz.current), []);
@@ -343,6 +344,8 @@ export default function LandingHome({ modulos, mosaico }) {
               <p className="allm-ayuda reveal">¿Quieres ver cómo se usa cada una? <Link href="/ayuda">Entra al Centro de ayuda <span aria-hidden="true">→</span></Link></p>
             </div>
           </section>
+          {/* Brochure y tríptico en PDF: después de ver todos los módulos y antes de pedir la demostración. */}
+          {descargas}
           <section className="final" id="demo">
             <div className="wrap reveal" style={{display: 'grid', gap: 26, justifyItems: 'center'}}>
               <h2>Ve ADAMIA en acción.</h2>

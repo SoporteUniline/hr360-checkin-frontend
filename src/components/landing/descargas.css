@@ -1,0 +1,79 @@
+/* «Llévate ADAMIA a casa» (DescargasAdamia.jsx), dentro de .lh. Estilo favorito del dueño (docs/estilo-mosaico-favorito.md):
+   tarjetas gris claro con esquinas muy redondeadas y movimiento discreto. Sin fondos degradados.
+   Lectura para personas mayores: texto 16 px (17 px en celular), títulos de peso 700, secundario --body (#4b5270,
+   más oscuro que #4B5563) y botones de 52 px de alto. El botón usa .btn.dz-boton: landing-home.css puede cargarse
+   después que este archivo y su .lh .btn (font: 600 1rem) ganaría con la misma especificidad. */
+.lh .dz { padding-block: 110px 0; }
+.lh .dz-cab { display: grid; gap: 12px; max-width: 60ch; margin-bottom: 36px; }
+.lh .dz-cab .eyebrow { font-size: 14px; }
+.lh .dz h2 { font-size: clamp(2rem, 4vw, 3rem); font-weight: 700; line-height: 1.05; }
+.lh .dz-cab p { font-size: 18px; line-height: 1.55; color: var(--body); }
+
+.lh .dz-lista { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin: 0; padding: 0; list-style: none; }
+.lh .dz-tarjeta {
+  display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); align-items: center; gap: 26px; min-width: 0;
+  padding: 26px; border-radius: 28px; background: var(--soft);
+}
+/* La miniatura va sobre un cuadro blanco de alto fijo (--alto) igual en las dos tarjetas: la del brochure es vertical
+   (llena el alto) y la del tríptico horizontal (llena el ancho); ninguna se sale del cuadro. La fila 1fr da un alto
+   definido para que el height: 100% de la miniatura vertical funcione (con una fila auto se ignora). */
+.lh .dz-portada { --alto: 260px; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; height: var(--alto); min-width: 0; padding: 18px; border-radius: 20px; background: #fff; }
+.lh .dz-portada img {
+  display: block; max-width: 100%; max-height: 100%; border-radius: 6px;
+  box-shadow: 0 18px 36px -18px rgba(11, 16, 51, .45), 0 0 0 1px rgba(11, 16, 51, .06);
+}
+.lh .dz-vertical img { width: auto; height: 100%; }
+.lh .dz-horizontal img { width: 100%; height: auto; }
+.lh .dz-cuerpo { display: grid; gap: 10px; align-content: center; min-width: 0; }
+.lh .dz-cuerpo h3 { font-size: 26px; font-weight: 700; line-height: 1.15; letter-spacing: -0.02em; }
+.lh .dz-cuerpo p { font-size: 16px; line-height: 1.55; color: var(--body); }
+.lh .dz-cuerpo .dz-meta { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.lh .btn.dz-boton { justify-self: start; min-height: 52px; margin-top: 6px; padding: 0 22px; font-size: 16px; }
+
+/* Cotizar: mismo bloque, más corto y alineado con las preguntas frecuentes (860 px). */
+.lh .dz-compacta { padding-block: 40px 0; }
+.lh .dz-compacta .wrap { max-width: 860px; }
+.lh .dz-compacta .dz-cab { margin-bottom: 20px; }
+.lh .dz-compacta h2 { font-size: clamp(1.8rem, 3vw, 2.4rem); }
+.lh .dz-compacta .dz-cab p { font-size: 16px; }
+.lh .dz-compacta .dz-tarjeta { grid-template-columns: 104px minmax(0, 1fr); align-items: start; gap: 18px; padding: 20px; border-radius: 24px; }
+.lh .dz-compacta .dz-portada { --alto: 104px; padding: 10px; border-radius: 14px; }
+.lh .dz-compacta .dz-cuerpo { gap: 6px; }
+.lh .dz-compacta .dz-cuerpo h3 { font-size: 21px; }
+.lh .dz-compacta .btn.dz-boton { margin-top: 8px; }
+
+@media (max-width: 980px) {
+  .lh .dz-tarjeta { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+  .lh .dz-portada { --alto: 280px; }
+  .lh .dz-compacta .dz-tarjeta { grid-template-columns: 96px minmax(0, 1fr); }
+  .lh .dz-compacta .dz-portada { --alto: 96px; }
+}
+/* Celular: una tarjeta debajo de la otra, texto a 17 px y botón a todo lo ancho. */
+@media (max-width: 640px) {
+  .lh .dz { padding-top: 80px; }
+  .lh .dz-compacta { padding-top: 32px; }
+  .lh .dz-lista { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .lh .dz-tarjeta { padding: 20px; border-radius: 26px; gap: 18px; }
+  .lh .dz-cab p, .lh .dz-cuerpo p, .lh .dz-compacta .dz-cab p { font-size: 17px; }
+  .lh .dz-cuerpo h3 { font-size: 24px; }
+  .lh .btn.dz-boton { justify-self: stretch; font-size: 17px; }
+  .lh .dz-portada { --alto: 240px; }
+  .lh .dz-compacta .dz-tarjeta { grid-template-columns: 84px minmax(0, 1fr); }
+  .lh .dz-compacta .dz-portada { --alto: 84px; }
+}
+
+/* Movimiento discreto (como el mosaico): la tarjeta sube 4 px y la portada se acerca. Quieto con «reducir movimiento». */
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  /* Repite la entrada de .reveal para no perderla al declarar transition aquí (selector más fuerte que .lh .reveal,
+     que puede cargarse después). */
+  .lh .dz-lista .dz-tarjeta {
+    transition: opacity .7s var(--ease) var(--d, 0s), translate .7s var(--ease) var(--d, 0s),
+      transform .25s cubic-bezier(.2, .7, .2, 1), box-shadow .25s cubic-bezier(.2, .7, .2, 1);
+  }
+  .lh .dz-portada img { transition: transform .45s cubic-bezier(.16, 1, .3, 1); }
+  .lh .dz-tarjeta:hover { transform: translateY(-4px); box-shadow: 0 24px 48px -28px rgba(11, 16, 51, .35); }
+  .lh .dz-tarjeta:hover .dz-portada img { transform: translateY(-4px) scale(1.03) rotate(-1deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lh .dz-tarjeta, .lh .dz-portada img { transition: none; transform: none; }
+}
