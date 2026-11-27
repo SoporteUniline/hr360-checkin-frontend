@@ -37,3 +37,14 @@ test("al hidratar solo se anima lo que aún no se ve y nunca con movimiento redu
   assert.equal(estadoInicial({ reducido: false, visible: true }), "final");
   assert.equal(estadoInicial({ reducido: true, visible: false }), "final");
 });
+
+test("ciclo de estados del mosaico: termina y arranca en el último, da la vuelta y aguanta valores raros", async () => {
+  const { pasoFinal, siguientePaso } = await import("../src/components/landing/home/datosVivos.mjs");
+  assert.equal(pasoFinal(3), 2);
+  assert.equal(pasoFinal(1), 0);
+  assert.equal(pasoFinal(0), 0, "sin estados no hay índice negativo");
+  assert.deepEqual([2, 0, 1].map((p) => siguientePaso(p, 3)), [0, 1, 2], "del último vuelve al primero");
+  assert.equal(siguientePaso(0, 1), 0, "un solo estado no se mueve");
+  assert.equal(siguientePaso(5, 3), 0, "un paso fuera de rango vuelve a la lista");
+  assert.equal(siguientePaso(-1, 3), 0);
+});

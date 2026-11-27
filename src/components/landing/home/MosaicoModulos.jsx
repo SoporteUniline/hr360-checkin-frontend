@@ -1,17 +1,22 @@
-// Mosaico de módulos. Inspirado en la sección de módulos de Crehana:
-// tarjeta principal grande con degradado de marca y las demás en gris suave; cada una con nombre, submarca
-// «adamia ___.», una línea de beneficio y una mini pantalla del producto dibujada con código (datos de ejemplo).
-// Estilos en ./landing-home.css (bloque «Mosaico de módulos», todo bajo .lh .mz).
+// Mosaico de módulos. Inspirado en la sección de módulos de Crehana: tarjeta principal grande con degradado de marca y
+// las demás en gris suave; cada una con nombre, submarca «adamia ___.», dos líneas de beneficio, flecha a su página y una
+// mini pantalla del producto dibujada con código (datos de ejemplo). Estilo favorito del dueño:
+// docs/estilo-mosaico-favorito.md. Estilos en ./landing-home.css (bloque «Mosaico de módulos», todo bajo .lh .mz).
+//
+// Componente de SERVIDOR (lo monta src/app/(landing)/page.jsx y llega a LandingHome como prop): el marcado de las 24
+// tarjetas no viaja en el JavaScript de la portada; solo hidratan los datos vivos (DatosVivos.jsx) y el botón del
+// celular (MosaicoPlegable.jsx). Lista y textos: ./mosaico.mjs; mini pantallas: ./MinisMosaico.jsx.
 import Link from "next/link";
-import { BarraLlena, Contador, EscrituraIA, RelojJornada } from "./DatosVivos";
+import { GRUPOS, TARJETAS, TOTAL_TARJETAS, tarjetasDeGrupo } from "./mosaico.mjs";
+import { ChatIA, MINIS } from "./MinisMosaico";
+import MosaicoPlegable from "./MosaicoPlegable";
 
-// Fuera del componente: una referencia estable evita que la escritura se reinicie en cada render.
-const RESPUESTA_IA = [
-  { texto: "Le tocan " },
-  { texto: "16 días", b: true },
-  { texto: " de vacaciones pagadas: 12 el primer año y 2 más por cada año." },
-];
-const JORNADA_INICIO = 7 * 3600 + 42 * 60 + 15;
+// Ritmo de la flotación: cada mini pantalla con su duración y desfase para que no vayan sincronizadas.
+const FLOTA = [["6.4s", "-1.2s"], ["5.6s", "-3.1s"], ["6.6s", "-2.2s"], ["7.3s", "-0.9s"], ["6.2s", "-3.6s"], ["7.1s", "-0.4s"], ["6s", "-4.2s"], ["6.8s", "-2.5s"]];
+// Posición de cada tarjeta en la lista completa (escalona la flotación).
+const ORDEN = new Map(TARJETAS.map((c, i) => [c.id, i]));
+// Sin JavaScript se ven todas (el botón no serviría).
+const SIN_JS = ".lh .mz-mas{display:grid!important}.lh .mz-vertodos{display:none!important}";
 
 function Flecha({ href, nombre }) {
   return (
@@ -21,13 +26,30 @@ function Flecha({ href, nombre }) {
   );
 }
 
-function Cabecera({ nombre, sub, children, etiqueta }) {
+function Cabecera({ c }) {
   return (
     <div className="mz-cab">
-      <h3>{nombre}{etiqueta ? <span className="mz-etq">{etiqueta}</span> : null}</h3>
-      <div className="mz-sub"><b>adamia</b> {sub}.</div>
-      <p>{children}</p>
+      <h4>{c.nombre}{c.etiqueta ? <span className="mz-etq">{c.etiqueta}</span> : null}</h4>
+      <div className="mz-sub"><b>adamia</b> {c.sub}.</div>
+      <p>{c.texto}</p>
     </div>
+  );
+}
+
+function Tarjeta({ c, k }) {
+  const clases = ["mz-m", `mz-${c.ancho}`, c.estilo ? `mz-${c.estilo}` : "", c.movil ? "" : "mz-mas", "reveal"].filter(Boolean).join(" ");
+  const [ft, fd] = FLOTA[k % FLOTA.length];
+  const Mini = MINIS[c.id];
+  return (
+    <article className={clases} data-tarjeta={c.id}>
+      <Cabecera c={c} />
+      <Flecha href={c.href} nombre={c.aria} />
+      {c.estilo === "ia" ? (
+        <div className="mz-chat flota" style={{ "--ft": "7.6s", "--fd": "-1.8s" }}><ChatIA /></div>
+      ) : (
+        <div className="mz-mini flota" style={{ "--ft": ft, "--fd": fd }} aria-hidden="true"><Mini /></div>
+      )}
+    </article>
   );
 }
 
@@ -40,111 +62,26 @@ export default function MosaicoModulos() {
           <h2 id="mz-titulo">Todo el día de tu equipo, en una sola plataforma.</h2>
           <p>Del checador a la nómina, del reclutamiento al clima laboral, con IA que conoce la Ley Federal del Trabajo. Activa solo lo que tu empresa necesita.</p>
         </div>
-        <div className="mz-grid">
-          <article className="mz-m mz-g4 mz-principal reveal">
-            <Cabecera nombre="Nómina" sub="nómina" etiqueta="Recibos firmados">
-              Calcula con las checadas reales, aplica bonos, descuentos y préstamos, y cada quien firma su recibo desde su celular.
-            </Cabecera>
-            <Flecha href="/ayuda/nomina" nombre="Nómina" />
-            <div className="mz-mini flota" style={{ "--ft": "6.4s", "--fd": "-1.2s" }} aria-hidden="true">
-              <div className="mz-fila"><span>Total a pagar</span><b className="mz-grande">$284,350.00</b></div>
-              <div className="mz-fila"><span>Periodo</span><b>Quincena 1–15 nov</b></div>
-              <div className="mz-fila"><span>Recibos firmados</span>
-                <span className="mz-avatares"><i style={{ background: "#2c56e8" }}>AT</i><i style={{ background: "#5a3cf4" }}>BR</i><i style={{ background: "#0ea5e9" }}>CR</i><i style={{ background: "#16a34a" }}>+38</i></span>
+        <noscript><style>{SIN_JS}</style></noscript>
+        <MosaicoPlegable total={TOTAL_TARJETAS}>
+          {GRUPOS.map((g) => {
+            const tarjetas = tarjetasDeGrupo(g.id);
+            return (
+              <div key={g.id} className="mz-grupo" role="group" aria-labelledby={`mz-g-${g.id}`}>
+                <div className="mz-grupo-cab reveal">
+                  <h3 id={`mz-g-${g.id}`}>{g.titulo}</h3>
+                  <p>{g.lema}</p>
+                  <span className="mz-cuenta">{tarjetas.length} {tarjetas.length === 1 ? "módulo" : "módulos"}</span>
+                </div>
+                <div className="mz-grid">
+                  {tarjetas.map((c) => <Tarjeta key={c.id} c={c} k={ORDEN.get(c.id)} />)}
+                </div>
               </div>
-              <div className="mz-fila"><span>Firmados</span><b><Contador hasta={41} /> de 45</b></div>
-              <BarraLlena valor={41 / 45} />
-              <div className="mz-boton">Autorizar nómina</div>
-            </div>
-          </article>
-
-          <article className="mz-m mz-g2 reveal" style={{ "--d": ".05s" }}>
-            <Cabecera nombre="Asistencia" sub="time">Entradas, comidas y salidas en vivo. Horas extra y retardos sin hojas de cálculo.</Cabecera>
-            <Flecha href="/funcionalidades/dashboard-empleados" nombre="Asistencia" />
-            <div className="mz-mini flota" style={{ "--ft": "5.6s", "--fd": "-3.1s" }} aria-hidden="true">
-              <b className="mz-tit">Jornada registrada</b>
-              <div className="mz-tramo"><span>Trabajo</span><b>08:02 → 14:02</b></div>
-              <div className="mz-tramo mz-gris"><span>Comida</span><b>14:02 → 14:58</b></div>
-              <div className="mz-nota">56 min de comida · a tiempo</div>
-              <div className="mz-tramo"><span>Trabajo</span><b>14:58 → 17:04</b></div>
-            </div>
-          </article>
-
-          <article className="mz-m mz-g2 reveal">
-            <Cabecera nombre="Reclutador IA" sub="reclutamiento">Contesta a tus candidatos por WhatsApp, los filtra y les agenda la entrevista.</Cabecera>
-            <Flecha href="/ayuda/reclutamiento/agente-de-whatsapp" nombre="el Reclutador IA" />
-            <div className="mz-mini flota" style={{ "--ft": "6.6s", "--fd": "-2.2s" }} aria-hidden="true">
-              <div className="mz-wa-b">¿Tienes disponibilidad para trabajar fines de semana?</div>
-              <div className="mz-wa-bts"><span>Sí</span><span>No</span></div>
-              <div className="mz-fila"><span>Daniela Ortiz</span><span className="mz-chip mz-verde">Califica</span></div>
-              <div className="mz-fila"><span>Entrevista</span><b>jue 3 dic · 9:00 a. m.</b></div>
-            </div>
-          </article>
-
-          <article className="mz-m mz-g2 reveal" style={{ "--d": ".05s" }}>
-            <Cabecera nombre="Clima laboral" sub="clima">Encuestas anónimas, NOM-035 y un plan de acción que te sugiere Adamia AI.</Cabecera>
-            <Flecha href="/ayuda/clima" nombre="Clima laboral" />
-            <div className="mz-mini flota" style={{ "--ft": "7.3s", "--fd": "-0.9s" }} aria-hidden="true">
-              <div className="mz-fila"><span>Participación</span><Contador hasta={86} sufijo="%" /></div>
-              <BarraLlena valor={0.86} />
-              <div className="mz-fila"><span>NOM-035</span><b>Riesgo medio</b></div>
-              <div className="mz-nota">✦ Adamia AI sugiere 3 acciones</div>
-            </div>
-          </article>
-
-          <article className="mz-m mz-g2 reveal" style={{ "--d": ".1s" }}>
-            <Cabecera nombre="Muro" sub="comunicados">Avisos, fotos y eventos para tu equipo. Sabes quién ya confirmó de leído.</Cabecera>
-            <Flecha href="/ayuda/comunicados" nombre="el Muro" />
-            <div className="mz-mini flota" style={{ "--ft": "6.2s", "--fd": "-3.6s" }} aria-hidden="true">
-              <div className="mz-fila"><b>Reglamento interior</b><span className="mz-chip">Confirmar</span></div>
-              <div className="mz-fila"><span>Confirmaron</span><b><Contador hasta={31} /> de 42</b></div>
-              <BarraLlena valor={31 / 42} />
-              <div className="mz-fila"><span>♥ 48 · 6 comentarios</span><span>Toda la empresa</span></div>
-            </div>
-          </article>
-
-          <article className="mz-m mz-g2 reveal">
-            <Cabecera nombre="Checador" sub="check">Rostro y GPS desde el celular o una tableta en la sucursal.</Cabecera>
-            <Flecha href="/funcionalidades/reloj-checador" nombre="el Checador" />
-            <div className="mz-mini flota" style={{ "--ft": "7.1s", "--fd": "-0.4s" }} aria-hidden="true">
-              <div className="mz-verif"><span className="mz-cara" /><div><b>Ana Torres</b><div className="mz-ok">✓ Rostro verificado</div></div></div>
-              <div className="mz-fila"><span>Ubicación</span><b>Sucursal Centro · 18 m</b></div>
-              <div className="mz-fila"><span>Entrada</span><b>08:02</b></div>
-              <div className="mz-fila mz-jornada"><span><i className="mz-punto" />En jornada</span><RelojJornada inicio={JORNADA_INICIO} /></div>
-            </div>
-          </article>
-
-          <article className="mz-m mz-g2 reveal" style={{ "--d": ".05s" }}>
-            <Cabecera nombre="Tareas y checklists" sub="tasks">Checklists que se califican solos, con foto y firma. Cumplimiento listo para bonos.</Cabecera>
-            <Flecha href="/ayuda/tareas" nombre="Tareas y checklists" />
-            <div className="mz-mini flota" style={{ "--ft": "6s", "--fd": "-4.2s" }} aria-hidden="true">
-              <div className="mz-fila"><b>Apertura de sucursal</b><span className="mz-chip">Hoy</span></div>
-              <div className="mz-chips"><span className="mz-chip">8 preguntas</span><span className="mz-chip">Foto</span><span className="mz-chip">Firma</span></div>
-              <div className="mz-fila"><span>Cumplimiento del equipo</span><Contador hasta={92} sufijo="%" /></div>
-              <BarraLlena valor={0.92} />
-            </div>
-          </article>
-
-          <article className="mz-m mz-g2 reveal" style={{ "--d": ".1s" }}>
-            <Cabecera nombre="Documentos y firma" sub="sign">Contratos, actas y finiquitos firmados desde el celular, con foto de quien firmó.</Cabecera>
-            <Flecha href="/funcionalidades/contratos" nombre="Documentos y firma" />
-            <div className="mz-mini flota" style={{ "--ft": "6.8s", "--fd": "-2.5s" }} aria-hidden="true">
-              <div className="mz-fila"><b>Contrato · Beto Ríos</b><span className="mz-ok">Firmado</span></div>
-              <div className="mz-firma"><svg viewBox="0 0 150 40" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 30c10-22 18-24 22-10s8 12 16-6 14-8 18 4 12 8 22-12 16 4 24 10 18-4 22-6" /></svg></div>
-              <div className="mz-fila"><span>23 nov · 10:42 · iPhone</span><span className="mz-ok">✓ Foto</span></div>
-            </div>
-          </article>
-
-          <article className="mz-m mz-g6 mz-ia reveal">
-            <Cabecera nombre="Adamia AI" sub="ai">Pregúntale de la Ley Federal del Trabajo o de cómo usar ADAMIA. Responde con el texto oficial y te dice el artículo o la guía.</Cabecera>
-            <Flecha href="/ayuda/adamia-ai" nombre="Adamia AI" />
-            <div className="mz-chat flota" style={{ "--ft": "7.6s", "--fd": "-1.8s" }}>
-              <div className="mz-burbuja mz-yo">¿Cuántos días de vacaciones le tocan a alguien con 3 años?</div>
-              <div className="mz-burbuja mz-ai"><EscrituraIA partes={RESPUESTA_IA}><span className="mz-cita">Art. 76 LFT</span></EscrituraIA></div>
-            </div>
-          </article>
-        </div>
+            );
+          })}
+        </MosaicoPlegable>
       </div>
     </section>
   );
 }
+

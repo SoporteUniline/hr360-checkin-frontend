@@ -3,9 +3,21 @@
 // Datos de ejemplo que se mueven dentro de las mini pantallas del mosaico. El HTML del servidor trae el valor final:
 // sin JS, antes de hidratar o con «reducir movimiento» todo se lee completo; solo lo que aún no se ve vuelve a su inicio.
 import { useEffect, useRef, useState } from "react";
-import { estadoInicial, formatoReloj, largoTexto, segundosReloj, textoParcial, valorContador } from "./datosVivos.mjs";
+import { estadoInicial, formatoReloj, largoTexto, pasoFinal, segundosReloj, siguientePaso, textoParcial, valorContador } from "./datosVivos.mjs";
 
 const reducido = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
+// Evento que lanza MosaicoPlegable al abrir «Ver todos los módulos» en el celular.
+export const EVENTO_ABIERTO = "mz-abierto";
+// IntersectionObserver que pide una lectura nueva al abrir el mosaico en el celular: lo que estaba plegado (display:none)
+// y ya quedó a la vista arranca en ese momento, sin esperar otro scroll. Devuelve la limpieza.
+function observar(el, alCambiar, opciones) {
+  const io = new IntersectionObserver(([e]) => alCambiar(e.isIntersecting), opciones);
+  io.observe(el);
+  const otraVez = () => { io.unobserve(el); io.observe(el); };
+  window.addEventListener(EVENTO_ABIERTO, otraVez);
+  return () => { io.disconnect(); window.removeEventListener(EVENTO_ABIERTO, otraVez); };
+}
 
 // Fase de entrada: "final" (valor completo), "espera" (fuera de vista, en su inicio) o "anima" (ya entró en pantalla).
 function useEntrada() {
@@ -17,13 +29,13 @@ function useEntrada() {
     const r = el.getBoundingClientRect();
     if (estadoInicial({ reducido: reducido(), visible: r.top < window.innerHeight && r.bottom > 0 }) === "final") return undefined;
     setFase("espera");
-    const io = new IntersectionObserver(([e]) => {
-      if (!e.isIntersecting) return;
+    // El aviso del observador siempre llega después de esta línea (es asíncrono): `suelta` ya existe.
+    const suelta = observar(el, (visible) => {
+      if (!visible) return;
       setFase("anima");
-      io.disconnect();
+      suelta();
     }, { threshold: 0.5 });
-    io.observe(el);
-    return () => io.disconnect();
+    return suelta;
   }, []);
   return [ref, fase, setFase];
 }
@@ -54,9 +66,8 @@ export function RelojJornada({ inicio }) {
     const para = () => { window.clearInterval(id); id = null; };
     const arranca = () => { if (id === null) { tic(); id = window.setInterval(tic, 1000); } };
     if (!("IntersectionObserver" in window)) { arranca(); return para; }
-    const io = new IntersectionObserver(([e]) => (e.isIntersecting ? arranca() : para()));
-    io.observe(ref.current);
-    return () => { io.disconnect(); para(); };
+    const suelta = observar(ref.current, (visible) => (visible ? arranca() : para()));
+    return () => { suelta(); para(); };
   }, [inicio]);
   return <b ref={ref} className="mz-reloj" aria-hidden="true">{formatoReloj(seg)}</b>;
 }
@@ -102,6 +113,31 @@ export function EscrituraIA({ partes, children }) {
         {escribiendo ? <span className="mz-parcial">{pinta(textoParcial(partes, n))}</span> : null}
       </span>
       <span className="mz-pie">{children}<span className="mz-listo" aria-hidden="true">✓ Listo</span></span>
+    </span>
+  );
+}
+
+/**
+ * Pequeño ciclo de estados dentro de una mini pantalla (una solicitud que se aprueba, el número del monitor que sube,
+ * otra búsqueda en el Centro de ayuda…). Todos los estados ocupan la misma celda (grid), así cambiar no mueve nada (sin
+ * CLS). El HTML del servidor y «reducir movimiento» muestran el último estado, que es el que describe la tarjeta; solo
+ * corre mientras se ve (un intervalo que se detiene fuera de pantalla). La mini pantalla ya es aria-hidden.
+ */
+export function Ciclo({ estados, ms = 2800, bloque = false, className = "" }) {
+  const ref = useRef(null);
+  const total = estados.length;
+  const [paso, setPaso] = useState(pasoFinal(total));
+  useEffect(() => {
+    if (total < 2 || reducido() || !("IntersectionObserver" in window)) return undefined;
+    let id = null;
+    const para = () => { window.clearInterval(id); id = null; };
+    const arranca = () => { if (id === null) id = window.setInterval(() => setPaso((p) => siguientePaso(p, total)), ms); };
+    const suelta = observar(ref.current, (visible) => (visible ? arranca() : para()), { threshold: 0.4 });
+    return () => { suelta(); para(); };
+  }, [total, ms]);
+  return (
+    <span ref={ref} className={`mz-ciclo${bloque ? " mz-ciclo-b" : ""}${className ? ` ${className}` : ""}`} data-paso={paso} data-n={total}>
+      {estados.map((e, k) => <span key={k} className={k === paso ? "on" : undefined}>{e}</span>)}
     </span>
   );
 }

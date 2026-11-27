@@ -11,6 +11,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
+import { TARJETAS } from "../src/components/landing/home/mosaico.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -34,8 +35,41 @@ async function escenaCompleta(pg, id, ms = 90_000) {
   await pg.waitForFunction((s) => document.querySelector(s).hasAttribute("data-fin"), sel, { timeout: ms });
   await dormir(900); // última transición
 }
-// Lo que flota nunca está «estable» para Playwright: se lleva a la vista con scrollIntoView directo.
-const ver = (loc) => loc.evaluate((el) => el.scrollIntoView({ block: "center" }));
+// Lo que flota nunca está «estable» para Playwright: se lleva a la vista con scrollIntoView directo (instantáneo: la
+// página tiene scroll suave y un recorrido rápido se saltaría tarjetas).
+const ver = (loc) => loc.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "instant" }));
+// Valores finales de los contadores del mosaico, en orden del documento (mini pantallas de MinisMosaico.jsx).
+const CONTADORES = ["41", "58%", "16", "12", "38", "92%", "148", "92%", "23", "86%", "34", "31"];
+// Contraste WCAG entre dos colores rgb()/rgba() ya calculados por el navegador.
+function contraste(a, b) {
+  const lum = (c) => { const [r, g, bl] = c.match(/[\d.]+/g).slice(0, 3).map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }); return 0.2126 * r + 0.7152 * g + 0.0722 * bl; };
+  const [l1, l2] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (l1 + 0.05) / (l2 + 0.05);
+}
+// Texto de cada tarjeta del mosaico con el color de fondo detrás (en las de degradado, el color del degradado a la altura
+// del texto) para medir el contraste; también tamaño del beneficio y peso de los títulos.
+const textosMosaico = (pg) => pg.evaluate(() => {
+  const rgb = (t) => t.match(/[\d.]+/g).slice(0, 3).map(Number);
+  const fondo = (el) => {
+    for (let n = el; n; n = n.parentElement) {
+      const cs = getComputedStyle(n);
+      if (cs.backgroundImage.startsWith("linear-gradient")) {
+        const paradas = [...cs.backgroundImage.matchAll(/rgba?\(([^)]+)\)\s*([\d.]+)%/g)].map((m) => [rgb(m[1]), +m[2] / 100]);
+        const caja = n.getBoundingClientRect(), r = el.getBoundingClientRect();
+        // Peor caso: el renglón más bajo del texto (donde el degradado se aclara).
+        const y = Math.min(1, Math.max(0, (r.bottom - caja.top) / caja.height));
+        let k = paradas.findIndex(([, p]) => p >= y); if (k <= 0) k = Math.max(1, k === -1 ? paradas.length - 1 : 1);
+        const [[c0, p0], [c1, p1]] = [paradas[k - 1], paradas[k]], f = p1 > p0 ? Math.min(1, Math.max(0, (y - p0) / (p1 - p0))) : 0;
+        return `rgb(${c0.map((v, i) => Math.round(v + (c1[i] - v) * f)).join(", ")})`;
+      }
+      if (cs.backgroundColor !== "rgba(0, 0, 0, 0)") return cs.backgroundColor;
+    }
+    return "rgb(255, 255, 255)";
+  };
+  return [...document.querySelectorAll("#modulos-adamia .mz-cab h4, #modulos-adamia .mz-sub, #modulos-adamia .mz-cab p, #modulos-adamia .mz-grupo-cab h3, #modulos-adamia .mz-grupo-cab p")]
+    .filter((el) => el.getClientRects().length)
+    .map((el) => { const cs = getComputedStyle(el); return { tag: el.tagName, txt: el.textContent.slice(0, 30), color: cs.color, fondo: fondo(el), px: parseFloat(cs.fontSize), peso: +cs.fontWeight }; });
+});
 
 let exito = false;
 const browser = await chromium.launch();
@@ -47,18 +81,28 @@ try {
   const errores = [];
   page.on("pageerror", (e) => errores.push(e.message));
   await page.goto(base + "/", { waitUntil: "domcontentloaded" });
-  // Mosaico de módulos: seis tarjetas con submarca, mini pantalla y flecha a su página.
+  // Mosaico de módulos (27/11/2026: los 24 módulos en producción, en 5 grupos): cada tarjeta con título, submarca,
+  // beneficio, mini pantalla decorativa y flecha con nombre a su página; la lista sale de mosaico.mjs.
   const mosaico = page.locator("#modulos-adamia");
   await mosaico.getByRole("heading", { name: "Todo el día de tu equipo, en una sola plataforma." }).waitFor();
-  assert.deepEqual(await mosaico.locator("h3").evaluateAll((hs) => hs.map((h) => h.firstChild.textContent.trim())), ["Nómina", "Asistencia", "Reclutador IA", "Clima laboral", "Muro", "Checador", "Tareas y checklists", "Documentos y firma", "Adamia AI"]);
-  assert.equal(await mosaico.getByRole("link", { name: /^Conocer / }).count(), 9);
-  assert.equal(await mosaico.getByRole("link", { name: "Conocer el Checador" }).getAttribute("href"), "/funcionalidades/reloj-checador");
+  assert.deepEqual(await mosaico.locator(".mz-m h4").evaluateAll((hs) => hs.map((h) => h.firstChild.textContent.trim())), TARJETAS.map((c) => c.nombre));
+  assert.deepEqual(await mosaico.locator(".mz-grupo-cab h3").allInnerTexts(), ["Nómina y dinero", "Tiempo", "Personas", "Talento y cultura", "Plataforma"]);
+  for (const c of TARJETAS) {
+    const art = mosaico.locator(`[data-tarjeta="${c.id}"]`);
+    assert.equal(await art.locator(".mz-sub").innerText(), `adamia ${c.sub}.`, `${c.id}: submarca`);
+    assert.equal(await art.locator(".mz-cab p").innerText(), c.texto, `${c.id}: beneficio`);
+    assert.equal(await art.getByRole("link", { name: `Conocer ${c.aria}` }).getAttribute("href"), c.href, `${c.id}: flecha`);
+    if (c.estilo !== "ia") assert.equal(await art.locator(".mz-mini").getAttribute("aria-hidden"), "true", `${c.id}: mini pantalla decorativa`);
+  }
+  assert.equal(await mosaico.getByRole("link", { name: /^Conocer / }).count(), TARJETAS.length);
+  assert.ok(!(await mosaico.innerText()).toLowerCase().includes("inducción"), "el mosaico no anuncia Inducción digital");
+  assert.equal(await page.locator(".mz-vertodos").isVisible(), false, "en escritorio no hay «Ver todos»: se ven todas");
   // Pantallas que flotan: el panel de la portada corre mientras se ve; las tarjetas del mosaico entran al bajar.
   const juego = (sel) => page.locator(sel).first().evaluate((el) => getComputedStyle(el).animationPlayState);
   await page.waitForFunction(() => document.querySelector(".hero .dash").classList.contains("en-vista"));
   assert.equal(await juego(".hero .dash"), "running");
   assert.ok(await page.locator("#modulos-adamia .mz-m.pre").count() > 0, "las tarjetas de abajo esperan su entrada");
-  for (const art of await mosaico.locator(".mz-m").all()) { await ver(art); await dormir(250); }
+  for (const art of await mosaico.locator(".mz-m").all()) { await ver(art); await dormir(300); }
   await page.waitForFunction(() => [...document.querySelectorAll("#modulos-adamia .mz-m")].every((a) => getComputedStyle(a).opacity === "1"));
   assert.equal(await page.locator("#modulos-adamia .pre").count(), 0);
   assert.equal(await juego(".hero .dash"), "paused", "fuera de pantalla el flotado se pausa");
@@ -71,8 +115,41 @@ try {
   assert.match(lectura1, /^\d{2}:\d{2}:\d{2}$/);
   assert.ok(lectura2 > lectura1, `el reloj avanza (${lectura1} → ${lectura2})`);
   const escala = (el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).a.toFixed(2);
-  await page.waitForFunction((f) => [...document.querySelectorAll(".mz-barra > i")].map(eval(f)).join() === "0.91,0.86,0.74,0.92", escala.toString());
-  assert.deepEqual(await mosaico.locator(".mz-num").allInnerTexts(), ["41", "86%", "31", "92%"]);
+  // Cada barra llega a su valor (--v) y cada contador a su cifra final.
+  await page.waitForFunction((f) => [...document.querySelectorAll(".mz-barra > i")].every((i) => eval(f)(i) === (+i.style.getPropertyValue("--v")).toFixed(2)), escala.toString(), { timeout: 5000 });
+  assert.equal(await mosaico.locator(".mz-barra > i").count(), 8);
+  assert.deepEqual(await mosaico.locator(".mz-num").allInnerTexts(), CONTADORES);
+  // Ciclos (solicitud que se aprueba, monitor que suma llegadas…): corren mientras se ven y se detienen fuera de vista.
+  const ciclo = mosaico.locator('[data-tarjeta="monitor"] .mz-ciclo');
+  await ver(ciclo);
+  const pasos = new Set();
+  for (let i = 0; i < 12; i++) { pasos.add(await ciclo.getAttribute("data-paso")); await dormir(500); }
+  assert.ok(pasos.size >= 2, `el monitor cambia mientras se ve (${[...pasos]})`);
+  await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+  await dormir(600);
+  const quieto1 = await ciclo.getAttribute("data-paso");
+  await dormir(3000);
+  assert.equal(await ciclo.getAttribute("data-paso"), quieto1, "fuera de vista el ciclo se pausa");
+  await ver(mosaico.locator('[data-tarjeta="rutas"] .mz-mini'));
+  await dormir(800);
+  assert.equal(await mosaico.locator('[data-tarjeta="rutas"] .mz-ruta').evaluate((el) => el.getAnimations()[0]?.playState), "running", "la ruta se dibuja mientras se ve");
+  // Lectura: beneficio de 16 px o más, títulos en 700 (nada en 800+), contraste de 4.5:1 o más (también en el degradado).
+  for (const t of await textosMosaico(page)) {
+    const c = contraste(t.color, t.fondo);
+    assert.ok(c >= 4.5, `contraste ${c.toFixed(2)} en «${t.txt}» (${t.color} sobre ${t.fondo})`);
+    if (t.tag === "P") assert.ok(t.px >= 16, `«${t.txt}» a ${t.px}px`);
+    if (/^H/.test(t.tag)) assert.equal(t.peso, 700, `«${t.txt}»: peso ${t.peso}`);
+  }
+  // Sin saltos de diseño: el alto de la sección no cambia mientras los ciclos y contadores corren.
+  const alto1 = await mosaico.evaluate((el) => el.getBoundingClientRect().height);
+  await dormir(3500);
+  assert.equal(await mosaico.evaluate((el) => el.getBoundingClientRect().height), alto1, "el mosaico no cambia de alto con el movimiento");
+  if (CAPTURAS) {
+    const estilo = await page.addStyleTag({ content: SIN_FLOTANTES });
+    await page.locator('[data-tarjeta="ia"] .mz-listo').waitFor();
+    await mosaico.screenshot({ path: `${CAPTURAS}/mosaico-completo-1440.png`, animations: "disabled" });
+    await estilo.evaluate((el) => el.remove()); // el asistente comercial se revisa más abajo
+  }
   await mosaico.locator(".mz-listo").waitFor();
   await page.waitForFunction(() => !document.querySelector(".mz-tecleando") && getComputedStyle(document.querySelector(".mz-pie")).opacity === "1");
   assert.match(await mosaico.locator(".mz-ai .sr-only").innerText(), /^Le tocan 16 días de vacaciones pagadas/);
@@ -254,16 +331,46 @@ try {
   }
   await pn.close();
 
-  // Celular: sin desbordes horizontales.
+  // Celular (360 y 390): el mosaico muestra 8 tarjetas y «Ver todos los módulos (24)»; al tocarlo aparecen todas, el foco
+  // pasa a la primera que estaba oculta y sus datos vivos arrancan. Sin desbordes horizontales antes ni después.
+  for (const ancho of [360, 390]) {
+    const pm = await ctx.newPage();
+    pm.on("pageerror", (e) => errores.push(e.message));
+    await pm.setViewportSize({ width: ancho, height: 800 });
+    await pm.goto(base + "/", { waitUntil: "domcontentloaded" });
+    await dormir(1500);
+    const visibles = () => pm.locator("#modulos-adamia .mz-m").evaluateAll((as) => as.filter((a) => a.getClientRects().length).map((a) => a.dataset.tarjeta));
+    assert.deepEqual(await visibles(), TARJETAS.filter((c) => c.movil).map((c) => c.id), `${ancho}: primero 8 tarjetas`);
+    const boton = pm.getByRole("button", { name: `Ver todos los módulos (${TARJETAS.length})` });
+    await ver(boton);
+    assert.equal(await boton.getAttribute("aria-expanded"), "false");
+    assert.equal(await pm.evaluate(() => document.documentElement.scrollWidth), ancho, `${ancho}: sin desborde (plegado)`);
+    await boton.click();
+    await pm.waitForFunction((n) => [...document.querySelectorAll("#modulos-adamia .mz-m")].filter((a) => a.getClientRects().length).length === n, TARJETAS.length);
+    assert.equal(await pm.getByRole("button", { name: /Ver todos los módulos/ }).count(), 0, "el botón se va al abrir");
+    assert.equal(await pm.evaluate(() => document.activeElement?.getAttribute("aria-label")), `Conocer ${TARJETAS.find((c) => !c.movil).aria}`, "foco en la primera tarjeta nueva");
+    for (const art of await pm.locator("#modulos-adamia .mz-m").all()) {
+      await ver(art); await dormir(250);
+      const der = await art.evaluate((el) => Math.max(el.getBoundingClientRect().right, ...[...el.querySelectorAll("*")].map((n) => n.getBoundingClientRect().right)));
+      assert.ok(der <= ancho, `${ancho}: «${await art.getAttribute("data-tarjeta")}» cabe (${der})`);
+    }
+    await dormir(1800);
+    assert.deepEqual(await pm.locator("#modulos-adamia .mz-num").allInnerTexts(), CONTADORES, `${ancho}: contadores de las tarjetas abiertas`);
+    assert.equal(await pm.evaluate(() => document.documentElement.scrollWidth), ancho, `${ancho}: sin desborde con el mosaico abierto y en movimiento`);
+    for (const t of await textosMosaico(pm)) assert.ok(contraste(t.color, t.fondo) >= 4.5, `${ancho}: contraste en «${t.txt}»`);
+    if (CAPTURAS && ancho === 390) {
+      await pm.addStyleTag({ content: SIN_FLOTANTES });
+      await pm.locator('[data-tarjeta="ia"] .mz-listo').waitFor();
+      await pm.locator("#modulos-adamia").screenshot({ path: `${CAPTURAS}/mosaico-completo-390.png`, animations: "disabled" });
+    }
+    await pm.close();
+  }
   const movil = await ctx.newPage();
   movil.on("pageerror", (e) => errores.push(e.message));
   await movil.setViewportSize({ width: 390, height: 844 });
   await movil.goto(base + "/", { waitUntil: "domcontentloaded" });
   await dormir(1500);
   assert.equal(await movil.evaluate(() => document.documentElement.scrollWidth), 390, "sin desborde en celular");
-  await ver(movil.locator("#modulos-adamia .mz-ia"));
-  await dormir(1500);
-  assert.equal(await movil.evaluate(() => document.documentElement.scrollWidth), 390, "sin desborde con el mosaico en movimiento");
   if (CAPTURAS) await movil.addStyleTag({ content: SIN_FLOTANTES });
   for (const id of NUEVAS) {
     await escenaCompleta(movil, id);
@@ -293,7 +400,14 @@ try {
   });
   assert.deepEqual(quietos, [], "nada se anima con reducir movimiento");
   assert.equal(await pq.locator(".pre, .mz-tecleando, .mz-vacia").count(), 0);
-  assert.deepEqual(await pq.locator(".mz-num").allInnerTexts(), ["41", "86%", "31", "92%"]);
+  assert.deepEqual(await pq.locator(".mz-num").allInnerTexts(), CONTADORES);
+  // Cuadros finales: cada ciclo del mosaico en su último estado y sin moverse; nada del mosaico tiene animación viva.
+  for (const art of await pq.locator("#modulos-adamia .mz-m").all()) { await ver(art); await dormir(80); }
+  await dormir(3200);
+  assert.deepEqual(await pq.locator("#modulos-adamia .mz-ciclo").evaluateAll((cs) => cs.filter((c) => +c.dataset.paso !== +c.dataset.n - 1).map((c) => c.closest("[data-tarjeta]").dataset.tarjeta)), [], "ciclos en su último estado");
+  const vivasMz = await pq.locator("#modulos-adamia").evaluate((el) => [...el.querySelectorAll("*")].flatMap((n) => n.getAnimations().filter((a) => a.playState === "running").map(() => n.className.baseVal ?? n.className)));
+  assert.deepEqual(vivasMz, [], "nada del mosaico se anima con reducir movimiento");
+  assert.equal(await pq.locator("#modulos-adamia .mz-ruta").evaluate((el) => getComputedStyle(el).strokeDashoffset), "0px", "la ruta ya está dibujada");
   // Secciones nuevas: cada escena ya está en su estado final (último mensaje del chat incluido), sin botón de pausa
   // y sin nada que se mueva, aunque se vean.
   for (const id of NUEVAS) {
@@ -313,6 +427,7 @@ try {
 
   assert.deepEqual(errores, []);
   exito = true;
+  console.log(`OK mosaico: ${TARJETAS.length} tarjetas con submarca, beneficio, flecha sin 404 y mini pantalla decorativa; contraste ≥ 4.5 y lectura (16 px, títulos 700); ciclos que corren a la vista y se pausan fuera; sin cambio de alto; celular 360/390 con «Ver todos» (8 → ${TARJETAS.length}) y sin desborde; cuadros finales con reducir movimiento`);
   console.log("OK efectos: pantallas que flotan (pausadas fuera de vista), reloj, barras, contadores, Adamia AI y tarjetas al bajar");
   console.log("OK secciones nuevas: reclutador con IA en WhatsApp (chat hasta el último mensaje y bandeja de RH), clima con IA (pausa real y plan), tablero y muro; enlaces sin 404; final inmediato con reducir movimiento; 390 px sin desborde");
   console.log("OK página de inicio y blog: carrusel, ley con multa animada, blog con datos estructurados, sitemap, checada rostro → GPS → registro sincronizada con el panel, cifras desde 0, reporte semanal con notificaciones, lista de módulos desde modulos.js, enlaces, celular y reducir movimiento");
