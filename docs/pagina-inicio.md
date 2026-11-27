@@ -109,3 +109,5 @@ También en esta versión:
 
 ❓ PENDIENTE (dueño): el muro/comunicados y el Centro de ayuda están en `dev` pero no en `main` al 27/11/2026; esta
 versión de la portada debe pasar a producción junto con ellos (y el backend de comunicados), no antes.
+
+> Estilo visual favorito del dueño para presentar módulos: ver `docs/estilo-mosaico-favorito.md`.
