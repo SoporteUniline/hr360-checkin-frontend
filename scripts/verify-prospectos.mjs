@@ -366,7 +366,9 @@ try {
     assert.ok(await pp.getByRole("button", { name: "Anterior" }).isDisabled());
     await pp.getByRole("button", { name: "Siguiente" }).click();
     await pp.getByText("página 2 de 3").waitFor({ timeout: 3000 });
-    assert.ok(estado.listados.includes("?buscar=muchos&pagina=2"));
+    // La página puede pintarse antes de que la petición quede anotada (con la máquina cargada falló 1 de 3 veces).
+    for (let i = 0; i < 30 && !estado.listados.includes("?buscar=muchos&pagina=2"); i++) await pp.waitForTimeout(100);
+    assert.ok(estado.listados.includes("?buscar=muchos&pagina=2"), `listados: ${estado.listados.join(" | ")}`);
     await legible(pp, "[data-pagina=prospectos]", { ancho, nombre: `/dashboard/prospectos ${nombre} (paginado)` });
     await ctxP.close();
   }
