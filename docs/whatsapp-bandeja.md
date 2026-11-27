@@ -139,7 +139,7 @@ navegador no hay token (lo comprueba `scripts/test-whatsapp-lumo-b.mjs`).
 - **Ficha del candidato → Entrevista**: «Sucursal elegida» y «Dijo que vive en: …» (texto; nunca coordenadas).
 - **Aviso de privacidad**: `src/lib/legal/documentos.js` trae `AVISO_PRIVACIDAD_PROPUESTA` (versión `2026-12-18`) con Mapbox
   como encargado, los candidatos de reclutamiento y la IA de la entrevista. **No está publicada**: la página
-  `/aviso-privacidad` sigue con `AVISO_PRIVACIDAD` (2026-11-25). Para publicarla, el dueño (con su abogado) cambia
+  `/aviso-privacidad` sigue con `AVISO_PRIVACIDAD` (2026-11-28; la propuesta se arma desde él y ya trae el párrafo de noticias). Para publicarla, el dueño (con su abogado) cambia
   `AVISO_PRIVACIDAD` por la propuesta en `app/(public)/aviso-privacidad/page.jsx`.
 
 ## Lumo fase B2: entrevista estructurada y formulario por enlace (25/11/2026)

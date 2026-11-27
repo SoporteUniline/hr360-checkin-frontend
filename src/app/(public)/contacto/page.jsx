@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import AceptoLegal from "@/components/legal/AceptoLegal";
 import { DOCS_AVISO, registrarAceptacion } from "@/lib/legal/aceptacion";
-import { NOTICIAS, celularDeTextoLibre } from "@/lib/prospectos/reglas.mjs";
+import { NOTICIAS, MENSAJES_CORREO, celularDeTextoLibre, estadoCorreo, limpiarCorreo } from "@/lib/prospectos/reglas.mjs";
 import { guardarProspecto } from "@/lib/prospectos/guardar";
 
 const canales = [
@@ -42,6 +42,12 @@ export default function ContactoPage() {
   const [aceptaAviso, setAceptaAviso] = useState(false);
   // Aparte del aviso y desmarcada: permiso para mandarle noticias al correo (constancia propia en el backend).
   const [noticias, setNoticias] = useState(false);
+  // Correo opcional, con las mismas reglas que el pop-up (src/lib/prospectos/reglas.mjs): si marca noticias sin correo,
+  // se pide en ese momento; mal escrito, se avisa al salir del campo o al enviar.
+  const [correoTocado, setCorreoTocado] = useState(false);
+  const correoRef = useRef(null);
+  const { error: problemaCorreo } = estadoCorreo({ correo: form.email, noticias });
+  const errorCorreo = problemaCorreo === "falta" || (problemaCorreo === "formato" && correoTocado) ? MENSAJES_CORREO[problemaCorreo] : null;
   const whatsappNumber = "523171288029";
 
   const handleChange = (field) => (event) => {
@@ -52,30 +58,30 @@ export default function ContactoPage() {
     event.preventDefault();
     const { nombre, email, telefono, asunto, mensaje } = form;
 
-    if (
-      !nombre.trim() ||
-      !email.trim() ||
-      !telefono.trim() ||
-      !mensaje.trim()
-    ) {
-      window.alert(
-        "Completa nombre, correo, teléfono y mensaje para continuar.",
-      );
+    if (!nombre.trim() || !telefono.trim() || !mensaje.trim()) {
+      window.alert("Completa nombre, teléfono y mensaje para continuar.");
       return;
     }
+
+    if (problemaCorreo) {
+      setCorreoTocado(true);
+      correoRef.current?.focus();
+      return;
+    }
+    const correo = limpiarCorreo(email);
 
     if (!aceptaAviso) {
       window.alert("Para continuar, acepta el Aviso de privacidad.");
       return;
     }
     // Constancia de la aceptación (no detiene el envío si falla).
-    registrarAceptacion({ contexto: "contacto", documentos: DOCS_AVISO, nombre, correo: email, telefono });
+    registrarAceptacion({ contexto: "contacto", documentos: DOCS_AVISO, nombre, correo: correo || undefined, telefono });
 
     const body = [
       "Hola ADAMIA, quiero solicitar información.",
       "",
       `Nombre: ${nombre}`,
-      `Correo: ${email}`,
+      ...(correo ? [`Correo: ${correo}`] : []),
       `Teléfono: ${telefono}`,
       `Asunto: ${asunto}`,
       `Mensaje: ${mensaje}`,
@@ -86,7 +92,7 @@ export default function ContactoPage() {
     )}`;
     window.open(url, "_blank", "noopener,noreferrer");
     // Después de abrir WhatsApp y sin esperar: el prospecto (mismo guardado que el pop-up), origen «contacto».
-    guardarProspecto({ nombre, celular: celularDeTextoLibre(telefono), correo: email, noticias, origen: { tipo: "contacto" } });
+    guardarProspecto({ nombre, celular: celularDeTextoLibre(telefono), correo, noticias, origen: { tipo: "contacto" } });
   };
 
   return (
@@ -162,19 +168,32 @@ export default function ContactoPage() {
                 />
               </label>
 
-              <label className="grid gap-2">
-                <span className="text-sm font-semibold">
-                  Correo electrónico
-                </span>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={handleChange("email")}
-                  placeholder="correo@empresa.com"
-                  required
-                  className="h-11 rounded-xl border border-[var(--adamia-blue)]/20 px-3 outline-none transition focus:border-[var(--adamia-blue)]"
-                />
-              </label>
+              <div className="grid gap-2">
+                <label className="grid gap-2">
+                  <span className="text-sm font-semibold">
+                    Correo electrónico <span className="font-normal text-[var(--adamia-text-secondary)]">(opcional)</span>
+                  </span>
+                  <input
+                    ref={correoRef}
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    maxLength={255}
+                    value={form.email}
+                    onChange={handleChange("email")}
+                    onBlur={() => setCorreoTocado(true)}
+                    placeholder="correo@empresa.com"
+                    aria-invalid={errorCorreo ? true : undefined}
+                    aria-describedby={errorCorreo ? "contacto-correo-error" : undefined}
+                    className="h-11 rounded-xl border border-[var(--adamia-blue)]/20 px-3 outline-none transition focus:border-[var(--adamia-blue)] aria-[invalid=true]:border-destructive"
+                  />
+                </label>
+                {errorCorreo ? (
+                  <small id="contacto-correo-error" role="alert" className="text-sm font-semibold text-destructive">
+                    {errorCorreo}
+                  </small>
+                ) : null}
+              </div>
 
               <label className="grid gap-2">
                 <span className="text-sm font-semibold">Teléfono</span>
@@ -221,7 +240,11 @@ export default function ContactoPage() {
                     id="contacto-noticias"
                     type="checkbox"
                     checked={noticias}
-                    onChange={(e) => setNoticias(e.target.checked)}
+                    onChange={(e) => {
+                      setNoticias(e.target.checked);
+                      // Sin correo, se pide en ese momento: el foco va al campo y aparece el aviso.
+                      if (e.target.checked && !limpiarCorreo(form.email)) correoRef.current?.focus();
+                    }}
                     className="mt-0.5 size-5 shrink-0 accent-[#2c56e8]"
                   />
                   <span>{NOTICIAS.texto}</span>

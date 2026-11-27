@@ -108,3 +108,49 @@ test("el guardado del prospecto no detiene WhatsApp: se abre primero y el envío
   assert.ok(contacto.indexOf("window.open(") < contacto.indexOf("guardarProspecto("), "/contacto: WhatsApp antes que el guardado");
   assert.match(contacto, /origen: \{ tipo: "contacto" \}/);
 });
+
+// (28/11/2026) Aviso de privacidad 2026-11-28: párrafo aprobado de la casilla de noticias y la baja.
+const leer = (ruta) => readFileSync(new URL(`../${ruta}`, import.meta.url), "utf8");
+test("aviso 2026-11-28: párrafo de noticias y baja en las finalidades adicionales, con el texto exacto de la casilla", () => {
+  const docs = leer("src/lib/legal/documentos.js");
+  const aviso = docs.slice(docs.indexOf("export const AVISO_PRIVACIDAD = {"), docs.indexOf("export const AVISO_PRIVACIDAD_PROPUESTA"));
+  assert.match(aviso, /version: "2026-11-28",\n {2}fecha: "28 de noviembre de 2026",/);
+  const finalidades = aviso.slice(aviso.indexOf('id: "finalidades"'), aviso.indexOf('id: "transferencias"'));
+  const despues = finalidades.slice(finalidades.indexOf("despues: ["));
+  assert.ok(despues.indexOf("Finalidades adicionales") < despues.indexOf("Si marcas la casilla"), "va dentro de las finalidades adicionales, después de su introducción");
+  const parrafo = `Si marcas la casilla "${NOTICIAS.texto}", usaremos tu nombre y correo para enviarte esas noticias y promociones. Esta casilla es opcional y distinta de la aceptación de este aviso; no marcarla no afecta tu solicitud. Puedes dejar de recibirlas en cualquier momento con el enlace "Darme de baja" que incluye cada correo, o escribiendo a \${correo()}. Guardamos la fecha en que diste y, en su caso, retiraste tu consentimiento.`;
+  assert.ok(despues.includes(parrafo), "texto aprobado, literal, con el correo de privacidad del aviso");
+  // La propuesta (sin publicar) se arma desde el aviso vigente, así que también lo lleva; sigue con versión posterior.
+  assert.match(docs, /export const AVISO_PRIVACIDAD_PROPUESTA = \{\n {2}\.\.\.AVISO_PRIVACIDAD,\n {2}version: "2026-12-18",/);
+});
+
+test("todos los formularios guardan la versión vigente del aviso: nadie la escribe a mano", () => {
+  const aceptacion = leer("src/lib/legal/aceptacion.js");
+  assert.match(aceptacion, /DOCS_AVISO = \[\{ id: AVISO_PRIVACIDAD\.id, version: AVISO_PRIVACIDAD\.version \}\]/);
+  assert.match(aceptacion, /DOCS_CUENTA = \[\.\.\.DOCS_AVISO,/);
+  assert.match(leer("src/lib/prospectos/guardar.js"), /avisoVersion: AVISO_PRIVACIDAD\.version/);
+  for (const [ruta, docs] of [
+    ["src/components/landing/popups/PopupTarjeta.jsx", "DOCS_AVISO"],
+    ["src/app/(public)/contacto/page.jsx", "DOCS_AVISO"],
+    ["src/app/(public)/cotiza/page.jsx", "DOCS_AVISO"],
+    ["src/app/(public)/contratar-plan/ContratarPlanContent.jsx", "DOCS_CUENTA"],
+    ["src/app/(public)/alta-empresas/AltaEmpresasForm.jsx", "DOCS_CUENTA"],
+  ]) {
+    const codigo = leer(ruta);
+    assert.match(codigo, new RegExp(`registrarAceptacion\\(\\{ contexto: "[a-z_]+", documentos: ${docs},`), ruta);
+    assert.doesNotMatch(codigo, /aviso_privacidad|version: "\d{4}-/, `${ruta}: sin versión escrita a mano`);
+  }
+});
+
+test("/contacto: correo opcional con las reglas del pop-up", () => {
+  const contacto = leer("src/app/(public)/contacto/page.jsx");
+  const campo = contacto.slice(contacto.indexOf("Correo electrónico"), contacto.indexOf("Teléfono</span>"));
+  assert.match(campo, /\(opcional\)/);
+  assert.doesNotMatch(campo, /\brequired\b/, "el correo ya no es obligatorio");
+  assert.match(contacto, /estadoCorreo\(\{ correo: form\.email, noticias \}\)/, "misma regla que el pop-up");
+  assert.match(contacto, /MENSAJES_CORREO\[problemaCorreo\]/);
+  assert.match(contacto, /if \(e\.target\.checked && !limpiarCorreo\(form\.email\)\) correoRef\.current\?\.focus\(\);/, "al marcar noticias sin correo, se pide");
+  const enviar = contacto.slice(contacto.indexOf("const onSubmit"), contacto.indexOf("return ("));
+  assert.ok(enviar.indexOf("if (problemaCorreo)") < enviar.indexOf("window.open("), "correo mal o faltante detiene antes de WhatsApp");
+  assert.match(enviar, /\.\.\.\(correo \? \[`Correo: \$\{correo\}`\] : \[\]\)/, "sin correo, el mensaje no lleva la línea");
+});
