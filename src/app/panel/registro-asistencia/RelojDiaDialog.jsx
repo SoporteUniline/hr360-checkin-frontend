@@ -87,7 +87,7 @@ function opcionesCorreccion(motivos, actual) {
 // La autorización de la extra y el error del renglón van justo debajo de la fila.
 function Renglon({ r, n, error, motivos, autorizadores, nocturno, horario, h, onCambio, onQuitar }) {
   const ed = editado(r);
-  const pideMotivo = ed || (r.anulado && !r.anuladoAntes);
+  const pideMotivo = ed || (r.anulado && !r.anuladoAntes) || Boolean(r.quitarComida);
   const otro = esMotivoOtro(r.motivo);
   const valorMotivo = otro ? "otro" : r.motivo;
   const extra = r.concepto === "extra" && !r.anulado;
@@ -138,7 +138,7 @@ function Renglon({ r, n, error, motivos, autorizadores, nocturno, horario, h, on
             onCambio={(v) => onCambio({ motivo: v === "otro" ? (otro ? r.motivo : motivoOtro("")) : v, motivoElegido: true })}
             vacio={pideMotivo ? "Elige el motivo…" : "Sin motivo"} opciones={opcionesCorreccion(motivos, valorMotivo)} />
           {otro ? (
-            <input aria-label="Escribe el motivo de la corrección" placeholder="Escribe el motivo (al menos 3 letras)" maxLength={MAX_TEXTO_OTRO}
+            <input aria-label="Escribe el motivo de la corrección" placeholder="Escribe el motivo (al menos 5 letras)" maxLength={MAX_TEXTO_OTRO}
               value={textoMotivoOtro(r.motivo)} onChange={(e) => onCambio({ motivo: motivoOtro(e.target.value), motivoElegido: true })}
               className={CAMPO} />
           ) : null}

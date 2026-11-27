@@ -3,7 +3,7 @@
 // Página de inicio (adamia.com.mx). Estilos en ./landing-home.css (bajo .lh para no tocar el resto de la app);
 // movimiento en ./animaciones.js (se limpia al salir). Pantallas con datos de ejemplo; fotos ilustrativas en /public/landing.
 /* eslint-disable @next/next/no-img-element -- fotos ya optimizadas (webp) dentro de contenedores animados */
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { iniciarAnimaciones } from "./animaciones";
 import HeroCarrusel from "./HeroCarrusel";
@@ -11,10 +11,25 @@ import SeccionLey from "./SeccionLey";
 import MosaicoModulos from "./MosaicoModulos";
 import SitioEncabezado from "./SitioEncabezado";
 import SitioPie from "./SitioPie";
+import SeccionReclutadorIA from "./SeccionReclutadorIA";
+import SeccionClimaIA from "./SeccionClimaIA";
+import SeccionTablero from "./SeccionTablero";
+import SeccionMuro from "./SeccionMuro";
+import { diapositivasPortada } from "./diapositivas";
 import "./landing-home.css";
+import "./novedades.css";
 
-export default function LandingHome() {
+// Marquesina: lo que hace ADAMIA, en corto (solo funciones en producción). La segunda copia es para el giro continuo.
+const MARQUESINA = [
+  "Reclutador IA en WhatsApp", "Reconocimiento facial", "Validación GPS", "Clima laboral y NOM-035", "Horas extra según la LFT",
+  "Vacaciones y permisos", "Aprobación por WhatsApp", "Muro de la empresa", "Contratos y actas", "Activos y uniformes",
+  "Aguinaldos y finiquitos", "Evaluaciones 360°", "Varias sucursales",
+];
+
+// modulos: { total, categorias } de src/lib/sitio/modulos.js (modulosPortada), armado en el servidor.
+export default function LandingHome({ modulos }) {
   const raiz = useRef(null);
+  const diapositivas = useMemo(() => diapositivasPortada(modulos.total), [modulos.total]);
   useEffect(() => iniciarAnimaciones(raiz.current), []);
   return (
     <div className="lh" ref={raiz}>
@@ -22,7 +37,7 @@ export default function LandingHome() {
         <SitioEncabezado />
         <main id="inicio">
           <section className="hero">
-            <HeroCarrusel />
+            <HeroCarrusel diapositivas={diapositivas} />
             <div className="wrap">
               <p className="sync-tit">Así se ve en vivo: <b>tu gente checa y RH lo recibe al instante.</b></p>
               <div className="sync" aria-label="Ejemplo: una persona checa en su celular y la entrada aparece al instante en el panel de RH">
@@ -87,9 +102,13 @@ export default function LandingHome() {
                 </div>
               </div>
             </div>
-            <div className="marq" aria-hidden="true"><div className="marq-in" id="marq"><span>Reconocimiento facial</span><span>Validación GPS</span><span>Checada con QR o código</span><span>Horas extra según la LFT</span><span>Vacaciones y permisos</span><span>Aprobación por WhatsApp</span><span>Contratos y actas</span><span>Activos y uniformes</span><span>Aguinaldos y finiquitos</span><span>Evaluaciones 360°</span><span>Varias sucursales</span><span aria-hidden="true">Reconocimiento facial</span><span aria-hidden="true">Validación GPS</span><span aria-hidden="true">Checada con QR o código</span><span aria-hidden="true">Horas extra según la LFT</span><span aria-hidden="true">Vacaciones y permisos</span><span aria-hidden="true">Aprobación por WhatsApp</span><span aria-hidden="true">Contratos y actas</span><span aria-hidden="true">Activos y uniformes</span><span aria-hidden="true">Aguinaldos y finiquitos</span><span aria-hidden="true">Evaluaciones 360°</span><span aria-hidden="true">Varias sucursales</span></div></div>
+            <div className="marq" aria-hidden="true"><div className="marq-in" id="marq">{[...MARQUESINA, ...MARQUESINA].map((t, k) => <span key={k}>{t}</span>)}</div></div>
           </section>
+          <SeccionReclutadorIA />
           <MosaicoModulos />
+          <SeccionClimaIA />
+          <SeccionTablero />
+          <SeccionMuro />
           <section className="fullband gris" id="producto">
             <div className="wrap row2">
               <div className="txt reveal">
@@ -221,7 +240,7 @@ export default function LandingHome() {
                 <div className="photo" id="uni-photo" style={{aspectRatio: '4/3', width: '100%'}}>
                   <img src="/landing/uniformes.webp" alt="Entrega de uniforme y botas en el almacén de una empresa" width={1400} height={1050} loading="lazy" />
                   <div className="float-card" data-t={0} style={{left: '4%', top: '7%'}}><i style={{background: 'var(--violet)'}}><svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M8 3 4 6v4l3 1v10h10V11l3-1V6l-4-3c0 2-2 3-4 3s-4-1-4-3z" /></svg></i><div>Entrega E-512<small>3 camisas M · botas 27 · chaleco M</small></div></div>
-                  <div className="float-card" data-t={1} style={{right: '4%', bottom: '8%'}}><i><svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg></i><div>Resguardo firmado<small>Luis Pérez · hoy 09:12</small></div></div>
+                  <div className="float-card" data-t={1} style={{right: '4%', bottom: '8%'}}><i><svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg></i><div>Resguardo firmado<small>Raúl Pérez · hoy 09:12</small></div></div>
                 </div>
               </div>
             </div>
@@ -305,15 +324,21 @@ export default function LandingHome() {
             <div className="wrap">
               <div className="txt reveal" style={{textAlign: 'center', justifyItems: 'center', marginBottom: 40}}>
                 <span className="eyebrow">Todos los módulos</span>
-                <h2><span className="cnt" data-to={36}>36</span> herramientas. Una sola cuenta.</h2>
+                <h2><span className="cnt" data-to={modulos.total}>{modulos.total}</span> herramientas. Una sola cuenta.</h2>
               </div>
               <div className="allm reveal" id="allm">
-                <article className="cat" style={{"--c": '#2c56e8'}}><header><span>10</span><b>Control de tiempo</b><small>Cada minuto, contado</small></header><ul><li style={{"--k": 0}}><i />Reloj checador facial</li><li style={{"--k": 1}}><i />Validación GPS y geocercas</li><li style={{"--k": 2}}><i />Checada con rostro, QR o código</li><li style={{"--k": 3}}><i />Asistencias</li><li style={{"--k": 4}}><i />Entradas y salidas</li><li style={{"--k": 5}}><i />Horas extra</li><li style={{"--k": 6}}><i />Turnos y turnos extra</li><li style={{"--k": 7}}><i />Centro de incidencias</li><li style={{"--k": 8}}><i />Reporte de horas</li><li style={{"--k": 9}}><i />Reportes personalizados</li></ul></article>
-                <article className="cat" style={{"--c": '#5a3cf4'}}><header><span>8</span><b>Personal</b><small>El expediente completo</small></header><ul><li style={{"--k": 0}}><i />Empleados</li><li style={{"--k": 1}}><i />Expediente 360°</li><li style={{"--k": 2}}><i />Departamentos y puestos</li><li style={{"--k": 3}}><i />Contratos</li><li style={{"--k": 4}}><i />Actas administrativas</li><li style={{"--k": 5}}><i />Finiquitos y liquidaciones</li><li style={{"--k": 6}}><i />Aguinaldos</li><li style={{"--k": 7}}><i />Mapa de rutas</li></ul></article>
-                <article className="cat" style={{"--c": '#16a34a'}}><header><span>6</span><b>Ausencias</b><small>Sin papeles ni Excel</small></header><ul><li style={{"--k": 0}}><i />Vacaciones según la ley</li><li style={{"--k": 1}}><i />Planeación de vacaciones</li><li style={{"--k": 2}}><i />Permisos por día u hora</li><li style={{"--k": 3}}><i />Aprobación por WhatsApp</li><li style={{"--k": 4}}><i />Días festivos</li><li style={{"--k": 5}}><i />Solicitudes de mi equipo</li></ul></article>
-                <article className="cat" style={{"--c": '#d97706'}}><header><span>6</span><b>Documentos y gente</b><small>Orden y crecimiento</small></header><ul><li style={{"--k": 0}}><i />Biblioteca documental</li><li style={{"--k": 1}}><i />Generar documentos</li><li style={{"--k": 2}}><i />Firma en línea</li><li style={{"--k": 3}}><i />Activos y uniformes</li><li style={{"--k": 4}}><i />Evaluación de desempeño</li><li style={{"--k": 5}}><i />Reclutamiento y vacantes</li></ul></article>
-                <article className="cat" style={{"--c": '#0b1033'}}><header><span>6</span><b>Tu empresa</b><small>Control total</small></header><ul><li style={{"--k": 0}}><i />Portal y app del empleado</li><li style={{"--k": 1}}><i />Varias empresas y sucursales</li><li style={{"--k": 2}}><i />Usuarios y permisos</li><li style={{"--k": 3}}><i />Reglas de aviso</li><li style={{"--k": 4}}><i />Campos personalizados</li><li style={{"--k": 5}}><i />Calculadora de aguinaldos</li></ul></article>
+                {modulos.categorias.map((c) => (
+                  <article key={c.id} className="cat" style={{"--c": c.color}}>
+                    <header><span>{c.modulos.length}</span><b>{c.nombre}</b><small>{c.lema}</small></header>
+                    <ul>
+                      {c.modulos.map((m, k) => (
+                        <li key={m.nombre} style={{"--k": k}}><i />{m.href ? <Link href={m.href}>{m.nombre}</Link> : m.nombre}</li>
+                      ))}
+                    </ul>
+                  </article>
+                ))}
               </div>
+              <p className="allm-ayuda reveal">¿Quieres ver cómo se usa cada una? <Link href="/ayuda">Entra al Centro de ayuda <span aria-hidden="true">→</span></Link></p>
             </div>
           </section>
           <section className="final" id="demo">

@@ -13,6 +13,13 @@ import { Combobox } from "@/components/Combobox";
 import FiniquitoResumen from "./FiniquitoResumen";
 import styles from "./finiquitos-theme.module.css";
 import dayjs from "dayjs";
+import {
+  AVISO_VERSION_ANTERIOR,
+  TIPOS_TERMINACION,
+  ZONAS_SALARIO_MINIMO,
+  incluye20Dias,
+  tipoTerminacion,
+} from "@/lib/calculos/calculosLft.mjs";
 
 function Field({
   label,
@@ -187,36 +194,27 @@ export default function FiniquitoPreparation({
                   : undefined,
               })}
               <label className={styles.field}>
-                <span>Tipo de cálculo</span>
-                <select
-                  aria-label="Tipo de cálculo"
-                  value={values.tipoCalculo}
-                  onChange={(e) => onChange("tipoCalculo", e.target.value)}
-                >
-                  <option value="finiquito">Finiquito</option>
-                  <option value="liquidacion">Liquidación</option>
-                </select>
-              </label>
-              <label className={styles.field}>
                 <span>Tipo de terminación</span>
                 <select
                   aria-label="Tipo de terminación"
                   value={values.tipoTerminacion}
                   onChange={(e) => onChange("tipoTerminacion", e.target.value)}
                 >
-                  {[
-                    "Renuncia Voluntaria",
-                    "Despido Justificado",
-                    "Despido Injustificado",
-                    "Mutuo Acuerdo",
-                    "Fin de Contrato",
-                    "Rescisión Artículo 51",
-                    "Defunción",
-                    "Otros",
-                  ].map((v) => (
-                    <option key={v}>{v}</option>
+                  {!tipoTerminacion(values.tipoTerminacion) && (
+                    <option value={values.tipoTerminacion} disabled>
+                      {values.tipoTerminacion || "Elige el tipo"}
+                    </option>
+                  )}
+                  {TIPOS_TERMINACION.map((t) => (
+                    <option key={t.valor} value={t.valor}>
+                      {t.etiqueta}
+                    </option>
                   ))}
                 </select>
+                <small>
+                  {tipoTerminacion(values.tipoTerminacion)?.ayuda ||
+                    "Elige un tipo de la lista para calcular."}
+                </small>
               </label>
               {empleado && (
                 <div className={styles.employeeMeta}>
@@ -274,7 +272,9 @@ export default function FiniquitoPreparation({
                 <div className={styles.fieldsGrid}>
                   {field("salarioDiario", "Salario diario", {
                     step: "0.01",
-                    hint: "Importe en MXN",
+                    hint: empleado?.salario_texto
+                      ? `${empleado.salario_texto}. Cámbialo solo si es otro.`
+                      : "Salario del empleado (mensual ÷ 30, quincenal ÷ 15, semanal ÷ 7).",
                   })}
                   {field("diasSalarioPendiente", "Días de salario pendientes")}
                 </div>
@@ -285,30 +285,69 @@ export default function FiniquitoPreparation({
                     proporcional se aplica al calcular.
                   </p>
                   <div className={styles.fieldsGrid}>
-                    {field("diasNoTrabajados", "Días no trabajados", {
-                      hint: "Reducen los proporcionales",
+                    {field("diasNoTrabajados", "Faltas a descontar del aguinaldo", {
+                      step: "1",
+                      hint: "Faltas del 1 de enero (o del ingreso) a la baja. Pon 0 si no se descuentan.",
                     })}
-                    {field("diasAguinaldo", "Días de aguinaldo anual")}
+                    {field("diasAguinaldo", "Días de aguinaldo anual", {
+                      hint: "Mínimo de ley: 15",
+                    })}
                     {field(
                       "diasVacAnteriores",
-                      "Vacaciones pendientes de años anteriores"
+                      "Vacaciones pendientes de años anteriores",
+                      { hint: "Saldo de Vacaciones: cargados − tomados" }
                     )}
-                    {field("diasVacLeyActual", "Días de vacaciones por año", {
+                    {field("diasVacLeyActual", "Días de vacaciones del año en curso", {
                       step: "1",
+                      hint: "Por ley según la antigüedad (12 el primer año); si la empresa da más, se usa lo de la empresa.",
                     })}
                     {field(
                       "diasVacYaGozadas",
                       "Vacaciones ya gozadas este año"
                     )}
-                    {field("primaVacacional", "Prima vacacional (%)")}
+                    {field("primaVacacional", "Prima vacacional (%)", {
+                      hint: "Mínimo de ley: 25 %",
+                    })}
+                    <label className={styles.field}>
+                      <span>Zona del salario mínimo</span>
+                      <select
+                        aria-label="Zona del salario mínimo"
+                        value={values.zonaSalarioMinimo}
+                        onChange={(e) =>
+                          onChange("zonaSalarioMinimo", e.target.value)
+                        }
+                      >
+                        {ZONAS_SALARIO_MINIMO.map((z) => (
+                          <option key={z.valor} value={z.valor}>
+                            {z.etiqueta}
+                          </option>
+                        ))}
+                      </select>
+                      <small>Para el tope de la prima de antigüedad (2 salarios mínimos).</small>
+                    </label>
+                    {field("gratificacion", "Gratificación adicional pactada", {
+                      step: "0.01",
+                      hint: "Opcional (p. ej. en mutuo acuerdo). Importe en MXN.",
+                    })}
                   </div>
                 </details>
-                {values.tipoCalculo === "liquidacion" && (
+                {incluye20Dias(values.tipoTerminacion) && (
                   <div className={styles.liquidationField}>
-                    {field("diasSalariosVencidos", "Días de salarios vencidos")}
+                    <label className={styles.checkField}>
+                      <input
+                        type="checkbox"
+                        checked={!!values.incluir20Dias}
+                        onChange={(e) =>
+                          onChange("incluir20Dias", e.target.checked)
+                        }
+                      />
+                      <span>Incluir 20 días por año (art. 50)</span>
+                    </label>
                     <p className={styles.helpText}>
-                      El resumen incluirá los conceptos adicionales de
-                      liquidación.
+                      Se pagan 20 días de salario integrado por cada año de
+                      servicio cuando el patrón se niega a reinstalar (art. 49)
+                      o en la rescisión por causa del patrón (art. 52). Quítalo
+                      si no corresponde a tu caso.
                     </p>
                   </div>
                 )}
@@ -340,6 +379,11 @@ export default function FiniquitoPreparation({
           <p className={styles.summaryEmployee}>
             {empleado?.nombre_completo || "Sin empleado seleccionado"}
           </p>
+          {resultado?.calculado_version_anterior && (
+            <p role="note" className={styles.versionNotice}>
+              {AVISO_VERSION_ANTERIOR}
+            </p>
+          )}
           <p className={styles.summaryType}>
             {values.tipoCalculo === "liquidacion" ? "Liquidación" : "Finiquito"}{" "}
             ·{" "}
@@ -382,7 +426,9 @@ export default function FiniquitoPreparation({
                 disabled={busy}
                 onClick={onCalculate}
               >
-                Volver a calcular
+                {resultado?.calculado_version_anterior
+                  ? "Recalcular con las reglas vigentes"
+                  : "Volver a calcular"}
               </Button>
             )}
             <p className={styles.nextStep}>

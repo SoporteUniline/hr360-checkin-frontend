@@ -4,10 +4,10 @@ resumen: El Centro de incidencias junta por persona las faltas, retardos, checad
 modulo: incidencias
 audiencia: [rh, dueno]
 pantallas: [/panel/incidencias]
-palabras: [incidencias, centro de incidencias, prenómina, faltas, retardos, sin salida, sin entrada, horas extra, conflicto, vacaciones, quincena, revisar]
+palabras: [incidencias, centro de incidencias, prenómina, faltas, retardos, sin salida, sin entrada, horas extra, conflicto, vacaciones, quincena, revisar, motivo de la corrección]
 orden: 10
 actualizado: 2026-11-27
-fuentes: [src/app/panel/incidencias/page.jsx, src/lib/asistencia/horasExtra.mjs]
+fuentes: [src/app/panel/incidencias/page.jsx, src/lib/asistencia/horasExtra.mjs, src/components/asistencia/CampoMotivo.jsx, src/lib/asistencia/motivoCorreccion.mjs]
 ---
 
 ## Para qué sirve
@@ -29,7 +29,8 @@ Recursos Humanos y el dueño.
 
 ## Antes de empezar
 
-Entra a **Control de tiempo → Centro de incidencias**.
+- Entra a **Control de tiempo → Centro de incidencias**.
+- Si vas a corregir una entrada o una salida, ten a la mano el **motivo de la corrección**: es obligatorio.
 
 ## Cómo elegir el periodo
 
@@ -48,11 +49,13 @@ Entra a **Control de tiempo → Centro de incidencias**.
 
 1. Toca la fila de la persona. Se despliega «Incidencias de …» con cada día: fecha, tipo de incidencia, horario, entrada, salida y nota.
 2. Según el caso:
-   - **Sin salida / Sin entrada / Retardo:** corrige la **Entrada** o la **Salida**, escribe una **Nota** y toca **Guardar**. El cambio se guarda en Asistencias y queda marcado como corrección.
+   - **Sin salida / Sin entrada / Retardo:** corrige la **Entrada** o la **Salida**. Debajo del renglón aparece **Motivo de la corrección (obligatorio)**: escríbelo o toca una sugerencia (**Olvidó checar**, **Falla del reloj**, **Error de captura**…). Si quieres, escribe una **Nota**. Toca **Guardar**. El cambio se guarda en Asistencias, queda marcado como corrección y el historial guarda tu nombre, la hora, lo de antes y lo de después, y el motivo.
    - **H. extra:** toca **Autorizar** o **No autorizar**.
    - **Falta o Conflicto:** toca **Revisar** o **Abrir en Asistencias** para decidirlo en el reloj del día.
 
 ![Incidencias de una persona desplegadas con los botones Autorizar, No autorizar y Revisar](/ayuda/capturas/incidencias/incidencias-detalle.webp "Cada incidencia se resuelve en su renglón o se abre en Asistencias")
+
+![Renglón con la entrada corregida y el campo Motivo de la corrección con sus sugerencias](/ayuda/capturas/incidencias/incidencias-motivo.webp "Al cambiar la entrada o la salida aparece el motivo; sin él no se guarda")
 
 > **Consejo:** para marcar una falta como justificada, vacaciones o incapacidad, abre el día en Asistencias. Ver [Cómo marcar qué pasó un día sin checadas](/ayuda/asistencias/que-paso-y-motivo).
 
@@ -82,6 +85,10 @@ Que esa persona no tiene incidencias pendientes en el periodo.
 
 Se paga su jornada programada, no el tiempo de más. La checada del reloj se conserva.
 
+### ¿Por qué me pide un motivo?
+
+Toda corrección de checadas pide motivo: así cualquiera puede ver después por qué se cambió la hora. Debe tener entre 5 y 500 letras. Si solo cambias la **Nota**, no lo pide.
+
 ### ¿Las vacaciones son una incidencia?
 
 Solo si además tiene una checada ese día (Conflicto). Si no, aparecen como informativas en el filtro Vacaciones.
@@ -89,6 +96,7 @@ Solo si además tiene una checada ese día (Conflicto). Si no, aparecen como inf
 ## Qué pasa si…
 
 - **…el día está en una nómina autorizada:** no se puede corregir.
+- **…tocas Guardar sin motivo:** no se guarda y junto al campo verás «Escribe el motivo de la corrección.». Si es muy corto: «El motivo debe tener al menos 5 letras.».
 - **…falla el guardado:** verás «No se pudo actualizar el registro.».
 - **…no se pueden cargar las incidencias:** verás «No se pudieron cargar las incidencias.».
 

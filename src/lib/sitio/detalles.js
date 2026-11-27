@@ -28,14 +28,6 @@ export const DETALLE = {
         ],
       },
       {
-        titulo: "Sin señal, también.",
-        texto: "Si se cae el internet, la checada se guarda en el equipo y se envía sola al volver la conexión.",
-        puntos: [
-          { t: "Registro sin conexión", d: "Guarda hora y evidencia en el momento real." },
-          { t: "Envío automático", d: "Al reconectar, se sincroniza sin que nadie haga nada." },
-        ],
-      },
-      {
         titulo: "Las horas, listas para pagar.",
         texto: "RH ve cada día con entradas, salidas, comida y horas extra, y lo exporta a Excel.",
         puntos: [
@@ -48,7 +40,7 @@ export const DETALLE = {
     ],
     faq: [
       { p: "¿Necesito comprar un reloj?", r: "No. Se usa desde el celular de cada persona o desde una tablet en la entrada. Si ya tienes relojes compatibles, también pueden enviar sus checadas." },
-      { p: "¿Qué pasa si no hay internet?", r: "La checada se guarda en el equipo con su hora real y se envía en cuanto vuelve la conexión." },
+      { p: "¿Necesita internet?", r: "Sí. La checada se registra en línea al momento, con su rostro y su ubicación, desde el celular o una tablet." },
       { p: "¿Sirve para la ley de registro de jornada de 2027?", r: "ADAMIA registra cada entrada y salida de forma electrónica por persona. Revisa nuestra guía de la reforma para ver los detalles." },
     ],
   },

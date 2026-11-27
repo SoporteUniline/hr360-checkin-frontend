@@ -52,11 +52,12 @@ export const finiquitosApi = {
     });
     return res.data;
   },
-  async obtenerVacacionesDatos({ idEmpleado, empresa, aniosCompletos }) {
+  // Saldo real de vacaciones y días de ley del año de servicio en curso a la fecha de baja.
+  async obtenerVacacionesDatos({ idEmpleado, empresa, fechaBaja }) {
     const res = await axios.get(
       `/checador/finiquitos/empleado/${idEmpleado}/vacaciones-datos`,
       {
-        params: { empresa, aniosCompletos },
+        params: { empresa, fechaBaja },
         headers: authHeaders(),
       },
     );

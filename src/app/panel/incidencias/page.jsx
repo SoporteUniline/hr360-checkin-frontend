@@ -32,6 +32,8 @@ import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import { formatearMinutos } from "@/utils/asistenciaHoras";
 import { cambiosAutorizar, cambiosNoAutorizar, estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
 import useHorasExtra from "@/hooks/useHorasExtra";
+import CampoMotivo from "@/components/asistencia/CampoMotivo";
+import { camposMotivo, errorMotivo, errorMotivoServidor } from "@/lib/asistencia/motivoCorreccion.mjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/Combobox";
@@ -257,6 +259,11 @@ export default function CentroIncidenciasPage() {
   const [guardandoId, setGuardandoId] = useState(null);
   const [autorizandoMasivo, setAutorizandoMasivo] = useState(false);
   const [drafts, setDrafts] = useState({});
+  // (27/11/2026) «Las checadas tienen que pedir motivo»: motivo de la corrección por fila y su error (junto al campo).
+  const [motivos, setMotivos] = useState({});
+  const [erroresMotivo, setErroresMotivo] = useState({});
+  // Filas donde el servidor pidió motivo (422) aunque aquí no se vieran horas cambiadas.
+  const [piden, setPiden] = useState({});
 
   const unidadSeleccionada =
     unidadActiva === "all" ? null : unidadById?.[unidadActiva] || null;
@@ -483,8 +490,33 @@ export default function CentroIncidenciasPage() {
     );
   };
 
+  // ¿Cambió la entrada o la salida? Entonces la corrección pide motivo (el servidor también lo exige: 422).
+  const cambioHoras = (registro, tz) => {
+    const d = drafts[String(registro.id)];
+    if (!d) return false;
+    const zona = tz || fallbackTimezone;
+    return d.entrada !== horaLocal(registro.entrada, zona) || d.salida !== horaLocal(registro.salida, zona);
+  };
+  const pideMotivo = (registro, tz) => cambioHoras(registro, tz) || Boolean(piden[String(registro.id)]);
+  const ponerMotivo = (registro, texto) => {
+    const id = String(registro.id);
+    setMotivos((prev) => ({ ...prev, [id]: texto }));
+    setErroresMotivo((prev) => (prev[id] ? { ...prev, [id]: errorMotivo(texto) } : prev));
+  };
+  const limpiarMotivoFila = (id) => {
+    for (const set of [setMotivos, setErroresMotivo, setPiden]) {
+      set((prev) => { const next = { ...prev }; delete next[id]; return next; });
+    }
+  };
+
   const guardarCorreccion = async (registro, tz, patch = {}) => {
     if (!registro?.id) return;
+    const idFila = String(registro.id);
+    const motivo = motivos[idFila] ?? "";
+    if (pideMotivo(registro, tz) && errorMotivo(motivo)) {
+      setErroresMotivo((prev) => ({ ...prev, [idFila]: errorMotivo(motivo) }));
+      return;
+    }
     setGuardandoId(registro.id);
     try {
       const draft = draftDe(registro, tz);
@@ -504,7 +536,7 @@ export default function CentroIncidenciasPage() {
         correccion: 1,
       });
 
-      await axios.put(`/checador/asistencias/${registro.id}`, payload);
+      await axios.put(`/checador/asistencias/${registro.id}`, { ...payload, ...(motivo.trim() ? camposMotivo(motivo, "incidencias") : { pantalla: "incidencias" }) });
       enqueueSnackbar("Registro actualizado correctamente.", {
         variant: "success",
       });
@@ -513,8 +545,16 @@ export default function CentroIncidenciasPage() {
         delete next[String(registro.id)];
         return next;
       });
+      limpiarMotivoFila(idFila);
       await cargar();
     } catch (e) {
+      // 422 «falta el motivo»: el error va junto al campo (se muestra aunque aquí no se vieran horas cambiadas).
+      const faltaMotivo = errorMotivoServidor(e);
+      if (faltaMotivo) {
+        setPiden((prev) => ({ ...prev, [idFila]: true }));
+        setErroresMotivo((prev) => ({ ...prev, [idFila]: faltaMotivo }));
+        return;
+      }
       console.error("Error guardando incidencia:", e);
       enqueueSnackbar(
         e?.response?.data?.message ||
@@ -1147,10 +1187,11 @@ export default function CentroIncidenciasPage() {
                                     const fecha = inc.fecha
                                       ? dayjs(inc.fecha).format("DD MMM YYYY")
                                       : "-";
+                                    const conMotivo = inc.accion === "corregir" && pideMotivo(registro, inc.tz);
                                     return (
+                                      <Fragment key={inc.key}>
                                       <div
-                                        key={inc.key}
-                                        className="grid grid-cols-2 gap-3 border-b border-slate-100 p-3 last:border-0 sm:grid-cols-4 xl:items-center xl:grid-cols-[112px_96px_118px_132px_132px_minmax(0,1fr)_352px]"
+                                        className={`grid grid-cols-2 gap-3 p-3 sm:grid-cols-4 xl:items-center xl:grid-cols-[112px_96px_118px_132px_132px_minmax(0,1fr)_352px] ${conMotivo ? "" : "border-b border-slate-100 last:border-0"}`}
                                       >
                                         <div>
                                           <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400 xl:hidden">
@@ -1281,6 +1322,20 @@ export default function CentroIncidenciasPage() {
                                           </Button>
                                         </div>
                                       </div>
+                                      {conMotivo ? (
+                                        // Fuera de la cuadrícula: las columnas de todas las filas siguen alineadas.
+                                        <div data-motivo-incidencia className="border-b border-slate-100 bg-amber-50/40 px-3 pb-3 pt-1 last:border-0">
+                                          <CampoMotivo
+                                            nombre={nombreCompleto(registro)}
+                                            valor={motivos[String(registro.id)] ?? ""}
+                                            onCambio={(t) => ponerMotivo(registro, t)}
+                                            error={erroresMotivo[String(registro.id)] ?? ""}
+                                            disabled={guardandoId === registro.id}
+                                            className="max-w-3xl"
+                                          />
+                                        </div>
+                                      ) : null}
+                                      </Fragment>
                                     );
                                   })}
                                 </div>

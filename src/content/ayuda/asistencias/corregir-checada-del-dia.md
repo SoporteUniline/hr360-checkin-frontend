@@ -29,7 +29,7 @@ Recursos Humanos y el dueño, con permiso de edición de asistencias. Los emplea
 ## Antes de empezar
 
 - Abre **Control de tiempo → Asistencias** (o el **Monitor**) y busca a la persona y el día.
-- Ten a la mano el **motivo** de la corrección: es obligatorio cada vez que agregas, cambias o anulas una checada.
+- Ten a la mano el **motivo** de la corrección: es obligatorio cada vez que agregas, cambias o anulas una checada, y también al tocar **No fue comida**.
 
 ## Cómo abrir el reloj del día
 
@@ -84,7 +84,7 @@ Si le faltó un tramo completo (por ejemplo, regresó de comer y no checó), toc
 3. Elige el motivo, por ejemplo **Checada duplicada**.
 4. Toca **Guardar**.
 
-La checada anulada no cuenta para las horas, pero sigue en el historial. Si el renglón lo agregaste tú (no vino del reloj), la ✕ dice **Quitar** y simplemente lo elimina de lo que vas a guardar.
+La checada anulada no cuenta para las horas, pero sigue en el historial. Si el renglón lo agregaste tú (no vino del reloj), la ✕ dice **Quitar**: si aún no lo guardabas, simplemente desaparece; si ya estaba guardado, también pide el motivo («Para quitar un registro agregado a mano elige el motivo.») y queda en el historial.
 
 ## Cómo cargar las horas de alguien que no checó nada
 
@@ -111,7 +111,7 @@ Luego toca **Guardar**. Si en realidad no vino, no cargues horas: usa **Qué pas
 | Visita a cliente o comisión | Salió a ver clientes o a una comisión |
 | Capacitación o evento externo | Estuvo en un curso o evento |
 | Sin dispositivo o reloj sin conexión | No tenía cómo checar |
-| Otro (escribe el motivo) | Escribe el motivo (al menos 3 letras; es un texto corto) |
+| Otro (escribe el motivo) | Escribe el motivo (al menos 5 letras; es un texto corto) |
 
 ## Cómo guardar o salir sin guardar
 
@@ -120,7 +120,7 @@ Luego toca **Guardar**. Si en realidad no vino, no cargues horas: usa **Qué pas
 
 ## Cómo ver quién corrigió y qué cambió
 
-En la tabla de Asistencias, la columna **Editado** dice «Sí» cuando el día tiene correcciones. Tócalo para ver **Qué cambió** (antes → después), **Quién y cuándo** y el **Motivo**.
+En la tabla de Asistencias, la columna **Editado** dice «Sí» cuando el día tiene correcciones. Tócalo para ver **Qué cambió** (antes → después), **Quién y cuándo**, desde qué pantalla (por ejemplo **Reloj del día**, **Centro de incidencias** o **Entradas y salidas**) y el **Motivo**.
 
 ## Errores que puedes ver y cómo resolverlos
 
@@ -132,6 +132,8 @@ En la tabla de Asistencias, la columna **Editado** dice «Sí» cuando el día t
 | Se encima con otro registro. | Dos renglones cubren el mismo horario; ajusta uno |
 | Cambiaste la hora: elige el motivo. / Registro agregado: elige el motivo. | Elige el motivo del renglón |
 | Para anular una checada del reloj elige el motivo. | Elige el motivo de la anulación |
+| Para quitar un registro agregado a mano elige el motivo. | Elige por qué lo quitas (por ejemplo **Checada duplicada** o **Error de captura**) |
+| Escribe el motivo (al menos 5 letras). | En «Otro», escribe un motivo más claro |
 | Hora extra: falta quién autoriza. | Elige quién autoriza o «No se autoriza» |
 | La hora extra va antes de su entrada (…) o después de su salida (…). Dentro de la jornada usa «Jornada» | Cambia el concepto a Jornada o corrige las horas |
 

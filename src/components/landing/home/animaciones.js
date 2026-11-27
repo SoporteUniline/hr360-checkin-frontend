@@ -25,7 +25,7 @@ function despues(fn, ms) { setTimeout(fn, quieto ? 0 : ms); }
 // ===== Portada: un solo guion mueve el celular y el panel (así nunca se desfasan) =====
 var gente = [
   ["Ana Torres", "Planta Empaque", "08:58", "Presente"],
-  ["Luis Pérez", "Planta Empaque", "09:07", "Retardo"],
+  ["Raúl Pérez", "Planta Empaque", "09:07", "Retardo"],
   ["Karla Romero", "Planta Empaque", "08:59", "Presente"]
 ];
 var scr = $("h-scr"), btn = $("h-btn"), pill = $("h-pill"), rows = $("h-rows"), pres = $("k-pres"), presN = $("k-pres-n"), falta = $("k-falta");
@@ -91,7 +91,7 @@ function wa() {
 }
 
 // ===== Contratos: se llenan los registros y se firma el contrato =====
-var docsData = [["Contrato · Ana Torres", "Firmado", ""], ["Contrato · Luis Pérez", "Firmado", ""], ["Acta administrativa · J. Ruiz", "En revisión", "p"], ["Contrato · Karla Romero", "Firmado", ""], ["Constancia laboral · R. Vega", "Emitida", ""]];
+var docsData = [["Contrato · Ana Torres", "Firmado", ""], ["Contrato · Raúl Pérez", "Firmado", ""], ["Acta administrativa · J. Ruiz", "En revisión", "p"], ["Contrato · Karla Romero", "Firmado", ""], ["Constancia laboral · R. Vega", "Emitida", ""]];
 function docs() {
   var d = $("docs"); d.innerHTML = "<h5>Contratos</h5>"; $("paper").classList.remove("sign");
   docsData.forEach(function (x, j) {
@@ -193,12 +193,12 @@ var gentesem = [ // horas por día (L–S)
   ["Carlos Méndez", "Almacén", [8.6667, 8.6667, 8.6667, 8.6667, 8.6667, 8]],
   ["Lucía Herrera", "Calidad", [7.6, 7.6, 7.6, 7.6, 7.6, 7.6]],
   ["Jorge Ruiz", "Empaque", [7.2, 6.8, 7.2, 7.2, 7.2, 6]],
-  ["Luis Pérez", "Almacén", [8, 8, 8, 0, 8, 6]]
+  ["Raúl Pérez", "Almacén", [8, 8, 8, 0, 8, 6]]
 ];
 var avisos = [ // [día en que llega, color, icono, título, detalle, origen]
   [1, "#d97706", "✉", "Jorge Ruiz llegó tarde", "Martes 09:14 · su entrada es 9:00", "Correo · Regla de aviso"],
   [2, "#b45309", "!", "Carlos Méndez va a pasar del límite", "Llevaría 52 h de 46 h esta semana", "Alerta en el panel"],
-  [3, "#dc2626", "✉", "Luis Pérez no se presentó", "Jueves · sin checada ni permiso", "Correo · Regla de aviso"],
+  [3, "#dc2626", "✉", "Raúl Pérez no se presentó", "Jueves · sin checada ni permiso", "Correo · Regla de aviso"],
   [4, "#dc2626", "▲", "Ana Torres pasó del límite semanal", "48 h 20 min de 46 h · horas extra en más de 4 días", "Alerta en el panel"],
   [5, "#2c56e8", "✓", "Reporte semanal listo", "PDF con la hoja de cada empleado para firma", "Reporte de horas"]
 ];

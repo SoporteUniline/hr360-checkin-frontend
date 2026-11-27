@@ -15,6 +15,11 @@ import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
 import EvidenciaFirma from "@/components/firma/EvidenciaFirma";
 import styles from "./finiquitos-theme.module.css";
 import FiniquitoResumen, { money } from "./FiniquitoResumen";
+import {
+  AVISO_VERSION_ANTERIOR,
+  renglonesPdfFiniquito,
+  tipoTerminacion,
+} from "@/lib/calculos/calculosLft.mjs";
 import { jsPDF } from "jspdf";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
@@ -64,6 +69,7 @@ export default function FiniquitoViewDialog({
   id,
   justSaved = false,
   onUpdated,
+  onRecalcular,
 }) {
   const { dataUser } = useAuth();
   const [det, setDet] = useState(null);
@@ -265,26 +271,6 @@ export default function FiniquitoViewDialog({
       hRule(y + 1, contentWidth, 0.2);
       y += 10;
     };
-    const drawAmountRows = (title, rows) => {
-      sectionTitle(title);
-      doc.setFont(FONT, "normal");
-      doc.setFontSize(10);
-      rows.forEach(([label, amount]) => {
-        needSpace(8);
-        doc.setTextColor(...ADAMIA.text2);
-        doc.text(safe(label), marginLeft, y);
-        doc.setTextColor(...ADAMIA.text);
-        doc.setFont(FONT, "bold");
-        doc.text(safe(amount), pageWidth - marginRight, y, { align: "right" });
-        doc.setFont(FONT, "normal");
-        doc.setDrawColor(...ADAMIA.hairline);
-        doc.setLineWidth(0.2);
-        doc.line(marginLeft, y + 2, pageWidth - marginRight, y + 2);
-        y += 7;
-      });
-      y += 4;
-    };
-
     const companyName =
       safe(
         empresaData?.nombre_empresa ||
@@ -387,25 +373,67 @@ export default function FiniquitoViewDialog({
     );
     y += 18;
 
-    drawAmountRows("Conceptos de finiquito", [
-      ["Salario pendiente", money(det.monto_salario_pendiente)],
-      ["Aguinaldo proporcional", money(det.monto_aguinaldo_proporcional)],
-      ["Vacaciones no gozadas", money(det.monto_vacaciones_no_gozadas)],
-      ["Prima vacacional", money(det.monto_prima_vacacional)],
-      ["Subtotal finiquito", money(det.subtotal_finiquito)],
-    ]);
+    // (27/11/2026) Mismos conceptos, fórmulas y notas que la pantalla (renglonesPdfFiniquito ← respuesta del servidor).
+    const pdf = renglonesPdfFiniquito(det);
+    const drawConceptRows = (title, rows, subtotal) => {
+      sectionTitle(title);
+      rows.forEach(([label, formula, amount]) => {
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(8);
+        const formulaLines = formula ? doc.splitTextToSize(safe(formula), contentWidth - 42) : [];
+        needSpace(8 + formulaLines.length * 4);
+        doc.setFontSize(10);
+        doc.setTextColor(...ADAMIA.text2);
+        doc.text(safe(label), marginLeft, y);
+        doc.setTextColor(...ADAMIA.text);
+        doc.setFont(FONT, "bold");
+        doc.text(safe(amount), pageWidth - marginRight, y, { align: "right" });
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(...ADAMIA.muted);
+        formulaLines.forEach((line, i) => doc.text(line, marginLeft, y + 4.5 + i * 4));
+        const bottom = y + 2 + formulaLines.length * 4 + (formulaLines.length ? 1.5 : 0);
+        doc.setDrawColor(...ADAMIA.hairline);
+        doc.setLineWidth(0.2);
+        doc.line(marginLeft, bottom, pageWidth - marginRight, bottom);
+        y = bottom + 5;
+      });
+      if (subtotal) {
+        needSpace(8);
+        doc.setFont(FONT, "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(...ADAMIA.text);
+        doc.text(safe(subtotal[0]), marginLeft, y);
+        doc.text(safe(subtotal[1]), pageWidth - marginRight, y, { align: "right" });
+        doc.setFont(FONT, "normal");
+        y += 7;
+      }
+      y += 4;
+    };
 
-    if (det.es_liquidacion) {
-      drawAmountRows("Conceptos de liquidacion", [
-        ["Prima antiguedad", money(det.monto_prima_antiguedad)],
-        [
-          "Indemnizacion constitucional",
-          money(det.monto_indemnizacion_constitucional),
-        ],
-        ["Salarios vencidos", money(det.monto_salarios_vencidos)],
-        ["Subtotal liquidacion", money(det.subtotal_liquidacion)],
-      ]);
+    if (pdf.versionAnterior) {
+      drawWrappedSectionText({ sectionName: "Aviso", textValue: AVISO_VERSION_ANTERIOR, emptyFallback: "" });
     }
+    drawConceptRows("Conceptos de finiquito", pdf.finiquito, ["Subtotal finiquito", pdf.subtotalFiniquito]);
+    if (pdf.indemnizacion.length) {
+      drawConceptRows(
+        det.es_liquidacion ? "Conceptos de liquidacion" : "Prima de antiguedad y adicionales",
+        pdf.indemnizacion,
+        [det.es_liquidacion ? "Subtotal indemnizacion" : "Subtotal adicional", pdf.subtotalIndemnizacion]
+      );
+    }
+    needSpace(10);
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(...ADAMIA.blue);
+    doc.text("Total a pagar (bruto)", marginLeft, y);
+    doc.text(totalPagar, pageWidth - marginRight, y, { align: "right" });
+    y += 9;
+    drawWrappedSectionText({
+      sectionName: "Notas del calculo",
+      textValue: [pdf.nota, pdf.sdi ? `Salario diario integrado: ${pdf.sdi}` : null, pdf.tope ? `Prima de antiguedad: ${pdf.tope}` : null].filter(Boolean).join("\n"),
+      emptyFallback: pdf.nota,
+    });
 
     drawWrappedSectionText({
       sectionName: "Motivo de baja",
@@ -865,9 +893,27 @@ export default function FiniquitoViewDialog({
                 </div>
                 <div>
                   <span>Terminación</span>
-                  <strong>{det.tipo_terminacion || "—"}</strong>
+                  <strong>
+                    {tipoTerminacion(det.tipo_terminacion)?.etiqueta ||
+                      det.tipo_terminacion ||
+                      "—"}
+                  </strong>
                 </div>
               </div>
+              {det.calculado_version_anterior && !paid && onRecalcular && (
+                <div className="mb-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
+                    disabled={busy}
+                    onClick={() => onRecalcular(det)}
+                  >
+                    Recalcular como borrador
+                  </Button>
+                </div>
+              )}
               <h3 className={styles.smallHeading}>Desglose del documento</h3>
               <FiniquitoResumen data={det} />
               {det.motivo_baja && (

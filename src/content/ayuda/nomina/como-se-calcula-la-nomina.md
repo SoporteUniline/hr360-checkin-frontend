@@ -95,7 +95,7 @@ Ejemplo con un sueldo semanal de $2,100.00 y 5.83 días pagados en una nómina d
 
 Los permisos de unas horas marcados como «se reponen» o «se pagan» **no** descuentan nada. Si la persona cobra por hora, simplemente se le pagan las horas que trabajó.
 
-**Préstamos.** Cada préstamo vigente agrega el renglón «Abono a préstamo #N». El importe es el **menor** de tres: el abono pactado, el saldo pendiente y el 30 % de lo que la persona gana en el periodo por arriba del salario mínimo de sus días pagados (límite de la ley). Si el límite recorta el abono, el renglón lo explica en una nota.
+**Préstamos.** Cada préstamo vigente agrega el renglón «Abono a préstamo #N». El importe es el **menor** de tres: el abono pactado, el saldo pendiente y el 30 % de lo que la persona gana en el periodo por arriba del salario mínimo de sus días pagados (límite de la ley). El salario mínimo sale de la tabla oficial por año de ADAMIA, la misma del tope de la prima de antigüedad del finiquito (2026: $315.04 diarios, zona general). Si el límite recorta el abono, el renglón lo explica en una nota.
 
 ### Paso 5. Los retardos
 

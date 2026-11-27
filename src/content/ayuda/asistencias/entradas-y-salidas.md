@@ -4,10 +4,10 @@ resumen: Entradas y salidas muestra cada checada (cada tramo de entrada y salida
 modulo: asistencias
 audiencia: [rh, dueno]
 pantallas: [/panel/registro-de-entradas-y-salidas]
-palabras: [entradas y salidas, checadas, movimientos, reloj, registros hoy, jornadas completas, pendientes, entrada corregida, salida corregida, exportar]
+palabras: [entradas y salidas, checadas, movimientos, reloj, registros hoy, jornadas completas, pendientes, entrada corregida, salida corregida, exportar, motivo de la corrección]
 orden: 110
 actualizado: 2026-11-27
-fuentes: [src/app/panel/registro-de-entradas-y-salidas/page.jsx, src/app/panel/registro-de-entradas-y-salidas/EntradasSalidasTable.jsx, src/app/panel/registro-de-entradas-y-salidas/EntradasSalidasRow.jsx, src/app/panel/registro-de-entradas-y-salidas/EntradasDetalleSheet.jsx, src/app/panel/registro-de-entradas-y-salidas/EntradasSalidasDataContainer.jsx, src/hooks/useEntradaSalida.js, src/components/Clock/LocalClockRows.jsx]
+fuentes: [src/components/asistencia/CampoMotivo.jsx, src/lib/asistencia/motivoCorreccion.mjs, src/app/panel/registro-de-entradas-y-salidas/page.jsx, src/app/panel/registro-de-entradas-y-salidas/EntradasSalidasTable.jsx, src/app/panel/registro-de-entradas-y-salidas/EntradasSalidasRow.jsx, src/app/panel/registro-de-entradas-y-salidas/EntradasDetalleSheet.jsx, src/app/panel/registro-de-entradas-y-salidas/EntradasSalidasDataContainer.jsx, src/hooks/useEntradaSalida.js, src/components/Clock/LocalClockRows.jsx]
 ---
 
 ## Para qué sirve
@@ -49,11 +49,14 @@ Toca el renglón. Se abre a la derecha el **Detalle del registro** con el emplea
 
 1. Toca el lápiz (**Editar**) en la columna Acciones, o **Corregir horario** en el detalle.
 2. Escribe la **Entrada corregida** o la **Salida corregida**.
-3. Toca **Guardar** (o **Cancelar**).
+3. Debajo del renglón escribe el **Motivo de la corrección (obligatorio)** o toca una sugerencia, por ejemplo **Olvidó checar**.
+4. Toca **Guardar** (o **Cancelar**).
 
-Verás «Movimiento de checador actualizado correctamente.». La hora original del reloj se conserva y la corregida aparece en su columna.
+Verás «Movimiento de checador actualizado correctamente.». La hora original del reloj se conserva, la corregida aparece en su columna y el historial del día guarda tu nombre, la hora, antes → después y el motivo.
 
-> **Importante:** para corregir un **día completo** (agregar checadas, anular duplicadas, comida, hora extra o permisos) con motivo e historial, usa el reloj del día en Asistencias: [Cómo corregir la checada de un día](/ayuda/asistencias/corregir-checada-del-dia).
+![Renglón de Entradas y salidas en edición con el campo Motivo de la corrección debajo](/ayuda/capturas/asistencias/entradas-y-salidas-motivo.webp "Sin motivo, Guardar no cambia nada y te dice qué falta")
+
+> **Importante:** para corregir un **día completo** (agregar checadas, anular duplicadas, comida, hora extra o permisos), usa el reloj del día en Asistencias: [Cómo corregir la checada de un día](/ayuda/asistencias/corregir-checada-del-dia). Ahí también se pide el motivo.
 
 ## Cómo exportar a Excel
 
@@ -72,6 +75,10 @@ Porque cada salida y su regreso son tramos distintos (por ejemplo, salió a come
 
 Son checadas que ese mismo aparato guardó sin internet con una versión anterior del reloj (hoy el reloj necesita internet) y que todavía no se confirmaron en el servidor. RH puede revisar la hora original. No se suman a los contadores ni a la exportación. Ver [El reloj y la conexión a internet](/ayuda/reloj-checador/reloj-sin-conexion).
 
+### ¿Por qué me pide un motivo?
+
+Toda corrección de checadas pide motivo (de 5 a 500 letras) para que quede claro por qué se cambió. Lo ves después en la columna **Editado** de Asistencias.
+
 ### ¿Dónde veo las checadas de un empleado por días?
 
 En [Asistencias](/ayuda/asistencias/revisar-asistencias), que junta los tramos de cada día.
@@ -79,6 +86,7 @@ En [Asistencias](/ayuda/asistencias/revisar-asistencias), que junta los tramos d
 ## Qué pasa si…
 
 - **…el día de esa checada está en una nómina autorizada:** no se puede corregir; el dueño debe cancelar esa nómina primero.
+- **…tocas Guardar sin motivo:** no se guarda y junto al campo verás «Escribe el motivo de la corrección.».
 - **…no se pueden cargar los registros:** verás «Error al cargar los registros de entradas y salidas».
 - **…el servidor no responde pero hay capturas en el dispositivo:** verás «No se pudo actualizar el servidor. Se muestran las capturas de este dispositivo.».
 

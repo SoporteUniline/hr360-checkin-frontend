@@ -1,6 +1,7 @@
 // Diapositivas del carrusel de la portada. Fotos ilustrativas (generadas con IA, personas ficticias).
 // `marca`: parte de la última línea que lleva el subrayado animado. `fondo`: color sólido de la marca de cada diapositiva.
-export const DIAPOSITIVAS = [
+// total: número de herramientas (TOTAL_MODULOS de src/lib/sitio/modulos.js, llega desde el servidor).
+export const diapositivasPortada = (total) => [
   {
     fondo: "#2c56e8",
     foto: "/landing/planta.webp",
@@ -46,9 +47,9 @@ export const DIAPOSITIVAS = [
     foto: "/landing/equipo.webp",
     alt: "Equipo de trabajo de una planta con uniforme azul",
     etiqueta: "Todo tu personal",
-    titulo: ["36 herramientas.", "Una sola cuenta."],
+    titulo: [`${total} herramientas.`, "Una sola cuenta."],
     marca: "Una sola cuenta.",
-    texto: "Expedientes, contratos, uniformes, evaluaciones y más, conectados con la asistencia.",
+    texto: "Expedientes, contratos, reclutamiento con IA, clima laboral y más, conectados con la asistencia.",
     boton: { texto: "Ver módulos", href: "#modulos" },
   },
 ];

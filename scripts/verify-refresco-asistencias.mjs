@@ -202,6 +202,8 @@ try {
   // 2) Guardar en la pantalla: «Día de descanso» a Armando (PUT estado-dia). El servidor ya cuenta 2 con horas extra.
   let n = pedidos.length;
   await elegir(page.getByLabel("Qué pasó de Armando González"), "5");
+  // (27/11/2026) Cambiar qué pasó pide «Motivo de la corrección».
+  await filaDe("Armando González").getByLabel(/Motivo de la corrección/).fill("Error de captura");
   await filaDe("Armando González").getByRole("button", { name: "OK" }).click();
   await esperar(() => escrituras.length === 1, "PUT estado-dia");
   await dormir(2500);

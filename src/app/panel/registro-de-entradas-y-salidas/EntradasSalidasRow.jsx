@@ -6,6 +6,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { hora12 } from "@/lib/hora12.mjs";
+import CampoMotivo from "@/components/asistencia/CampoMotivo";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -20,6 +21,9 @@ export default function EntradasSalidasRow({
   handleCancelMovimientoEdit,
   handleMovimientoFieldChange,
   handleSaveMovimientoClick,
+  motivo = "",
+  errorMotivo = "",
+  onMotivo,
   empresaActiva,
   colVisible,
   onRowClick,
@@ -80,6 +84,7 @@ export default function EntradasSalidasRow({
   };
 
   return (
+    <>
     <TableRow
       key={registro.id}
       onClick={handleRowClick}
@@ -332,5 +337,21 @@ export default function EntradasSalidasRow({
         </>
       )}
     </TableRow>
+    {isEditing ? (
+      // (27/11/2026) «Las checadas tienen que pedir motivo»: el motivo va en su propio renglón, debajo de la checada.
+      <TableRow data-motivo-entradas className="border-b border-slate-100 bg-amber-50/40 hover:bg-amber-50/40">
+        <TableCell colSpan={99} className="px-4 py-3">
+          <CampoMotivo
+            nombre={`${registro.nombre ?? ""} ${registro.apellido_paterno ?? ""}`.trim()}
+            valor={motivo}
+            onCambio={(t) => onMotivo?.(t)}
+            error={errorMotivo}
+            disabled={isSaving}
+            className="sticky left-0 max-w-[min(720px,calc(100vw-4rem))]"
+          />
+        </TableCell>
+      </TableRow>
+    ) : null}
+    </>
   );
 }

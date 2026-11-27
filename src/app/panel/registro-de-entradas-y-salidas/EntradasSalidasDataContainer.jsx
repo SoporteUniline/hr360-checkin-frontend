@@ -173,6 +173,9 @@ export default function EntradasSalidasDataContainer({
     handleCancelMovimientoEdit,
     handleMovimientoFieldChange,
     handleSaveMovimientoClick,
+    motivoMovimiento,
+    errorMotivoMovimiento,
+    cambiarMotivoMovimiento,
   } = useEntradaSalida(mutate);
 
   // Panel lateral de detalle (clic en una fila)
@@ -213,6 +216,9 @@ export default function EntradasSalidasDataContainer({
           handleCancelMovimientoEdit={handleCancelMovimientoEdit}
           handleMovimientoFieldChange={handleMovimientoFieldChange}
           handleSaveMovimientoClick={handleSaveMovimientoClick}
+          motivoMovimiento={motivoMovimiento}
+          errorMotivoMovimiento={errorMotivoMovimiento}
+          cambiarMotivoMovimiento={cambiarMotivoMovimiento}
           empresaActiva={empresaActiva}
           onResetFilters={onResetFilters}
           agrupar={agrupar}

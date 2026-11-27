@@ -1,8 +1,12 @@
 // Verificación en navegador de la página de inicio: portada sincronizada (la checada pasa por
 // rostro → GPS → registro y la fila llega al panel), números que cuentan desde 0, reporte semanal con
-// notificaciones, sin errores, sin desbordes en celular y sin animaciones vivas al salir de la página.
-// Las llamadas a otros dominios se bloquean (nada sale a internet). Construir como Dev (robots debe bloquear):
-// NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx npm run build && node scripts/verify-landing.mjs
+// notificaciones, secciones nuevas (reclutador con IA en WhatsApp, clima con IA, tablero y muro: cada escena arranca al
+// verse, llega a su final, se pausa con su botón y con «reducir movimiento» ya está completa), enlaces que existen,
+// sin errores, sin desbordes en celular y sin animaciones vivas al salir de la página.
+// Las llamadas a otros dominios se bloquean (nada sale a internet).
+// Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build && node scripts/verify-landing.mjs
+// (con NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx también se prueba que robots.txt bloquee).
+// CAPTURAS=<carpeta> guarda cada sección nueva en su estado final a 1440 y 390 y una secuencia del chat.
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
@@ -17,6 +21,19 @@ await new Promise((r) => reserva.close(r));
 const base = `http://127.0.0.1:${port}`;
 const next = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", String(port), "-H", "127.0.0.1"], { stdio: "ignore" });
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+const CAPTURAS = process.env.CAPTURAS || "";
+if (CAPTURAS) (await import("node:fs")).mkdirSync(CAPTURAS, { recursive: true });
+const NUEVAS = ["reclutador-ia", "clima-ia", "tablero", "muro"];
+// Solo para las capturas: el asistente comercial y el aviso de cookies flotan encima de todo.
+const SIN_FLOTANTES = '.fixed.bottom-5.right-5, [aria-label="Aviso de cookies"] { display: none !important; }';
+// El HTML trae cada escena en su final; al verse vuelve al inicio (paso < total) y luego llega otra vez al final.
+async function escenaCompleta(pg, id, ms = 90_000) {
+  const sel = `#${id} [data-total]`;
+  await pg.locator(`#${id}`).evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await pg.waitForFunction((s) => { const e = document.querySelector(s); return +e.dataset.paso < +e.dataset.total; }, sel, { timeout: 20_000 });
+  await pg.waitForFunction((s) => document.querySelector(s).hasAttribute("data-fin"), sel, { timeout: ms });
+  await dormir(900); // última transición
+}
 // Lo que flota nunca está «estable» para Playwright: se lleva a la vista con scrollIntoView directo.
 const ver = (loc) => loc.evaluate((el) => el.scrollIntoView({ block: "center" }));
 
@@ -33,8 +50,8 @@ try {
   // Mosaico de módulos: seis tarjetas con submarca, mini pantalla y flecha a su página.
   const mosaico = page.locator("#modulos-adamia");
   await mosaico.getByRole("heading", { name: "Todo el día de tu equipo, en una sola plataforma." }).waitFor();
-  assert.deepEqual(await mosaico.locator("h3").evaluateAll((hs) => hs.map((h) => h.firstChild.textContent.trim())), ["Nómina", "Asistencia", "Checador", "Tareas y checklists", "Documentos y firma", "Adamia AI"]);
-  assert.equal(await mosaico.getByRole("link", { name: /^Conocer / }).count(), 6);
+  assert.deepEqual(await mosaico.locator("h3").evaluateAll((hs) => hs.map((h) => h.firstChild.textContent.trim())), ["Nómina", "Asistencia", "Reclutador IA", "Clima laboral", "Muro", "Checador", "Tareas y checklists", "Documentos y firma", "Adamia AI"]);
+  assert.equal(await mosaico.getByRole("link", { name: /^Conocer / }).count(), 9);
   assert.equal(await mosaico.getByRole("link", { name: "Conocer el Checador" }).getAttribute("href"), "/funcionalidades/reloj-checador");
   // Pantallas que flotan: el panel de la portada corre mientras se ve; las tarjetas del mosaico entran al bajar.
   const juego = (sel) => page.locator(sel).first().evaluate((el) => getComputedStyle(el).animationPlayState);
@@ -54,8 +71,8 @@ try {
   assert.match(lectura1, /^\d{2}:\d{2}:\d{2}$/);
   assert.ok(lectura2 > lectura1, `el reloj avanza (${lectura1} → ${lectura2})`);
   const escala = (el) => new DOMMatrixReadOnly(getComputedStyle(el).transform).a.toFixed(2);
-  await page.waitForFunction((f) => [...document.querySelectorAll(".mz-barra > i")].map(eval(f)).join() === "0.91,0.92", escala.toString());
-  assert.deepEqual(await mosaico.locator(".mz-num").allInnerTexts(), ["41", "92%"]);
+  await page.waitForFunction((f) => [...document.querySelectorAll(".mz-barra > i")].map(eval(f)).join() === "0.91,0.86,0.74,0.92", escala.toString());
+  assert.deepEqual(await mosaico.locator(".mz-num").allInnerTexts(), ["41", "86%", "31", "92%"]);
   await mosaico.locator(".mz-listo").waitFor();
   await page.waitForFunction(() => !document.querySelector(".mz-tecleando") && getComputedStyle(document.querySelector(".mz-pie")).opacity === "1");
   assert.match(await mosaico.locator(".mz-ai .sr-only").innerText(), /^Le tocan 16 días de vacaciones pagadas/);
@@ -66,19 +83,26 @@ try {
   assert.equal(await page.locator('img[src^="/landing/"]').count() >= 6, true, "fotos de /public/landing");
 
   // Checada: rostro (malla) → GPS (la distancia baja hasta 38 m) → registro; la fila llega al panel y suben los presentes.
+  // (27/11/2026) El mosaico creció a 9 tarjetas: al volver arriba la checada puede ir en otra vuelta (Ana, Raúl o
+  // Karla, cada 8.2 s), así que se revisa la persona de esa vuelta con su distancia, en lugar de exigir la primera.
   const scr = page.locator("#h-scr");
-  await page.waitForFunction(() => document.getElementById("h-scr").classList.contains("mesh-on"), null, { timeout: 4000 });
-  await page.waitForFunction(() => document.getElementById("h-scr").classList.contains("gps"), null, { timeout: 4000 });
-  await page.waitForFunction(() => document.getElementById("h-dist").textContent === "38", null, { timeout: 4000 });
-  await page.waitForFunction(() => document.getElementById("h-scr").classList.contains("done"), null, { timeout: 4000 });
-  assert.match(await scr.locator("#h-ok-who").innerText(), /Entrada registrada · Ana Torres/);
-  await page.waitForFunction(() => document.querySelector("#h-rows .trow b").textContent === "Ana Torres", null, { timeout: 3000 });
-  assert.equal(await page.locator("#k-pres-n").innerText(), "22");
+  await page.waitForFunction(() => document.getElementById("h-scr").classList.contains("mesh-on"), null, { timeout: 10000 });
+  await page.waitForFunction(() => document.getElementById("h-scr").classList.contains("gps"), null, { timeout: 10000 });
+  await page.waitForFunction(() => document.getElementById("h-scr").classList.contains("done"), null, { timeout: 10000 });
+  const quien = (await scr.locator("#h-ok-who").innerText()).replace(/^Entrada registrada · /, "");
+  const distancia = { "Ana Torres": "38", "Raúl Pérez": "61", "Karla Romero": "24" }[quien];
+  assert.ok(distancia, `persona de la checada: ${quien}`);
+  assert.equal(await page.locator("#h-dist").innerText(), distancia, "la distancia baja hasta la de esa persona");
+  const presentes = +(await page.locator("#k-pres-n").innerText());
+  await page.waitForFunction((q) => document.querySelector("#h-rows .trow b").textContent === q, quien, { timeout: 3000 });
+  assert.equal(+(await page.locator("#k-pres-n").innerText()), presentes + 1, "suben los presentes");
 
   // Carrusel: pasa solo a la siguiente diapositiva y se puede pausar.
   const slideActual = () => page.evaluate(() => [...document.querySelectorAll(".carr .slide")].findIndex((d) => d.classList.contains("on")));
-  assert.equal(await slideActual(), 0);
-  await page.waitForFunction(() => document.querySelectorAll(".carr .slide")[1].classList.contains("on"), null, { timeout: 8000 });
+  // Va en la diapositiva que toque según el tiempo transcurrido (el recorrido de arriba tarda más con el mosaico nuevo).
+  const s0 = await slideActual();
+  assert.ok(s0 >= 0);
+  await page.waitForFunction((s) => { const d = document.querySelectorAll(".carr .slide"); return d[(s + 1) % d.length].classList.contains("on"); }, s0, { timeout: 8000 });
   await page.getByRole("tab", { name: "Ir a 3: Checa donde trabaja tu equipo." }).click();
   assert.equal(await slideActual(), 2);
   await page.mouse.move(5, 5);
@@ -102,10 +126,17 @@ try {
   await page.waitForFunction(() => document.querySelector("#ley .multa b.max span").textContent === "$586,550", null, { timeout: 4000 });
   assert.equal(await page.locator("#ley a.btn-primary").getAttribute("href"), "/blog/registro-electronico-jornada-2027");
 
-  // Módulos: 36 herramientas en 5 grupos.
+  // Módulos: la cifra del título es la de la lista (src/lib/sitio/modulos.js), con las novedades y sin lo que no
+  // está en producción (Inducción digital) ni el checador «sin internet».
   await page.locator("#allm").scrollIntoViewIfNeeded();
-  await page.waitForFunction(() => document.querySelector(".cnt").textContent === "36", null, { timeout: 4000 });
-  assert.equal(await page.locator("#allm li").count(), 36);
+  const totalModulos = await page.locator("#allm li").count();
+  assert.ok(totalModulos >= 45, `módulos en la lista: ${totalModulos}`);
+  await page.waitForFunction((n) => document.querySelector(".cnt").textContent === String(n), totalModulos, { timeout: 4000 });
+  const lista = (await page.locator("#allm").innerText()).toLowerCase();
+  for (const t of ["reclutador ia por whatsapp", "clima laboral con ia", "muro y comunicados", "centro de ayuda", "monitor en vivo"]) assert.ok(lista.includes(t), `la lista incluye «${t}»`);
+  const textoPagina = (await page.locator("main").innerText()).toLowerCase();
+  for (const t of ["inducción", "sin internet", "sin conexión"]) assert.ok(!textoPagina.includes(t), `la página no anuncia «${t}»`);
+  assert.equal(await page.locator(".allm-ayuda a").getAttribute("href"), "/ayuda");
 
   // El asistente comercial de antes sigue en la página.
   await page.getByText("asistente comercial de ADAMIA").first().waitFor({ timeout: 4000 });
@@ -124,14 +155,104 @@ try {
   await page.getByRole("heading", { level: 1, name: "Registro electrónico de la jornada: obligatorio desde 2027" }).waitFor();
   const ld = await page.locator('script[type="application/ld+json"]').allTextContents();
   assert.ok(ld.some((t) => JSON.parse(t)["@type"] === "FAQPage"), "FAQPage en el artículo");
+  // Al navegar del lado del cliente la etiqueta de la página anterior puede tardar en irse: se espera a que quede una.
+  await page.waitForFunction(() => document.querySelectorAll("link[rel=canonical]").length === 1, null, { timeout: 5000 });
   assert.match(await page.locator("link[rel=canonical]").getAttribute("href"), /\/blog\/registro-electronico-jornada-2027$/);
   const mapa = await (await fetch(base + "/sitemap.xml")).text();
   assert.match(mapa, /blog\/multas-registro-jornada-laboral/);
+  // robots.txt depende del dominio con que se compiló (NEXT_PUBLIC_RUTA_DOMAIN): solo un build de Dev debe pedir
+  // «no indexar». Con el build de producción (o sin dominio, que cae en adamia.com.mx, como en CI) esa prueba no
+  // aplica: se omite y se avisa, y solo se revisa que el panel siga fuera de los buscadores.
   const robots = await (await fetch(base + "/robots.txt")).text();
-  assert.match(robots, /Disallow: \/\s*$/m, "fuera de producción no se indexa");
+  if (/Sitemap: https:\/\/adamia\.com\.mx\//.test(robots)) {
+    console.log("OMITIDA robots «no indexar»: build de producción (adamia.com.mx); compila con NEXT_PUBLIC_RUTA_DOMAIN de Dev para probarla");
+    assert.match(robots, /Disallow: \/panel/, "producción: el panel no se indexa");
+  } else {
+    assert.match(robots, /Disallow: \/\s*$/m, "fuera de producción no se indexa");
+  }
   assert.equal((await fetch(base + "/blog/no-existe")).status, 404);
   await page.goto(base + "/blog-y-noticias");
   await page.waitForURL("**/blog");
+
+  // ===== Secciones nuevas (27/11/2026) =====
+  const pn = await ctx.newPage();
+  pn.on("pageerror", (e) => errores.push(e.message));
+  await pn.goto(base + "/", { waitUntil: "domcontentloaded" });
+  if (CAPTURAS) await pn.addStyleTag({ content: SIN_FLOTANTES });
+  for (const [id, titulo] of [["reclutador-ia", "Tu reclutador con IA en WhatsApp."], ["clima-ia", "Clima laboral con IA."], ["tablero", "Todo tu equipo en un tablero."], ["muro", "El muro de tu empresa."]]) {
+    await pn.locator(`#${id}`).getByRole("heading", { level: 2, name: titulo }).waitFor();
+    const esc = pn.locator(`#${id} [data-total]`);
+    assert.equal(await esc.getAttribute("aria-hidden"), "true", `${id}: la maqueta es decorativa`);
+    assert.ok((await pn.locator(`#${id} p.sr-only`).innerText()).length > 80, `${id}: texto alterno cerca`);
+  }
+  // Sin el logotipo de WhatsApp: ningún archivo ni ícono con ese nombre en las secciones nuevas.
+  assert.equal(await pn.locator('#reclutador-ia img, #reclutador-ia [class*="logo"]').count(), 0);
+
+  // WhatsApp: arranca al verse, aparece «escribiendo…», un botón se toca, las palomitas pasan a azul y llega al último
+  // mensaje; la bandeja de RH termina con la candidata calificada, la cita confirmada y otro candidato que pide atención.
+  const wa = pn.locator("#nv-wa-escena");
+  await wa.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await pn.waitForFunction(() => +document.querySelector("#nv-wa-escena").dataset.paso < 4, null, { timeout: 20_000 });
+  await pn.getByText("escribiendo…").waitFor({ timeout: 10_000 });
+  const cuadros = [8, 16, 26];
+  for (const [k, n] of cuadros.entries()) {
+    await pn.waitForFunction((n) => +document.querySelector("#nv-wa-escena").dataset.paso >= n, n, { timeout: 40_000 });
+    if (CAPTURAS) await pn.locator("#nv-wa-escena .nv-tel").screenshot({ path: `${CAPTURAS}/whatsapp-cuadro-${k + 1}.png`, animations: "disabled" });
+  }
+  await pn.waitForFunction(() => document.querySelector("#nv-wa-escena").hasAttribute("data-fin"), null, { timeout: 60_000 });
+  await dormir(900);
+  if (CAPTURAS) await pn.locator("#nv-wa-escena .nv-tel").screenshot({ path: `${CAPTURAS}/whatsapp-cuadro-4.png`, animations: "disabled" });
+  const ultimo = wa.locator(".nv-wa-msg").last();
+  assert.match(await ultimo.innerText(), /¡Gracias por confirmar! Te esperamos el jueves 3 de diciembre/);
+  assert.ok(await wa.locator(".nv-wa-palomitas.leido").count() >= 5, "mensajes de la candidata leídos");
+  assert.ok(await wa.locator(".nv-wa-boton").count() >= 10, "botones de respuesta rápida");
+  assert.equal(await wa.locator(".nv-wa-quien small").innerText(), "en línea");
+  assert.equal(await wa.locator(".nv-rh .nv-chip.verde").first().innerText(), "Califica");
+  await wa.locator(".nv-rh-cita").getByText("Confirmada").waitFor();
+  assert.match(await wa.locator(".nv-rh-atn.on").innerText(), /necesita atención/);
+  if (CAPTURAS) await pn.locator("#reclutador-ia").screenshot({ path: `${CAPTURAS}/reclutador-ia-1440.png`, animations: "disabled" });
+
+  // Clima: el botón real pausa la escena (el paso no avanza), la reanuda y termina con las 3 sugerencias en el plan.
+  await pn.locator("#nv-cl-escena").evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await pn.waitForFunction(() => { const e = document.querySelector("#nv-cl-escena"); return +e.dataset.paso >= 2 && +e.dataset.paso < +e.dataset.total - 2; }, null, { timeout: 20_000 });
+  await pn.locator("#clima-ia .nv-control").click();
+  const pausado = await pn.locator("#nv-cl-escena").getAttribute("data-paso");
+  await dormir(3000);
+  assert.equal(await pn.locator("#nv-cl-escena").getAttribute("data-paso"), pausado, "en pausa no avanza");
+  assert.equal(await pn.locator("#clima-ia .nv-control").getAttribute("data-control"), "Reanudar animación");
+  await pn.locator("#clima-ia .nv-control").click();
+  await pn.waitForFunction(() => document.querySelector("#nv-cl-escena").hasAttribute("data-fin"), null, { timeout: 30_000 });
+  await dormir(900);
+  assert.equal(await pn.locator("#nv-cl-escena .nv-cl-sug li.agregada").count(), 3);
+  assert.equal(await pn.locator("#nv-cl-escena .nv-cl-pct").innerText(), "86%");
+  if (CAPTURAS) await pn.locator("#clima-ia").screenshot({ path: `${CAPTURAS}/clima-ia-1440.png`, animations: "disabled" });
+
+  // Tablero: llegan 4 checadas (22 trabajando), lo pendiente y Adamia AI cita la ley.
+  await escenaCompleta(pn, "tablero", 40_000);
+  assert.equal(await pn.locator("#nv-tb-escena .nv-tb-fila.on:not(.th)").count(), 6);
+  assert.equal(await pn.locator("#nv-tb-escena .nv-tb-kpi b").first().innerText(), "22");
+  assert.equal(await pn.locator("#nv-tb-escena .nv-tb-cita.on").innerText(), "Arts. 74 y 75 LFT");
+  if (CAPTURAS) await pn.locator("#tablero").screenshot({ path: `${CAPTURAS}/tablero-1440.png`, animations: "disabled" });
+
+  // Muro: me gusta sube a 48, llegan 2 comentarios y al confirmar de leído el avance pasa a 31 de 42.
+  await escenaCompleta(pn, "muro", 40_000);
+  assert.equal(await pn.locator("#nv-mu-escena .nv-mu-conteos .nv-cifra").innerText(), "48");
+  assert.equal(await pn.locator("#nv-mu-escena .nv-mu-com.on").count(), 2);
+  assert.match(await pn.locator("#nv-mu-escena .nv-mu-avance").innerText(), /31 de 42 confirmaron/);
+  await pn.locator("#nv-mu-escena .nv-mu-confirmar.hecho").waitFor();
+  if (CAPTURAS) await pn.locator("#muro").screenshot({ path: `${CAPTURAS}/muro-1440.png`, animations: "disabled" });
+  if (CAPTURAS) await pn.locator("#modulos-adamia").screenshot({ path: `${CAPTURAS}/mosaico-1440.png`, animations: "disabled" });
+  if (CAPTURAS) { await pn.locator("#modulos").evaluate((el) => el.scrollIntoView()); await dormir(2000); await pn.locator("#modulos").screenshot({ path: `${CAPTURAS}/modulos-1440.png`, animations: "disabled" }); }
+
+  // Enlaces de las secciones nuevas, del mosaico y de la lista: todos existen (sin 404).
+  const hrefs = await pn.evaluate((ids) => [...new Set([...ids.map((id) => `#${id} a`), "#modulos-adamia a", "#allm a", ".allm-ayuda a"]
+    .flatMap((s) => [...document.querySelectorAll(s)].map((a) => a.getAttribute("href"))))], NUEVAS);
+  for (const h of hrefs) {
+    const ruta = h.split("#")[0] || "/";
+    assert.equal((await fetch(base + ruta)).status, 200, `enlace ${h}`);
+    if (h.includes("#") && ruta === "/") assert.ok(await pn.locator(`#${h.split("#")[1]}`).count(), `ancla ${h}`);
+  }
+  await pn.close();
 
   // Celular: sin desbordes horizontales.
   const movil = await ctx.newPage();
@@ -143,6 +264,14 @@ try {
   await ver(movil.locator("#modulos-adamia .mz-ia"));
   await dormir(1500);
   assert.equal(await movil.evaluate(() => document.documentElement.scrollWidth), 390, "sin desborde con el mosaico en movimiento");
+  if (CAPTURAS) await movil.addStyleTag({ content: SIN_FLOTANTES });
+  for (const id of NUEVAS) {
+    await escenaCompleta(movil, id);
+    assert.equal(await movil.evaluate(() => document.documentElement.scrollWidth), 390, `sin desborde en celular: ${id}`);
+    const ancho = await movil.locator(`#${id} [data-total]`).evaluate((el) => el.getBoundingClientRect().right);
+    assert.ok(ancho <= 390, `${id}: la maqueta cabe en 390 px (${ancho})`);
+    if (CAPTURAS) await movil.locator(`#${id}`).screenshot({ path: `${CAPTURAS}/${id}-390.png`, animations: "disabled" });
+  }
   await page.goto(base + "/", { waitUntil: "domcontentloaded" });
   await ver(page.locator("#modulos-adamia .mz-ia"));
   await dormir(1000);
@@ -164,14 +293,29 @@ try {
   });
   assert.deepEqual(quietos, [], "nada se anima con reducir movimiento");
   assert.equal(await pq.locator(".pre, .mz-tecleando, .mz-vacia").count(), 0);
-  assert.deepEqual(await pq.locator(".mz-num").allInnerTexts(), ["41", "92%"]);
+  assert.deepEqual(await pq.locator(".mz-num").allInnerTexts(), ["41", "86%", "31", "92%"]);
+  // Secciones nuevas: cada escena ya está en su estado final (último mensaje del chat incluido), sin botón de pausa
+  // y sin nada que se mueva, aunque se vean.
+  for (const id of NUEVAS) {
+    const esc = pq.locator(`#${id} [data-total]`);
+    await esc.evaluate((el) => el.scrollIntoView({ block: "center" }));
+    await dormir(1500);
+    assert.equal(await esc.getAttribute("data-paso"), await esc.getAttribute("data-total"), `${id}: final con reducir movimiento`);
+    assert.equal(await esc.getAttribute("data-fin"), "", `${id}: marcada como final`);
+    assert.equal(await pq.locator(`#${id} .nv-control`).count(), 0, `${id}: sin botón de pausa`);
+    const vivas = await esc.evaluate((el) => [el, ...el.querySelectorAll("*")].flatMap((n) => n.getAnimations().filter((a) => a.playState === "running")).length);
+    assert.equal(vivas, 0, `${id}: nada se anima`);
+  }
+  assert.match(await pq.locator("#nv-wa-escena .nv-wa-msg").last().innerText(), /¡Gracias por confirmar!/);
+  assert.equal(await pq.locator("#nv-cl-escena .nv-cl-sug li.agregada").count(), 3);
   assert.equal(await pq.locator(".mz-pie").evaluate((el) => getComputedStyle(el).opacity), "1");
   await quieto.close();
 
   assert.deepEqual(errores, []);
   exito = true;
   console.log("OK efectos: pantallas que flotan (pausadas fuera de vista), reloj, barras, contadores, Adamia AI y tarjetas al bajar");
-  console.log("OK página de inicio y blog: carrusel, ley con multa animada, blog con datos estructurados, sitemap y robots, checada rostro → GPS → registro sincronizada con el panel, cifras desde 0, reporte semanal con notificaciones, 36 módulos, enlaces, celular y reducir movimiento");
+  console.log("OK secciones nuevas: reclutador con IA en WhatsApp (chat hasta el último mensaje y bandeja de RH), clima con IA (pausa real y plan), tablero y muro; enlaces sin 404; final inmediato con reducir movimiento; 390 px sin desborde");
+  console.log("OK página de inicio y blog: carrusel, ley con multa animada, blog con datos estructurados, sitemap, checada rostro → GPS → registro sincronizada con el panel, cifras desde 0, reporte semanal con notificaciones, lista de módulos desde modulos.js, enlaces, celular y reducir movimiento");
 } finally {
   await browser.close();
   next.kill();
