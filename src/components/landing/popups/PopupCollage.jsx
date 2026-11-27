@@ -1,5 +1,5 @@
 // Collage de marca del pop-up (decorativo, sin fotos): píldoras en azul, violeta y lila con mini pantallas
-// de lo que hace ADAMIA (checador, nómina y firma). Solo CSS y SVG; se oculta a lectores de pantalla.
+// de lo que hace ADAMIA (checador, vacaciones y firma de contratos). Solo CSS y SVG; se oculta a lectores de pantalla.
 export default function PopupCollage() {
   return (
     <div className="pv-collage" aria-hidden="true">
@@ -21,9 +21,12 @@ export default function PopupCollage() {
       <div className="pv-pildora pv-p4">
         <div className="pv-mini">
           <span className="pv-mini-ico pv-ico-violeta">
-            <svg viewBox="0 0 24 24"><path d="M7 3h10v18l-2.5-1.5L12 21l-2.5-1.5L7 21z" /><path d="M10 8h4M10 12h4" /></svg>
+            {/* Sol sobre el horizonte: vacaciones. (27/11/2026) Antes «Recibo de nómina · Timbrado · CFDI 4.0», que era
+                falso: ADAMIA no timbra. */}
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="11" r="4" /><path d="M12 3v1.5M5.6 5.6l1 1M18.4 5.6l-1 1M3 11h1.5M19.5 11H21M3 19h18" /></svg>
           </span>
-          <span className="pv-mini-txt"><b>Recibo de nómina</b><i>Timbrado · CFDI 4.0</i></span>
+          <span className="pv-mini-txt"><b>Vacaciones aprobadas</b><i>Desde el celular</i></span>
+          <span className="pv-mini-ok"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg></span>
         </div>
       </div>
       <div className="pv-pildora pv-p5">
