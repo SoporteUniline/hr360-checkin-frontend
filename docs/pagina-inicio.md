@@ -125,3 +125,56 @@ versión de la portada debe pasar a producción junto con ellos (y el backend de
 - ❓ PENDIENTE (dueño): la marquesina y `modulos.js` siguen diciendo «Aprobación por WhatsApp» (función descrita en esta
   página desde la versión 1); hoy va por el flujo externo anterior. Decidir si se mantiene o se cambia por «desde el
   celular» hasta que la aprobación por WhatsApp propia esté en producción.
+
+## Versión 5 (27/11/2026): «Llévate ADAMIA a casa» — brochure y tríptico en PDF
+
+Pedido del dueño: «Esos dos documentos, ponlos en la página principal, como descarga nuestra presentación o algo. Y
+también en Cotizar, para que la gente los descargue y se los lleve a su casa».
+
+| Archivo | Qué tiene |
+|---|---|
+| `public/descargas/adamia-brochure-comercial.pdf` | Brochure comercial: 4 páginas tamaño carta, 2.5 MB. |
+| `public/descargas/adamia-triptico.pdf` | Tríptico: carta horizontal, 2 caras (2 páginas), 2.1 MB. |
+| `public/descargas/*-portada.webp` | Miniaturas de portada (495×640 y 640×495). |
+| `src/components/landing/descargas.mjs` | Lista única: título, una línea de qué es, ruta, nombre de descarga, páginas, bytes, miniatura y su `alt`. |
+| `src/components/landing/DescargasAdamia.jsx` + `descargas.css` | Un solo componente para las dos páginas: variante `completa` (portada; se arma en el servidor en `src/app/(landing)/page.jsx` y entra a `LandingHome` como prop `descargas`, igual que el mosaico, para no sumar JavaScript: `/` queda en 35.7 kB) y `compacta` (Cotizar). |
+| `scripts/test-descargas.mjs` | Archivo existe, es PDF, páginas y peso = lo que anuncia la tarjeta, miniatura con sus medidas, robots. |
+| `scripts/verify-descargas.mjs` | Navegador a 1440 y 390 en `/` y `/cotiza`: dos tarjetas, `alt`, nombre accesible, `download`, descarga real con el nombre bonito, PDF 200 `application/pdf` con el peso anunciado, botón ≥ 48 px, miniatura dentro de su cuadro, lugar en el flujo, 16/17 px, títulos 700, secundario ≤ #4B5563, sin degradados, apiladas en celular, sin desborde, movimiento y «reducir movimiento», robots. Chromium se lanza con `LANG=C.UTF-8` (con locale C cambia «Tríptico» por «download»). Ambas pruebas en `ci-dev.yml`. |
+
+Dónde va:
+- **Portada** (`#descargas`): después de «Todos los módulos» (`#modulos`) y antes de «Ve ADAMIA en acción» (`#demo`):
+  quien ya vio todo se lleva el material y luego pide la demostración. Título «Llévate ADAMIA a casa.», dos tarjetas
+  lado a lado (miniatura, título, una línea, «PDF · 4 páginas · 2.5 MB» y «Descargar PDF»).
+- **Cotizar** (`#descargas-cotiza`): después de las preguntas frecuentes y antes de «¿Listo para empezar?». Versión
+  compacta: «¿Quieres compartirlo con tu equipo?» + miniatura pequeña, título, detalle y botón (sin la línea de qué es).
+- **Contratar plan: no.** Es el formulario de alta y pago de alguien que ya decidió; un enlace de descarga ahí distrae
+  del cierre (y lo sacaría a otra pestaña a media captura). Quien quiere compartir antes de decidir está en Cotizar.
+
+Cómo se descarga: `<a href="/descargas/…pdf" download="ADAMIA - Brochure comercial.pdf" target="_blank" rel="noopener">`.
+El atributo `download` pone el nombre bonito (mismo dominio); si el navegador no lo respeta, el PDF se abre en otra
+pestaña. Nombre accesible: «Descargar el brochure comercial en PDF» / «Descargar el tríptico en PDF» (lo visible es
+«Descargar PDF»; el resto va en `sr-only`).
+
+Estilo: el del mosaico (`docs/estilo-mosaico-favorito.md`): tarjeta gris claro (`--soft`) de esquinas de 28 px,
+miniatura sobre cuadro blanco con sombra suave; al pasar el cursor la tarjeta sube 4 px y la portada se acerca; quieta
+con «reducir movimiento». **Sin fondos degradados.** Lectura: texto 16 px (17 px en celular), títulos de peso 700,
+secundario `--body` (#4b5270, no más claro que #4B5563), botón de 52 px. En celular, una tarjeta debajo de la otra.
+
+Analítica: el sitio solo carga el Pixel de Meta (con consentimiento de cookies, `GlobalThirdPartyScripts.jsx`) y no tiene
+un helper para registrar eventos propios; por eso **no** se registran «descarga_brochure» / «descarga_triptico». Si se
+quiere medir, primero hay que decidir el helper (y respetar el consentimiento) y luego conectarlo aquí.
+
+SEO: `robots.js` de producción no bloquea `/descargas/` (lo revisan las dos pruebas); dev bloquea todo, como siempre.
+
+### De dónde salen los PDF
+- Diseños hechos en claude.ai (proyectos de diseño «brochure» y «tríptico» del dueño): el brochure son 4 hojas
+  (portada, Tiempo y personas, Talento/cultura/IA y La ley de tu lado) y el tríptico 2 caras (exterior e interior).
+- Se exportaron a HTML, se armaron con sus imágenes (capturas reales de ADAMIA con datos de ejemplo) y se imprimieron a PDF
+  con Chromium a tamaño carta. Las miniaturas son la primera página en WebP.
+
+**Regla: los PDF se mantienen al día con los módulos.** Cuando un módulo nuevo llegue a producción, cambie de nombre o una
+función anunciada cambie (misma regla que el mosaico y `modulos.js`), se actualizan los diseños en claude.ai, se vuelven a
+exportar los PDF y las miniaturas con el mismo nombre de archivo, y se ajustan `bytes` / `paginas` en `descargas.mjs`
+(`scripts/test-descargas.mjs` falla si el PDF cambió y la tarjeta no). Nada que no esté en producción se anuncia en
+ellos. ❓ PENDIENTE (dueño): los PDF mencionan el muro (comunicados con confirmación de leído), que al 27/11/2026
+está en `dev` y no en `main`; deben pasar a producción junto con esa versión de la portada, no antes.
