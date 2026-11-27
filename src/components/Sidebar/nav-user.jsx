@@ -29,10 +29,14 @@ import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 export function NavUser() {
   const { dataUser, logout } = useAuth();
 
+  // La foto solo se muestra a quien no es empleado ni acceso (ellos ven sus iniciales): a ellos no se les pide.
+  // En celular el menú se monta cada vez que se abre: con la foto ya en caché no se vuelve a pedir
+  // (cambiarla en Mi cuenta hace mutate de esta misma clave).
+  const conFoto = Boolean(dataUser?.id_usuario) && !dataUser?.esEmpleado && !dataUser?.esAcceso;
   const { data, isLoading, error } = useSWR(
-    dataUser?.id_usuario ? `/users/imagen/${dataUser.id_usuario}` : null,
+    conFoto ? `/users/imagen/${dataUser.id_usuario}` : null,
     fetcherWithToken,
-    swr_config,
+    { ...swr_config, revalidateIfStale: false, revalidateOnFocus: false },
   );
 
   const { isMobile, setOpenMobile } = useSidebar();

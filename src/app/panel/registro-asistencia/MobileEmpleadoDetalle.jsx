@@ -97,13 +97,15 @@ export default function MobileEmpleadoDetalle({
   currentIndex = 0,
   totalCount = 0,
   mutateAsistencia,
+  // Empresa de la pantalla (la misma que pide la lista): comparte la consulta de empleados en vez de pedir otra.
+  idEmpresa,
 }) {
   const { dataUser } = useAuth();
   const tz = useEmpresaTimezone(dataUser?.id_empresa);
 
   const { data: tiposPermisoData } = useTiposPermisoData();
 
-  const { data: empleadosData } = useEmpleadosData(dataUser?.id_empresa);
+  const { data: empleadosData } = useEmpleadosData(idEmpresa !== undefined ? idEmpresa : dataUser?.id_empresa);
   const empleados = empleadosData?.data ?? [];
 
   // Local copy of registro for optimistic updates after save

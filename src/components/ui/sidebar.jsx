@@ -54,7 +54,16 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile();
   const pathname = usePathname();
-  const [openMobile, setOpenMobile] = React.useState(false);
+  const [openMobile, _setOpenMobile] = React.useState(false);
+  // Al cerrar el menú móvil se suelta primero el foco que quedó dentro (el módulo tocado): si el elemento enfocado se
+  // desmonta, el navegador recalcula los estilos de toda la página dentro del mismo toque (~120 ms con CPU lenta).
+  const setOpenMobile = React.useCallback((valor) => {
+    if (valor === false && typeof document !== "undefined") {
+      const activo = document.activeElement;
+      if (activo && activo !== document.body && activo.closest?.('[data-mobile="true"]')) activo.blur();
+    }
+    _setOpenMobile(valor);
+  }, []);
 
   // Cierra automáticamente el menú lateral móvil al navegar a cualquier vista
   React.useEffect(() => {
@@ -161,6 +170,10 @@ function Sidebar({
   if (isMobile) {
     return (
       <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+        {/* (27/11/2026) Solo se monta abierto: al cerrar se desmonta en el mismo toque. Con el panel siempre montado,
+            Radix (Presence) leía los estilos calculados de toda la página antes de soltar el <body> (~70 ms más con
+            CPU lenta); así el toque al módulo libera la página de inmediato. */}
+        {openMobile ? (
         <SheetContent
           menu
           data-sidebar="sidebar"
@@ -178,6 +191,7 @@ function Sidebar({
           </SheetHeader>
           <div className="flex h-full w-full flex-col">{children}</div>
         </SheetContent>
+        ) : null}
       </Sheet>
     );
   }
@@ -471,7 +485,10 @@ function SidebarMenuButton({
     />
   );
 
-  if (!tooltip) {
+  // En celular el tooltip nunca se ve (hidden abajo), pero envolverlo igual hacía que al tocar un módulo el foco lo
+  // "abriera": Radix montaba el contenido oculto y medía estilos y posición de toda la página (~120 ms con CPU lenta)
+  // antes del clic. Sin tooltip en celular el toque llega directo (27/11/2026, rendimiento del menú en celular).
+  if (!tooltip || isMobile) {
     return button;
   }
 

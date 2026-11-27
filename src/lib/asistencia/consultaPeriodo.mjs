@@ -47,3 +47,29 @@ export async function cargarPeriodoCompleto(fetcher, filtros) {
   const registros = Array.isArray(datos?.registros) ? datos.registros : [];
   return { registros, total, completo: registros.length >= total };
 }
+
+// (27/11/2026) ¿La respuesta de la tabla ya es TODO el periodo? Con «Todos los registros», o en la primera página
+// cuando el total cabe en ella (celular pide páginas de 500 y un día de 200 personas cabe). Entonces las tarjetas,
+// los filtros por columna y la matriz usan esas mismas filas y no se descarga el periodo otra vez.
+export function tablaTraeTodoElPeriodo(datos, { limit, page } = {}) {
+  if (Number(limit) >= LIMITE_TODOS) return true;
+  if (!datos || !Array.isArray(datos.registros)) return false;
+  const pagina = Number(datos.page ?? page ?? 1);
+  if (pagina !== 1) return false;
+  const total = Number(datos.total);
+  if (!Number.isFinite(total)) return false;
+  return datos.registros.length >= total;
+}
+
+// Periodo completo en UNA petición cuando ya se sabe que no cabe en la tabla (el total viene en su respuesta):
+// pide con el límite de «Todos los registros», el mismo que usa la tabla de escritorio. Exportar sigue con
+// cargarPeriodoCompleto (no hay respuesta previa de la que tomar el total).
+export async function cargarPeriodoDeUnaVez(fetcher, filtros) {
+  if (!filtros?.idEmpresa) return { registros: [], total: 0, completo: true };
+  const params = parametrosPeriodo(filtros);
+  params.set("limit", String(LIMITE_TODOS));
+  const datos = await fetcher(`/checador/asistencias?${params.toString()}`);
+  const registros = Array.isArray(datos?.registros) ? datos.registros : [];
+  const total = Number(datos?.total ?? registros.length) || 0;
+  return { registros, total, completo: registros.length >= total };
+}

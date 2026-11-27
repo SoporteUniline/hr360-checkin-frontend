@@ -33,7 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { esMovilAhora, useIsMobile } from "@/hooks/use-mobile";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
 import ResumenAsistencia from "./ResumenAsistencia";
 import RangoFechasModal from "@/components/filtros/RangoFechasModal";
@@ -155,7 +155,8 @@ export default function ControlAsistencia() {
   const [page, setPage] = useState(1);
   // Escritorio arranca en "Todos los registros": se ve el periodo completo y los
   // filtros por columna se aplican sobre todo. Celular conserva páginas de 500.
-  const [limit, setLimit] = useState(LIMITE_TODOS);
+  // null hasta saber el ancho (efecto de abajo): así no se pide primero «Todos» y luego 500 en celular.
+  const [limit, setLimit] = useState(null);
   const [filtroEmpleado, setFiltroEmpleado] = useState(
     searchParams.get("empleado") || "",
   );
@@ -239,9 +240,10 @@ export default function ControlAsistencia() {
   // Al cambiar entre escritorio y móvil cambia el tamaño de página.
   // Reiniciar la paginación evita conservar una página que ya no corresponde
   // al nuevo límite.
+  // Se lee el ancho directamente: en el primer efecto useIsMobile todavía vale false aunque sea celular.
   useEffect(() => {
     setPage(1);
-    setLimit(isMobile ? 500 : LIMITE_TODOS);
+    setLimit(esMovilAhora() ? 500 : LIMITE_TODOS);
   }, [isMobile]);
 
   // «Registrar asistencia masiva» ya no está en Asistencias: lo reemplazan «Marcar como…» y «Cargar horario

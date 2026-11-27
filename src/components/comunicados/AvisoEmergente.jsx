@@ -56,7 +56,7 @@ export function VentanaAviso({ aviso, modo, tz, alTerminar }) {
             <D.Title className="break-words text-xl font-extrabold leading-tight">{aviso.titulo}</D.Title>
             {aviso.fecha_evento ? <p className="flex items-center gap-2 text-sm font-semibold text-slate-700"><CalendarDays className="size-4 text-[#2563EB]" aria-hidden="true" />{fechaEvento(aviso.fecha_evento, { tz })}</p> : null}
             {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada */}
-            {foto ? <img src={foto.url} alt={foto.nombre || ""} className="max-h-56 w-full rounded-xl object-cover" /> : null}
+            {foto ? <img src={foto.url} alt={foto.nombre || ""} width={1024} height={576} loading="lazy" decoding="async" className="h-auto max-h-56 w-full rounded-xl object-cover" /> : null}
             <div id="aviso-cuerpo"><TextoPlano className="text-[15px] leading-relaxed text-slate-700">{aviso.cuerpo}</TextoPlano></div>
             {pdf ? <a href={pdf.url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-[#2563EB] hover:underline"><FileText className="size-4" aria-hidden="true" />Ver {pdf.nombre || "documento.pdf"}</a> : null}
             {modo === "empleado" && (aviso.youtube_id || fotosDe(aviso).length > 1) ? <Link href={rutaPost(aviso.id)} className="inline-flex min-h-11 items-center text-sm font-semibold text-[#2563EB] hover:underline" onClick={() => { if (!confirmar) posponer(); }}>Ver completo en el muro</Link> : null}
