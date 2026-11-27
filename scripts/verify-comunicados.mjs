@@ -585,6 +585,11 @@ async function recorridoEmpleado(browser, { ancho, alto, sufijo }) {
   assert.ok(ultimo("DELETE", "/mi/comentarios/503"));
   await revisar(page, "[data-comentarios]", { movil });
   await captura(page, `8b-empleado-comentarios-${sufijo}`);
+  // Regresión (27/11/2026, reportado en producción): al volver al muro con el enlace —sin recargar la página— el muro
+  // mostraba la copia vieja: la franja «por confirmar» seguía y no aparecían el me gusta ni los comentarios nuevos.
+  await page.locator("[data-pantalla='detalle-post']").getByRole("link", { name: "Muro" }).click();
+  await page.locator("[data-pantalla='muro']").waitFor({ timeout: 30000 });
+  await page.waitForFunction(() => !document.querySelector("[data-franja-pendientes]"), null, { timeout: 15000 });
 
   // ——— 9. Publicar (queda pendiente de aprobación) ———
   await page.goto(base + "/empleado/panel/muro/publicar", { waitUntil: "domcontentloaded" });

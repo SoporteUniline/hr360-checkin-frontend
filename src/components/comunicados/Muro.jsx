@@ -65,7 +65,9 @@ function PreferenciasForm({ inicial }) {
 
 export default function Muro() {
   const tz = useZona();
-  const { data, error, isLoading, size, setSize, mutate, isValidating } = useSWRInfinite(llave, get, { revalidateOnFocus: false, revalidateFirstPage: false, shouldRetryOnError: false });
+  const { data, error, isLoading, size, setSize, mutate, isValidating } = // Al volver del detalle (me gusta, comentario, confirmación) el muro se pide de nuevo completo: sin esto se veía la
+  // copia guardada en memoria, sin el me gusta ni los comentarios nuevos y con la confirmación todavía pendiente.
+  useSWRInfinite(llave, get, { revalidateOnMount: true, revalidateAll: true, revalidateOnFocus: true, shouldRetryOnError: false });
   const megusta = useMeGusta(urlMeGusta);
   const primera = data?.[0];
   const todos = (data ?? []).flatMap((p) => p?.items ?? []).map(megusta.aplicar);
