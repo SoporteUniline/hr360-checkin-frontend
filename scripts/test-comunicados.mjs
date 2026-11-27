@@ -18,6 +18,14 @@ test("rutas del módulo (se apagan con «comunicados») y área de permisos; RH 
   assert.equal(plantilla("recursos_humanos").permisos.comunicados, "editar");
   assert.equal(plantilla("reclutador").permisos.comunicados, "sin_acceso");
   assert.equal(C.rutaPost("a/b"), "/empleado/panel/muro/a%2Fb");
+  // Liga de los correos y del push: /login?next=/mi-espacio/comunicados/<id>
+  assert.equal(C.destinoLiga("/mi-espacio/comunicados/15", "Empleado"), "/empleado/panel/muro/15");
+  assert.equal(C.destinoLiga("/mi-espacio/comunicados", "Empleado"), "/empleado/panel/muro");
+  assert.equal(C.destinoLiga("/mi-espacio/comunicados/15", "Recruiter"), "/panel/comunicados");
+  assert.equal(C.destinoLiga("/mi-espacio/comunicados/15/../../x", "Empleado"), null);
+  assert.equal(C.destinoLiga("/mi-espacio/comunicados/15", "Admin"), null);
+  assert.deepEqual([C.rutasPopup("panel").popup, C.rutasPopup("panel").confirmar(3), C.rutasPopup("panel").posponer(3)], ["/checador/comunicados/popup", "/checador/comunicados/popup/3/confirmar", "/checador/comunicados/popup/3/posponer"]);
+  assert.deepEqual([C.rutasPopup().popup, C.rutasPopup().confirmar(3), C.rutasPopup().posponer(3)], ["/checador/comunicados/mi/popup", "/checador/comunicados/mi/3/confirmar", "/checador/comunicados/mi/3/posponer"]);
 });
 
 test("fechas en la zona de la empresa: Hoy 9:00, Ayer 18:20, día de la semana, 24 nov; texto sin zona = hora de la empresa", () => {
@@ -54,6 +62,7 @@ test("tabla del panel: canales, lectura, estado y «para» como en la maqueta", 
   assert.deepEqual(C.tarjetasResumen({ publicados_mes: 12, lectura_promedio: 84.4, confirmaciones_pendientes: 18, programados: 3 }).map((t) => t.valor), ["12", "84 %", "18 personas", "3"]);
   assert.equal(C.urlListado({ filtro: "confirmacion", q: " posada ", pagina: 2, empresa: 7 }), "/checador/comunicados?nivel=confirmacion&q=posada&pagina=2&empresa=7");
   assert.equal(C.urlListado(), "/checador/comunicados");
+  assert.equal(C.urlListado({ filtro: "automaticos" }), "/checador/comunicados?estado=automaticos");
   assert.deepEqual(C.filtrarLocal([{ id: 1, automatico: true }, { id: 2 }], "automaticos").map((x) => x.id), [1]);
 });
 
@@ -177,6 +186,10 @@ test("reglas del muro, automáticos y respuestas del servidor", () => {
   assert.equal(C.cuandoAuto("festivo"), "2 días antes");
   assert.equal(C.textoManana({ cumpleanos: 2, aniversarios: 1 }), "Mañana: 2 cumpleaños y 1 aniversario");
   assert.equal(C.textoManana({}), "Mañana: nada programado.");
+  const dia = { fecha: "2026-11-28", cumpleanos: [{ titulo: "¡Feliz cumpleaños, Ana!" }, { titulo: "¡Feliz cumpleaños, Beto!" }], aniversario: [{ titulo: "Gracias por 5 años" }], festivo: [], bienvenida: [] };
+  assert.equal(C.textoManana(dia), "Mañana: 2 cumpleaños y 1 aniversario", "forma del servidor");
+  assert.deepEqual(C.publicacionesDelDia(dia).map((x) => x.regla), ["cumpleanos", "cumpleanos", "aniversario"]);
+  assert.equal(C.errorDe({ response: { status: 422, data: { ok: false, codigo: "VALIDACION", mensaje: "Revisa", campos: { titulo: "Escribe el título." } } } }), "Escribe el título.");
   assert.equal(C.errorDe({ response: { data: { ok: false, codigo: "X", mensaje: "Solo 3 fijadas" } } }), "Solo 3 fijadas");
   assert.equal(C.errorDe({ response: { data: { error: "Viejo" } } }), "Viejo");
   assert.match(C.errorDe({ response: { status: 503, data: { codigo: "SIN_MIGRACION" } } }), /no está instalado/);
