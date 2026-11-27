@@ -46,7 +46,7 @@ try {
 
   // 1) Documentos: responsable, domicilio, versión; RFC solo en términos; nunca la CURP; aviso de borrador por pendientes.
   // (25/11/2026) Los dos avisos de privacidad cambiaron de versión: agregan la línea de Face ID / huella (passkeys).
-  for (const [ruta, titulo, version] of [["/aviso-privacidad", "Aviso de privacidad integral", "2026-11-25"], ["/terminos-condiciones", "Términos y condiciones del servicio", "2026-11-21"], ["/aviso-empleados", "Aviso de privacidad para empleados (plantilla)", "2026-11-25"]]) {
+  for (const [ruta, titulo, version] of [["/aviso-privacidad", "Aviso de privacidad integral", "2026-11-28"], ["/terminos-condiciones", "Términos y condiciones del servicio", "2026-11-21"], ["/aviso-empleados", "Aviso de privacidad para empleados (plantilla)", "2026-11-25"]]) {
     const html = await (await fetch(base + ruta)).text();
     assert.ok(html.includes(titulo), `${ruta}: título`);
     assert.match(html, new RegExp(`Versión (<!-- -->)?${version}`), `${ruta}: versión`);
@@ -57,6 +57,12 @@ try {
   assert.ok(aviso.includes("Diego Alonso León de Dios") && aviso.includes("Autlán de Navarro"));
   assert.ok(aviso.includes("Documento en revisión"), "aviso de borrador mientras haya pendientes");
   assert.ok(!aviso.includes("LEDD900608JE9"), "el RFC no va en el aviso");
+  // (28/11/2026) Versión 2026-11-28: párrafo de la casilla de noticias y la baja, en «Para qué usamos tus datos».
+  const textoAviso = aviso.replace(/<!-- -->/g, "").replace(/&quot;/g, '"');
+  const finalidades = textoAviso.slice(textoAviso.indexOf('id="finalidades"'), textoAviso.indexOf('id="transferencias"'));
+  assert.ok(finalidades.includes('Si marcas la casilla "Quiero recibir noticias sobre reformas laborales, novedades de ADAMIA y consejos de RH", usaremos tu nombre y correo'), "párrafo de noticias en las finalidades");
+  assert.ok(finalidades.includes('con el enlace "Darme de baja" que incluye cada correo, o escribiendo a [Pendiente: correo de privacidad]. Guardamos la fecha'), "baja con el correo de privacidad del aviso");
+  assert.match(textoAviso, /Última actualización: 28 de noviembre de 2026/);
   assert.ok((await (await fetch(base + "/terminos-condiciones")).text()).includes("LEDD900608JE9"), "el RFC sí va en términos");
 
   // 2) Cookies: sin decidir, no se carga el Pixel; con «Solo necesarias», tampoco; con «Aceptar todas», sí.
@@ -105,7 +111,7 @@ try {
   await dormir(300);
   assert.equal(aceptaciones.length, 1);
   assert.equal(aceptaciones[0].contexto, "contacto");
-  assert.deepEqual(aceptaciones[0].documentos, [{ id: "aviso_privacidad", version: "2026-11-25" }]);
+  assert.deepEqual(aceptaciones[0].documentos, [{ id: "aviso_privacidad", version: "2026-11-28" }]);
   assert.equal(aceptaciones[0].correo, "ana@empresa.mx");
   await ctx2.close();
 

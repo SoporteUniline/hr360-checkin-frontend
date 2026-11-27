@@ -10,8 +10,10 @@ export const AVISO_PRIVACIDAD = {
   id: "aviso_privacidad",
   ruta: "/aviso-privacidad",
   titulo: "Aviso de privacidad integral",
-  version: "2026-11-25",
-  fecha: "25 de noviembre de 2026",
+  // Versiones: 2026-11-21 (primera) · 2026-11-25 (Face ID, huella o passkey) · 2026-11-28 (casilla de noticias y baja).
+  // Las aceptaciones anteriores conservan la versión que se aceptó (aceptaciones_legales no se edita).
+  version: "2026-11-28",
+  fecha: "28 de noviembre de 2026",
   intro: `${R.nombre}, ${R.calidad}, con domicilio en ${R.domicilio} («ADAMIA»), es responsable del tratamiento de los datos personales que se describen en este aviso, conforme a la Ley Federal de Protección de Datos Personales en Posesión de los Particulares.`,
   secciones: [
     {
@@ -49,6 +51,8 @@ export const AVISO_PRIVACIDAD = {
       ],
       despues: [
         "Finalidades adicionales, que no son necesarias para el servicio: enviarte información comercial y medir la efectividad de nuestra publicidad (por ejemplo, con el Pixel de Meta). Puedes negarte en cualquier momento escribiendo al correo de privacidad o rechazando las cookies de publicidad; tu negativa no afecta el servicio.",
+        // (28/11/2026) Texto aprobado por el dueño, literal. La casilla es NOTICIAS.texto (src/lib/prospectos/reglas.mjs).
+        `Si marcas la casilla "Quiero recibir noticias sobre reformas laborales, novedades de ADAMIA y consejos de RH", usaremos tu nombre y correo para enviarte esas noticias y promociones. Esta casilla es opcional y distinta de la aceptación de este aviso; no marcarla no afecta tu solicitud. Puedes dejar de recibirlas en cualquier momento con el enlace "Darme de baja" que incluye cada correo, o escribiendo a ${correo()}. Guardamos la fecha en que diste y, en su caso, retiraste tu consentimiento.`,
       ],
     },
     {

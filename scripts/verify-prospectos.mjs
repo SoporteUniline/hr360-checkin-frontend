@@ -3,7 +3,8 @@
 //     momento (foco + aviso); correo mal escrito avisa; con el guardado del prospecto LENTO o CON ERROR, WhatsApp se abre
 //     igual dentro del clic y aparece «¡Gracias!»; el cuerpo del prospecto (origen, aviso, noticias y su versión). Sin
 //     correo ni casilla se guarda igual. Ya no promete timbrado (tarjeta de vacaciones, frase con contratos).
-//  2) /contacto: guarda el prospecto con origen «contacto», celular internacional y la casilla de noticias.
+//  2) /contacto: guarda el prospecto con origen «contacto», celular internacional y la casilla de noticias. El correo es
+//     opcional como en el pop-up (marcar noticias sin correo lo pide; mal escrito avisa); sin correo se envía igual.
 //  3) /baja?token=: botón «Sí, darme de baja», «ya estabas», enlace inválido o sin token, y error con reintento.
 //  4) /dashboard/prospectos (Admin): menú, tabla / tarjetas, buscador, filtros, CSV (por omisión solo con noticias; con
 //     la casilla, todos), paginación; un usuario de una empresa no entra.
@@ -187,7 +188,7 @@ try {
   assert.match(texto, /Celular: \+52 5512345678 \(México\)\nCorreo: ana@empresa\.mx/);
   assert.deepEqual(estado.prospectos.at(-1).cuerpo, {
     nombre: "Ana López", celular: "+525512345678", correo: "ana@empresa.mx", origen: { tipo: "popup", id: 7, titulo: "Conoce ADAMIA con una llamada" },
-    aviso_version: "2026-11-25", acepta_noticias: true, noticias_version: "2026-11-27",
+    aviso_version: "2026-11-28", acepta_noticias: true, noticias_version: "2026-11-27",
   });
   assert.equal(estado.aceptaciones.at(-1).correo, "ana@empresa.mx", "la constancia del aviso lleva el correo");
   assert.ok(await page.getByText("Te enviaremos noticias a").isVisible(), "gracias confirma el correo de las noticias");
@@ -240,20 +241,51 @@ try {
   await pc.waitForFunction(() => [...document.querySelectorAll("form input")].some((el) => Object.keys(el).some((k) => k.startsWith("__reactProps"))));
   const nContacto = pc.getByLabel("Quiero recibir noticias sobre reformas laborales, novedades de ADAMIA y consejos de RH");
   assert.equal(await nContacto.isChecked(), false, "/contacto: casilla desmarcada");
+  // (28/11/2026) Correo opcional, como en el pop-up: «(opcional)»; marcar noticias sin correo lo pide en ese momento.
+  const correoC = pc.getByLabel("Correo electrónico");
+  assert.match(await pc.locator("form").innerText(), /Correo electrónico \(opcional\)/);
+  assert.equal(await correoC.getAttribute("required"), null, "/contacto: el correo no es obligatorio");
   await pc.getByLabel("Nombre completo").fill("Carmen Díaz");
-  await pc.getByLabel("Correo electrónico").fill("Carmen@Contacto.mx");
   await pc.getByLabel("Teléfono").fill("33 1234 5678");
   await pc.getByLabel("Mensaje").fill("Quiero una demostración.");
   await pc.getByLabel("He leído y acepto el Aviso de privacidad.").check();
   await nContacto.check();
+  await pc.getByRole("alert").filter({ hasText: "Para recibir noticias escribe tu correo." }).waitFor();
+  assert.ok(await correoC.evaluate((el) => el === document.activeElement), "/contacto: el foco va al correo");
+  assert.equal(await correoC.getAttribute("aria-invalid"), "true");
+  const [antesP, antesW] = [estado.prospectos.length, estado.whatsapp.length];
+  await pc.getByRole("button", { name: /Enviar por WhatsApp/ }).click();
+  await dormir(800);
+  assert.deepEqual([estado.prospectos.length, estado.whatsapp.length, ctxC.pages().length], [antesP, antesW, 1], "/contacto: noticias sin correo no envía");
+  await correoC.fill("carmen@");
+  await correoC.blur();
+  await pc.getByRole("alert").filter({ hasText: "déjalo vacío" }).waitFor();
+  await correoC.fill("Carmen@Contacto.mx");
+  assert.equal(await pc.getByRole("alert").filter({ hasText: /correo/i }).count(), 0, "/contacto: correo bueno, sin aviso");
   const antesC = estado.prospectos.length;
   const [wa3] = await Promise.all([ctxC.waitForEvent("page", { timeout: 3000 }), pc.getByRole("button", { name: /Enviar por WhatsApp/ }).click()]).catch((e) => { throw new Error(`/contacto no abrió WhatsApp (alertas: ${alertas.join(" | ") || "ninguna"}): ${e.message}`); });
   await wa3.close();
   for (let i = 0; estado.prospectos.length === antesC && i < 30; i++) await dormir(100);
   assert.deepEqual(estado.prospectos.at(-1).cuerpo, {
-    nombre: "Carmen Díaz", celular: "+523312345678", correo: "carmen@contacto.mx", origen: { tipo: "contacto" }, aviso_version: "2026-11-25", acepta_noticias: true, noticias_version: "2026-11-27",
+    nombre: "Carmen Díaz", celular: "+523312345678", correo: "carmen@contacto.mx", origen: { tipo: "contacto" }, aviso_version: "2026-11-28", acepta_noticias: true, noticias_version: "2026-11-27",
   });
   await capturar(pc, "contacto-1440");
+  // Sin correo ni noticias: se envía igual; la constancia y el prospecto van sin correo y el mensaje no lleva la línea.
+  await nContacto.uncheck();
+  await correoC.fill("");
+  const [antesC2, antesA2] = [estado.prospectos.length, estado.aceptaciones.length];
+  const [wa4] = await Promise.all([ctxC.waitForEvent("page", { timeout: 3000 }), pc.getByRole("button", { name: /Enviar por WhatsApp/ }).click()]).catch((e) => { throw new Error(`/contacto sin correo no abrió WhatsApp (alertas: ${alertas.join(" | ") || "ninguna"}): ${e.message}`); });
+  await wa4.close();
+  for (let i = 0; estado.prospectos.length === antesC2 && i < 30; i++) await dormir(100);
+  assert.deepEqual(estado.prospectos.at(-1).cuerpo, {
+    nombre: "Carmen Díaz", celular: "+523312345678", correo: null, origen: { tipo: "contacto" }, aviso_version: "2026-11-28", acepta_noticias: false,
+  });
+  assert.equal(estado.aceptaciones.length, antesA2 + 1);
+  assert.deepEqual(estado.aceptaciones.at(-1), { contexto: "contacto", documentos: [{ id: "aviso_privacidad", version: "2026-11-28" }], nombre: "Carmen Díaz", telefono: "33 1234 5678" });
+  const textoC = new URL(estado.whatsapp.at(-1)).searchParams.get("text");
+  assert.match(textoC, /Nombre: Carmen Díaz\nTeléfono: 33 1234 5678/);
+  assert.doesNotMatch(textoC, /Correo/, "sin correo, el mensaje no lo menciona");
+  assert.deepEqual(alertas, [], "/contacto: sin alertas del navegador");
   await ctxC.close();
 
   // ── 3) /baja ─────────────────────────────────────────────────────────────────────────────────────────────────
