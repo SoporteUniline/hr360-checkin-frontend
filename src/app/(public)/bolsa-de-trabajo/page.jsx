@@ -2,10 +2,10 @@ import "@/components/landing/home/landing-home.css";
 import "./bolsa.css";
 import BolsaTrabajo from "./BolsaTrabajo";
 
-// Bolsa de trabajo con el estilo del inicio de ADAMIA; sin cifras ni testimonios que no tengan fuente.
+// Bolsa de trabajo v2 (27/11/2026): buscador, chips y lista + vacante elegida. Sin cifras ni testimonios sin fuente.
 export const metadata = {
   title: "Bolsa de trabajo",
-  description: "Encuentra tu próximo trabajo en México: vacantes de empresas que contratan con ADAMIA. Busca por puesto y ubicación, y postúlate desde tu celular en minutos.",
+  description: "Encuentra tu próximo trabajo en México: vacantes de empresas que contratan con ADAMIA. Busca por puesto y lugar, y postúlate por WhatsApp o con un formulario corto desde tu celular.",
   alternates: { canonical: "/bolsa-de-trabajo" },
   openGraph: {
     title: "Bolsa de trabajo | ADAMIA",
@@ -18,9 +18,5 @@ export const metadata = {
 };
 
 export default function BolsaTrabajoPage() {
-  return (
-    <div className="lh bt">
-      <BolsaTrabajo />
-    </div>
-  );
+  return <BolsaTrabajo />;
 }

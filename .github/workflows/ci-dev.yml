@@ -195,6 +195,18 @@ jobs:
           mkdir -p capturas-landing
           CAPTURAS=capturas-landing node scripts/verify-landing.mjs
 
+      # (27/11/2026) Bolsa de trabajo v2 con el backend simulado (1440, 390 y 360) y la compilación anterior: lista + vacante
+      # elegida (?v=), chips y hoja de filtros con los parámetros del API, «Postularme por WhatsApp» (wa.me exacto, QR),
+      # solicitud corta con SMS, JSON-LD, letra ≥ 17 px en celular, botones ≥ 48 px, sin degradados ni desborde.
+      - name: Bolsa de trabajo y vacante — verificación en navegador (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-bolsa capturas-whatsapp-vacante
+          CAPTURAS=capturas-bolsa node scripts/verify-bolsa.mjs
+          CAPTURAS=capturas-whatsapp-vacante node scripts/verify-whatsapp-vacante.mjs
+
       # (27/11/2026) Cálculos LFT con el backend simulado (copia del motor del servidor; 1440 y 390): calculadora pública =
       # servidor, finiquito con fórmulas y «Incluir 20 días por año (art. 50)», guardado con entradas = detalle, versión
       # anterior marcada sin recalcular y aguinaldo con corte al 31/12. Reusa la compilación anterior.

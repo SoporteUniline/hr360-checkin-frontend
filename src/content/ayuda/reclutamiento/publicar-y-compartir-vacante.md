@@ -55,7 +55,7 @@ Arriba de la lista de vacantes (y en **Conversaciones (WhatsApp) › ⋮ › Enl
 
 En la misma lista tienes **Copiar enlace de la vacante** (la página con su formulario), que funciona aunque WhatsApp no esté activo.
 
-La página pública también muestra un botón para pedir información por WhatsApp cuando tu empresa tiene WhatsApp activo.
+La página pública muestra **Postularme por WhatsApp** (el mismo enlace) cuando tu empresa tiene el agente encendido; con WhatsApp activo pero sin agente, el candidato ve **Preguntar por WhatsApp** y te escribe a tu bandeja.
 
 ## Cómo pausar, cerrar, reabrir o duplicar
 

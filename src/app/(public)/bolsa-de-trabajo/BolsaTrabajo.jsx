@@ -1,94 +1,139 @@
 "use client";
+// Bolsa de trabajo pública v2 (maqueta aprobada por el dueño, 27/11/2026): «muy fácil, que hasta una persona de 60 años
+// se pueda postular y fácil de leer». Buscador grande (puesto + lugar), chips de un toque, y en computadora lista a la
+// izquierda + vacante elegida a la derecha (?v=slug, sin recargar); en celular la lista abre la página de la vacante.
+// API: /vacantes/filter (lo de antes + parámetros nuevos, ver src/lib/bolsaTrabajo.mjs), /vacantes/entidades,
+// /empresas/activas?bolsa=1 (solo empresas que publican en la bolsa) y /vacantes/slug/:slug para la vacante elegida.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
-import { MapPin, Search, SlidersHorizontal, X } from "lucide-react";
-import HeroCarrusel from "@/components/landing/home/HeroCarrusel";
+import { MapPin, Search } from "lucide-react";
 import { fetcher, swr_config } from "@/lib/fetcher";
 import {
-  FILTROS_INICIALES, LIMITE_VACANTES, aplicarUbicacion, cambiarFiltro, consultaVacantes, filtrosActivos, filtrosDesdeUrl,
-  hayFiltros, opcionesUbicacion, quitarFiltro, textoConteo, totalPaginas, urlDeFiltros, valorUbicacion,
+  FILTROS_INICIALES, LIMITE_VACANTES, ORDENES, aplicarUbicacion, cambiarFiltro, consultaVacantes, cuantosFiltros, filtrosActivos, filtrosDesdeUrl,
+  hayFiltros, opcionesUbicacion, textoConteo, textoDe, totalPaginas, ubicacionValida, urlDeFiltros, vacanteDeUrl, valorUbicacion,
 } from "@/lib/bolsaTrabajo.mjs";
-import EmpresasContratando, { RUTA_EMPRESAS_BOLSA } from "./EmpresasContratando";
 import ListaVacantes, { Esqueletos, Estado } from "./ListaVacantes";
-import { GruposFiltros, HojaFiltros, Paginacion } from "./Filtros";
-import { DIAPOSITIVAS_BOLSA } from "./diapositivas";
+import { ChipsCelular, ChipsEscritorio, HojaFiltros, Paginacion } from "./Filtros";
+import FichaVacante from "../vacante/[slug]/FichaVacante";
 
-const Flecha = () => (
-  <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M5 12h14M13 6l6 6-6 6" />
-  </svg>
-);
+// Solo las empresas que publican en la bolsa y tienen vacantes abiertas (filtra el backend).
+export const RUTA_EMPRESAS_BOLSA = "/empresas/activas?bolsa=1&limit=50&page=1";
 
-// Bolsa de trabajo pública. Contratos del API sin cambios: /vacantes/filter (misma consulta),
-// /vacantes/entidades, /empresas/giros y /empresas/activas?bolsa=1&limit=4&page=1. Los filtros viven en la dirección
-// (?q=…&estado=…) para compartir la búsqueda y volver de una vacante sin perderla.
+// Vacante elegida (escritorio): se ve al momento con los datos de la lista y se completa con su página (preguntas,
+// periodo de postulación) antes de ofrecer postularse.
+function PanelVacante({ fila }) {
+  const { data, error } = useSWR(fila ? `/vacantes/slug/${encodeURIComponent(fila.slug)}` : null, fetcher, swr_config);
+  if (!fila) return null;
+  const v = data?.slug === fila.slug ? { ...fila, ...data } : fila;
+  return (
+    <div className="bt2-panel-in" key={fila.slug}>
+      {error ? <p className="bt2-nota" role="status">No pudimos cargar todos los datos de esta vacante. <Link href={`/vacante/${encodeURIComponent(fila.slug)}`}>Abrir su página</Link></p> : null}
+      <FichaVacante v={v} nivel="h2" completo={Boolean(data) && !error} />
+      <p className="bt2-panel-pagina"><Link href={`/vacante/${encodeURIComponent(fila.slug)}`}>Abrir la página de esta vacante</Link></p>
+    </div>
+  );
+}
+
+// ¿Pantalla de computadora (≥ 1024 px)? Solo ahí se arma el panel de la derecha (en celular no se piden sus datos).
+function useEscritorio() {
+  const [escritorio, setEscritorio] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const ver = () => setEscritorio(mq.matches);
+    ver();
+    mq.addEventListener("change", ver);
+    return () => mq.removeEventListener("change", ver);
+  }, []);
+  return escritorio;
+}
+
 export default function BolsaTrabajo() {
+  const escritorio = useEscritorio();
   const [filtros, setFiltros] = useState(FILTROS_INICIALES);
+  const [elegida, setElegida] = useState("");
   const [listo, setListo] = useState(false);
   const [texto, setTexto] = useState("");
   const [hoja, setHoja] = useState(false);
+  const [ubicacion, setUbicacion] = useState(null);
+  const [avisoUbicacion, setAvisoUbicacion] = useState("");
   const tituloRes = useRef(null);
 
   useEffect(() => {
     const f = filtrosDesdeUrl(window.location.search);
     setFiltros(f);
     setTexto(f.titulo);
+    setElegida(vacanteDeUrl(window.location.search));
     setListo(true);
   }, []);
 
+  // La dirección refleja la búsqueda y la vacante elegida (sin recargar ni crear historial).
   useEffect(() => {
     if (!listo) return;
-    const destino = `${window.location.pathname}${urlDeFiltros(filtros)}`;
+    const destino = `${window.location.pathname}${urlDeFiltros(filtros, elegida)}`;
     if (destino !== `${window.location.pathname}${window.location.search}`) window.history.replaceState(window.history.state, "", destino);
-  }, [filtros, listo]);
+  }, [filtros, elegida, listo]);
 
-  // Búsqueda por puesto mientras se escribe (como antes, con pausa); «Buscar» o Enter la aplica al momento.
+  // Búsqueda por puesto mientras se escribe (con pausa); «Buscar» o Enter la aplica al momento.
   useEffect(() => {
     if (!listo) return undefined;
     const t = setTimeout(() => setFiltros((f) => (f.titulo === texto.trim() ? f : cambiarFiltro(f, "titulo", texto.trim()))), 450);
     return () => clearTimeout(t);
   }, [texto, listo]);
 
-  const clave = listo ? `/vacantes/filter?${consultaVacantes(filtros)}` : null;
+  const clave = listo ? `/vacantes/filter?${consultaVacantes(filtros, LIMITE_VACANTES, ubicacion)}` : null;
   const { data, error, isValidating, mutate } = useSWR(clave, fetcher, { ...swr_config, keepPreviousData: true });
   const { data: ubic } = useSWR("/vacantes/entidades", fetcher, swr_config);
-  const { data: datosGiros } = useSWR("/empresas/giros", fetcher, swr_config);
-  const { data: datosEmpresas, isLoading: cargandoEmpresas } = useSWR(RUTA_EMPRESAS_BOLSA, fetcher, swr_config);
+  const { data: datosEmpresas } = useSWR(RUTA_EMPRESAS_BOLSA, fetcher, swr_config);
 
-  const empresas = useMemo(() => datosEmpresas?.data ?? [], [datosEmpresas]);
+  const empresas = useMemo(() => (Array.isArray(datosEmpresas?.data) ? datosEmpresas.data : []), [datosEmpresas]);
   const nombres = useMemo(() => Object.fromEntries(empresas.map((e) => [String(e.id_empresa), e.nombre_empresa])), [empresas]);
   const ubicaciones = useMemo(() => opcionesUbicacion(ubic?.entidades, ubic?.ciudades), [ubic]);
-  const giros = Array.isArray(datosGiros?.giros) ? datosGiros.giros.filter(Boolean) : [];
-  const paises = Array.isArray(ubic?.paises) ? ubic.paises.filter(Boolean) : [];
 
-  const activos = filtrosActivos(filtros, nombres);
-  const conFiltros = hayFiltros(filtros);
-  const enHoja = ["tipo_contratacion", "giro", "pais"].filter((k) => filtros[k]).length;
   const total = Number(data?.total) || 0;
-  const vacantes = Array.isArray(data?.data) ? data.data : [];
+  const vacantes = useMemo(() => (Array.isArray(data?.data) ? data.data : []), [data]);
   const paginasTotales = totalPaginas(total, LIMITE_VACANTES);
+  const conFiltros = hayFiltros(filtros);
+  const cuantos = cuantosFiltros(filtros);
   const cargando = !data && !error;
+  // En escritorio se ve la elegida o, si no hay, la primera de la lista.
+  const filaElegida = vacantes.find((v) => v.slug === elegida) || vacantes[0] || null;
 
-  const cambiar = useCallback((clave, valor) => setFiltros((f) => cambiarFiltro(f, clave, valor)), []);
+  const cambiar = useCallback((k, valor) => setFiltros((f) => cambiarFiltro(f, k, valor)), []);
+  // «Más cerca de mí» pide la ubicación del navegador (solo al tocarlo). Si no se puede, se queda como estaba y se avisa.
+  const ordenar = useCallback((valor) => {
+    setAvisoUbicacion("");
+    if (valor !== "cerca") return setFiltros((f) => cambiarFiltro(f, "orden", valor));
+    if (ubicacionValida(ubicacion)) return setFiltros((f) => cambiarFiltro(f, "orden", "cerca"));
+    if (!navigator.geolocation) return setAvisoUbicacion("Tu navegador no comparte la ubicación. Elige tu estado o ciudad en «Lugar».");
+    setAvisoUbicacion("Buscando dónde estás…");
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        setUbicacion({ lat: p.coords.latitude, lng: p.coords.longitude });
+        setAvisoUbicacion("");
+        setFiltros((f) => cambiarFiltro(f, "orden", "cerca"));
+      },
+      () => setAvisoUbicacion("No pudimos saber dónde estás. Revisa el permiso de ubicación o elige tu estado o ciudad en «Lugar»."),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 10 * 60 * 1000 },
+    );
+  }, [ubicacion]);
+
   const limpiar = () => {
     setFiltros(FILTROS_INICIALES);
     setTexto("");
-  };
-  const quitar = (clave) => {
-    if (clave === "titulo") setTexto("");
-    setFiltros((f) => quitarFiltro(f, clave));
+    setAvisoUbicacion("");
   };
   const irAPagina = (p) => {
     setFiltros((f) => ({ ...f, page: Math.min(Math.max(1, p), paginasTotales) }));
-    tituloRes.current?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    const reducir = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    tituloRes.current?.scrollIntoView({ behavior: reducir ? "auto" : "smooth", block: "start" });
     tituloRes.current?.focus({ preventScroll: true });
   };
   const buscar = (e) => {
     e.preventDefault();
     setFiltros((f) => cambiarFiltro(f, "titulo", texto.trim()));
-    tituloRes.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+  const elegir = (slug) => setElegida(slug);
 
   let conteo = "Buscando vacantes…";
   if (data) conteo = textoConteo(total, conFiltros);
@@ -99,14 +144,14 @@ export default function BolsaTrabajo() {
     contenido = <Esqueletos />;
   } else if (error) {
     contenido = (
-      <Estado tipo="error" titulo="No pudimos cargar las vacantes" accion={<button type="button" className="btn btn-primary" onClick={() => mutate()}>Reintentar</button>}>
+      <Estado tipo="error" titulo="No pudimos cargar las vacantes" accion={<button type="button" className="bt2-btn principal" onClick={() => mutate()}>Reintentar</button>}>
         Revisa tu conexión a internet e inténtalo de nuevo.
       </Estado>
     );
   } else if (!vacantes.length) {
     contenido = conFiltros ? (
-      <Estado tipo="vacio-filtros" titulo="No hay vacantes con esos filtros" accion={<button type="button" className="btn btn-primary" onClick={limpiar}>Limpiar filtros</button>}>
-        Prueba con otro puesto, otra ubicación o quita algún filtro.
+      <Estado tipo="vacio-filtros" titulo="No hay vacantes con esos filtros" accion={<button type="button" className="bt2-btn principal" onClick={limpiar}>Limpiar filtros</button>}>
+        Prueba con otro puesto, otro lugar o quita algún filtro.
       </Estado>
     ) : (
       <Estado tipo="vacio" titulo="Por ahora no hay vacantes publicadas">
@@ -116,37 +161,29 @@ export default function BolsaTrabajo() {
   } else {
     contenido = (
       <>
-        <ListaVacantes vacantes={vacantes} actualizando={isValidating} />
+        <ListaVacantes vacantes={vacantes} actualizando={isValidating} elegida={escritorio ? filaElegida?.slug : undefined} onElegir={elegir} />
         <Paginacion actual={Math.min(filtros.page, paginasTotales)} total={paginasTotales} onIr={irAPagina} />
       </>
     );
   }
 
-  const grupos = (idBase) => <GruposFiltros idBase={idBase} filtros={filtros} giros={giros} paises={paises} onCambiar={cambiar} />;
+  const activos = filtrosActivos(filtros, nombres);
+  const ordenTexto = textoDe(ORDENES, filtros.orden);
 
   return (
-    <>
-      <HeroCarrusel
-        diapositivas={DIAPOSITIVAS_BOLSA}
-        etiqueta="Bolsa de trabajo de ADAMIA"
-        className="bt-carr"
-        primerTitulo="h2"
-        desliza
-      />
-
-      <div className="wrap bt-buscar-caja">
-        <form className="bt-buscar" role="search" aria-label="Buscar vacantes" onSubmit={buscar}>
-          <h1 id="bt-titulo" className="bt-buscar-tit">Encuentra tu próximo trabajo</h1>
-          <label className="bt-campo">
-            <span>Puesto</span>
-            <span className="bt-control">
+    <div className="bt2 bt2-bolsa">
+      <section className="bt2-buscar-banda" aria-labelledby="bt2-titulo">
+        <div className="bt2-envoltura ancha">
+          <h1 id="bt2-titulo" className="bt2-titulo">Bolsa de trabajo</h1>
+          <form className="bt2-buscar" role="search" aria-label="Buscar vacantes" onSubmit={buscar}>
+            <label className="bt2-buscar-campo puesto">
+              <span className="sr-only">Puesto</span>
               <Search aria-hidden="true" />
-              <input type="search" name="q" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Ej. chofer, cajera, almacén" autoComplete="off" enterKeyHint="search" maxLength={120} />
-            </span>
-          </label>
-          <label className="bt-campo">
-            <span>Estado o ciudad</span>
-            <span className="bt-control">
+              <input type="search" name="q" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="¿Qué trabajo buscas? Ej. cajera, chofer"
+                autoComplete="off" enterKeyHint="search" maxLength={120} />
+            </label>
+            <label className="bt2-buscar-campo lugar">
+              <span className="sr-only">Lugar</span>
               <MapPin aria-hidden="true" />
               <select name="ubicacion" value={valorUbicacion(filtros)} onChange={(e) => setFiltros((f) => aplicarUbicacion(f, e.target.value))}>
                 <option value="">Todo México</option>
@@ -161,74 +198,51 @@ export default function BolsaTrabajo() {
                   </optgroup>
                 ) : null}
               </select>
-            </span>
-          </label>
-          <button type="submit" className="btn btn-primary">Buscar</button>
-        </form>
-        <p className="bt-conteo" aria-live="polite">
-          {data ? <b>{conteo}</b> : <span>{conteo}</span>}
-          {data && !conFiltros && ubicaciones.estados.length > 1 ? <span>en {ubicaciones.estados.length} estados</span> : null}
-        </p>
+            </label>
+            <button type="submit" className="bt2-btn principal bt2-buscar-btn">Buscar</button>
+          </form>
+          <div className="solo-escritorio">
+            <ChipsEscritorio filtros={filtros} empresas={empresas} onCambiar={cambiar} onOrden={ordenar} ordenTexto={ordenTexto} onLimpiar={limpiar} hayAlgo={conFiltros || Boolean(filtros.orden)} />
+          </div>
+          <div className="solo-movil">
+            <ChipsCelular filtros={filtros} cuantos={cuantos} onAbrir={() => setHoja(true)} onCambiar={cambiar} onOrden={ordenar} />
+          </div>
+          <p className="bt2-aviso-ubicacion" role="status">{avisoUbicacion}</p>
+        </div>
+      </section>
+
+      <div className="bt2-envoltura ancha bt2-cuerpo">
+        <section className="bt2-resultados" aria-labelledby="bt2-res-titulo">
+          <div className="bt2-res-cab">
+            <h2 id="bt2-res-titulo" ref={tituloRes} tabIndex={-1} className="sr-only">Vacantes</h2>
+            <p className="bt2-conteo" aria-live="polite">
+              {data ? <b>{conteo}</b> : <span>{conteo}</span>}
+              {data && paginasTotales > 1 ? <span>, página {Math.min(filtros.page, paginasTotales)} de {paginasTotales}</span> : null}
+            </p>
+          </div>
+          {activos.length ? (
+            <ul className="bt2-activos" aria-label="Filtros aplicados">
+              {activos.map((a) => (
+                <li key={a.clave}>
+                  <button type="button" className="bt2-quitar" onClick={() => { if (a.clave === "titulo") setTexto(""); cambiar(a.clave, ""); }} aria-label={`Quitar filtro ${a.etiqueta}`}>
+                    {a.etiqueta} <span aria-hidden="true">×</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {contenido}
+          <p className="bt2-empresas-cta">¿Tu empresa contrata? <Link href="/contacto">Publica tus vacantes con ADAMIA</Link></p>
+        </section>
+
+        <section className="bt2-panel" aria-label="Vacante elegida" data-panel-vacante={filaElegida?.slug || ""}>
+          {escritorio && filaElegida ? <PanelVacante fila={filaElegida} /> : null}
+          <p className="sr-only" aria-live="polite">{filaElegida && elegida ? `Mostrando la vacante ${filaElegida.titulo}` : ""}</p>
+        </section>
       </div>
 
-      <EmpresasContratando
-        empresas={empresas}
-        cargando={cargandoEmpresas}
-        idEmpresa={filtros.id_empresa}
-        onElegir={(id) => cambiar("id_empresa", id)}
-      />
-
-      <section className="bt-res" id="vacantes" aria-labelledby="bt-res-titulo">
-        <div className="wrap bt-res-grid">
-          <aside className="bt-lateral" aria-label="Filtros">
-            <h2>Filtrar vacantes</h2>
-            {grupos("lat")}
-          </aside>
-          <div>
-            <div className="bt-res-cab">
-              <div>
-                <h2 id="bt-res-titulo" ref={tituloRes} tabIndex={-1}>Vacantes</h2>
-                {data ? <p>{conteo}{paginasTotales > 1 ? `, página ${Math.min(filtros.page, paginasTotales)} de ${paginasTotales}` : ""}</p> : null}
-              </div>
-              <button type="button" className="btn btn-line bt-btn-filtros" onClick={() => setHoja(true)} aria-haspopup="dialog">
-                <SlidersHorizontal aria-hidden="true" size={18} /> Filtros {enHoja ? <b aria-label={`${enHoja} aplicados`}>{enHoja}</b> : null}
-              </button>
-            </div>
-            {activos.length ? (
-              <ul className="bt-activos" aria-label="Filtros aplicados">
-                {activos.map((a) => (
-                  <li key={a.clave}>
-                    <button type="button" className="bt-chip" onClick={() => quitar(a.clave)} aria-label={`Quitar filtro ${a.etiqueta}`}>
-                      {a.etiqueta} <X aria-hidden="true" />
-                    </button>
-                  </li>
-                ))}
-                <li><button type="button" className="bt-texto-btn" onClick={limpiar}>Limpiar filtros</button></li>
-              </ul>
-            ) : null}
-            {contenido}
-          </div>
-        </div>
-      </section>
-
-      <section className="bt-cta" aria-labelledby="bt-cta-titulo">
-        <div className="wrap">
-          <div className="solid violet">
-            <div>
-              <h2 id="bt-cta-titulo">¿Tu empresa contrata? Publica tus vacantes con ADAMIA.</h2>
-              <p>Recibe postulaciones con teléfono verificado, haz tus propias preguntas de filtro y lleva cada candidato hasta su contratación desde el mismo panel de Recursos Humanos.</p>
-            </div>
-            <div className="ctas">
-              <Link className="btn btn-primary" href="/contacto">Solicitar demo <Flecha /></Link>
-              <Link className="btn btn-claro" href="/contratar-plan">Contratar</Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <HojaFiltros abierta={hoja} onAbierta={setHoja} total={data ? total : undefined} onLimpiar={limpiar}>
-        {grupos("hoja")}
-      </HojaFiltros>
-    </>
+      <HojaFiltros abierta={hoja} onAbierta={setHoja} filtros={filtros} empresas={empresas} total={data ? total : undefined}
+        onCambiar={cambiar} onOrden={ordenar} onLimpiar={limpiar} />
+    </div>
   );
 }

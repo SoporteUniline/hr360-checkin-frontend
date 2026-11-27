@@ -8,8 +8,9 @@ import { readFile } from "node:fs/promises";
 const raiz = new URL("../", import.meta.url).pathname;
 
 test("las vistas de vacante solo insertan HTML saneado", async () => {
-  // La vista pública de la vacante se movió a VacanteDetalle.jsx; page.jsx (servidor) solo inserta el JSON-LD.
-  for (const archivo of ["src/app/(public)/vacante/[slug]/VacanteDetalle.jsx", "src/app/panel/empleados/DetalleVacante.jsx"]) {
+  // La vista pública de la vacante vive en FichaVacante.jsx (bolsa v2, 27/11/2026: la misma en la página y en el panel de
+  // la bolsa); page.jsx (servidor) solo inserta el JSON-LD.
+  for (const archivo of ["src/app/(public)/vacante/[slug]/FichaVacante.jsx", "src/app/panel/empleados/DetalleVacante.jsx"]) {
     const texto = await readFile(`${raiz}${archivo}`, "utf8");
     const usos = [...texto.matchAll(/dangerouslySetInnerHTML=\{\{\s*__html:\s*([^}]+?)\s*\}\}/g)].map((m) => m[1]);
     assert.ok(usos.length > 0, `${archivo} sin HTML insertado`);

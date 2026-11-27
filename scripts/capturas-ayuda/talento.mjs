@@ -459,7 +459,8 @@ const CONVERTIR = [
   ["propias/rec-expediente.png", "reclutamiento/expediente.webp", null],
   ["propias/rec-contratar.png", "reclutamiento/contratar.webp", null],
   ["bolsa/bolsa-escritorio-portada.png", "reclutamiento/bolsa-de-trabajo.webp", null],
-  ["wavac/vacante-con-wa-1440.png", "reclutamiento/vacante-publica.webp", null],
+  // (27/11/2026, bolsa v2) La página de la vacante sale de verify-bolsa (ficha con «Postularme» y sus datos).
+  ["bolsa/vacante-1440.png", "reclutamiento/vacante-publica.webp", [0, 0, 1440, 1150]],
   ["bolsa/vacante-celular-otp.png", "reclutamiento/solicitud-codigo.webp", null, 390],
   ["propias/wa-configurar-agente.png", "reclutamiento/configurar-agente.webp", null],
   ["lumob/b2-02-editor-campos-1440.png", "reclutamiento/entrevista-editor.webp", null],

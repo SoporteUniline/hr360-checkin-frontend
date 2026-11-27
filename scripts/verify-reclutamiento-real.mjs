@@ -129,36 +129,27 @@ try {
   ultima = pc;
   pc.on("pageerror", (e) => errores.push(e.message));
   await pc.goto(`${base}/vacante/${encodeURIComponent(slug)}`, { waitUntil: "domcontentloaded" });
-  // En celular «Postularme ahora» va fijo abajo y el aviso de cookies lo tapa hasta
-  // contestarlo; se espera a que la página cargue para cerrarlo. La solicitud ya no va en acordeón.
-  await pc.getByRole("button", { name: "Postularme ahora" }).waitFor({ timeout: 30000 });
+  // (27/11/2026, bolsa v2) Solicitud corta: la acción principal va fija abajo; con asistente de WhatsApp es el botón
+  // verde y el formulario queda en «No tengo WhatsApp: llenar formulario». El aviso de cookies se contesta antes.
+  const acciones = pc.locator("[data-acciones-postular] .solo-movil");
+  await acciones.waitFor({ timeout: 30000 });
   const avisoCookies = pc.getByRole("button", { name: "Solo necesarias" });
   if (await avisoCookies.waitFor({ timeout: 3000 }).then(() => true, () => false)) await avisoCookies.click();
-  await pc.getByRole("button", { name: "Postularme ahora" }).click();
+  const sinWhatsApp = acciones.getByRole("button", { name: "No tengo WhatsApp: llenar formulario" });
+  if (await sinWhatsApp.count()) await sinWhatsApp.click();
+  else await acciones.getByRole("button", { name: "Postularme" }).click();
   const hoja = pc.getByRole("dialog");
-  const llenar = (nombre, valor) => hoja.locator(`[name="${nombre}"]`).fill(valor);
-  await llenar("nombre_completo", "Ana María García López");
-  await llenar("correo", "ana.g@x.mx");
-  await llenar("telefono", "5511112222");
-  await llenar("sexo", "Mujer");
-  await hoja.getByRole("combobox").filter({ hasText: "Selecciona uno" }).click();
-  await pc.getByRole("option", { name: "Soltero(a)" }).click();
-  await llenar("curp", "GAPA900101MJCRRN09");
-  await hoja.getByRole("combobox").filter({ hasText: "Selecciona un nivel" }).click();
-  await pc.getByRole("option", { name: "Licenciatura" }).click();
-  await llenar("institucion", "UdeG");
-  await llenar("carrera", "Administración");
-  for (const [n, v] of [["ultimo_puesto", "Repartidora"], ["empresa_anterior", "Tienda"], ["duracion_puesto", "2 años"], ["ultimo_salario", "10000"], ["motivo_salida", "Crecer"]]) await llenar(n, v);
-  await hoja.getByLabel("¿Cuánta experiencia tienes en un puesto similar? *").selectOption("1 a 3 años");
+  await hoja.getByLabel("Nombre completo").fill("Ana María García López");
+  await hoja.getByLabel("Celular").fill("5511112222");
+  await hoja.getByLabel(/^Correo/).fill("ana.g@x.mx");
+  await hoja.getByRole("group", { name: "¿Cuánta experiencia tienes en un puesto similar?" }).getByRole("radio", { name: "1 a 3 años" }).check();
   await hoja.locator('input[type="file"]').setInputFiles({ name: "cv.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 prueba") });
-  await hoja.getByRole("checkbox").last().click();
-  await hoja.getByRole("button", { name: "Enviar solicitud" }).click();
-  await hoja.getByText("Ingresa el código para continuar").waitFor({ timeout: 15000 });
-  await hoja.locator('input[autocomplete="one-time-code"], input[data-input-otp]').first().fill("123456");
-  // El aviso «Código de verificación enviado» (pantalla pública de siempre) queda encima del botón a 390 px:
-  // se dispara el clic directamente en el botón.
-  await hoja.getByRole("button", { name: "Verificar código" }).dispatchEvent("click");
-  await pc.getByText(/Postulación enviada exitosamente/).waitFor({ timeout: 20000 });
+  await hoja.getByRole("checkbox", { name: /aviso de privacidad/ }).check();
+  await hoja.getByRole("button", { name: "Enviar postulación" }).click();
+  await hoja.getByLabel("Código del SMS").waitFor({ timeout: 15000 });
+  await hoja.getByLabel("Código del SMS").fill("123456");
+  await hoja.getByRole("button", { name: "Confirmar y enviar" }).click();
+  await hoja.getByRole("heading", { name: "¡Listo! Enviamos tu postulación" }).waitFor({ timeout: 20000 });
   await captura(pc, "rec-postulacion-movil");
 
   // 5) RH la ve en Candidatos (con la de WhatsApp) y la mueve de etapa.

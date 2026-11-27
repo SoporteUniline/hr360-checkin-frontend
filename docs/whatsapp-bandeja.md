@@ -159,7 +159,7 @@ Sin un modelo aparte: los campos de la entrevista son las mismas preguntas de la
   formulario»), los opcionales marcados y el documento para descargar con la sesión (nunca un enlace público). «Enlace del
   formulario» crea uno nuevo (el anterior deja de servir), lo copia y muestra su vigencia y cuántas veces lo llenó.
   Sin campos (servidor sin la migración) se ve la lista de «Respuestas» de antes.
-- **Formulario público** `/postular/<token>` (`app/(public)/postular/[token]`): reutiliza `PreguntasVacante` de la página de la
+- **Formulario público** `/postular/<token>` (`app/(public)/postular/[token]`): reutiliza `PreguntasGrandes` (desde 27/11/2026; Sí/No como botones grandes) de la página de la
   vacante, prellenado con lo que contestó por WhatsApp; documentos (PDF, Word o foto, ≤ 10 MB) con un campo de archivo
   accesible; revisa obligatorios antes de mandar; muestra los errores por campo del servidor; avisos de enlace inválido,
   vencido, vacante cerrada o sin consentimiento. No manda la sesión (`credentials: "omit"`) y no se indexa.
