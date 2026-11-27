@@ -16,7 +16,7 @@ Diseño aprobado por el dueño («Aprobado, hazlo y publica en mi rama»), const
 Reglas del contenido:
 - Pantallas del producto dibujadas con código y **datos de ejemplo**; ninguna cifra es de clientes.
 - Solo se prometen funciones existentes: checador facial, GPS con geocerca (radio 10–1000 m, precisión ≤ 50 m,
-  ubicación de menos de 60 s), sin internet, aprobación de permisos y vacaciones por WhatsApp, reporte semanal contra
+  ubicación de menos de 60 s), checada con QR o código, aprobación de permisos y vacaciones por WhatsApp, reporte semanal contra
   el límite de la LFT, reglas de aviso por correo (retardos, faltas, contratos, cumpleaños, aniversarios).
 - El aviso «va a pasar / excede el límite semanal» hoy es **alerta en el panel**, no correo ni WhatsApp; la página lo
   dice así. Enviarlo por correo o WhatsApp sería un cambio aparte.

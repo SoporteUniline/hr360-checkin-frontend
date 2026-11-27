@@ -71,7 +71,7 @@ export default function MosaicoModulos() {
           </article>
 
           <article className="mz-m mz-g2 reveal">
-            <Cabecera nombre="Checador" sub="check">Rostro y GPS desde el celular o una tableta en la sucursal. Funciona sin internet.</Cabecera>
+            <Cabecera nombre="Checador" sub="check">Rostro y GPS desde el celular o una tableta en la sucursal.</Cabecera>
             <Flecha href="/funcionalidades/reloj-checador" nombre="el Checador" />
             <div className="mz-mini flota" style={{ "--ft": "7.1s", "--fd": "-0.4s" }} aria-hidden="true">
               <div className="mz-verif"><span className="mz-cara" /><div><b>Ana Torres</b><div className="mz-ok">✓ Rostro verificado</div></div></div>

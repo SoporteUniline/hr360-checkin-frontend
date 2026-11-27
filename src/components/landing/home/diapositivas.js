@@ -28,7 +28,7 @@ export const DIAPOSITIVAS = [
     etiqueta: "Checador con rostro y GPS",
     titulo: ["Checa donde", "trabaja tu equipo."],
     marca: "tu equipo.",
-    texto: "Reconocimiento facial y geocerca en cada entrada, aunque no haya internet.",
+    texto: "Reconocimiento facial y geocerca en cada entrada, desde el celular o una tableta.",
     boton: { texto: "Solicitar demo", href: "/contacto" },
   },
   {
