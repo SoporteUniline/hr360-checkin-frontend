@@ -68,6 +68,10 @@ import {
   Target,
   Grid3x3,
   MessageSquareHeart,
+  UserPlus,
+  ClipboardPen,
+  Sparkles,
+  ShieldAlert,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -317,6 +321,14 @@ const menuGroups = [
         rol: "Recruiter",
         icon: UsersIcon,
       },
+      // (27/12/2026) Inducción digital: tablero de quienes están por entrar y su checklist del primer día.
+      {
+        title: "Nuevos ingresos",
+        url: "/panel/nuevos-ingresos",
+        matchPrefix: true,
+        rol: "Recruiter",
+        icon: UserPlus,
+      },
       // {
       //   title: "Reclutamiento",
       //   url: "/panel/reclutamiento",
@@ -549,6 +561,16 @@ const menuGroups = [
     })),
   },
   {
+    // (27/11/2026) Centro de comunicados: muro de la empresa y avisos con confirmación de leído (src/components/comunicados).
+    group: "COMUNICADOS",
+    groupIcon: Megaphone,
+    items: [
+      { title: "Comunicados", url: "/panel/comunicados", matchPrefix: true, rol: "Recruiter", icon: Megaphone },
+      { title: "Automáticos", url: "/panel/comunicados/automaticos", rol: "Recruiter", icon: Sparkles },
+      { title: "Moderar el muro", url: "/panel/comunicados/moderacion", rol: "Recruiter", icon: ShieldAlert },
+    ],
+  },
+  {
     // Clima organizacional y NOM-035 (src/components/clima/ModuloClima.jsx): una dirección por vista.
     group: "CLIMA Y NOM-035",
     groupIcon: HeartHandshake,
@@ -596,6 +618,14 @@ const menuGroups = [
         url: "/panel/plantillas-felicitacion",
         rol: "Recruiter",
         icon: PartyPopper,
+      },
+      // (27/12/2026) Inducción digital: qué pide, qué se firma, la ruta de bienvenida y las tareas (por empresa).
+      {
+        title: "Plantillas de inducción",
+        url: "/panel/plantillas-induccion",
+        matchPrefix: true,
+        rol: "Recruiter",
+        icon: ClipboardPen,
       },
       {
         title: "Campos personalizados",

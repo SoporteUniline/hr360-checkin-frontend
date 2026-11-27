@@ -1,5 +1,8 @@
 "use client";
-import { Package, ClipboardCheck, ClipboardList, LogOut, UsersRound, ReceiptText, HandCoins, KeyRound, ScanFace, Activity, ShieldCheck } from "lucide-react";
+import { Package, ClipboardCheck, ClipboardList, LogOut, UsersRound, ReceiptText, HandCoins, KeyRound, ScanFace, Activity, ShieldCheck, Route } from "lucide-react";
+import useSWR from "swr";
+import axios from "@/lib/axios";
+import { API as API_INDUCCION, RUTA_BIENVENIDA } from "@/lib/induccion/induccion.mjs";
 import { useAuth } from "@/context/AuthContext";
 import { MenuLink, cardClass } from "@/components/empleado/shared";
 import { useModulosActivos } from "@/components/modulos/useModulos";
@@ -14,8 +17,12 @@ export default function EmployeeSpace() {
   const ver = (href) => rutaPermitida(href, activos, opciones);
   const { esJefe } = useMonitorEquipo();
   const { pendientes } = useMisEncuestas();
+  // (27/12/2026) Inducción digital: su ruta de bienvenida, solo si tiene una (la de su ingreso).
+  const conRuta = ver(RUTA_BIENVENIDA);
+  const { data: bienvenida } = useSWR(conRuta ? `${API_INDUCCION}/mi-ruta` : null, (u) => axios.get(u).then((r) => r.data), { revalidateOnFocus: false, shouldRetryOnError: false });
+  const ruta = bienvenida?.ruta;
   return <div className="space-y-5"><h1 className="text-3xl font-bold tracking-tight">Mi espacio</h1><section className={cardClass}><p className="font-semibold">{dataUser?.nombre}</p><p className="mt-1 break-words text-sm text-slate-500">{dataUser?.correo || dataUser?.email}</p></section>
-    <div className="space-y-3"><MenuLink href="/empleado/panel/mi-firma" icon={KeyRound} title="Mi firma y PIN" description="Guarda tu firma y tu PIN para firmar documentos" />
+    <div className="space-y-3">{ruta ? <MenuLink href={RUTA_BIENVENIDA} icon={Route} title="Mi ruta de bienvenida" description={`${ruta.listos} de ${ruta.total} listos`} /> : null}<MenuLink href="/empleado/panel/mi-firma" icon={KeyRound} title="Mi firma y PIN" description="Guarda tu firma y tu PIN para firmar documentos" />
       <MenuLink href="/empleado/panel/mi-rostro" icon={ScanFace} title="Mi rostro" description="Regístralo o actualízalo para checar" />
       <MenuLink href="/empleado/panel/seguridad" icon={ShieldCheck} title="Seguridad y Face ID" description="Entra sin contraseña y revisa tus dispositivos" />
       {ver("/empleado/panel/mis-recibos") ? <MenuLink href="/empleado/panel/mis-recibos" icon={ReceiptText} title="Mis recibos de pago" description="Consulta, descarga y firma tus recibos" /> : null}

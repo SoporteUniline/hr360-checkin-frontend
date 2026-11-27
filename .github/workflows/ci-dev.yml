@@ -139,6 +139,25 @@ jobs:
       - name: Integraciones — llaves de API por empresa (panel del dueño) y documentación /desarrolladores
         run: node --test scripts/test-integraciones.mjs
 
+      - name: Inducción digital — plantillas, tablero, liga del celular y ruta de bienvenida (reglas de presentación)
+        run: node --test scripts/test-induccion.mjs
+
+      - name: Centro de comunicados — reglas de presentación, liga del correo y service worker de push
+        run: node --test scripts/test-comunicados.mjs
+
+      # Verificación en navegador con el backend simulado (1440 y 390): panel, aviso emergente (no se cierra con clic al
+      # fondo) y muro de Mi espacio. Compila con un backend inexistente para que nada salga a la red.
+      - name: Centro de comunicados — verificación en navegador (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          npm install --no-save --no-package-lock playwright@1.63.0
+          npx playwright install --with-deps chromium
+          npx next build
+          mkdir -p capturas-comunicados
+          CAPTURAS=capturas-comunicados node scripts/verify-comunicados.mjs
+
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación
   # ─────────────────────────────────────────────

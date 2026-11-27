@@ -20,6 +20,7 @@ const MODULOS_NUEVOS = [
   "src/components/nomina", "src/components/tareas", "src/components/whatsapp", "src/lib/asistencia",
   "src/lib/diagnostico-reloj", "src/lib/firma", "src/lib/legal", "src/lib/modulos", "src/lib/reloj", "src/lib/rostro",
   "src/lib/sitio", "src/lib/tareas", "src/lib/whatsapp", "src/lib/passkeys", "src/components/seguridad",
+  "src/components/comunicados", "src/lib/comunicados",
 ].map((d) => `${d}/**/*.{js,jsx,mjs}`);
 
 const eslintConfig = [
