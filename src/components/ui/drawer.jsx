@@ -31,12 +31,17 @@ const DrawerOverlay = React.forwardRef(({ className, ...props }, ref) => (
 ));
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 
+// (27/11/2026, regla del dueño, docs/vistas-de-detalle.md) Una hoja con contenido (filtros, detalle) NO se cierra con
+// un toque afuera: solo con su botón de cerrar o la X, con Esc o deslizándola hacia abajo. Las que son un MENÚ (menú del
+// Navbar en celular) pasan `menu` y sí se cierran al tocar afuera, como cualquier menú.
 const DrawerContent = React.forwardRef(
-  ({ className, children, pull = true, ...props }, ref) => (
+  ({ className, children, pull = true, menu = false, onPointerDownOutside, onInteractOutside, ...props }, ref) => (
     <DrawerPortal>
       <DrawerOverlay />
       <DrawerPrimitive.Content
         ref={ref}
+        onPointerDownOutside={(e) => { onPointerDownOutside?.(e); if (!menu) e.preventDefault(); }}
+        onInteractOutside={(e) => { onInteractOutside?.(e); if (!menu) e.preventDefault(); }}
         className={cn(
           "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
           className,

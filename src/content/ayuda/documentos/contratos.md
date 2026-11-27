@@ -4,10 +4,10 @@ resumen: Registra el contrato de cada persona, revisa su sueldo y su texto, fír
 modulo: documentos
 audiencia: [rh, dueno]
 pantallas: [/panel/contratos, /panel/contratos/[id], /panel/contratos/[id]/editar, /panel/contratos/nuevo, /panel/contratos/revisar-sueldos]
-palabras: [contratos, contrato laboral, editar contrato, duplicar contrato, nuevo contrato, vigencia, por vencer, vencido, renovar, convenio, cambiar sueldo, firmar contrato, mandar a firmar, revisar sueldos, sueldo del contrato, contrato vigente, indefinido, temporal, periodo de prueba, terminar contrato]
+palabras: [contratos, contrato laboral, periodicidad por confirmar, quincenal, editar contrato, duplicar contrato, nuevo contrato, vigencia, por vencer, vencido, renovar, convenio, cambiar sueldo, firmar contrato, mandar a firmar, revisar sueldos, sueldo del contrato, contrato vigente, indefinido, temporal, periodo de prueba, terminar contrato]
 orden: 60
 actualizado: 2026-11-27
-fuentes: [src/app/panel/contratos/page.jsx, src/app/panel/contratos/ContratosTable.jsx, src/app/panel/contratos/formulario/FormularioContrato.jsx, src/lib/contratos/formularioContrato.mjs, src/app/panel/contratos/CambiarEstatusContrato.jsx, src/app/panel/contratos/[id]/DetalleContrato.jsx, src/app/panel/contratos/[id]/DialogosContrato.jsx, src/app/panel/contratos/revisar-sueldos/page.jsx, src/lib/contratos/detalleContrato.mjs, src/components/avisos/CampanaAvisos.jsx]
+fuentes: [src/app/panel/contratos/page.jsx, src/app/panel/contratos/ContratosTable.jsx, src/app/panel/contratos/formulario/FormularioContrato.jsx, src/lib/contratos/formularioContrato.mjs, src/lib/contratos/periodicidadPorConfirmar.mjs, src/app/panel/contratos/CambiarEstatusContrato.jsx, src/app/panel/contratos/[id]/DetalleContrato.jsx, src/app/panel/contratos/[id]/DialogosContrato.jsx, src/app/panel/contratos/revisar-sueldos/page.jsx, src/lib/contratos/detalleContrato.mjs, src/components/avisos/CampanaAvisos.jsx]
 ---
 
 ## Para qué sirve
@@ -101,6 +101,16 @@ Si el sueldo de la ficha de alguien no coincide con el de su contrato vigente, *
 
 ![Revisar sueldos: la ficha y el contrato con sueldos distintos](/ayuda/capturas/documentos/revisar-sueldos.webp "Elige cuál sueldo es el correcto")
 
+### Periodicidad por confirmar
+
+Algunos contratos de antes guardaron cada cuándo se paga de una forma que los cálculos no entienden (por ejemplo «quincenal» en minúsculas). Esos contratos **se estaban pagando como mensuales**: un contrato de $5,000 «quincenal» se pagaba como $5,000 al mes, es decir $2,500 a la quincena. Aparecen arriba, en **Periodicidad por confirmar**, y mientras no los confirmes **la nómina de esas personas no se puede crear ni autorizar**.
+
+1. En cada contrato ves lo **Guardado** (el monto y cómo dice que se paga), cómo se paga **Hoy** y cómo quedaría **Como dice**.
+2. Elige `Es por quincena (como dice)` (o por semana, por catorcena…) si el monto es de cada periodo, o `Era mensual` si el monto es del mes.
+3. Toca `Confirmar`. **El monto no cambia**, solo cómo se lee. Queda en el historial del contrato con tu nombre y la fecha.
+
+Si eliges «como dice», la persona cobra distinto a partir de la siguiente nómina que calcules; si su ficha no coincide, aparece después en **Sueldo distinto en la ficha** para que decidas cuál es el correcto.
+
 En la misma pantalla aparecen las personas con **más de un contrato vigente** (de antes): elige cuál se queda y toca `Conservar este y terminar los demás`. No se borra ninguno.
 
 ## Cómo renovar o terminar un contrato
@@ -130,6 +140,7 @@ Solo si nadie lo ha firmado ni se mandó a firmar. Si ya existió, termínalo o 
 
 - **…faltan datos para firmar:** verás «Faltan datos para el contrato: CURP, RFC…». Complétalos en la ficha.
 - **…edito un contrato ya enviado a firmar:** verás que su texto ya no cambia; usa un convenio o una renovación.
+- **…un contrato está en «Periodicidad por confirmar»:** se está pagando como mensual; confírmalo en **Revisar sueldos** para poder crear o autorizar su nómina.
 - **…toco afuera de una ventana:** no se cierra (así no pierdes lo que escribiste). Ciérrala con `Esc`, `Cancelar`, `Guardar` o la **X**.
 - **…un dato guardado no está en la lista:** aparece con «(guardado)» para que veas lo que tiene el contrato; solo cambia si eliges otro.
 - **…la fecha del convenio es futura:** verás «La fecha efectiva no puede ser futura». Regístralo el día que aplique.

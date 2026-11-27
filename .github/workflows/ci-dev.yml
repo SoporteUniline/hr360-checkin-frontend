@@ -245,6 +245,14 @@ jobs:
           mkdir -p capturas-contratos
           CAPTURAS=capturas-contratos node scripts/verify-contratos.mjs
 
+      - name: Hojas de celular — no se cierran al tocar afuera; sí con la X, Esc o deslizando (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-hojas
+          CAPTURAS=capturas-hojas node scripts/verify-hojas.mjs
+
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación
   # ─────────────────────────────────────────────
