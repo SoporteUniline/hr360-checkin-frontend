@@ -137,6 +137,8 @@ try {
   await page.locator('[data-sidebar="trigger"]').first().click();
   await menu.getByRole("button", { name: "Nóminas", exact: true }).waitFor();
   assert.equal(await menu.getByRole("button", { name: "Módulos", exact: true }).count(), 1, "Ajustes → Módulos en el menú");
+  // (27/11/2026) «Muro» (Centro de comunicados) es la primera entrada del menú, arriba de «Resumen».
+  assert.deepEqual((await menu.locator('[data-sidebar="menu-button"]').allInnerTexts()).slice(0, 2).map((t) => t.trim()), ["Muro", "Resumen"]);
   assert.match(await page.locator('li[data-modulo="asistencias"]').innerText(), /Incluido siempre/);
   assert.equal(await page.locator('li[data-modulo="asistencias"] [role="switch"]').count(), 0, "lo base no se apaga");
   await nomina.getByRole("switch").click();
@@ -156,6 +158,18 @@ try {
   await menu.getByRole("button", { name: "Empleados", exact: true }).waitFor({ timeout: 30000 });
   await dormir(800);
   assert.deepEqual(await page.evaluate(() => window.__vistos), [], "sin parpadeo de Nómina al cargar");
+
+  // Sin Centro de comunicados: no hay «Muro» en el menú y la primera pantalla vuelve a ser el Monitor.
+  S.uso.comunicados = false;
+  await page.goto(base + "/panel", { waitUntil: "domcontentloaded" });
+  await page.waitForURL("**/panel/monitor", { timeout: 30000 });
+  await menu.getByRole("button", { name: "Resumen", exact: true }).waitFor({ timeout: 30000 });
+  assert.equal(await menu.getByRole("button", { name: "Muro", exact: true }).count(), 0, "sin el módulo, sin «Muro»");
+  S.uso.comunicados = true;
+  await page.goto(base + "/panel", { waitUntil: "domcontentloaded" });
+  await page.waitForURL("**/panel/muro", { timeout: 30000 });
+  await page.goto(base + "/panel/modulos", { waitUntil: "domcontentloaded" });
+  await page.locator('li[data-modulo="documentos"]').waitFor({ timeout: 30000 });
 
   // ——— 3. Candado y Contratar ———
   const docs = page.locator('li[data-modulo="documentos"]');

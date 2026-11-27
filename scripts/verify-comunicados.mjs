@@ -2,6 +2,9 @@
 // /api/checador/comunicados): panel de RH (lista, redactar, seguimiento, automáticos, moderación y portada), aviso
 // emergente (no se cierra con clic al fondo) y Mi espacio (muro con portada, fijadas, fotos, video, PDF, me gusta,
 // comentarios, confirmar de leído, publicar y preferencias).
+// (27/11/2026) Muro del panel: /panel lleva al muro tipo Facebook (portada, «¿Qué quieres comunicar?», fijadas, «Me
+// gusta» y comentarios como RH, seguimiento, menú ⋯), «Muro» es la primera entrada del menú y la tabla quedó en la
+// pestaña «Administrar». En los dos muros, los últimos comentarios y «Escribe un comentario…» debajo de cada publicación.
 // Escritorio (1440) y teléfono (390): sin scroll horizontal, objetivos táctiles ≥ 44 px (teléfono) y texto ≥ 13 px en lo
 // nuevo; lo que se manda al servidor; el texto de las personas se muestra como texto (sin HTML).
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build
@@ -83,7 +86,11 @@ function estadoInicial() {
     },
     muro: [
       { ...AUDITORIA },
-      { id: 2, tipo: "evento", nivel: "normal", titulo: "", cuerpo: "¡Así vivimos el torneo de fútbol de Sucursal Norte! Gracias a todos los que fueron. <img src=x onerror=alert(1)>", autor: RH, publicado_en: hace(60 * 20), adjuntos: fotos(7, "torneo"), youtube_id: null, reacciones: 53, me_gusta: false, comentarios: 2, permite_reacciones: true, permite_comentarios: true, fijado: false, requiere_confirmar: false, audiencia_texto: "Toda la empresa" },
+      { id: 2, tipo: "evento", nivel: "normal", titulo: "", cuerpo: "¡Así vivimos el torneo de fútbol de Sucursal Norte! Gracias a todos los que fueron. <img src=x onerror=alert(1)>", autor: RH, publicado_en: hace(60 * 20), adjuntos: fotos(7, "torneo"), youtube_id: null, reacciones: 53, me_gusta: false, comentarios: 3, permite_reacciones: true, permite_comentarios: true, fijado: false, requiere_confirmar: false, audiencia_texto: "Toda la empresa",
+        comentarios_recientes: [
+          { id: 501, padre_id: null, texto: "¡Qué buen partido! La revancha en enero.", autor: { id_empleado: 10, nombre: "Jorge Ramírez" }, creado_en: hace(120), reacciones: 6, me_gusta: false, propio: false, estado: "visible" },
+          { id: 503, padre_id: null, texto: "¿Habrá fotos del equipo completo?", autor: { id_empleado: 44, nombre: "Ana Torres" }, creado_en: hace(40), reacciones: 2, me_gusta: false, propio: false, estado: "visible" },
+        ] },
       { id: 3, tipo: "evento", nivel: "normal", titulo: "Posada 2026: viernes 18 de diciembre", cuerpo: "Cena, rifa y música. ¡Te esperamos!", autor: RH, publicado_en: hace(60 * 24 * 3), adjuntos: fotos(1, "posada"), youtube_id: null, reacciones: 54, me_gusta: true, comentarios: 12, permite_reacciones: true, permite_comentarios: true, fijado: true, requiere_confirmar: false, audiencia_texto: "Toda la empresa" },
       { id: 4, tipo: "aviso", nivel: "normal", titulo: "Mensaje de fin de año", cuerpo: "Mensaje de fin de año para todo el equipo.", autor: { nombre: "Diego León", iniciales: "DL", rol: "Dirección" }, publicado_en: hace(60 * 24 * 4), adjuntos: [], youtube_id: "dQw4w9WgXcQ", reacciones: 98, me_gusta: false, comentarios: 21, permite_reacciones: true, permite_comentarios: true, fijado: false, requiere_confirmar: false, audiencia_texto: "Toda la empresa" },
       { id: 6, tipo: "politica", nivel: "normal", titulo: "Nuevo reglamento de uso de uniforme", cuerpo: "Consulta el reglamento.", autor: RH, publicado_en: hace(60 * 24 * 9), adjuntos: [{ id: 30, tipo: "pdf", url: `${ARCHIVOS}/reglamento.pdf`, nombre: "reglamento-uniforme.pdf" }], youtube_id: null, reacciones: 3, me_gusta: false, comentarios: 0, permite_reacciones: true, permite_comentarios: false, fijado: false, requiere_confirmar: false, audiencia_texto: "Cajeras" },
@@ -161,6 +168,24 @@ async function instalarMocks(ctx) {
     if ((m = ruta.match(/^\/mi\/comentarios\/(\d+)\/reportar$/))) return json({ ok: true, reportado: true, ya_reportado: false, oculto: false });
     if ((m = ruta.match(/^\/mi\/comentarios\/(\d+)$/)) && metodo === "DELETE") { const c = S.comentarios.find((x) => x.id === Number(m[1])); if (c) Object.assign(c, { borrado: true, texto: null, estado: "borrado" }); return json({ ok: true, borrado: true }); }
     if ((m = ruta.match(/^\/mi\/(\d+)$/))) { const x = S.muro.find((y) => y.id === Number(m[1])); return x ? json({ ok: true, comunicado: { ...x, visto_en: x.visto_en ?? new Date().toISOString() } }) : json({ ok: false, codigo: "NO_ENCONTRADO", mensaje: "Ese comunicado no existe o no lo puedes ver." }, 404); }
+    // ——— Panel: muro ———
+    if (ruta === "/muro") {
+      const seg = (x) => (x.nivel === "confirmacion" ? { total: 42, confirmados: 30, vistos: 35, faltan: 12, texto: "30 de 42 confirmaron" } : { total: 186, vistos: 164, confirmados: 0, faltan: 22, texto: "164 de 186 lo vieron" });
+      return json({ ok: true, portada: S.portada, pendientes_confirmar: 0, puede_participar: true, siguiente: null,
+        items: S.muro.slice(0, 4).map((x) => ({ ...x, requiere_confirmar: false, confirmado_en: null, seguimiento: seg(x) })) });
+    }
+    if ((m = ruta.match(/^\/muro\/(\d+)\/me-gusta$/))) { const x = S.muro.find((y) => y.id === Number(m[1])); x.me_gusta = !x.me_gusta; x.reacciones += x.me_gusta ? 1 : -1; await dormir(250); return json({ ok: true, me_gusta: x.me_gusta, reacciones: x.reacciones }); }
+    if ((m = ruta.match(/^\/muro\/(\d+)\/comentarios$/)) && metodo === "GET") return json({ ok: true, items: S.comentarios.map((c) => ({ ...c, propio: Boolean(c.autor?.panel), respuestas: c.respuestas.map((r) => ({ ...r, propio: Boolean(r.autor?.panel) })) })), siguiente: null, puede_comentar: true, suspendido_hasta: null });
+    if ((m = ruta.match(/^\/muro\/(\d+)\/comentarios$/)) && metodo === "POST") {
+      const c = { id: S.siguienteId++, padre_id: cuerpo.padre_id ?? null, texto: cuerpo.texto, autor: { id_empleado: null, nombre: "Laura Ríos", iniciales: "LR", panel: true, rol: "Recursos Humanos" }, creado_en: new Date().toISOString(), reacciones: 0, me_gusta: false, propio: true, estado: "visible", respuestas: [] };
+      if (c.padre_id) S.comentarios.find((x) => x.id === c.padre_id).respuestas.push(c); else S.comentarios.push(c);
+      return json({ ok: true, comentario: c, estado: "visible" }, 201);
+    }
+    if ((m = ruta.match(/^\/muro\/comentarios\/(\d+)\/me-gusta$/))) {
+      const c = S.comentarios.flatMap((x) => [x, ...x.respuestas]).find((x) => x.id === Number(m[1]));
+      c.me_gusta = !c.me_gusta; c.reacciones += c.me_gusta ? 1 : -1;
+      return json({ ok: true, me_gusta: c.me_gusta, reacciones: c.reacciones });
+    }
     // ——— Panel ———
     if (ruta === "/" && metodo === "GET") {
       const nivel = url.searchParams.get("nivel"); const estado = url.searchParams.get("estado");
@@ -209,7 +234,10 @@ async function instalarMocks(ctx) {
       return json({ ok: true, items, conteos: conteos(), filtro, pagina: 1, por_pagina: 50, total: filtro === "faltan" ? 12 : filtro === "confirmaron" ? 30 : 42 });
     }
     if ((m = ruta.match(/^\/(\d+)\/recordar$/))) return json({ ok: true, enviados: 12 });
-    if ((m = ruta.match(/^\/(\d+)\/fijar$/))) { S.lista.find((x) => x.id === Number(m[1])).fijado = cuerpo.fijado; return json({ ok: true, fijado: cuerpo.fijado }); }
+    if ((m = ruta.match(/^\/(\d+)\/fijar$/))) {
+      for (const x of [S.lista.find((y) => y.id === Number(m[1])), S.muro.find((y) => y.id === Number(m[1]))]) if (x) x.fijado = cuerpo.fijado;
+      return json({ ok: true, fijado: cuerpo.fijado });
+    }
     if ((m = ruta.match(/^\/(\d+)\/(aprobar|rechazar|archivar)$/))) { const x = S.lista.find((y) => y.id === Number(m[1])); if (x) x.estado = { aprobar: "publicado", rechazar: "rechazado", archivar: "archivado" }[m[2]]; return json({ ok: true }); }
     if ((m = ruta.match(/^\/(\d+)\/constancia\.pdf$/))) return route.fulfill({ status: 200, contentType: "application/pdf", headers: cors, body: "%PDF-1.4\n1 0 obj<<>>endobj\n%%EOF" });
     if ((m = ruta.match(/^\/(\d+)$/)) && metodo === "GET") {
@@ -284,9 +312,104 @@ async function recorridoPanel(browser, { ancho, alto, sufijo }) {
   const errores = [];
   page.on("pageerror", (e) => errores.push(e.message));
 
-  // ——— 1. Lista con resumen y filtros ———
+  // ——— 0. Primera pantalla después de entrar: el muro tipo Facebook ———
+  await page.goto(base + "/panel", { waitUntil: "domcontentloaded" });
+  await page.waitForURL("**/panel/muro", { timeout: 40000 });
+  const muroP = page.locator("[data-pantalla='muro-panel']");
+  await muroP.locator("[data-post='1']").waitFor({ timeout: 40000 });
+  if (!movil) {
+    const menuLateral = page.locator('[data-sidebar="content"]').first();
+    const entradas = (await menuLateral.locator('[data-sidebar="menu-button"]').allInnerTexts()).map((t) => t.trim());
+    assert.deepEqual(entradas.slice(0, 2), ["Muro", "Resumen"], "«Muro» es la primera entrada del menú, arriba de «Resumen»");
+    assert.ok(entradas.includes("Administrar") && !entradas.includes("Comunicados"), `grupo Comunicados: ${entradas.join(", ")}`);
+  }
+  assert.equal(await muroP.locator("[data-pestana='muro']").getAttribute("aria-current"), "page");
+  assert.deepEqual(await muroP.locator("[data-pestana]").allInnerTexts(), ["Muro", "Administrar", "Automáticos", "Moderar el muro"]);
+  assert.equal(ultimo("GET", "/muro").params.get("empresa"), "7", "con la empresa elegida");
+  // Columna centrada (~680 px) con la portada a todo lo ancho arriba y la caja «¿Qué quieres comunicar?» debajo.
+  const columna = await muroP.locator("[data-columna-muro]").boundingBox();
+  const banner = await muroP.locator("[data-portada]").boundingBox();
+  const caja = await muroP.locator("[data-caja-comunicar]").boundingBox();
+  if (!movil) {
+    assert.ok(columna.width <= 681 && columna.width >= 600, `columna de ${columna.width} px`);
+    const pantalla = await muroP.boundingBox();
+    assert.ok(Math.abs(columna.x + columna.width / 2 - (pantalla.x + pantalla.width / 2)) < 2, "columna centrada");
+  } else assert.ok(columna.width >= ancho - 48, `en teléfono a todo lo ancho (${columna.width})`);
+  assert.ok(banner.height > 100 && Math.abs(banner.width - columna.width) < 2, "portada a todo lo ancho de la columna");
+  assert.ok(banner.y < caja.y, "la portada va arriba");
+  assert.match(await muroP.locator("[data-portada]").innerText(), /Posada 2026 · ¡ya casi!/);
+  assert.match(await muroP.locator("[data-caja-comunicar]").innerText(), /¿Qué quieres comunicar, Laura\?/);
+  assert.equal(await muroP.locator("[data-accion='comunicar']").getAttribute("href"), "/panel/comunicados/nuevo");
+  assert.equal(await muroP.locator("[data-fijadas] [data-post='3']").count(), 1, "fijada arriba");
+  // Seguimiento de RH en cada publicación
+  assert.match(await muroP.locator("[data-seguimiento='1']").innerText(), /30 de 42 confirmaron[\s\S]*Ver seguimiento/);
+  assert.equal(await muroP.locator("[data-seguimiento='1'] [role='progressbar']").getAttribute("aria-valuenow"), "71");
+  assert.equal(await muroP.locator("[data-seguimiento='1'] [data-ver-seguimiento]").getAttribute("href"), "/panel/comunicados/1");
+  assert.equal(await muroP.locator("[data-seguimiento='2'] [role='progressbar']").count(), 0, "la barra solo en los de confirmación");
+  // Misma tarjeta que Mi espacio: mosaico, video, PDF; últimos comentarios y «Escribe un comentario…»
+  const torneoP = muroP.locator("[data-post='2']");
+  assert.match(await torneoP.locator("[data-mosaico='7']").innerText(), /\+4/);
+  assert.match(await torneoP.locator("[data-comentarios-recientes='2']").innerText(), /Ver 1 comentario más[\s\S]*Jorge Ramírez[\s\S]*¡Qué buen partido![\s\S]*Ana Torres[\s\S]*¿Habrá fotos/);
+  assert.equal(await torneoP.getByRole("link", { name: /Ver más|Comentar/ }).count(), 0, "en el panel no se sale al detalle de Mi espacio");
+  await revisar(page, "[data-pantalla='muro-panel']", { movil });
+  await captura(page, `0-panel-muro-${sufijo}`);
+  // «Me gusta» como el usuario del panel
+  await torneoP.getByRole("button", { name: "Me gusta" }).click();
+  await torneoP.locator("[data-reacciones]").getByText("Tú y 53 más").waitFor({ timeout: 1000 });
+  await dormir(400);
+  assert.equal(ultimo("POST", "/muro/2/me-gusta").params.get("empresa"), "7");
+  // Comentar y responder aquí mismo, con su avatar
+  await torneoP.locator("[data-escribe-comentario='2']").click();
+  const hiloP = torneoP.locator("[data-comentarios='2']");
+  await hiloP.locator("[data-comentario='501']").waitFor({ timeout: 15000 });
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "nuevo-comentario-2", "el cursor queda en la caja");
+  await page.locator("#nuevo-comentario-2").fill("¡Felicidades a todos los que jugaron!");
+  await hiloP.locator("[data-escribir='comentario']").getByRole("button", { name: "Comentar" }).click();
+  const deRh = hiloP.locator("[data-comentario]").filter({ hasText: "¡Felicidades a todos los que jugaron!" });
+  await deRh.waitFor();
+  assert.deepEqual(ultimo("POST", "/muro/2/comentarios").cuerpo, { texto: "¡Felicidades a todos los que jugaron!", padre_id: null });
+  assert.equal(ultimo("POST", "/muro/2/comentarios").params.get("empresa"), "7");
+  assert.match(await deRh.innerText(), /Laura Ríos · Recursos Humanos/);
+  await hiloP.locator("[data-comentario='501']").getByRole("button", { name: "Responder" }).click();
+  await page.locator("#respuesta-501").fill("¡Gracias, Jorge!");
+  await hiloP.locator("[data-escribir='respuesta-501']").getByRole("button", { name: "Responder" }).click();
+  await hiloP.locator("[data-comentario]").filter({ hasText: "¡Gracias, Jorge!" }).waitFor();
+  assert.equal(ultimo("POST", "/muro/2/comentarios").cuerpo.padre_id, 501);
+  await hiloP.locator("[data-me-gusta-comentario='502']").click();
+  await hiloP.locator("[data-me-gusta-comentario='502']").getByText("Me gusta (1)").waitFor();
+  assert.ok(ultimo("POST", "/muro/comentarios/502/me-gusta"));
+  assert.equal(await hiloP.getByRole("button", { name: "Reportar" }).count(), 0, "RH no reporta: modera");
+  await revisar(page, "[data-pantalla='muro-panel']", { movil });
+  await captura(page, `0b-panel-muro-comentarios-${sufijo}`);
+  // Menú ⋯: Fijar / Desfijar y Archivar
+  await torneoP.locator("[data-menu-post='2']").click();
+  await page.getByRole("menuitem", { name: "Fijar arriba del muro" }).click();
+  await page.getByText("Publicación fijada arriba del muro.").waitFor();
+  assert.equal(ultimo("POST", "/2/fijar").cuerpo.fijado, true);
+  await muroP.locator("[data-fijadas] [data-post='2']").waitFor({ timeout: 15000 });
+  await muroP.locator("[data-menu-post='4']").click();
+  await page.getByRole("menuitem", { name: "Archivar" }).click();
+  const dlgArchivar = page.getByRole("dialog", { name: "Archivar publicación" });
+  await dlgArchivar.getByRole("button", { name: "Cancelar" }).click();
+  await dlgArchivar.waitFor({ state: "detached" });
+  assert.equal(ultimo("POST", "/4/archivar"), undefined, "cancelar no archiva");
+  // «Cambiar portada» encima de la portada: el mismo editor de la portada
+  await muroP.locator("[data-cambiar-portada]").click();
+  const dlgPortada = page.getByRole("dialog", { name: "Portada del muro" });
+  await dlgPortada.locator("[data-portada-editor] img").waitFor();
+  await captura(page, `0c-panel-cambiar-portada-${sufijo}`, false);
+  await page.keyboard.press("Escape");
+  await dlgPortada.waitFor({ state: "detached" });
+  // /panel/comunicados también abre en el muro
   await page.goto(base + "/panel/comunicados", { waitUntil: "domcontentloaded" });
+  await page.waitForURL("**/panel/muro", { timeout: 30000 });
+  await muroP.locator("[data-post='1']").waitFor({ timeout: 30000 });
+
+  // ——— 1. Pestaña «Administrar»: lista con resumen y filtros (lo de antes) ———
+  await muroP.locator("[data-pestana='administrar']").click();
+  await page.waitForURL("**/panel/comunicados/administrar", { timeout: 30000 });
   await page.locator("[data-comunicado='1']").waitFor({ timeout: 40000 });
+  assert.equal(await page.locator("[data-pestana='administrar']").getAttribute("aria-current"), "page");
   assert.deepEqual(await Promise.all(["publicados_mes", "lectura_promedio", "confirmaciones_pendientes", "programados"].map((k) => page.locator(`[data-kpi='${k}']`).innerText().then((t) => t.split("\n").at(-1).trim()))), ["12", "84 %", "18 personas", "1"]);
   assert.match(await page.locator("[data-comunicado='1']").innerText(), /Auditoría de Protección Civil el jueves 3[\s\S]*Requiere confirmación[\s\S]*Auditoría[\s\S]*Sucursal Centro · 42[\s\S]*App · Correo · Push · Aviso[\s\S]*30 de 42 confirmaron/);
   assert.match(await page.locator("[data-comunicado='2']").innerText(), /Automático[\s\S]*121 lo vieron · 38 felicitaciones/);
@@ -443,7 +566,15 @@ async function recorridoPanel(browser, { ancho, alto, sufijo }) {
   const lectura = await contexto(browser, { ancho, alto, cookie: firmar("Recruiter") });
   const pl = await lectura.ctx.newPage();
   pl.on("pageerror", (e) => errores.push(e.message));
-  await pl.goto(base + "/panel/comunicados", { waitUntil: "domcontentloaded" });
+  await pl.goto(base + "/panel", { waitUntil: "domcontentloaded" });
+  await pl.waitForURL("**/panel/muro", { timeout: 30000 });
+  await pl.locator("[data-post='2']").waitFor({ timeout: 30000 });
+  for (const sel of ["[data-caja-comunicar]", "[data-cambiar-portada]", "[data-menu-post]", "[data-me-gusta]", "[data-escribe-comentario]"]) assert.equal(await pl.locator(sel).count(), 0, `solo consulta: sin ${sel}`);
+  await pl.locator("[data-post='2']").getByRole("button", { name: "Ver comentarios" }).click();
+  await pl.locator("[data-comentarios='2'] [data-comentario='501']").waitFor({ timeout: 15000 });
+  assert.equal(await pl.locator("[data-comentarios='2'] textarea").count(), 0, "sin caja para comentar");
+  assert.equal(await pl.locator("[data-seguimiento='1']").count(), 1, "el seguimiento sí se ve");
+  await pl.goto(base + "/panel/comunicados/administrar", { waitUntil: "domcontentloaded" });
   await pl.locator("[data-comunicado='1']").waitFor({ timeout: 30000 });
   assert.equal(await pl.getByRole("link", { name: "Nuevo comunicado" }).count(), 0, "sin «Nuevo comunicado»");
   await pl.goto(base + "/panel/comunicados/1", { waitUntil: "domcontentloaded" });
@@ -480,7 +611,7 @@ async function recorridoEmpleado(browser, { ancho, alto, sufijo }) {
   assert.deepEqual(await ir("/mi-espacio/comunicados/1"), [307, "/login?next=%2Fmi-espacio%2Fcomunicados%2F1"], "sin sesión: al login recordando la liga");
   assert.deepEqual(await ir("/login?next=%2Fmi-espacio%2Fcomunicados%2F6", tokenAna), [307, "/mi-espacio/comunicados/6"], "el login respeta next");
   assert.deepEqual(await ir("/mi-espacio/comunicados/6", tokenAna), [307, "/empleado/panel/muro/6"], "empleado: al detalle");
-  assert.deepEqual(await ir("/mi-espacio/comunicados/6", firmar("Recruiter")), [307, "/panel/comunicados"], "usuario del panel: a Comunicados");
+  assert.deepEqual(await ir("/mi-espacio/comunicados/6", firmar("Recruiter")), [307, "/panel/muro"], "usuario del panel: al muro del panel");
 
   // ——— 7. Muro: aviso emergente normal (no cierra al fondo; Escape sí) ———
   await page.goto(base + "/empleado/panel/muro", { waitUntil: "domcontentloaded" });
@@ -505,12 +636,24 @@ async function recorridoEmpleado(browser, { ancho, alto, sufijo }) {
   assert.equal(await page.locator("img[src='x']").count(), 0, "sin HTML del usuario");
   assert.match(await torneo.locator("[data-mosaico='7']").innerText(), /\+4/);
   assert.match(await torneo.innerText(), /Tú y 53 más|53 me gusta/);
+  // Como Facebook: los últimos comentarios debajo de la publicación y «Escribe un comentario…» (abre el hilo ahí mismo)
+  assert.match(await torneo.locator("[data-comentarios-recientes='2']").innerText(), /Ver 1 comentario más[\s\S]*Jorge Ramírez[\s\S]*Ana Torres/);
+  assert.equal(await page.locator("[data-post='6'] [data-escribe-comentario]").count(), 0, "sin caja si no se permiten comentarios");
   await revisar(page, "[data-pantalla='muro']", { movil });
   await captura(page, `7b-empleado-muro-${sufijo}`);
+  await torneo.locator("[data-escribe-comentario='2']").click();
+  await torneo.locator("[data-comentarios='2'] [data-comentario='501']").waitFor({ timeout: 15000 });
+  assert.equal(await page.evaluate(() => document.activeElement?.id), "nuevo-comentario-2");
+  await page.locator("#nuevo-comentario-2").fill("¡Qué bonitas fotos!");
+  await torneo.locator("[data-comentarios='2'] [data-escribir='comentario']").getByRole("button", { name: "Comentar" }).click();
+  await torneo.locator("[data-comentarios='2'] [data-comentario]").filter({ hasText: "¡Qué bonitas fotos!" }).waitFor();
+  assert.deepEqual(ultimo("POST", "/mi/2/comentarios").cuerpo, { texto: "¡Qué bonitas fotos!", padre_id: null });
   // Me gusta optimista
-  await torneo.getByRole("button", { name: "Me gusta" }).click();
+  // (la captura va después: una captura de página completa justo antes retrasa el siguiente cuadro)
+  await torneo.locator("[data-me-gusta]").click();
   await torneo.locator("[data-reacciones]").getByText("Tú y 53 más").waitFor({ timeout: 200 });
-  assert.equal(await torneo.getByRole("button", { name: "Me gusta" }).getAttribute("aria-pressed"), "true");
+  await captura(page, `7b2-empleado-muro-comentarios-${sufijo}`);
+  assert.equal(await torneo.locator("[data-me-gusta]").getAttribute("aria-pressed"), "true");
   await dormir(400);
   assert.ok(ultimo("POST", "/mi/2/me-gusta"));
   // Visor de fotos

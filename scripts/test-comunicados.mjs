@@ -7,6 +7,7 @@ import vm from "node:vm";
 import * as C from "../src/lib/comunicados/comunicados.mjs";
 import { modulosDeRuta } from "../src/lib/modulos/catalogo.mjs";
 import { areaDeRuta, plantilla } from "../src/lib/permisos/permisos.mjs";
+import { RUTA_INICIO_MONITOR, RUTA_INICIO_MURO, rutaInicioPanel } from "../src/lib/inicioPanel.mjs";
 
 const TZ = { tz: "America/Mexico_City", ahora: new Date("2026-11-27T18:00:00Z") }; // 12:00 en CDMX, viernes
 
@@ -21,7 +22,7 @@ test("rutas del módulo (se apagan con «comunicados») y área de permisos; RH 
   // Liga de los correos y del push: /login?next=/mi-espacio/comunicados/<id>
   assert.equal(C.destinoLiga("/mi-espacio/comunicados/15", "Empleado"), "/empleado/panel/muro/15");
   assert.equal(C.destinoLiga("/mi-espacio/comunicados", "Empleado"), "/empleado/panel/muro");
-  assert.equal(C.destinoLiga("/mi-espacio/comunicados/15", "Recruiter"), "/panel/comunicados");
+  assert.equal(C.destinoLiga("/mi-espacio/comunicados/15", "Recruiter"), "/panel/muro", "usuario del panel: al muro del panel");
   assert.equal(C.destinoLiga("/mi-espacio/comunicados/15/../../x", "Empleado"), null);
   assert.equal(C.destinoLiga("/mi-espacio/comunicados/15", "Admin"), null);
   assert.deepEqual([C.rutasPopup("panel").popup, C.rutasPopup("panel").confirmar(3), C.rutasPopup("panel").posponer(3)], ["/checador/comunicados/popup", "/checador/comunicados/popup/3/confirmar", "/checador/comunicados/popup/3/posponer"]);
@@ -226,4 +227,43 @@ test("service worker de push: muestra texto plano y solo abre rutas de ADAMIA", 
   assert.equal(mostradas[2][0], "ADAMIA");
   await esperar("notificationclick", { notification: { close: () => {}, data: { url: "https://adamia.mx/empleado/panel/muro/5" } } });
   assert.deepEqual(abiertas, ["https://adamia.mx/empleado/panel/muro/5"]);
+});
+
+test("muro del panel: rutas, pestañas de Comunicados y primera pantalla del panel", () => {
+  for (const r of [C.RUTA_MURO_PANEL, C.RUTA_ADMINISTRAR]) {
+    assert.deepEqual(modulosDeRuta(r), ["comunicados"], r);
+    assert.deepEqual(areaDeRuta(r), ["comunicados"], r);
+  }
+  assert.deepEqual(C.PESTANAS_PANEL.map((p) => [p.texto, p.ruta]), [
+    ["Muro", "/panel/muro"], ["Administrar", "/panel/comunicados/administrar"], ["Automáticos", "/panel/comunicados/automaticos"], ["Moderar el muro", "/panel/comunicados/moderacion"],
+  ]);
+  assert.deepEqual(["/panel/muro", "/panel/comunicados", "/panel/comunicados/administrar", "/panel/comunicados/automaticos", "/panel/comunicados/moderacion/", "/panel/comunicados/12", "/panel/otra"].map(C.pestanaDe),
+    ["muro", "muro", "administrar", "automaticos", "moderacion", null, null]);
+  // Primera pantalla: el muro si la empresa tiene el módulo y el usuario lo puede ver; si no, el Monitor (como antes).
+  assert.equal(RUTA_INICIO_MURO, C.RUTA_MURO_PANEL);
+  assert.equal(rutaInicioPanel({ activos: null, permisos: null }), "/panel/muro", "dueño sin filtro de módulos");
+  assert.equal(rutaInicioPanel({ activos: new Set(["asistencias", "comunicados"]) }), "/panel/muro");
+  assert.equal(rutaInicioPanel({ activos: new Set(["asistencias"]) }), RUTA_INICIO_MONITOR, "módulo apagado: el Monitor");
+  assert.equal(rutaInicioPanel({ activos: null, permisos: { modulos: { comunicados: "ver" } } }), "/panel/muro", "con «ver» también");
+  assert.equal(rutaInicioPanel({ activos: null, permisos: { modulos: { comunicados: "sin_acceso", asistencias: "editar" } } }), RUTA_INICIO_MONITOR, "sin permiso: el Monitor");
+});
+
+test("muro del panel: la misma fuente de datos para Mi espacio (/mi) y el panel (/muro con la empresa)", () => {
+  const mi = C.fuenteMuro("empleado");
+  assert.deepEqual([mi.muro(), mi.muro("c 2"), mi.meGusta(3), mi.comentarios(3), mi.comentarios(3, "9"), mi.comentario(5), mi.meGustaComentario(5), mi.reportar(5)], [
+    "/checador/comunicados/mi/muro", "/checador/comunicados/mi/muro?cursor=c%202", "/checador/comunicados/mi/3/me-gusta", "/checador/comunicados/mi/3/comentarios",
+    "/checador/comunicados/mi/3/comentarios?cursor=9", "/checador/comunicados/mi/comentarios/5", "/checador/comunicados/mi/comentarios/5/me-gusta", "/checador/comunicados/mi/comentarios/5/reportar",
+  ]);
+  assert.equal(mi.rutaDetalle(3), "/empleado/panel/muro/3");
+  const panel = C.fuenteMuro("panel", 7);
+  assert.deepEqual([panel.muro(), panel.muro("c2"), panel.meGusta(3), panel.comentarios(3, "9"), panel.comentario(5), panel.meGustaComentario("a/b")], [
+    "/checador/comunicados/muro?empresa=7", "/checador/comunicados/muro?cursor=c2&empresa=7", "/checador/comunicados/muro/3/me-gusta?empresa=7",
+    "/checador/comunicados/muro/3/comentarios?cursor=9&empresa=7", "/checador/comunicados/muro/comentarios/5?empresa=7", "/checador/comunicados/muro/comentarios/a%2Fb/me-gusta?empresa=7",
+  ]);
+  assert.equal(panel.reportar, null, "RH no reporta: modera");
+  assert.equal(panel.rutaDetalle, null, "en el panel se comenta en la tarjeta");
+  assert.equal(C.fuenteMuro("panel").muro(), "/checador/comunicados/muro", "sin empresa elegida: la de la sesión");
+  assert.deepEqual(C.avanceSeguimiento({ nivel: "confirmacion", seguimiento: { total: 42, confirmados: 30, vistos: 35, texto: "30 de 42 confirmaron" } }), { texto: "30 de 42 confirmaron", porcentaje: 71, confirmacion: true });
+  assert.deepEqual(C.avanceSeguimiento({ nivel: "normal", seguimiento: { total: 0, vistos: 0 } }), { texto: "0 de 0 lo vieron", porcentaje: 0, confirmacion: false });
+  assert.equal(C.avanceSeguimiento({ nivel: "normal" }), null, "sin seguimiento (jefe en lo de RH)");
 });

@@ -7,7 +7,7 @@ import Link from "next/link";
 import * as D from "@radix-ui/react-dialog";
 import { CalendarDays, ChevronLeft, ChevronRight, FileText, MessageCircle, Pin, Play, ThumbsUp, X } from "lucide-react";
 import {
-  fechaEvento, fotosDe, lineaAutor, mosaico, pdfDe, porConfirmar, rutaPost, textoComentarios, textoReacciones, urlEmbed, urlMiniatura,
+  fechaEvento, fotosDe, haceCuanto, lineaAutor, mosaico, pdfDe, porConfirmar, rutaPost, textoComentarios, textoReacciones, urlEmbed, urlMiniatura,
 } from "@/lib/comunicados/comunicados.mjs";
 import { Avatar, TextoPlano } from "./comun";
 
@@ -104,20 +104,59 @@ export function TarjetaPdf({ pdf }) {
 }
 
 /**
- * Tarjeta del muro. completo: en el detalle (texto entero y sin enlace al detalle).
- * alMeGusta(it): alterna el me gusta (optimista, lo maneja el padre).
+ * Tarjeta del muro, igual en Mi espacio y en el panel (estilo Facebook: avatar, nombre y fecha; contenido; fotos, video
+ * o PDF; fila de conteos; barra «Me gusta» / «Comentar»).
+ * - completo: en el detalle (texto entero y sin enlace al detalle).
+ * - alMeGusta(it): alterna el me gusta (optimista, lo maneja el padre). ocupado: mientras se manda.
+ * - rutaDetalle(id) | null: Mi espacio abre el detalle (comentarios y confirmar); sin ruta (panel) el texto se despliega
+ *   aquí mismo y «Comentar» abre los comentarios en la tarjeta (alComentar, comentariosAbiertos, comentarios).
+ * - participa: false = solo consulta (sin «Me gusta»; los comentarios se pueden leer).
+ * - alComentar(it, { abrir, enfocar }): los comentarios van en la tarjeta (Mi espacio y panel, TarjetaMuro.jsx). Cerrados
+ *   se ven los últimos (it.comentarios_recientes) y «Escribe un comentario…»; abiertos, el hilo (comentarios).
+ * - menu: acciones de la tarjeta (⋯); extra: lo que va antes de los conteos (p. ej. el seguimiento de RH).
  */
-export default function Publicacion({ it, tz, completo = false, alMeGusta, ocupado = false }) {
+
+/** Un comentario reciente debajo de la publicación (solo lectura; «Me gusta» y responder, en el hilo abierto). */
+function ComentarioBreve({ c, tz }) {
+  const autor = c.autor?.nombre || "Empleado";
+  return (
+    <li className="flex gap-2.5" data-comentario-reciente={c.id}>
+      <Avatar nombre={autor} />
+      <div className="min-w-0 flex-1">
+        <div className="w-fit max-w-full rounded-2xl bg-slate-100 px-3 py-2">
+          <p className="text-[13px] font-bold text-slate-900">{autor}{c.autor?.panel ? <span className="font-normal text-slate-600"> · {c.autor.rol || "Recursos Humanos"}</span> : null}</p>
+          <TextoPlano className="line-clamp-3 text-[15px] leading-snug text-slate-800">{c.texto}</TextoPlano>
+        </div>
+        <p className="px-3 pt-0.5 text-[13px] text-slate-500">{haceCuanto(c.creado_en, { tz })}{Number(c.reacciones) ? ` · ${Number(c.reacciones)} me gusta` : ""}</p>
+      </div>
+    </li>
+  );
+}
+export default function Publicacion({
+  it, tz, completo = false, alMeGusta, ocupado = false, rutaDetalle = rutaPost, participa = true,
+  menu = null, extra = null, alComentar = null, comentariosAbiertos = false, comentarios = null, yo = null,
+}) {
   const [visor, setVisor] = useState(null);
+  const [desplegado, setDesplegado] = useState(false);
   const fotos = fotosDe(it);
   const pdf = pdfDe(it);
-  const largo = !completo && String(it.cuerpo ?? "").length > 280;
+  const largo = !completo && !desplegado && String(it.cuerpo ?? "").length > 280;
   const reacciones = textoReacciones(it.reacciones, it.me_gusta);
-  const comentarios = textoComentarios(it.comentarios);
-  const pendiente = porConfirmar(it);
+  const conteoComentarios = textoComentarios(it.comentarios);
+  const pendiente = rutaDetalle ? porConfirmar(it) : false;
   const autor = it.autor?.nombre || "Recursos Humanos";
+  const enLinea = !rutaDetalle;
+  const idComentarios = `comentarios-${it.id}`;
+  const verComentarios = !completo && alComentar
+    ? { type: "button", onClick: () => alComentar(it), "aria-expanded": comentariosAbiertos, "aria-controls": idComentarios }
+    : null;
+  const conMeGusta = participa && it.permite_reacciones !== false;
+  const conComentar = it.permite_comentarios !== false && (participa || Boolean(verComentarios));
+  const recientes = Array.isArray(it.comentarios_recientes) ? it.comentarios_recientes : [];
+  const faltan = Math.max(0, (Number(it.comentarios) || 0) - recientes.length);
+  const vistaPrevia = verComentarios && !comentariosAbiertos && (recientes.length || (participa && it.permite_comentarios !== false));
   return (
-    <article className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4" data-post={it.id} aria-labelledby={`post-${it.id}-titulo`}>
+    <article className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" data-post={it.id} aria-labelledby={`post-${it.id}-titulo`}>
       <header className="flex items-start gap-3">
         <Avatar nombre={autor} grande />
         <div className="min-w-0 flex-1">
@@ -125,37 +164,62 @@ export default function Publicacion({ it, tz, completo = false, alMeGusta, ocupa
           <p className="text-[13px] text-slate-600">{lineaAutor(it, { tz })}</p>
         </div>
         {it.fijado ? <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[13px] font-semibold text-blue-800"><Pin className="size-3.5" aria-hidden="true" />Fijada</span> : null}
+        {menu}
       </header>
       {pendiente ? <p className="w-fit rounded-full bg-amber-100 px-2.5 py-0.5 text-[13px] font-bold text-amber-900">Requiere tu confirmación</p> : null}
       {it.titulo ? (
         completo ? <h1 id={`post-${it.id}-titulo`} className="break-words text-xl font-extrabold leading-tight text-slate-900">{it.titulo}</h1>
-          : <h2 id={`post-${it.id}-titulo`} className="break-words text-[17px] font-extrabold leading-snug text-slate-900"><Link href={rutaPost(it.id)} className="inline-flex min-h-11 items-center hover:underline">{it.titulo}</Link></h2>
+          : enLinea ? <h2 id={`post-${it.id}-titulo`} className="break-words text-[17px] font-extrabold leading-snug text-slate-900">{it.titulo}</h2>
+            : <h2 id={`post-${it.id}-titulo`} className="break-words text-[17px] font-extrabold leading-snug text-slate-900"><Link href={rutaDetalle(it.id)} className="inline-flex min-h-11 items-center hover:underline">{it.titulo}</Link></h2>
       ) : <span id={`post-${it.id}-titulo`} className="sr-only">Publicación de {autor}</span>}
       {it.fecha_evento ? <p className="flex items-center gap-2 text-sm font-semibold text-slate-700"><CalendarDays className="size-4 text-[#2563EB]" aria-hidden="true" />{fechaEvento(it.fecha_evento, { tz })}</p> : null}
       {it.cuerpo ? <TextoPlano className={`text-[15px] leading-relaxed text-slate-800 ${largo ? "line-clamp-5" : ""}`}>{it.cuerpo}</TextoPlano> : null}
-      {largo ? <Link href={rutaPost(it.id)} className="-mt-2 inline-flex min-h-11 w-fit items-center text-sm font-semibold text-[#2563EB]">Ver más</Link> : null}
+      {largo ? (enLinea
+        ? <button type="button" onClick={() => setDesplegado(true)} className="-mt-2 inline-flex min-h-11 w-fit items-center text-sm font-semibold text-[#2563EB]">Ver más</button>
+        : <Link href={rutaDetalle(it.id)} className="-mt-2 inline-flex min-h-11 w-fit items-center text-sm font-semibold text-[#2563EB]">Ver más</Link>) : null}
       <Mosaico fotos={fotos} alAbrir={setVisor} />
       {it.youtube_id ? <VideoYoutube id={it.youtube_id} /> : null}
       <TarjetaPdf pdf={pdf} />
-      {pendiente && !completo ? <Link href={rutaPost(it.id)} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#2563EB] px-4 text-[15px] font-bold text-white">Leer y confirmar</Link> : null}
-      {reacciones || comentarios ? (
+      {pendiente && !completo ? <Link href={rutaDetalle(it.id)} className="inline-flex min-h-11 items-center justify-center rounded-xl bg-[#2563EB] px-4 text-[15px] font-bold text-white">Leer y confirmar</Link> : null}
+      {extra}
+      {reacciones || conteoComentarios ? (
         <p className="flex items-center justify-between gap-3 text-[13px] text-slate-600" data-conteos>
           <span data-reacciones>{reacciones}</span>
-          {comentarios ? (completo ? <span>{comentarios}</span> : <Link href={`${rutaPost(it.id)}#comentarios`} className="-my-3 inline-flex min-h-11 items-center hover:underline">{comentarios}</Link>) : null}
+          {conteoComentarios ? (completo ? <span>{conteoComentarios}</span>
+            : verComentarios ? <button {...verComentarios} className="-my-3 inline-flex min-h-11 items-center hover:underline" data-ver-comentarios>{conteoComentarios}</button>
+              : <Link href={`${rutaDetalle(it.id)}#comentarios`} className="-my-3 inline-flex min-h-11 items-center hover:underline">{conteoComentarios}</Link>) : null}
         </p>
       ) : null}
-      {it.permite_reacciones !== false || it.permite_comentarios !== false ? (
-        <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-2">
-          {it.permite_reacciones !== false ? (
+      {conMeGusta || conComentar ? (
+        <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-2" data-barra-acciones>
+          {conMeGusta ? (
             <button type="button" aria-pressed={Boolean(it.me_gusta)} disabled={ocupado} onClick={() => alMeGusta?.(it)} data-me-gusta={it.me_gusta ? "si" : "no"}
               className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold hover:bg-slate-50 ${it.me_gusta ? "text-[#2563EB]" : "text-slate-700"}`}>
               <ThumbsUp className={`size-5 ${it.me_gusta ? "fill-[#2563EB]/20" : ""}`} aria-hidden="true" />Me gusta
             </button>
           ) : <span />}
-          {it.permite_comentarios !== false ? (
+          {conComentar ? (
             completo
               ? <a href="#nuevo-comentario" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-slate-700 hover:bg-slate-50"><MessageCircle className="size-5" aria-hidden="true" />Comentar</a>
-              : <Link href={`${rutaPost(it.id)}#comentarios`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-slate-700 hover:bg-slate-50"><MessageCircle className="size-5" aria-hidden="true" />Comentar</Link>
+              : verComentarios
+                ? <button {...verComentarios} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-slate-700 hover:bg-slate-50" data-comentar><MessageCircle className="size-5" aria-hidden="true" />{participa ? "Comentar" : "Ver comentarios"}</button>
+                : <Link href={`${rutaDetalle(it.id)}#comentarios`} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl text-[15px] font-semibold text-slate-700 hover:bg-slate-50"><MessageCircle className="size-5" aria-hidden="true" />Comentar</Link>
+          ) : null}
+        </div>
+      ) : null}
+      {verComentarios && comentariosAbiertos ? <div id={idComentarios} className="border-t border-slate-100 pt-3">{comentarios}</div> : null}
+      {vistaPrevia ? (
+        <div className="grid gap-2.5 border-t border-slate-100 pt-3" data-comentarios-recientes={it.id}>
+          {faltan > 0 ? <button type="button" onClick={() => alComentar(it, { abrir: true })} className="inline-flex min-h-11 w-fit items-center text-[15px] font-semibold text-slate-600 hover:underline" data-ver-todos>{faltan === 1 ? "Ver 1 comentario más" : `Ver ${faltan} comentarios más`}</button> : null}
+          {recientes.length ? <ul className="grid gap-2.5">{recientes.map((c) => <ComentarioBreve key={c.id} c={c} tz={tz} />)}</ul> : null}
+          {participa && it.permite_comentarios !== false ? (
+            <div className="flex items-center gap-2.5">
+              <Avatar nombre={yo || "Tú"} />
+              <button type="button" onClick={() => alComentar(it, { abrir: true, enfocar: true })} data-escribe-comentario={it.id}
+                className="flex min-h-11 min-w-0 flex-1 items-center rounded-full bg-slate-100 px-4 text-left text-[15px] text-slate-600 hover:bg-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+                Escribe un comentario…
+              </button>
+            </div>
           ) : null}
         </div>
       ) : null}
