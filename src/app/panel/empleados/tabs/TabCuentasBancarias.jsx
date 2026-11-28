@@ -43,7 +43,7 @@ export default function TabCuentasBancarias({ renderCampos = () => null, form, s
           </div>
           <div>
             <h3 className="text-xl font-bold text-gray-900">Cuentas bancarias</h3>
-            <p className="text-sm text-gray-600">Información para depósitos</p>
+            <p className="text-cuerpo text-texto-secundario">Información para depósitos</p>
           </div>
         </div>
 

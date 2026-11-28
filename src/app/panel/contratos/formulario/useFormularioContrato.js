@@ -48,6 +48,8 @@ export default function useFormularioContrato({ modo, id = null, duplicar = null
   const [form, setForm] = useState(null);
   const [errores, setErrores] = useState([]);
   const [intentado, setIntentado] = useState(false);
+  // Paso guiado que se revisó con «Continuar» (antes de intentar guardar): solo se marcan los errores de ese paso.
+  const [pasoRevisado, setPasoRevisado] = useState(null);
   const llenado = useRef(false);
   const vacacionesTocadas = useRef(false);
 
@@ -109,7 +111,25 @@ export default function useFormularioContrato({ modo, id = null, duplicar = null
 
   const revisar = (f = form) => validarFormulario(f, { modo: editar ? "editar" : "nuevo", vacacionesLey: vacacionesLey?.dias ?? null, original: editar ? original : null });
   // Después del primer intento, los errores se actualizan mientras se corrige.
-  useEffect(() => { if (intentado && form) setErrores(revisar(form)); }, [form, intentado]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Antes de intentar guardar, solo los del paso que se revisó con «Continuar».
+  useEffect(() => {
+    if (!form) return;
+    if (intentado) setErrores(revisar(form));
+    else if (pasoRevisado) setErrores(revisar(form).filter((e) => pestanaDe(e.campo) === pasoRevisado));
+  }, [form, intentado, pasoRevisado]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * «Continuar» de los pasos guiados: revisa SOLO los datos del paso `clave` (no manda nada al servidor).
+   * → { ok, campo? } (campo: el primero con error, para llevar ahí el foco).
+   */
+  const revisarPaso = (clave) => {
+    const errs = revisar(form).filter((e) => pestanaDe(e.campo) === clave);
+    if (!intentado) {
+      setPasoRevisado(clave);
+      setErrores(errs);
+    }
+    return errs.length ? { ok: false, campo: errs[0].campo } : { ok: true };
+  };
 
   const permiso = editar && contrato ? queSePuedeEditar(contrato) : { editable: true, motivo: null };
   const sucio = Boolean(form && original && permiso.editable && hayCambios(original, form));
@@ -138,7 +158,7 @@ export default function useFormularioContrato({ modo, id = null, duplicar = null
 
   return {
     cargando: (idFuente && detalle.isLoading) || !form, error: detalle.error ?? null, datos: detalle.data ?? null, contrato, mutarDetalle: detalle.mutate,
-    form, original, cambiar, errores, guardar, sucio, permiso, empleados, puestos: catalogo.data?.puestos ?? [], cargandoPersonas: catalogo.isLoading,
+    form, original, cambiar, errores, guardar, revisarPaso, sucio, permiso, empleados, puestos: catalogo.data?.puestos ?? [], cargandoPersonas: catalogo.isLoading,
     persona, vacacionesLey,
   };
 }

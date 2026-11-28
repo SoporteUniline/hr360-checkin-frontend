@@ -6,13 +6,14 @@
 // (docs/vistas-de-detalle.md, regla 7). El dato principal es «¿En cuántos pagos?» con la palabra del periodo de la
 // persona («6 quincenas»); la opción «Prefiero poner cuánto por nómina» es el modo de antes. Guardar y Cancelar siempre a
 // la vista (barra fija en celular) y aviso si sales con cambios sin guardar.
+// (28/11/2026) Con las piezas del sistema de diseño (docs/sistema-diseno.md): encabezado gris, una sección con franja y
+// la barra de acciones pegada abajo (Cancelar a la izquierda, «Registrar y enviar a firma» azul a la derecha).
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import { useGuardiaSalida } from "@/components/cambios/CambiosPendientes";
-import { BarraAccionesMovil, EncabezadoDetalle, EspacioBarraMovil } from "@/components/detalle";
+import { BarraAccionesFormulario, EncabezadoPagina, PaginaFormulario, SeccionFormulario } from "@/components/formulario";
 import { mensajeError, SelectorEmpresa, useEmpresaNomina } from "./comun";
 import SelectorEmpleado from "./SelectorEmpleado";
 import { CAMPO, ETIQUETA, CamposPlan, ResumenSimulacion, cuerpoPlan, useSimulacionPrestamo } from "./PlanPrestamo";
@@ -70,39 +71,35 @@ export default function RegistrarPrestamo() {
   };
   const cancelar = () => confirmarSalida(({ reemplazar } = {}) => (reemplazar ? router.replace(LISTA) : router.push(LISTA)), { navega: true });
 
-  const primaria = { clave: "guardar", texto: guardando ? "Guardando…" : "Registrar y enviar a firma", tipo: "primaria", onClick: alGuardar, cargando: guardando };
-  const secundaria = { clave: "cancelar", texto: "Cancelar", tipo: "normal", onClick: cancelar, deshabilitada: guardando };
-
   return (
-    <div className="space-y-5 p-1 text-[17px] text-[#111827] lg:text-[16px]">
-      <EncabezadoDetalle volver={{ href: LISTA, texto: "Préstamos" }} iniciales="+" etiqueta="Nómina · Préstamo nuevo" titulo="Registrar préstamo"
-        subtitulo={<p className="m-0">Sin intereses. La persona firma el acuerdo en Mi espacio y desde la siguiente nómina se descuenta.</p>} />
-      <form onSubmit={alGuardar} noValidate className="grid max-w-3xl gap-5 rounded-2xl border border-slate-200 bg-white p-4 sm:p-6" aria-label="Registrar préstamo" data-formulario-prestamo>
-        {empresa.empresas.length > 1 ? <SelectorEmpresa {...empresa} setIdEmpresa={(v) => { empresa.setIdEmpresa(v); setF({ ...f, id_empleado: "" }); }} /> : null}
-        {empresa.idEmpresa ? <SelectorEmpleado idEmpresa={empresa.idEmpresa} value={f.id_empleado} onChange={(v) => setF({ ...f, id_empleado: v })} requerido grande /> : null}
-        <div className="grid gap-5 sm:grid-cols-2">
+    <PaginaFormulario
+      data-formulario-prestamo
+      encabezado={<EncabezadoPagina completo volver={{ href: LISTA, texto: "Préstamos" }} titulo="Registrar préstamo"
+        descripcion="Sin intereses. La persona firma el acuerdo en Mi espacio y desde la siguiente nómina se descuenta." />}
+      barra={<BarraAccionesFormulario etiqueta="Guardar o cancelar"
+        cancelar={{ onClick: cancelar, deshabilitado: guardando }}
+        principal={{ texto: guardando ? "Guardando…" : "Registrar y enviar a firma", type: "submit", form: "formulario-prestamo", cargando: guardando }} />}
+    >
+      <form id="formulario-prestamo" onSubmit={alGuardar} noValidate aria-label="Registrar préstamo" className="max-w-3xl">
+        <SeccionFormulario titulo="Préstamo" descripcion="A quién, cuánto y en cuántos pagos se descuenta." columnas={1}>
+          {empresa.empresas.length > 1 ? <SelectorEmpresa {...empresa} setIdEmpresa={(v) => { empresa.setIdEmpresa(v); setF({ ...f, id_empleado: "" }); }} /> : null}
+          {empresa.idEmpresa ? <SelectorEmpleado idEmpresa={empresa.idEmpresa} value={f.id_empleado} onChange={(v) => setF({ ...f, id_empleado: v })} requerido grande /> : null}
+          <div className="grid gap-5 sm:grid-cols-2">
+            <label className={ETIQUETA}>
+              Monto prestado
+              <input className={CAMPO} inputMode="decimal" type="number" min="0.01" step="0.01" required value={f.monto} onChange={(e) => setF({ ...f, monto: e.target.value })} />
+            </label>
+            <CamposPlan valor={f} onCambio={(v) => setF({ ...f, ...v })} periodo={periodo} idBase="rh-prestamo" />
+          </div>
+          {!f.id_empleado && plan ? <p className="m-0 text-texto-secundario">Elige a la persona para ver en qué periodo se le paga y el calendario de descuentos.</p> : null}
+          <ResumenSimulacion simulacion={simulacion} onUsarPagos={(n) => setF({ ...f, modo: "pagos", num_pagos: String(n) })} />
           <label className={ETIQUETA}>
-            Monto prestado
-            <input className={CAMPO} inputMode="decimal" type="number" min="0.01" step="0.01" required value={f.monto} onChange={(e) => setF({ ...f, monto: e.target.value })} />
+            Motivo (opcional)
+            <input className={CAMPO} maxLength={300} value={f.motivo} onChange={(e) => setF({ ...f, motivo: e.target.value })} />
           </label>
-          <CamposPlan valor={f} onCambio={(v) => setF({ ...f, ...v })} periodo={periodo} idBase="rh-prestamo" />
-        </div>
-        {!f.id_empleado && plan ? <p className="m-0 text-[#4B5563]">Elige a la persona para ver en qué periodo se le paga y el calendario de descuentos.</p> : null}
-        <ResumenSimulacion simulacion={simulacion} onUsarPagos={(n) => setF({ ...f, modo: "pagos", num_pagos: String(n) })} />
-        <label className={ETIQUETA}>
-          Motivo (opcional)
-          <input className={CAMPO} maxLength={300} value={f.motivo} onChange={(e) => setF({ ...f, motivo: e.target.value })} />
-        </label>
-        {error ? <p role="alert" className="m-0 rounded-xl bg-[#FEF2F2] px-3 py-2.5 text-[#991B1B]">{error}</p> : null}
-        <div className="hidden items-center justify-end gap-3 border-t border-[#E5E7EB] pt-4 lg:flex" role="toolbar" aria-label="Guardar o cancelar">
-          <Link href={LISTA} className="inline-flex min-h-12 items-center rounded-[14px] px-5 font-semibold text-[#1E40C4] no-underline" onClick={(e) => { e.preventDefault(); cancelar(); }}>Cancelar</Link>
-          <button type="submit" disabled={guardando} className="inline-flex min-h-12 items-center justify-center rounded-[14px] bg-[#2C56E8] px-5 font-semibold text-white hover:bg-[#1E40C4] disabled:opacity-60">
-            {primaria.texto}
-          </button>
-        </div>
+          {error ? <p role="alert" className="m-0 rounded-boton bg-estado-error px-4 py-3 text-estado-error-texto">{error}</p> : null}
+        </SeccionFormulario>
       </form>
-      <EspacioBarraMovil />
-      <BarraAccionesMovil primaria={primaria} secundaria={secundaria} />
-    </div>
+    </PaginaFormulario>
   );
 }

@@ -131,7 +131,7 @@ async function revisarFormulario(page, ancho, nombre) {
       const control = ["INPUT", "SELECT", "TEXTAREA"].includes(el.tagName);
       if ((conTexto || control) && parseFloat(getComputedStyle(el).fontSize) < minimo) chicas.push(`${el.tagName} ${parseFloat(getComputedStyle(el).fontSize)}px «${(el.textContent || el.value || "").trim().slice(0, 40)}»`);
     }
-    const controles = [...form.querySelectorAll("button, input, select, a"), ...document.querySelectorAll("[data-barra-movil] button, [data-barra-movil] a")].filter(visible);
+    const controles = [...form.querySelectorAll("button, input, select, a"), ...document.querySelectorAll("[data-barra-formulario] button, [data-barra-formulario] a")].filter(visible);
     const bajos = controles.filter((el) => el.getBoundingClientRect().height < 47.5).map((el) => `${el.tagName} ${Math.round(el.getBoundingClientRect().height)}px «${(el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 30)}»`);
     const titulos = [...document.querySelectorAll("h1, h2, h3")].filter(visible).filter((h) => Number(getComputedStyle(h).fontWeight) > 700).map((h) => h.textContent.trim().slice(0, 30));
     const degradados = [...document.querySelectorAll("body *")].filter((el) => /gradient/.test(getComputedStyle(el).backgroundImage)).map((el) => el.tagName);
@@ -259,10 +259,10 @@ try {
   await fm.getByLabel("Monto prestado").fill("5000");
   await fm.getByLabel("¿En cuántos pagos?").fill("6");
   await fm.getByText("6 quincenas de $833.33 · la última de $833.35").waitFor();
-  await pm.locator("[data-barra-movil]").getByRole("button", { name: "Registrar y enviar a firma" }).waitFor();
+  await pm.locator("[data-barra-formulario]").getByRole("button", { name: "Registrar y enviar a firma" }).waitFor();
   await revisarFormulario(pm, 390, "Registrar préstamo (RH)");
   await captura(pm, "prestamos-registrar-390");
-  await pm.locator("[data-barra-movil]").getByRole("button", { name: "Cancelar" }).click();
+  await pm.locator("[data-barra-formulario]").getByRole("button", { name: "Cancelar" }).click();
   await pm.getByText("Tienes cambios sin guardar").waitFor();
   await pm.getByRole("button", { name: "Salir sin guardar" }).click();
   await pm.waitForURL(/\/panel\/nomina\/prestamos$/);
