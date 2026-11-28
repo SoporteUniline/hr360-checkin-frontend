@@ -1,4 +1,7 @@
+"use client";
+
 import { cn } from "@/lib/utils";
+import { useVarianteCampo } from "./CampoFormulario";
 
 // Piezas chicas de los formularios en página (28/11/2026; docs/sistema-diseno.md). Nacieron en el contrato
 // (src/app/panel/contratos/formulario/campos.jsx, que las reexporta) y las usan también el permiso y el acta.
@@ -19,12 +22,17 @@ export function Lista({ opciones, valor, onCambio, vacio = null, ...props }) {
   );
 }
 
-/** Un dato de solo lectura (etiqueta arriba como la de un campo, valor en negritas). */
-export function Dato({ etiqueta, children }) {
+/**
+ * Un dato de solo lectura (etiqueta arriba como la de un campo, valor en negritas). Con campos «en línea»
+ * (<EstiloCampos variante="linea">) mide lo mismo que ellos para que el renglón quede parejo. `ayuda`: una línea gris abajo.
+ */
+export function Dato({ etiqueta, ayuda = null, className = "", children, ...props }) {
+  const linea = useVarianteCampo() === "linea";
   return (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div className={cn("flex min-w-0 flex-col", linea ? "gap-1" : "gap-2", className)} {...props}>
       <span className="text-etiqueta font-semibold text-texto">{etiqueta}</span>
-      <span className="flex min-h-campo items-center break-words font-bold text-texto">{children}</span>
+      <span className={cn("flex items-center break-words font-bold text-texto", linea ? "min-h-campo-linea" : "min-h-campo")}>{children}</span>
+      {ayuda ? <span data-chico className="text-ayuda text-texto-secundario">{ayuda}</span> : null}
     </div>
   );
 }

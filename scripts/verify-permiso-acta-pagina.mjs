@@ -126,6 +126,16 @@ async function encabezado(page, donde, titulo, movil) {
 // Un aviso de notistack con ese texto.
 const aviso = (page, texto) => page.locator("#notistack-snackbar, [role=alert], .notistack-MuiContent").filter({ hasText: texto }).first();
 
+// (28/11/2026) Lupa encimada («B🔍scar por nombre…»): el texto de un campo con ícono a la izquierda empieza DESPUÉS del
+// ícono (en escritorio `lg:px-3` de la clase de campo le ganaba al `pl-12`). Se mide en el navegador.
+async function lupaNoEncima(campo, donde) {
+  const r = await campo.evaluate((el) => {
+    const icono = el.parentElement.querySelector("svg").getBoundingClientRect();
+    return { textoEmpieza: el.getBoundingClientRect().left + parseFloat(getComputedStyle(el).paddingLeft), iconoTermina: icono.right };
+  });
+  assert.ok(r.textoEmpieza >= r.iconoTermina + 4, `${donde}: la lupa no queda encima del texto (${JSON.stringify(r)})`);
+}
+
 const { base, firmar, cerrar } = await levantarNext();
 const browser = await chromium.launch({ args: ["--lang=es-MX"] });
 let ok = false;
@@ -172,6 +182,7 @@ try {
     assert.equal(await vista.locator("#permiso-empresa").inputValue(), "");
     await dormir(500);
     await captura(page, `permiso-nuevo-${sufijo}`);
+    await lupaNoEncima(vista.locator("#permiso-buscar-empleado"), `permiso nuevo ${sufijo}`);
     await vista.locator("#permiso-empresa").selectOption("7");
     await vista.getByText("Persona Uno Demo").waitFor({ timeout: 15000 });
     await revisarDiseno(page, movil, `permiso nuevo ${sufijo}`, "[data-vista='formulario-permiso']");
@@ -265,6 +276,7 @@ try {
     await revisarBotones(barraA, `acta paso 1 ${sufijo}`, "Continuar", movil);
     await dormir(600);
     await captura(page, `acta-nueva-paso1-${sufijo}`);
+    await lupaNoEncima(page.locator("#acta-empleado"), `acta paso 1 ${sufijo}`);
     await revisarDiseno(page, movil, `acta paso 1 ${sufijo}`, "[data-vista='formulario-acta']");
     // Continuar sin empleado: error en el campo, se queda en el paso 1.
     await barraA.getByRole("button", { name: "Continuar" }).click();

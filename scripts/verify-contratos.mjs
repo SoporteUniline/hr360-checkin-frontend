@@ -7,12 +7,15 @@
 //   4. Cambiar sueldo con convenio: el servidor recibe el sueldo, la fecha y el motivo; la tarjeta y el historial cambian.
 //   5. «Revisar sueldos»: la diferencia ficha ≠ contrato y su solución; la «periodicidad por confirmar» (hoy / como dice
 //      y la decisión); la nómina muestra el aviso (con los dos motivos) y no deja autorizar.
-//   2b. Editar en página con pasos en pestañas (solo manda lo que cambió; sueldo de solo lectura; aviso al salir con
-//       cambios). Mockup v3 (28/11/2026): grilla de 3 columnas a 1440, resumen a la derecha (plegable en celular) con el
-//       sueldo que manda el servidor y «Ver documento».
+//   2b. Editar en página EN UNA SOLA HOJA (28/11/2026): solo manda lo que cambió; sueldo de solo lectura; aviso al
+//       salir con cambios; índice con ✓; grilla según el ancho de la tarjeta; resumen con el sueldo del servidor y «Ver
+//       documento». Puesto, departamento y lugar se eligen del CATÁLOGO con buscador (filtra sin acentos); un valor viejo
+//       que no está en el catálogo («Ventas») se ve y se conserva; «+ Crear» da de alta un puesto en ventana chica y lo
+//       deja elegido.
 //   2c. Ventanas: no se cierran con clic o toque afuera; sí con Esc y la X. «Más acciones» (menú) sí.
-//   2d. Alta en página: errores por pestaña (pastillas «Falta N» y «Falta» del resumen); duplicar copia condiciones y
-//       encadena la renovación.
+//   2d. Alta en página: Guardar con faltantes marca TODOS los campos, avisa arriba con un enlace por sección, el índice
+//       lleva «Falta N», la pantalla baja a la primera sección con errores y el foco va a su campo (sin quitárselo a
+//       quien ya escribe en otro: regresión INC-012); duplicar copia condiciones y encadena la renovación.
 //   6. Editor de plantillas (categoría Contrato): «Se usa para», «Datos que se llenan solos» insertan {{contrato.*}} y la
 //      vista previa con un empleado la llena el servidor.
 //   En cada pantalla: letra ≥ 16 px (≥ 17 px en celular, salvo pastillas `data-chico`; en escritorio las etiquetas de
@@ -56,7 +59,9 @@ function estadoInicial() {
     periodicidades: [{ motivo: "periodicidad_por_confirmar", id_empleado: 18, nombre: "Dora Gil Mora", id_contrato: 7, folio: "CT-2026-0007", salario_contrato: 5000,
       periodicidad_guardada: "quincenal", periodicidad_como_dice: "Quincenal", hoy: { periodicidad: "Quincenal", mensual: 5000, monto: 2500 },
       como_dice: { periodicidad: "Quincenal", mensual: 10000, monto: 5000 } }],
-    pedidos: { periodicidad: [], convenio: [], solicitud: 0, preparar: 0, resolver: [], vistaPrevia: [], editar: [], crear: [] },
+    pedidos: { periodicidad: [], convenio: [], solicitud: 0, preparar: 0, resolver: [], vistaPrevia: [], editar: [], crear: [], altaPuesto: [] },
+    // Catálogos de la empresa 7. «Ventas» (el departamento del contrato) NO está: es un valor viejo que debe conservarse.
+    puestos: ["Cajera", "Almacenista", "Jefa de Almacén"], departamentos: ["Almacén", "Administración"], sucursales: ["Sucursal Centro", "Sucursal Norte"],
   };
 }
 let E = estadoInicial();
@@ -124,6 +129,14 @@ function manejar({ ruta, metodo, cuerpo, json }) {
       { id_empleado: 16, nombre: "Beto", apellido_paterno: "Ríos", apellido_materno: "Lara", puesto: "Almacenista", departamento: "Almacén", fecha_ingreso: "2025-02-01" }] });
   }
   if (r.startsWith("/empleados/puestos")) return json([{ id: 1, nombre: "Cajera" }, { id: 2, nombre: "Almacenista" }]);
+  if (r === "/puestos" && metodo === "POST") {
+    E.pedidos.altaPuesto.push(cuerpo);
+    E.puestos.push(cuerpo.nombre);
+    return json({ id: 90 + E.puestos.length, nombre: cuerpo.nombre, id_empresa: cuerpo.id_empresa }, 201);
+  }
+  if (r.startsWith("/puestos")) return json({ puestos: E.puestos.map((n, i) => ({ id_puesto: i + 1, nombre_puesto: n, id_empresa: 7 })), total: E.puestos.length });
+  if (r.startsWith("/departamentos")) return json({ departamentos: E.departamentos.map((n, i) => ({ id_departamento: i + 1, nombre: n, id_empresa: 7 })), total: E.departamentos.length });
+  if (r.startsWith("/sucursales")) return json({ sucursales: E.sucursales.map((n, i) => ({ id_sucursal: i + 1, nombre: n, id_empresa: 7 })), total: E.sucursales.length });
   if (r.startsWith("/calculos-lft/publico/vacaciones-ley")) return json({ dias: 14, anio_servicio: 2 });
   if (r === "/contratos/revisar-sueldos") return json({ diferencias: E.diferencias, periodicidades: E.periodicidades, duplicados: [], migracion: true });
   if (r === "/contratos/periodicidad/resolver" && metodo === "POST") {
@@ -178,49 +191,55 @@ async function revisarLectura(page, movil, donde) {
   assert.deepEqual(r.degradados, [], `${donde}: fondos degradados`);
   assert.ok(r.doc <= r.ventana + 1, `${donde}: scroll horizontal (${r.doc} > ${r.ventana})`);
 }
-// (28/11/2026) Pasos guiados del formulario del contrato. En escritorio se salta con las pestañas de arriba (mockup v3); en celular
-// se avanza con «Continuar» (alta: revisa el paso) o «Siguiente» (editar) y se regresa con «Atrás».
-const PASOS = ["persona", "sueldo", "jornada", "prestaciones", "documento"];
-let irAPaso = async () => {};
-function preparaPasos(page, movil) {
-  irAPaso = async (clave) => {
-    if (!movil) {
-      await page.locator(`[data-pasos-pestanas] [data-paso='${clave}']`).click();
-    } else {
-      for (let i = 0; i < PASOS.length; i++) {
-        const texto = await page.locator("[data-pasos-movil]").innerText();
-        const actual = Number(texto.match(/Paso (\d+)/)[1]) - 1;
-        const meta = PASOS.indexOf(clave);
-        if (actual === meta) break;
-        const barra = page.locator("[data-barra-formulario]");
-        if (actual > meta) await barra.locator("[data-accion='atras']").click();
-        else await barra.locator("[data-accion='siguiente'], [data-accion='continuar']").first().click();
-        await dormir(150);
-      }
-    }
-    await page.locator(`[data-panel='${clave}']`).waitFor();
-  };
+// (28/11/2026) El formulario del contrato va en UNA SOLA HOJA: sin pasos. Las listas que vienen de un catálogo son
+// ListaConBuscador (un botón con data-valor y un menú con buscador).
+const valorLista = (page, id) => page.locator(`#${id}`).getAttribute("data-valor");
+async function elegirEnLista(page, id, buscar, opcion) {
+  await page.locator(`#${id}`).click();
+  const menu = page.locator("[data-lista-buscador-menu]");
+  await menu.waitFor();
+  if (buscar) await menu.getByRole("searchbox").fill(buscar);
+  await menu.locator("[role=option]").filter({ hasText: opcion }).first().click();
+  await menu.waitFor({ state: "detached" });
 }
+async function opcionesConBusqueda(page, id, buscar) {
+  await page.locator(`#${id}`).click();
+  const menu = page.locator("[data-lista-buscador-menu]");
+  await menu.waitFor();
+  await menu.getByRole("searchbox").fill(buscar);
+  await dormir(100);
+  const textos = (await menu.locator("[role=option]").allInnerTexts()).map((t) => t.split("\n")[0].trim());
+  await page.keyboard.press("Escape");
+  await menu.waitFor({ state: "detached" });
+  return textos;
+}
+/** Columnas que debe tener la grilla «auto» según el ancho de su tarjeta (SeccionFormulario: 416, 672 y 960 px). */
+const columnasEsperadas = (ancho, max = 4) => Math.min(max, ancho >= 960 ? 4 : ancho >= 672 ? 3 : ancho >= 416 ? 2 : 1);
+const grillaDe = (page, panel) => page.locator(`[data-panel='${panel}'] > div`).last().evaluate((el) => ({ columnas: getComputedStyle(el).gridTemplateColumns.split(" ").length, ancho: el.closest("section").getBoundingClientRect().width }));
 const ignorar = (m) => /ResizeObserver|Failed to load resource|hydrat/i.test(m);
 
 const { base, firmar, cerrar } = await levantarNext();
 const browser = await chromium.launch({ args: ["--lang=es-MX"] });
 let ok = false;
 try {
-  for (const [ancho, alto, sufijo] of [[1440, 1000, "1440"], [390, 844, "390"], [360, 780, "360"]]) {
+  for (const [ancho, alto, sufijo] of [[1440, 1000, "1440"], [390, 844, "390"], [360, 780, "360"]].filter(([a]) => !process.env.SOLO_ANCHO || String(a) === process.env.SOLO_ANCHO)) {
     E = estadoInicial();
     const movil = ancho < 1024;
     const completo = ancho !== 360;
     const { ctx, page } = await contexto(browser, { base, ancho, alto, cookie: firmar("Recruiter", { id_usuario: 1 }), usuario: () => RH, manejar });
     const errores = [];
     page.on("pageerror", (e) => errores.push(e.message));
-    preparaPasos(page, movil);
     // Botón de acción visible: en escritorio la barra; en celular la barra fija o «Más acciones».
     const accion = async (texto) => {
       if (!movil) return page.getByRole("toolbar", { name: "Acciones del contrato" }).getByRole("button", { name: texto, exact: true }).click();
       // Radix deja el resto de la página «aria-hidden» mientras cierra un diálogo: se espera a que se vaya.
       await page.locator("[role=dialog]").first().waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
       await dormir(300);
+      // En celular los avisos (snackbar) quedan encima de la barra de abajo: se espera a que se vayan (crear un puesto
+      // desde el contrato deja uno más, «Puesto … creado»). El puntero se quita de encima: notistack no los cierra
+      // mientras el puntero está sobre ellos.
+      await page.mouse.move(200, 10);
+      await page.waitForFunction(() => !document.querySelector(".notistack-SnackbarContainer [role=alert]"), null, { timeout: 20000 }).catch(() => {});
       const barra = page.locator("[data-barra-movil]");
       const boton = barra.locator("[data-accion]").filter({ hasText: new RegExp(`^${texto.replace(/[()]/g, "\\$&")}$`) });
       if (await boton.count()) return boton.click();
@@ -278,16 +297,17 @@ try {
       await page.locator("#ct-puesto").waitFor({ timeout: 30000 });
     };
     await abrirEditar();
-    // (28/11/2026) Sistema de diseño: encabezado gris y pasos (pestañas arriba en escritorio, «Paso N de M» en celular).
+    // (28/11/2026) Sistema de diseño: encabezado gris; una sola hoja con el índice (✓ en las cinco secciones).
     const encE = await page.locator("[data-encabezado-pagina]").evaluate((el) => { const st = getComputedStyle(el); return [st.backgroundImage, st.backgroundColor]; });
     assert.deepEqual(encE, ["none", "rgb(243, 244, 246)"], "editar: encabezado gris sin degradado");
-    if (movil) assert.match(await page.locator("[data-pasos-movil]").innerText(), /Paso 1 de 5 · Persona y puesto/);
-    else assert.deepEqual(await page.locator("[data-pasos-pestanas] [data-paso]").evaluateAll((els) => els.map((e) => e.dataset.paso)), PASOS);
-    if (!movil) assert.equal(await page.locator("[data-pasos-pestanas] [data-estado-paso='listo']").count(), 4, "editar: los demás pasos ya están «Listo»");
-    // Mockup v3: la grilla usa todo el ancho (3 columnas de 1200 a 1599 px; 1 en celular) y el resumen va a la derecha
-    // (en celular, plegable abajo) con el sueldo que manda el servidor. «Ver documento» abre el contrato en otra pestaña.
-    const columnas = await page.locator("[data-panel='persona'] > div").last().evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length);
-    assert.equal(columnas, movil ? 1 : 3, `editar: ${movil ? 1 : 3} columnas a ${ancho} px`);
+    assert.deepEqual(await page.locator("[data-seccion-formulario]").evaluateAll((els) => els.map((e) => e.dataset.panel)), ["persona", "sueldo", "jornada", "prestaciones", "documento"], "editar: las cinco secciones en una sola hoja");
+    const indiceSel = ancho >= 1200 ? "[data-indice-secciones]" : "[data-indice-compacto]";
+    assert.equal(await page.locator(`${indiceSel} [data-completa]`).count(), 5, "editar: el índice con ✓ en las cinco secciones");
+    // La grilla usa el ancho de la tarjeta (1 a 4 columnas) y el resumen va a la derecha (en celular, plegable abajo)
+    // con el sueldo que manda el servidor. «Ver documento» abre el contrato en otra pestaña.
+    const grilla = await grillaDe(page, "persona");
+    assert.equal(grilla.columnas, columnasEsperadas(grilla.ancho), `editar: columnas con la tarjeta de ${Math.round(grilla.ancho)} px`);
+    if (!movil) assert.ok(grilla.columnas >= 2, "editar: en escritorio, al menos 2 columnas");
     const resumen = page.locator(movil ? "[data-resumen-plegable]" : "[data-resumen-formulario]");
     assert.ok(await resumen.isVisible(), "editar: resumen visible");
     if (movil) await resumen.locator("summary").click();
@@ -297,36 +317,49 @@ try {
     assert.equal((await resumen.locator("[data-resumen='diario'] dd").innerText()).trim(), "$350.00", "resumen: diario (del servidor)");
     assert.equal(await page.locator("[data-accion='ver-documento']").getAttribute("href"), "/panel/contratos/142#documento");
     assert.equal(await page.locator("[data-accion='ver-documento']").getAttribute("target"), "_blank");
-    assert.equal(await page.locator("#ct-puesto").inputValue(), "Cajera");
+    assert.equal(await valorLista(page, "ct-puesto"), "Cajera", "puesto elegido del catálogo");
+    assert.equal(await valorLista(page, "ct-lugar_trabajo"), "Sucursal Centro");
+    // Valor viejo fuera del catálogo: se ve («Ventas (no está en el catálogo)») y se conserva (no se borra).
+    assert.equal(await valorLista(page, "ct-departamento"), "Ventas", "el departamento viejo se conserva");
+    assert.equal((await page.locator("#ct-departamento").innerText()).trim(), "Ventas (no está en el catálogo)");
     assert.equal(await page.locator("#ct-modalidad_trabajo").inputValue(), "presencial", "«Presencial» guardado se ve seleccionado, no en blanco");
-    await revisarLectura(page, movil, `editar · persona ${sufijo}`);
-    await captura(page, `editar-persona-${sufijo}`, true);
-    await irAPaso("sueldo");
+    // El buscador filtra sin importar acentos ni mayúsculas.
+    assert.deepEqual(await opcionesConBusqueda(page, "ct-puesto", "ALMACEN"), ["Almacenista", "Jefa de Almacén", "Crear «ALMACEN»"], "el buscador filtra (sin acentos ni mayúsculas) y ofrece crear");
+    assert.deepEqual(await opcionesConBusqueda(page, "ct-departamento", "ventas"), ["Ventas (no está en el catálogo)", "Crear «ventas»"]);
+    await revisarLectura(page, movil, `editar ${sufijo}`);
+    await captura(page, `editar-${sufijo}`, true);
     await page.locator("[data-sueldo-solo-lectura]").getByText("Pago quincenal · $5,250.00 a la quincena · $350.00 diarios").waitFor();
     assert.equal(await page.locator("#ct-salario_base").count(), 0, "el sueldo no se edita aquí");
     await page.locator("[data-sueldo-solo-lectura]").getByRole("button", { name: "Cambiar sueldo (convenio)" }).waitFor();
-    await revisarLectura(page, movil, `editar · sueldo ${sufijo}`);
-    await captura(page, `editar-sueldo-${sufijo}`, true);
-    await irAPaso("jornada");
     assert.equal(await page.locator("#ct-tipo_jornada").inputValue(), "diurna", "«Diurna» guardado se ve seleccionado");
     assert.deepEqual([await page.locator("#ct-hora_entrada").inputValue(), await page.locator("#ct-hora_salida").inputValue(), await page.locator("#ct-hora_comida_fin").inputValue()], ["08:00", "16:00", "12:30"]);
-    await revisarLectura(page, movil, `editar · jornada ${sufijo}`);
-    await captura(page, `editar-jornada-${sufijo}`, true);
-    await irAPaso("prestaciones");
     assert.equal(await page.locator("#ct-dias_vacaciones").inputValue(), "12");
-    await irAPaso("documento");
     assert.equal(await page.locator("#ct-tipo_contrato").inputValue(), "indefinido");
-    await revisarLectura(page, movil, `editar · documento ${sufijo}`);
     const guardarE = page.locator("[data-barra-formulario] [data-accion='guardar']");
     const cancelarE = page.locator("[data-barra-formulario] [data-accion='cancelar']");
     assert.ok(await guardarE.isVisible() && await cancelarE.isVisible(), "Guardar y Cancelar siempre a la vista");
+    assert.equal(await page.locator("[data-barra-formulario] [data-accion='atras'], [data-barra-formulario] [data-accion='continuar'], [data-barra-formulario] [data-accion='siguiente']").count(), 0, "sin Atrás ni Continuar");
     if (movil) assert.ok((await guardarE.boundingBox()).height >= 55.5, "Guardar de 56 px en celular");
     // Sin cambios, Cancelar regresa sin preguntar.
     await cancelarE.click();
     await page.waitForURL(/\/panel\/contratos\/142$/, { timeout: 30000 });
-    // Con cambios: Cancelar pregunta; «Seguir editando» se queda; Guardar manda SOLO el puesto.
+    // Con cambios: «+ Crear» da de alta un puesto en ventana chica, lo deja elegido y no se pierde nada; Cancelar
+    // pregunta; «Seguir editando» se queda; Guardar manda SOLO el puesto (el departamento viejo se conserva).
     await abrirEditar();
-    await page.locator("#ct-puesto").fill("Cajera principal");
+    await page.locator("#ct-puesto").click();
+    await page.locator("[data-lista-buscador-menu]").getByRole("searchbox").fill("Cajera principal");
+    await page.locator("[data-lista-buscador-menu] [data-crear]").click();
+    const alta = page.getByRole("dialog");
+    await alta.getByRole("heading", { name: "Crear puesto" }).waitFor();
+    assert.equal(await alta.getByLabel(/Nombre del puesto/).inputValue(), "Cajera principal", "la ventana trae lo escrito");
+    await revisarLectura(page, movil, `crear puesto ${sufijo}`);
+    await captura(page, `crear-puesto-${sufijo}`);
+    await alta.getByRole("button", { name: "Guardar" }).click();
+    await alta.waitFor({ state: "detached", timeout: 15000 });
+    assert.deepEqual(E.pedidos.altaPuesto.at(-1), { nombre: "Cajera principal", id_empresa: 7 }, "se da de alta en el catálogo de la empresa");
+    assert.equal(await valorLista(page, "ct-puesto"), "Cajera principal", "el puesto nuevo queda elegido");
+    assert.equal(await valorLista(page, "ct-departamento"), "Ventas", "lo demás no se pierde");
+    await page.waitForFunction(() => document.activeElement?.id === "ct-puesto", null, { timeout: 5000 });
     await cancelarE.click();
     await page.locator("[data-dialogo-cambios]").waitFor({ timeout: 15000 });
     // La ventana compartida «Tienes cambios sin guardar» se lee a los 60 años: letra ≥ 16 px y botones ≥ 48 px.
@@ -340,7 +373,7 @@ try {
     assert.match(page.url(), /\/142\/editar$/);
     await guardarE.click();
     await page.waitForURL(/\/panel\/contratos\/142$/, { timeout: 30000 });
-    assert.deepEqual(E.pedidos.editar.at(-1), { puesto: "Cajera principal" }, "solo se manda lo que cambió");
+    assert.deepEqual(E.pedidos.editar.at(-1), { puesto: "Cajera principal" }, "solo se manda lo que cambió (el departamento viejo no se toca)");
     await page.getByText(/Cajera principal/).first().waitFor({ timeout: 15000 });
 
     // 2c. Ventanas: no se cierran con un clic o toque afuera; sí con Esc y con la X (dialog.jsx, para todas).
@@ -365,57 +398,70 @@ try {
     }
     E.contrato.puesto = "Cajera";
 
-    // 2d. Alta en página: vacía marca los errores por pestaña; duplicar copia las condiciones y encadena.
+    // 2d. Alta en página (una sola hoja): Guardar con faltantes marca todo y baja a la primera sección con errores;
+    //     duplicar copia las condiciones y encadena.
     await page.clock.install(); // corre normal hasta que se pausa (regresión INC-012, abajo)
     await page.goto(base + "/panel/contratos/nuevo", { waitUntil: "domcontentloaded" });
     await page.locator("#ct-id_empleado").waitFor({ timeout: 60000 });
-    // «Continuar» revisa solo el paso: sin persona no avanza y marca ese dato.
-    // Regresión INC-012: el foco va a «Persona», pero si la persona ya está escribiendo en otro campo no se le quita
-    // (antes llegaba 60 ms después a ciegas: lo tecleado caía en la lista de personas). El reloj se pausa para que esa
-    // espera ocurra a la mitad de lo que se teclea, siempre.
+    await page.locator("#ct-notas").waitFor();
+    // Regresión INC-012: al guardar vacío el foco va a «Persona», pero si la persona ya está escribiendo en otro campo
+    // no se le quita (antes llegaba 60 ms después a ciegas). El reloj se pausa para que esa espera ocurra a la mitad de
+    // lo que se teclea, siempre.
     await page.clock.pauseAt(Date.now() + 60_000);
-    await page.locator("[data-barra-formulario] [data-accion='continuar']").click();
+    await page.locator("[data-barra-formulario] [data-accion='guardar']").click();
     await page.locator("[data-errores]").waitFor();
-    await page.locator("#ct-puesto").click();
-    await page.keyboard.type("Caj");
+    await page.locator("#ct-notas").click();
+    await page.keyboard.type("Obra");
     await page.clock.runFor(1000);
-    await page.keyboard.type("era");
+    await page.keyboard.type(" de temporada");
     await page.clock.resume();
-    assert.equal(await page.evaluate(() => document.activeElement?.id), "ct-puesto", "el foco no brinca de campo mientras se escribe");
-    assert.equal(await page.locator("#ct-puesto").inputValue(), "Cajera", "lo que se escribe tras el error se queda en su campo");
-    assert.equal(await page.locator("#ct-id_empleado").inputValue(), "", "y no cae en la lista de personas");
-    await page.locator("#ct-puesto").fill("");
-    assert.deepEqual((await page.locator("[data-errores] button").allInnerTexts()).map((t) => t.trim()), ["Persona y puesto (1)"]);
+    assert.equal(await page.evaluate(() => document.activeElement?.id), "ct-notas", "el foco no brinca de campo mientras se escribe");
+    assert.equal(await page.locator("#ct-notas").inputValue(), "Obra de temporada", "lo que se escribe tras el error se queda en su campo");
+    assert.equal(await valorLista(page, "ct-id_empleado"), "", "y no cae en la lista de personas");
+    await page.locator("#ct-notas").fill("");
+    // TODOS los campos con error en rojo, el aviso arriba con un enlace por sección y el índice con «Falta N».
+    assert.deepEqual((await page.locator("[data-errores] button").allInnerTexts()).map((t) => t.trim()), ["Persona y puesto (1)", "Sueldo y pago (2)", "Documento (2)"]);
+    assert.deepEqual(await page.locator("[aria-invalid='true']").evaluateAll((els) => els.map((e) => e.id)),
+      ["ct-id_empleado", "ct-periodicidad_pago", "ct-salario_base", "ct-tipo_contrato", "ct-fecha_inicio"], "se marcan en rojo todos los que faltan");
     await page.locator("#ct-id_empleado-error").waitFor();
+    const indiceN = ancho >= 1200 ? "[data-indice-secciones]" : "[data-indice-compacto]";
+    const pastillas = await page.locator(`${indiceN} [data-falta]`).evaluateAll((els) => els.map((e) => `${e.closest("[data-indice]").dataset.indice} ${e.textContent.trim()}`));
+    assert.deepEqual(pastillas, ["persona Falta 1", "sueldo Falta 2", "documento Falta 2"]);
     if (!movil) {
-      // En escritorio se puede saltar al último paso: «Guardar contrato» vacío marca lo que falta en cada paso.
-      await irAPaso("documento");
-      await page.locator("[data-barra-formulario] [data-accion='guardar']").click();
-      await page.waitForFunction(() => document.querySelectorAll("[data-errores] button").length === 3);
-      assert.deepEqual((await page.locator("[data-errores] button").allInnerTexts()).map((t) => t.trim()), ["Persona y puesto (1)", "Sueldo y pago (2)", "Documento (2)"]);
-      // Mockup v3: las pestañas llevan la pastilla «Falta N» y el resumen dice qué falta.
-      const pastillas = await page.locator("[data-pasos-pestanas] [data-falta]").evaluateAll((els) => els.map((e) => `${e.closest("[data-paso]").dataset.paso} ${e.textContent.trim()}`));
-      assert.deepEqual(pastillas, ["persona Falta 1", "sueldo Falta 2", "documento Falta 2"]);
       assert.deepEqual(await page.locator("[data-resumen-formulario] [data-resumen='falta'] [data-estado='error']").allInnerTexts(),
         ["Persona", "Sueldo", "Cada cuándo se paga", "Tipo de contrato", "Fecha de inicio"]);
     }
+    assert.match(await page.locator("[data-barra-formulario] [data-estado-barra]").innerText(), /Faltan o hay que corregir 5 datos/);
     assert.equal(E.pedidos.crear.length, 0, "no se manda nada con datos faltantes");
     await revisarLectura(page, movil, `nuevo con errores ${sufijo}`);
     await captura(page, `nuevo-errores-${sufijo}`, true);
+    // El buscador de personas filtra; con la persona elegida, Guardar baja a la primera sección con errores (Sueldo y
+    // pago) y el foco va a su primer campo.
+    assert.deepEqual(await opcionesConBusqueda(page, "ct-id_empleado", "TORRES"), ["Ana Torres Ruiz"], "el buscador de personas filtra");
+    await elegirEnLista(page, "ct-id_empleado", "ana", "Ana Torres Ruiz");
+    assert.equal(await valorLista(page, "ct-id_empleado"), "15");
+    assert.equal(await valorLista(page, "ct-puesto"), "Cajera", "al elegir a la persona se sugiere su puesto (del catálogo)");
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await page.locator("[data-barra-formulario] [data-accion='guardar']").click();
+    await page.waitForFunction(() => document.activeElement?.id === "ct-salario_base", null, { timeout: 5000 });
+    const arriba = await page.locator("[data-panel='sueldo']").evaluate((el) => el.getBoundingClientRect().top);
+    assert.ok(arriba >= 0 && arriba < 260, `la pantalla bajó a «Sueldo y pago» (queda a ${Math.round(arriba)} px de arriba)`);
+    // Los enlaces del aviso llevan a cada sección (Documento es la última: queda a la vista aunque no llegue hasta arriba).
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await page.locator("[data-errores] [data-ir-seccion='documento']").click();
+    await page.waitForFunction(() => { const t = document.querySelector("[data-panel='documento']").getBoundingClientRect().top; return t >= 0 && t < innerHeight - 200; }, null, { timeout: 5000 });
     await page.goto(base + "/panel/contratos/nuevo?duplicar=142", { waitUntil: "domcontentloaded" });
     await page.locator("#ct-puesto").waitFor({ timeout: 60000 });
-    assert.equal(await page.locator("#ct-puesto").inputValue(), "Cajera");
-    await irAPaso("sueldo");
+    await page.waitForFunction(() => document.querySelector("#ct-puesto")?.dataset.valor === "Cajera", null, { timeout: 15000 });
     assert.equal(await page.locator("#ct-periodicidad_pago").inputValue(), "Quincenal");
     assert.equal(await page.locator("#ct-salario_base").inputValue(), "5250");
-    await captura(page, `duplicar-sueldo-${sufijo}`, true);
-    await irAPaso("documento");
+    await captura(page, `duplicar-${sufijo}`, true);
     await page.locator("#ct-tipo_contrato").selectOption("indefinido");
     await page.locator("[data-barra-formulario] [data-accion='guardar']").click();
     await page.waitForURL(/\/panel\/contratos\/142$/, { timeout: 30000 });
-    const alta = E.pedidos.crear.at(-1);
-    assert.deepEqual([alta.id_empleado, alta.tipo_contrato, alta.salario_base, alta.periodicidad_pago, alta.es_renovacion, alta.contrato_anterior_id, alta.horario, alta.modalidad_trabajo],
-      [15, "indefinido", 5250, "Quincenal", 1, 142, "Entrada: 08:00 | Salida: 16:00 | Comida: 12:00 - 12:30", "presencial"]);
+    const altaC = E.pedidos.crear.at(-1);
+    assert.deepEqual([altaC.id_empleado, altaC.tipo_contrato, altaC.salario_base, altaC.periodicidad_pago, altaC.es_renovacion, altaC.contrato_anterior_id, altaC.horario, altaC.modalidad_trabajo, altaC.puesto, altaC.departamento],
+      [15, "indefinido", 5250, "Quincenal", 1, 142, "Entrada: 08:00 | Salida: 16:00 | Comida: 12:00 - 12:30", "presencial", "Cajera", "Ventas"], "duplicar conserva puesto y el departamento viejo");
     E = estadoInicial();
     await page.goto(base + "/panel/contratos/142", { waitUntil: "domcontentloaded" });
     await page.locator("[data-tarjeta='sueldo']").waitFor({ timeout: 30000 });
@@ -521,7 +567,7 @@ try {
 
     assert.deepEqual(errores.filter((m) => !ignorar(m)), [], `errores: ${errores.join(" | ")}`);
     await ctx.close();
-    console.log(`✔ ${sufijo}: lista → detalle, editar en página (pasos guiados, solo lo cambiado, aviso al salir), ventanas que no se cierran afuera, alta y duplicar, ${completo ? "firmas, convenio, " : ""}revisar sueldos, nómina bloqueada, editor de plantillas; letra, botones, sin desborde ni degradados`);
+    console.log(`✔ ${sufijo}: lista → detalle, editar en una sola hoja (catálogos con buscador, crear puesto, valor viejo conservado, solo lo cambiado, aviso al salir), ventanas que no se cierran afuera, alta (guardar con faltantes marca todo y baja a la sección; foco INC-012) y duplicar, ${completo ? "firmas, convenio, " : ""}revisar sueldos, nómina bloqueada, editor de plantillas; letra, botones, sin desborde ni degradados`);
   }
   ok = true;
   console.log("verify-contratos: todo bien");

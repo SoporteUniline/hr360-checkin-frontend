@@ -23,16 +23,26 @@ const despuesDePintar = (fn) => {
  *   const enfocar = prepararFocoCampo();
  *   if (!(await revisarPaso())) enfocar("acta-fecha");
  * Opciones (para pruebas): documento, esperar(fn).
+ *
+ * (28/11/2026, contrato en una sola hoja) `enfocar(id, { desplazar })`: si el foco SÍ se puede mover, primero se llama
+ * `desplazar(campo)` (p. ej. bajar suave hasta la sección con errores) y luego se enfoca SIN brincar
+ * (`preventScroll`), para que el desplazamiento suave no se corte. Si la persona ya está en otro campo, no se desplaza
+ * ni se enfoca nada: tampoco se le mueve la pantalla mientras escribe.
  */
 export function prepararFocoCampo({ documento = globalThis.document, esperar = despuesDePintar } = {}) {
   const origen = documento?.activeElement ?? null;
-  return (id) => {
+  return (id, { desplazar = null } = {}) => {
     if (!documento || !id) return;
     esperar(() => {
       const actual = documento.activeElement;
       const libre = !actual || actual === origen || actual === documento.body;
       if (!libre) return; // la persona ya está en otro control: no se le quita el foco
-      documento.getElementById(id)?.focus();
+      const campo = documento.getElementById(id);
+      if (!campo) return;
+      if (desplazar) {
+        desplazar(campo);
+        campo.focus({ preventScroll: true });
+      } else campo.focus();
     });
   };
 }

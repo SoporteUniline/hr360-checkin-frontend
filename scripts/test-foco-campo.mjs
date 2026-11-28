@@ -60,6 +60,29 @@ test("si el botón desapareció (foco en body) o el celular no enfoca botones, s
   assert.equal(doc.activeElement.id, "acta-fecha");
 });
 
+test("con desplazar: primero baja a la sección y luego enfoca sin brincar; si la persona se movió, nada", () => {
+  const doc = documentoDePrueba(["guardar", "ct-id_empleado", "ct-notas"]);
+  const opciones = [];
+  doc.elementos["ct-id_empleado"].focus = function (o) { opciones.push(o); doc.activeElement = this; };
+  doc.elementos.guardar.focus();
+  const reloj = esperaManual();
+  const desplazados = [];
+  prepararFocoCampo({ documento: doc, esperar: reloj.esperar })("ct-id_empleado", { desplazar: (el) => desplazados.push(el.id) });
+  reloj.correr();
+  assert.deepEqual(desplazados, ["ct-id_empleado"]);
+  assert.deepEqual(opciones, [{ preventScroll: true }]);
+  assert.equal(doc.activeElement.id, "ct-id_empleado");
+
+  // La persona ya está escribiendo en «Causa u obra»: ni se le mueve la pantalla ni el foco.
+  doc.elementos.guardar.focus();
+  const enfocar = prepararFocoCampo({ documento: doc, esperar: reloj.esperar });
+  enfocar("ct-id_empleado", { desplazar: (el) => desplazados.push(el.id) });
+  doc.elementos["ct-notas"].focus();
+  reloj.correr();
+  assert.deepEqual(desplazados, ["ct-id_empleado"], "no se desplazó otra vez");
+  assert.equal(doc.activeElement.id, "ct-notas");
+});
+
 test("sin documento, sin id o con un id que no existe no truena", () => {
   assert.doesNotThrow(() => prepararFocoCampo({ documento: null })("x"));
   const doc = documentoDePrueba([]);
