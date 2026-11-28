@@ -1,6 +1,7 @@
 import axios from "axios";
 import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+// unirClases = twMerge que además conoce los tokens del sistema de diseño (h-boton, text-campo…): src/lib/unirClases.mjs.
+import { unirClases } from "./unirClases.mjs";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -11,7 +12,7 @@ dayjs.extend(timezone);
 dayjs.locale("es"); // 👈 Establece el idioma globalmente
 
 export function cn(...inputs) {
-  return twMerge(clsx(inputs));
+  return unirClases(clsx(inputs));
 }
 
 export const mxnFormater = (number, decimal = 2) => {

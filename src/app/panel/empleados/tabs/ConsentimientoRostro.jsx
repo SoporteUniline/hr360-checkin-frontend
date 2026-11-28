@@ -100,7 +100,7 @@ export default function ConsentimientoRostro({ idEmpresa, idEmpleado, nombre, em
 
   if (!idEmpleado) {
     return (
-      <section className={`w-full rounded-xl border p-4 text-sm ${ESTILO.pendiente}`} aria-label="Consentimiento del rostro">
+      <section className={`w-full rounded-xl border p-4 text-cuerpo ${ESTILO.pendiente}`} aria-label="Consentimiento del rostro">
         <b>Consentimiento del rostro</b>
         <p className="mt-1">Guarda primero al empleado para generar su consentimiento de uso del rostro.</p>
       </section>
@@ -108,7 +108,7 @@ export default function ConsentimientoRostro({ idEmpresa, idEmpleado, nombre, em
   }
 
   return (
-    <section className={`w-full rounded-xl border p-4 text-sm ${ESTILO[estado.tipo]}`} aria-label="Consentimiento del rostro" aria-busy={cargando}>
+    <section className={`w-full rounded-xl border p-4 text-cuerpo ${ESTILO[estado.tipo]}`} aria-label="Consentimiento del rostro" aria-busy={cargando}>
       <div className="flex items-start justify-between gap-3">
         <b>Consentimiento del rostro</b>
         <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold">{cargando ? "Revisando…" : estado.etiqueta}</span>

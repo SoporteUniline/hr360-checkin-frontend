@@ -278,7 +278,7 @@ export default function PermisoCancelacionDiasPasadosDialog({
           <Button variant="outline" onClick={() => setOpen(false)} className="border-gray-300 text-gray-700 hover:bg-gray-100">
             Volver
           </Button>
-          <Button onClick={confirmar} className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2">
+          <Button onClick={confirmar} size="lg" className="gap-2">
             <Save className="h-4 w-4" />
             Confirmar selección
           </Button>

@@ -15,7 +15,7 @@ export default function BarraAccionesMovil({ primaria, secundaria = null, mas = 
   return (
     <>
       <div className="fixed inset-x-0 bottom-0 z-30 flex flex-col gap-2 border-t border-[#E5E7EB] bg-white px-3.5 pb-5 pt-3 lg:hidden" data-barra-movil>
-        {primaria ? <BotonAccion accion={{ ...primaria, tipo: "primaria" }} className="min-h-14 w-full text-[18px]" /> : null}
+        {primaria ? <BotonAccion accion={{ ...primaria, tipo: "primaria" }} className="h-boton-principal w-full text-boton-principal" /> : null}
         {secundaria || resto.length ? (
           <div className="grid grid-cols-2 gap-2">
             {secundaria ? <BotonAccion accion={{ ...secundaria, tipo: "normal" }} className={resto.length ? "" : "col-span-2"} /> : null}

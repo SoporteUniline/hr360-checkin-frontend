@@ -2,6 +2,7 @@
 
 // Ficha del empleado → Nómina (R1): medio de pago (D-1) y bonos/descuentos asignados (D-6).
 // El medio de pago se guarda con la ficha; los bonos tienen su propio botón (otra tabla).
+import { CLASE_CONTROL } from "@/components/formulario/CampoFormulario";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSnackbar } from "notistack";
@@ -9,14 +10,15 @@ import axios from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { dinero } from "@/lib/nomina/nomina.mjs";
 
-const campo = "h-10 w-full rounded-md border border-input bg-white px-3 text-sm";
+// (28/11/2026) Campo del sistema de diseño (docs/sistema-diseno.md).
+const campo = CLASE_CONTROL;
 
 export function MedioPago({ form, soloLectura }) {
   const medio = form.watch("medio_pago") ?? "";
   const error = form.formState.errors?.monto_transferencia?.message;
   return (
     <div className="grid gap-4 sm:grid-cols-2">
-      <label className="grid gap-2 text-sm font-medium">
+      <label className="grid gap-2 text-etiqueta font-semibold text-texto">
         Medio de pago
         <select className={campo} disabled={soloLectura} {...form.register("medio_pago")}>
           <option value="">Sin definir</option>
@@ -26,7 +28,7 @@ export function MedioPago({ form, soloLectura }) {
         </select>
       </label>
       {medio === "Mixto" ? (
-        <label className="grid gap-2 text-sm font-medium">
+        <label className="grid gap-2 text-etiqueta font-semibold text-texto">
           Monto por transferencia ($)
           <input type="number" min="0" step="0.01" inputMode="decimal" className={campo} disabled={soloLectura} {...form.register("monto_transferencia")} />
           <span className="text-xs font-normal text-gray-500">El resto del neto se paga en efectivo. Se puede cambiar en cada nómina.</span>
@@ -50,10 +52,10 @@ export function BonosEmpleado({ idEmpleado, soloLectura }) {
       .catch((e) => setError(e?.response?.data?.error || "No se pudieron cargar los bonos."));
   }, [idEmpleado]);
 
-  if (!idEmpleado) return <p className="text-sm text-gray-500">Guarda al empleado para asignarle bonos y descuentos.</p>;
-  if (error) return <p className="text-sm text-gray-500">{error}</p>;
-  if (!lista) return <p className="text-sm text-gray-500">Cargando bonos…</p>;
-  if (!lista.length) return <p className="text-sm text-gray-500">Aún no hay bonos ni descuentos. <Link className="font-semibold text-[#2c56e8] hover:underline" href="/panel/nomina/ajustes">Créalos aquí</Link>.</p>;
+  if (!idEmpleado) return <p className="text-cuerpo text-texto-secundario">Guarda al empleado para asignarle bonos y descuentos.</p>;
+  if (error) return <p className="text-cuerpo text-texto-secundario">{error}</p>;
+  if (!lista) return <p className="text-cuerpo text-texto-secundario">Cargando bonos…</p>;
+  if (!lista.length) return <p className="text-cuerpo text-texto-secundario">Aún no hay bonos ni descuentos. <Link className="font-semibold text-[#2c56e8] hover:underline" href="/panel/nomina/ajustes">Créalos aquí</Link>.</p>;
 
   const guardar = async () => {
     setGuardando(true);
@@ -70,7 +72,7 @@ export function BonosEmpleado({ idEmpleado, soloLectura }) {
   return (
     <div className="grid gap-2">
       {lista.map((c, i) => (
-        <div key={c.id_concepto} className="flex flex-wrap items-center gap-3 rounded-lg border border-gray-200 bg-white p-2.5 text-sm">
+        <div key={c.id_concepto} className="flex flex-wrap items-center gap-3 rounded-lg border border-borde bg-white p-2.5 text-cuerpo">
           <label className="flex flex-1 items-center gap-2">
             <input type="checkbox" disabled={soloLectura} checked={c.asignado} onChange={(e) => setLista(lista.map((x, j) => (j === i ? { ...x, asignado: e.target.checked } : x)))} />
             <span className="font-semibold">{c.nombre}</span>

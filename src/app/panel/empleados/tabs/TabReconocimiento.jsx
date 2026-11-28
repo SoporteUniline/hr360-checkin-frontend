@@ -3,6 +3,7 @@
 // (useCapturaRostro + CapturaGuiada, el mismo detector rápido del reloj al checar): las huellas quedan en el formulario y se
 // guardan al guardar la ficha (descriptores [{ pose, descriptor }] + descriptor_facial con la de frente). Antes era una
 // sola foto con otro detector (SSD), que no coincidía con el del reloj.
+import { buttonVariants } from "@/components/ui/button";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import ConsentimientoRostro from "./ConsentimientoRostro";
@@ -78,10 +79,10 @@ export default function TabReconocimiento({
           <FirmaPinRh idEmpleado={valores.id_empleado} />
           <AvisoRostroApp idEmpleado={valores.id_empleado} />
         </div>
-        <section aria-labelledby="t-reconocimiento" className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 text-sm @2xl:col-span-2 @5xl:col-span-1" data-columna="reconocimiento">
+        <section aria-labelledby="t-reconocimiento" className="min-w-0 rounded-seccion border border-borde bg-white p-4 text-cuerpo @2xl:col-span-2 @5xl:col-span-1" data-columna="reconocimiento">
           <div className="flex flex-wrap items-start justify-between gap-2">
-            <h3 id="t-reconocimiento" className="flex items-center gap-2 font-semibold text-slate-900"><ScanFace className="size-4 text-brand" aria-hidden="true" /> Reconocimiento facial</h3>
-            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${tieneRostro ? "bg-green-50 text-green-800" : "bg-slate-100 text-slate-600"}`} data-rostro-estado>
+            <h3 id="t-reconocimiento" className="flex items-center gap-2 text-titulo-seccion font-bold text-navy"><ScanFace className="size-5 text-navy" aria-hidden="true" /> Reconocimiento facial</h3>
+            <span data-chico className={`rounded-full px-3 py-1 text-[15px] font-semibold ${tieneRostro ? "bg-estado-exito text-estado-exito-texto" : "bg-estado-neutro text-estado-neutro-texto"}`} data-rostro-estado>
               {rostroCelular ? "Registrado desde el celular" : descriptorReady ? "Fotos tomadas: falta guardar" : tieneRostro ? "Rostro registrado" : "Sin rostro"}
             </span>
           </div>
@@ -94,10 +95,10 @@ export default function TabReconocimiento({
           <div ref={bloqueRef} className="mt-4 grid gap-3 border-t border-slate-100 pt-4" data-registro-guiado>
             {!camaraVisible ? (
               <>
-                <p className="text-slate-600">Registro con 5 fotos: la persona mira al frente, sube y baja un poco la cara y la gira un poco a cada lado. Las fotos se toman solas, con buena luz y sin otras personas atrás.</p>
+                <p className="text-texto-secundario">Registro con 5 fotos: la persona mira al frente, sube y baja un poco la cara y la gira un poco a cada lado. Las fotos se toman solas, con buena luz y sin otras personas atrás.</p>
                 {!soloLectura ? (
                   <button type="button" onClick={registrar} disabled={fase === "preparando"}
-                    className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-[#2563EB] px-4 font-semibold text-white hover:bg-[#1d4ed8] disabled:opacity-60">
+                    className={`${buttonVariants()} w-full`}>
                     <Camera className="size-4" aria-hidden="true" />{fase === "preparando" ? "Preparando la cámara…" : tieneRostro ? "Volver a registrar" : "Registrar rostro"}
                   </button>
                 ) : null}
@@ -115,11 +116,11 @@ export default function TabReconocimiento({
               depende de guardar la ficha. Antes se ocultaba y en la ficha abierta en solo lectura no aparecía. */}
           {valores.id_empleado || !soloLectura ? (
             <div className="mt-4 grid gap-2 border-t border-slate-100 pt-4" data-rostro-celular-bloque>
-              <p className="text-slate-600">{soloLectura ? "¿Registrar o actualizar su rostro? La persona puede tomarlo con su celular." : "¿Es difícil con la cámara de la computadora? La persona puede tomarlo con su celular."}</p>
+              <p className="text-texto-secundario">{soloLectura ? "¿Registrar o actualizar su rostro? La persona puede tomarlo con su celular." : "¿Es difícil con la cámara de la computadora? La persona puede tomarlo con su celular."}</p>
               {valores.id_empleado ? (
                 <RostroCelular idEmpleado={valores.id_empleado} nombre={nombreEmpleado} onRegistrado={alRegistrarDesdeCelular} onAbrir={cancelar} />
               ) : (
-                <p className="text-xs text-slate-500">Guarda primero al empleado para usar esta opción.</p>
+                <p className="text-cuerpo text-texto-secundario">Guarda primero al empleado para usar esta opción.</p>
               )}
             </div>
           ) : null}

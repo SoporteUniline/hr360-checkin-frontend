@@ -106,7 +106,9 @@ test("vistas de detalle: sin fondos degradados, títulos en 700 (nunca 800) y bo
     assert.doesNotMatch(t, /font-extrabold|font-black|fontWeight:\s*[89]00/, `${f}: títulos en 700`);
     assert.doesNotMatch(t, /text-(xs|\[1[0-4]px\])/, `${f}: letra ≥ 15 px (cuerpo ≥ 16)`);
   }
-  assert.match(readFileSync(path.join(RAIZ, "src/components/detalle/BarraAcciones.jsx"), "utf8"), /min-h-12/);
+  // (28/11/2026) 48 px con el token global del sistema de diseño (min-h-boton = --adamia-alto-boton).
+  assert.match(readFileSync(path.join(RAIZ, "src/components/detalle/BarraAcciones.jsx"), "utf8"), /min-h-boton/);
+  assert.match(readFileSync(path.join(RAIZ, "src/app/globals.css"), "utf8"), /--adamia-alto-boton:\s*48px;/);
 });
 
 test("horario corto para la tarjeta Jornada", async () => {

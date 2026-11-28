@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import axios from "@/lib/axios";
 import {
@@ -329,8 +330,8 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
             </svg>
           </div>
           <div>
-            <h3 className="text-xl font-bold text-gray-900">Jornada laboral</h3>
-            <p className="text-sm text-gray-600">
+            <h3 className="text-titulo-seccion font-bold text-navy">Jornada laboral</h3>
+            <p className="text-cuerpo text-texto-secundario">
               Define los horarios de trabajo semanales
             </p>
           </div>
@@ -347,7 +348,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                   <FormLabel className="text-base">
                     Autorizar horas extra (reporte)
                   </FormLabel>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-cuerpo text-texto-secundario">
                     Si está activo, este empleado acumula horas extra en el
                     reporte de horas trabajadas.
                   </div>
@@ -388,7 +389,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                   Turno existente
                 </div>
 
-                <div className="mt-1 text-sm text-gray-500">
+                <div className="mt-1 text-cuerpo text-texto-secundario">
                   Utiliza un horario previamente configurado.
                 </div>
               </button>
@@ -415,7 +416,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                   Horario personalizado
                 </div>
 
-                <div className="mt-1 text-sm text-gray-500">
+                <div className="mt-1 text-cuerpo text-texto-secundario">
                   Configura días y horarios específicos para este empleado.
                 </div>
               </button>
@@ -494,10 +495,10 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                   {DIAS_SEMANA.map((dia) => (
                     <label
                       key={dia}
-                      className={`cursor-pointer px-3 py-1 border rounded-full text-sm transition ${
+                      className={`inline-flex min-h-12 cursor-pointer items-center rounded-full border px-4 text-cuerpo font-semibold transition ${
                         diasSeleccionados.includes(dia)
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
+                          ? "bg-brand text-white border-brand"
+                          : "bg-white border-borde-campo text-texto-boton hover:bg-franja"
                       }`}
                     >
                       <input
@@ -516,7 +517,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                 {/* Inputs de horario común */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
-                    <FormLabel className="text-sm text-gray-600">
+                    <FormLabel className="text-cuerpo text-texto-secundario">
                       Entrada
                     </FormLabel>
                     <Input
@@ -527,7 +528,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                     />
                   </div>
                   <div>
-                    <FormLabel className="text-sm text-gray-600">
+                    <FormLabel className="text-cuerpo text-texto-secundario">
                       Salida comida
                     </FormLabel>
                     <Input
@@ -538,7 +539,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                     />
                   </div>
                   <div>
-                    <FormLabel className="text-sm text-gray-600">
+                    <FormLabel className="text-cuerpo text-texto-secundario">
                       Regreso comida
                     </FormLabel>
                     <Input
@@ -549,7 +550,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                     />
                   </div>
                   <div>
-                    <FormLabel className="text-sm text-gray-600">
+                    <FormLabel className="text-cuerpo text-texto-secundario">
                       Salida
                     </FormLabel>
                     <Input
@@ -566,7 +567,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                   <button
                     type="button"
                     onClick={aplicarHorarioComun}
-                    className="px-4 py-2 rounded bg-blue-600 text-white text-sm font-medium shadow disabled:opacity-50"
+                    className={buttonVariants({ variant: "outline" })}
                     disabled={soloLectura || diasSeleccionados.length === 0}
                   >
                     Aplicar horario a días seleccionados
@@ -581,7 +582,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
           </FormLabel>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-sm border border-gray-300 rounded min-w-[600px]">
+            <table className="w-full text-cuerpo border border-borde rounded min-w-[600px]">
               <thead className="bg-slate-100 text-left">
                 <tr>
                   <th className="p-2">Día</th>
@@ -652,6 +653,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
           {renderCampos("horarios", true)}
 
           {/* Resumen de horas */}
+          {/* Resumen calculado (no se edita): recuadro gris claro como el del mockup, sin colores decorativos. */}
           <div className="employee-fields employee-fields-three mt-6">
             <FormField
               name="hrs_por_dia"
@@ -661,7 +663,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                   <FormLabel className="text-sm font-medium text-gray-700">
                     Promedio de horas por día
                   </FormLabel>
-                  <div className="px-4 py-3 bg-blue-50 border-2 border-blue-200 rounded-lg text-lg font-bold text-blue-700">
+                  <div className="px-4 py-3 bg-fondo-pagina border border-borde rounded-boton text-[22px] font-bold text-texto">
                     {field.value ?? "0.00"} hrs
                   </div>
                 </FormItem>
@@ -676,7 +678,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                   <FormLabel className="text-sm font-medium text-gray-700">
                     Horas de comida por día
                   </FormLabel>
-                  <div className="px-4 py-3 bg-purple-50 border-2 border-purple-200 rounded-lg text-lg font-bold text-purple-700">
+                  <div className="px-4 py-3 bg-fondo-pagina border border-borde rounded-boton text-[22px] font-bold text-texto">
                     {field.value ?? "0.00"} hrs
                   </div>
                 </FormItem>
@@ -688,7 +690,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
               <FormLabel className="text-sm font-medium text-gray-700">
                 Horas totales por semana
               </FormLabel>
-              <div className="px-4 py-3 bg-green-50 border-2 border-green-200 rounded-lg text-lg font-bold text-green-700">
+              <div className="px-4 py-3 bg-fondo-pagina border border-borde rounded-boton text-[22px] font-bold text-texto">
                 {hrsSemana} hrs
               </div>
             </FormItem>

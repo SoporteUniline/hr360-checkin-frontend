@@ -1,5 +1,6 @@
 "use client";
 
+import { buttonVariants } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import axios from "@/lib/axios";
 import { useSnackbar } from "notistack";
@@ -247,10 +248,10 @@ export default function TabContactosEmergencia({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-titulo-seccion font-bold text-navy">
             Contactos de emergencia
           </h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-cuerpo text-texto-secundario">
             {esNuevo
               ? "Los contactos se guardarán al registrar al empleado."
               : `${total} contacto${total === 1 ? "" : "s"} registrado${total === 1 ? "" : "s"}`}
@@ -261,7 +262,7 @@ export default function TabContactosEmergencia({
           <button
             type="button"
             onClick={() => abrir()}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700"
+            className={buttonVariants({ variant: "outline" })}
           >
             <Plus size={17} />
             Agregar contacto
@@ -272,7 +273,7 @@ export default function TabContactosEmergencia({
       {renderCampos("encabezado", true)}
 
       {formulario && !soloLectura && (
-        <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-4 sm:p-5 space-y-4">
+        <div className="rounded-seccion border border-borde bg-fondo-pagina p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between">
             <h4 className="font-semibold text-gray-900">
               {editando !== null ? "Editar contacto" : "Nuevo contacto"}
@@ -349,8 +350,8 @@ export default function TabContactosEmergencia({
       ) : lista.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
           <Phone className="mx-auto mb-3 text-gray-400" size={28} />
-          <p className="font-medium text-gray-700">Sin contactos registrados</p>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="font-medium text-texto">Sin contactos registrados</p>
+          <p className="mt-1 text-cuerpo text-texto-secundario">
             Agrega a las personas que deban ser notificadas en una emergencia.
           </p>
         </div>

@@ -696,7 +696,7 @@ try {
   assert.ok(await tamano(hoja.getByRole("switch", { name: "Publicar mis vacantes en la bolsa de trabajo de ADAMIA" })) >= 44);
   assert.ok(await sinScrollHorizontal(tel), "hoja de enlaces sin scroll horizontal");
   if (OUT) await tel.screenshot({ path: OUT + "/11-movil-enlaces-vacantes.png" });
-  await hoja.getByRole("button", { name: "Close" }).tap();
+  await hoja.getByRole("button", { name: "Cerrar" }).tap();
   await hoja.waitFor({ state: "detached" });
   await tel.getByRole("button", { name: "Ana Ruiz" }).tap();
   await tel.waitForURL(/\?c=1$/);
@@ -746,7 +746,7 @@ try {
   assert.equal(await tel.evaluate(() => navigator.clipboard.readText()), "https://dev.adamia.com.mx/vacante/chofer-repartidor");
   assert.ok(await sinScrollHorizontal(tel), "hoja con WhatsApp apagado sin scroll horizontal");
   if (OUT) await tel.screenshot({ path: OUT + "/12-movil-apagado-enlaces.png" });
-  await hojaApagada.getByRole("button", { name: "Close" }).tap();
+  await hojaApagada.getByRole("button", { name: "Cerrar" }).tap();
   S.modo = "compartido";
   await movil.close();
 
@@ -1066,7 +1066,7 @@ try {
   const cajaAg = await agT.boundingBox();
   assert.ok(cajaAg.x === 0 && cajaAg.width === 390 && cajaAg.height >= 840, `agente a pantalla completa: ${JSON.stringify(cajaAg)}`);
   for (const sw of ["Agente encendido", "Siempre disponible", "Lunes", "Domingo"]) assert.ok(await tamano(agT.getByRole("switch", { name: sw })) >= 44, `switch ${sw} ≥44 px`);
-  assert.ok(await tamano(agT.getByRole("button", { name: "Guardar" })) >= 44 && await tamano(agT.getByRole("button", { name: "Close" })) >= 44);
+  assert.ok(await tamano(agT.getByRole("button", { name: "Guardar" })) >= 44 && await tamano(agT.getByRole("button", { name: "Cerrar" })) >= 44);
   assert.ok(await tamano(agT.getByRole("button", { name: "Quitar «humano»" })) >= 44);
   assert.ok(await sinScrollHorizontal(t2) && await agT.evaluate((el) => [...el.querySelectorAll("*")].every((n) => n.getBoundingClientRect().right <= 391)), "agente sin desborde horizontal");
   if (OUT) await t2.screenshot({ path: OUT + "/r2-05-movil-agente.png" });
@@ -1087,7 +1087,7 @@ try {
   if (OUT) await t2.screenshot({ path: OUT + "/r2-06-movil-editor.png" });
   await edT.getByRole("button", { name: "Cancelar" }).tap();
   await edT.waitFor({ state: "detached" });
-  await t2.getByRole("dialog", { name: "Enlaces de vacantes" }).getByRole("button", { name: "Close" }).tap();
+  await t2.getByRole("dialog", { name: "Enlaces de vacantes" }).getByRole("button", { name: "Cerrar" }).tap();
   // Chat y evaluación en hoja.
   await t2.getByRole("button", { name: /^Carlos Méndez/ }).tap();
   const hiloT = t2.getByRole("region", { name: "Conversación" });
@@ -1288,7 +1288,7 @@ try {
   assert.equal(await dlgAv.evaluate((el) => el.scrollTop), 0, "el encabezado del diálogo no se recorta al enfocar campos con error (radios sr-only contenidos en la zona con scroll)");
   await dlgAv.getByRole("button", { name: "Cerrar" }).click();
   await dlgAv.waitFor({ state: "detached" });
-  await r3.getByRole("dialog", { name: "Enlaces de vacantes" }).getByRole("button", { name: "Close" }).click();
+  await r3.getByRole("dialog", { name: "Enlaces de vacantes" }).getByRole("button", { name: "Cerrar" }).click();
 
   // ——— 19. Entrevistas: calendario, filtros, lista y acciones ———
   await linkEntrevistas(r3).click();
@@ -1478,7 +1478,7 @@ try {
   await avT.getByRole("button", { name: "Cerrar" }).tap();
   await avT.waitFor({ state: "detached" });
   // Chat con la ventana cerrada en teléfono: «Enviar seguimiento» ≥44 px.
-  await t3.getByRole("dialog", { name: "Enlaces de vacantes" }).getByRole("button", { name: "Close" }).tap();
+  await t3.getByRole("dialog", { name: "Enlaces de vacantes" }).getByRole("button", { name: "Cerrar" }).tap();
   await t3.getByRole("button", { name: "+52 442 123 4567" }).tap();
   const segT = t3.locator("[data-seguimiento]");
   await segT.waitFor();

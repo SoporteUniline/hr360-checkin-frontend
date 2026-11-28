@@ -1,19 +1,14 @@
-// Colores de estado de las vistas de detalle (docs/vistas-de-detalle.md). Contraste ≥ 4.5:1 sobre su fondo.
+// Colores de estado de las vistas de detalle (docs/vistas-de-detalle.md). (28/11/2026) Salen de los tokens globales
+// --adamia-estado-* de src/app/globals.css (los mismos de EtiquetaEstado, docs/sistema-diseno.md): cambiar un color
+// ahí lo cambia aquí. `suave` es el fondo de avisos largos. Contraste ≥ 4.5:1 sobre su fondo.
 export const TONOS = {
-  exito: { fondo: "#DCFCE7", texto: "#166534", suave: "#F0FDF4" },
-  aviso: { fondo: "#FFEDD5", texto: "#9A3412", suave: "#FFF7ED" },
-  error: { fondo: "#FEE2E2", texto: "#991B1B", suave: "#FEF2F2" },
-  info: { fondo: "#E0E7FF", texto: "#1E3A8A", suave: "#EEF2FF" },
-  neutro: { fondo: "#E5E7EB", texto: "#374151", suave: "#F3F4F6" },
+  exito: { fondo: "var(--adamia-estado-exito)", texto: "var(--adamia-estado-exito-texto)", suave: "#F0FDF4" },
+  aviso: { fondo: "var(--adamia-estado-aviso)", texto: "var(--adamia-estado-aviso-texto)", suave: "#FFFBEB" },
+  error: { fondo: "var(--adamia-estado-error)", texto: "var(--adamia-estado-error-texto)", suave: "var(--adamia-peligro-suave)" },
+  info: { fondo: "var(--adamia-estado-info)", texto: "var(--adamia-estado-info-texto)", suave: "var(--adamia-seleccion)" },
+  neutro: { fondo: "var(--adamia-estado-neutro)", texto: "var(--adamia-estado-neutro-texto)", suave: "var(--adamia-franja)" },
 };
 export const tono = (t) => TONOS[t] ?? TONOS.neutro;
 
-/** Pastilla de estado («Vigente», «Pendiente»…). */
-export function Pastilla({ texto, tono: t = "neutro", className = "" }) {
-  const c = tono(t);
-  return (
-    <span data-chico className={`inline-flex items-center rounded-full px-3 py-0.5 text-[15px] font-bold ${className}`} style={{ background: c.fondo, color: c.texto }}>
-      {texto}
-    </span>
-  );
-}
+/** Pastilla de estado («Vigente», «Pendiente»…). Es la misma EtiquetaEstado del sistema de diseño. */
+export { default as Pastilla } from "@/components/formulario/EtiquetaEstado";

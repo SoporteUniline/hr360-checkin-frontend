@@ -31,10 +31,12 @@ export const MONEDAS = [
 ];
 
 /** Las pestañas, en orden. `campos`: los que viven en cada una (para marcar dónde hay errores). */
+// Pasos del formulario guiado (28/11/2026, mockup aprobado: «Sueldo y pago», «Jornada y horario»). Cada paso lista sus
+// campos: con eso se sabe a qué paso llevar a la persona cuando un dato tiene error (pestanaDe).
 export const PESTANAS = [
   { clave: "persona", texto: "Persona y puesto", campos: ["id_empresa", "id_empleado", "puesto", "departamento", "jefe_inmediato_id", "lugar_trabajo", "modalidad_trabajo"] },
-  { clave: "sueldo", texto: "Sueldo", campos: ["salario_base", "periodicidad_pago", "moneda"] },
-  { clave: "jornada", texto: "Jornada", campos: ["tipo_jornada", "horas_semanales", "hora_entrada", "hora_salida", "hora_comida_inicio", "hora_comida_fin"] },
+  { clave: "sueldo", texto: "Sueldo y pago", campos: ["salario_base", "periodicidad_pago", "moneda"] },
+  { clave: "jornada", texto: "Jornada y horario", campos: ["tipo_jornada", "horas_semanales", "hora_entrada", "hora_salida", "hora_comida_inicio", "hora_comida_fin"] },
   { clave: "prestaciones", texto: "Prestaciones", campos: ["dias_vacaciones", "aguinaldo_dias", "prima_vacacional", "prestaciones_superiores"] },
   { clave: "documento", texto: "Documento", campos: ["tipo_contrato", "fecha_inicio", "fecha_fin", "notas"] },
 ];

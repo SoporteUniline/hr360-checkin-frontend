@@ -1,19 +1,13 @@
 import { useState, useEffect } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import axios from "axios";
 import { mutate } from "swr";
 import { useSnackbar } from "notistack";
-import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/Combobox";
+import { CampoFormulario, VentanaChica } from "@/components/formulario";
 
+// (28/11/2026, sistema de diseño; docs/sistema-diseno.md) Crear o editar un puesto es una sola idea con 1–2 campos:
+// va en VENTANA CHICA (franja gris, X de 44 px, Cancelar y Guardar; no se cierra al tocar afuera). La lógica de guardar
+// no cambió.
 export default function PositionFormDialog({
   open,
   setOpen,
@@ -98,115 +92,44 @@ export default function PositionFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="bg-brand-accent p-3 rounded-lg shadow-md">
-              <svg
-                className="w-6 h-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <DialogTitle className="text-xl font-bold text-gray-900">
-              {editPosition ? "Editar puesto" : "Nuevo puesto"}
-            </DialogTitle>
-          </div>
-        </DialogHeader>
+    <VentanaChica
+      abierta={open}
+      alCambiar={setOpen}
+      titulo={editPosition ? "Editar puesto" : "Crear puesto"}
+      descripcion="Los puestos dicen qué hace cada persona en tu empresa."
+      alGuardar={handleSubmit}
+      deshabilitado={formInvalido}
+    >
+      {!editPosition && (
+        <CampoFormulario id="empresa-combobox" etiqueta="Empresa" obligatorio>
+          <Combobox
+            name="empresa-combobox"
+            options={empresas.map((e) => ({
+              value: String(e.id_empresa),
+              label: e.nombre,
+            }))}
+            value={empresaSeleccionada}
+            onChange={setEmpresaSeleccionada}
+            placeholder="Selecciona la empresa"
+          />
+        </CampoFormulario>
+      )}
 
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
-          <div className="flex items-start gap-3">
-            <div className="bg-[#7C3AED] p-2 rounded-lg flex-shrink-0">
-              <svg
-                className="w-4 h-4 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <p className="text-xs text-gray-700">
-                Los puestos definen las responsabilidades y roles dentro de tu
-                organización.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {!editPosition && (
-            <div>
-              <Label htmlFor="empresa-combobox" className="mb-2">
-                Empresa
-              </Label>
-              <Combobox
-                name="empresa-combobox"
-                options={empresas.map((e) => ({
-                  value: String(e.id_empresa),
-                  label: e.nombre,
-                }))}
-                value={empresaSeleccionada}
-                onChange={setEmpresaSeleccionada}
-                placeholder="Selecciona la empresa"
-              />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              Nombre del puesto
-            </label>
-            <Input
-              placeholder="Ej. Gerente, Desarrollador, Contador..."
-              value={nombre}
-              onChange={(e) => {
-                setNombre(e.target.value);
-                setError("");
-              }}
-              className="w-full"
-              autoFocus
-            />
-          </div>
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-              <p className="text-sm text-red-700 font-medium">⚠️ {error}</p>
-            </div>
-          )}
-        </div>
-
-        <DialogFooter className="flex justify-end gap-3 mt-6">
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            className="border-gray-300"
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={formInvalido}
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
-          >
-            {editPosition ? "Actualizar" : "Agregar"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <CampoFormulario id="puesto-nombre" etiqueta="Nombre del puesto" obligatorio error={error || null}
+        ayuda="Así aparecerá en el contrato y en los recibos.">
+        {(p) => (
+          <input
+            {...p}
+            placeholder="Ej.: Supervisor de piso"
+            value={nombre}
+            onChange={(e) => {
+              setNombre(e.target.value);
+              setError("");
+            }}
+            autoFocus
+          />
+        )}
+      </CampoFormulario>
+    </VentanaChica>
   );
 }

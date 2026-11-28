@@ -7,9 +7,11 @@ import { useEffect, useState } from "react";
 import axios from "@/lib/axios";
 import { palabraPeriodo, palabraSola, resumenPlan, textoCalendario } from "@/lib/nomina/nomina.mjs";
 import { mensajeError } from "./comun";
+import { CLASE_CONTROL } from "@/components/formulario/CampoFormulario";
 
-export const CAMPO = "block min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-[17px] text-[#111827] lg:text-[16px] focus:border-brand focus:outline-none focus:ring-2 focus:ring-[#2C56E8]/30";
-export const ETIQUETA = "grid content-start gap-1.5 text-[17px] font-semibold text-[#111827] lg:text-[16px]";
+// (28/11/2026) Campo y etiqueta del sistema de diseño (docs/sistema-diseno.md): salen de los tokens globales.
+export const CAMPO = CLASE_CONTROL;
+export const ETIQUETA = "grid content-start gap-2 text-etiqueta font-semibold text-texto";
 
 /** Entero ≥ 1 escrito en el campo «¿En cuántos pagos?» (o null). */
 export const pagosValidos = (v) => (/^\d+$/.test(String(v ?? "").trim()) && Number(v) >= 1 ? Number(v) : null);
