@@ -91,7 +91,10 @@ export default function PasosGuiados({ pasos, actual, visitados = [], errores = 
         })}
       </ol>
 
-      <div className="flex min-w-0 max-w-[820px] flex-1 flex-col gap-4 lg:gap-6">{children}</div>
+      {/* key={actual}: cada paso es un árbol NUEVO. Sin la llave React reusaba los mismos <input> de un paso en el
+          siguiente (mismo lugar, mismo tipo) y, con campos sin control (register de react-hook-form), al regresar se
+          veía lo del otro paso: «Lugar» con el cargo y «Hora» vacía, aunque se guardaba otra cosa (INC-012). */}
+      <div key={actual} data-paso-contenido={actual} className="flex min-w-0 max-w-[820px] flex-1 flex-col gap-4 lg:gap-6">{children}</div>
     </div>
   );
 }

@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import NewTipoActaModal from "@/components/NewTipoActaModal";
 import { cn } from "@/lib/utils";
+import { prepararFocoCampo } from "@/lib/formulario/focoCampo.mjs";
 import { vecinosDePaso } from "@/lib/formulario/pasosGuiados.mjs";
 import {
   PASOS_ACTA, RUTA_ACTAS, SANCIONES, erroresPorPaso, formatearTexto, primerCampoConError, primerPasoConError, siNo,
@@ -55,13 +56,16 @@ export default function FormularioActa({ mode = "create", actaToEdit = null, dat
     setPaso(clave);
     window.scrollTo({ top: 0 });
   };
-  // Lleva el foco al campo con error (ya dentro de su paso).
-  const enfocar = (campo) => setTimeout(() => document.getElementById(ID[campo])?.focus(), 60);
+  // Lleva el foco al campo con error (ya dentro de su paso), pero NO se lo quita a quien ya está escribiendo en otro
+  // campo (INC-012: el foco a ciegas de 60 ms brincaba a «Fecha» a media palabra y el acta se guardaba sin lo escrito).
+  // Se prepara al INICIO de la acción, cuando el foco aún está en el botón oprimido (src/lib/formulario/focoCampo.mjs).
+  const prepararEnfoque = () => { const enfocar = prepararFocoCampo(); return (campo) => enfocar(ID[campo]); };
   const { anterior, siguiente } = vecinosDePaso(PASOS_ACTA, paso);
 
   // La lista de actas se vuelve a pedir al regresar (antes lo hacía refetch de la ventana).
   const refrescarLista = () => mutate((clave) => typeof clave === "string" && clave.startsWith("/checador/administrativeMinutes"));
   const guardar = async () => {
+    const enfocar = prepararEnfoque();
     const r = await f.guardar();
     if (r.ok) { refrescarLista(); return r; }
     if (r.errores) {
@@ -81,6 +85,7 @@ export default function FormularioActa({ mode = "create", actaToEdit = null, dat
   const cancelar = () => confirmarSalida(({ reemplazar }) => (reemplazar ? router.replace(volverA) : router.push(volverA)), { navega: true });
   // «Continuar» (alta): revisa solo los datos de este paso; si están bien, pasa al siguiente. No guarda todavía.
   const continuar = async () => {
+    const enfocar = prepararEnfoque();
     if (!(await f.revisarPaso(paso))) {
       enfocar(primerCampoConError(form.formState.errors, paso));
       return;

@@ -249,6 +249,8 @@ try {
     assert.equal(await page.locator("[data-encabezado-pagina] a").first().getAttribute("href"), "/panel/permisos", "un volver externo no se usa");
 
     // ——— 4. Acta nueva por pasos ———
+    // Reloj de la página bajo control (corre normal hasta que se pausa): sirve para la regresión de INC-012 del paso 2.
+    await page.clock.install();
     await page.goto(base + "/panel/actas-administrativas", { waitUntil: "domcontentloaded" });
     await page.getByText("ACTA-0088").first().waitFor({ timeout: 60000 }); // ya cargó (y se puede hacer clic)
     await page.getByRole("button", { name: /Nueva acta/ }).first().click({ timeout: 60000 });
@@ -276,13 +278,34 @@ try {
     await barraA.getByRole("button", { name: "Continuar" }).click();
     // Paso 2: el hecho.
     await page.locator("#acta-fecha").waitFor({ timeout: 5000 });
+    // Regresión INC-012 (el acta perdía lo escrito): «Continuar» con el paso vacío lleva el foco a «Fecha», pero si la
+    // persona YA está escribiendo en otro campo no se le quita. Antes el foco llegaba 60 ms después, a ciegas, brincaba a
+    // «Fecha» a media palabra y el resto se perdía (POST con testigos o lugar en null). El reloj se pausa para que la
+    // espera del foco ocurra justo a la mitad de lo que se teclea, siempre.
+    await page.clock.pauseAt(Date.now() + 60_000);
     await barraA.getByRole("button", { name: "Continuar" }).click();
     await page.locator("#acta-descripcion-error").waitFor({ timeout: 5000 });
+    await page.locator("#acta-lugar").click();
+    await page.keyboard.type("Caja");
+    await page.clock.runFor(1000);
+    await page.keyboard.type(" 2");
+    await page.clock.resume();
+    assert.equal(await page.evaluate(() => document.activeElement?.id), "acta-lugar", "el foco no brinca de campo mientras se escribe");
+    assert.equal(await page.locator("#acta-lugar").inputValue(), "Caja 2", "lo que se escribe tras el error se queda en su campo");
+    assert.equal(await page.locator("#acta-fecha").inputValue(), "", "y no cae en otro campo");
     await page.locator("#acta-fecha").fill("2026-11-25");
     await page.locator("#acta-hora").fill("09:40");
-    await page.locator("#acta-lugar").fill("Caja 2");
     await page.locator("#acta-descripcion").fill("Faltaron $200 en el corte de caja.");
     await page.locator("#acta-testigos").fill("Persona Dos Demo");
+    // Lo escrito sobrevive a cambiar de paso y regresar (el paso se desmonta y se vuelve a montar).
+    const pasoHecho = () => page.evaluate(() => ["acta-fecha", "acta-hora", "acta-lugar", "acta-descripcion", "acta-testigos"].map((id) => document.getElementById(id)?.value));
+    const HECHO = ["2026-11-25", "09:40", "Caja 2", "Faltaron $200 en el corte de caja.", "Persona Dos Demo"];
+    assert.deepEqual(await pasoHecho(), HECHO, "paso 2 lleno");
+    await barraA.getByRole("button", { name: "Continuar" }).click();
+    await page.locator("#acta-sancion").waitFor({ timeout: 5000 });
+    await barraA.getByRole("button", { name: "Atrás" }).click();
+    await page.locator("#acta-testigos").waitFor({ timeout: 5000 });
+    assert.deepEqual(await pasoHecho(), HECHO, "paso 2 igual tras ir al 3 y regresar");
     await captura(page, `acta-nueva-paso2-${sufijo}`);
     await revisarDiseno(page, movil, `acta paso 2 ${sufijo}`, "[data-vista='formulario-acta']");
     await barraA.getByRole("button", { name: "Continuar" }).click();
