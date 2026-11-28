@@ -232,6 +232,14 @@ prueban en `scripts/test-pasos-guiados.mjs`.
 ```
 Ejemplo: `src/app/panel/actas-administrativas/formulario/FormularioActa.jsx`. El contrato ya usa PestanasPasos.
 
+**Dos reglas de los formularios por pasos (INC-012, `docs/incidentes/INC-012-acta-pierde-datos.md`):**
+- Cada paso se monta como árbol nuevo: PasosGuiados ya pone `key={actual}` al contenido. Si armas tus propios pasos con
+  campos sin control (`register` de react-hook-form), pon tú la llave; si no, React reusa los `<input>` de otro paso y
+  al regresar se ve el dato de otro campo.
+- Para llevar el foco al campo con error usa `prepararFocoCampo()` (`src/lib/formulario/focoCampo.mjs`) AL INICIO de
+  la acción, nunca `setTimeout(() => el.focus(), 60)`: el foco a ciegas brincaba a otro campo mientras la persona
+  escribía y lo tecleado se perdía.
+
 ### Lista, Dato y Nota (`PiezasFormulario.jsx`)
 Lista desplegable nativa (en el celular abre la del teléfono, grande), un dato de solo lectura y una nota (explicación
 gris, aviso ámbar o error rojo). Nacieron en el contrato y las usan el permiso y el acta.
