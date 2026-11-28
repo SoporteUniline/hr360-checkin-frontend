@@ -71,6 +71,7 @@ import {
   Grid3x3,
   MessageSquareHeart,
   UserPlus,
+  FolderCheck,
   ClipboardPen,
   Sparkles,
   ShieldAlert,
@@ -346,6 +347,14 @@ const menuGroups = [
         matchPrefix: true,
         rol: "Recruiter",
         icon: UserPlus,
+      },
+      // (28/11/2026) Expediente por etapas y cumplimiento de ley (lo que falta a cada persona, ZIP y paquete para juicio).
+      {
+        title: "Expediente y cumplimiento",
+        url: "/panel/expediente",
+        matchPrefix: true,
+        rol: "Recruiter",
+        icon: FolderCheck,
       },
       // {
       //   title: "Reclutamiento",
