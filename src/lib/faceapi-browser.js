@@ -27,6 +27,38 @@ const despuesDeTurno = (paso) => { const espera = turno(); return espera ? esper
 // Marca opcional del modo diagnóstico (no hace nada si está apagado).
 const diag = (nombre, datos) => globalThis.__adamiaDiag?.marca(nombre, datos);
 
+const SCRIPT_FACE_API = "/vendor/face-api/face-api-0.22.2.min.js";
+const MODELOS = "/models";
+// Los tres modelos que carga el reloj (detector rápido, puntos y huella), por el nombre de su manifiesto.
+const MANIFIESTOS = ["tiny_face_detector_model", "face_landmark_68_model", "face_recognition_model"];
+
+// (INC-011) Precarga del panel del empleado: SOLO baja los archivos a la caché del navegador, sin ejecutar el script ni
+// crear tensores ni calentar la GPU (eso bloqueaba el hilo principal 3.5 + 1.1 + 2.2 s al abrir la app, o al terminar de
+// bajar el modelo de 6.4 MB con red celular, y los toques no respondían). El reloj los toma de la caché al abrirse
+// (loadBrowserFaceApi). Uno por uno y con prioridad baja para no competir con las pantallas en una red lenta.
+let descargando;
+export function descargarFaceApi() {
+  if (loading || window.faceapi) return Promise.resolve();
+  if (descargando) return descargando;
+  const bajar = async (url) => {
+    const respuesta = await fetch(url, { priority: "low" });
+    if (!respuesta.ok) throw new Error(`No se pudo descargar ${url}`);
+    return respuesta;
+  };
+  descargando = (async () => {
+    // blob(): el contenido queda en la caché y no se copia a la memoria de JavaScript.
+    await (await bajar(SCRIPT_FACE_API)).blob();
+    for (const modelo of MANIFIESTOS) {
+      const grupos = await (await bajar(`${MODELOS}/${modelo}-weights_manifest.json`)).json();
+      for (const archivo of grupos.flatMap((grupo) => grupo.paths || [])) await (await bajar(`${MODELOS}/${archivo}`)).blob();
+    }
+  })().catch((error) => {
+    descargando = undefined;
+    throw error;
+  });
+  return descargando;
+}
+
 // Share initialization across mounts; an existing script is not proof that
 // its model weights have finished loading.
 export function loadBrowserFaceApi() {
@@ -39,7 +71,7 @@ export function loadBrowserFaceApi() {
       diag("faceapi_script_inicio");
       await new Promise((resolve, reject) => {
         const script = document.createElement("script");
-        script.src = "/vendor/face-api/face-api-0.22.2.min.js";
+        script.src = SCRIPT_FACE_API;
         script.onload = resolve;
         script.onerror = () => {
           script.remove();
@@ -58,7 +90,7 @@ export function loadBrowserFaceApi() {
       ["reconocimiento", api.nets.faceRecognitionNet],
     ].map(([modelo, net]) => net.params
       ? diag("faceapi_modelo_en_memoria", { modelo })
-      : despuesDeTurno(() => net.loadFromUri("/models")).then(() => diag("faceapi_modelo_fin", { modelo }))));
+      : despuesDeTurno(() => net.loadFromUri(MODELOS)).then(() => diag("faceapi_modelo_fin", { modelo }))));
     diag("faceapi_modelos_fin");
     // Compile detector shaders before the first camera frame.
     diag("faceapi_warmup_inicio");
