@@ -22,7 +22,7 @@
   --ring: rgba(37, 99, 235, 0.35);
 
   /* NOTA:
-	   La tipografía del proyecto se estandariza globalmente (Inter en `src/app/layout.jsx` + `globals.css`).
+	   La tipografía del proyecto se estandariza globalmente (Plus Jakarta Sans en `src/app/layout.jsx` + `globals.css`).
 	   No sobreescribimos `font-family` para mantener consistencia con Empleados/Contratos. */
 
   /* Fondo base suave del panel */

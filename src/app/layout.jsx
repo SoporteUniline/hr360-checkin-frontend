@@ -1,6 +1,6 @@
 // app/layout.jsx
-// Tipografía oficial ADAMIA: Inter
-import { inter } from "@/fonts";
+// Tipografía oficial ADAMIA: Plus Jakarta Sans (28/11/2026, antes Inter). Variable CSS neutra: --font-adamia (src/fonts).
+import { plusJakartaSans } from "@/fonts";
 import "./globals.css";
 import { ClientProviders } from "@/app/ClientProviders";
 import GlobalThirdPartyScripts from "@/components/GlobalThirdPartyScripts";
@@ -57,8 +57,8 @@ export default function RootLayout({ children }) {
       </head>
 
       <body
-        className={`${inter.variable} antialiased`}
-        style={{ fontFamily: "var(--font-inter)" }}
+        className={`${plusJakartaSans.variable} antialiased`}
+        style={{ fontFamily: "var(--font-adamia)" }}
       >
         <ClientProviders>{children}</ClientProviders>
 

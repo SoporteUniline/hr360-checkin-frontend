@@ -17,7 +17,7 @@ const escapar = (v) => String(v).replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 export function resaltarVariables(html) {
   return limpiarHtmlContrato(html).replace(/\{\{\s*([a-z_]+\.[a-z_]+)\s*\}\}/gi, (_, clave) => {
     const etiqueta = ETIQUETA_VARIABLE.get(clave.toLowerCase());
-    return `<span data-variable="${escapar(clave)}" style="background:#EEF2FF;color:#1E40C4;border-radius:6px;padding:0 4px;font-family:Inter,system-ui,sans-serif;font-size:0.9em;">${escapar(etiqueta ?? clave)}</span>`;
+    return `<span data-variable="${escapar(clave)}" style="background:#EEF2FF;color:#1E40C4;border-radius:6px;padding:0 4px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-size:0.9em;">${escapar(etiqueta ?? clave)}</span>`;
   });
 }
 

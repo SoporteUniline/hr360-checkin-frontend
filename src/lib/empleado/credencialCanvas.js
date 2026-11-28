@@ -8,8 +8,8 @@ const H = BASE_ALTO;
 const RADIO = (TARJETA.radioMm / TARJETA.anchoMm) * W;
 
 function familia() {
-  if (typeof document === "undefined") return "Inter, system-ui, sans-serif";
-  return getComputedStyle(document.body).fontFamily || "Inter, system-ui, sans-serif";
+  if (typeof document === "undefined") return "'Plus Jakarta Sans', system-ui, sans-serif";
+  return getComputedStyle(document.body).fontFamily || "'Plus Jakarta Sans', system-ui, sans-serif";
 }
 const fuente = (peso, px) => `${peso} ${px}px ${familia()}`;
 

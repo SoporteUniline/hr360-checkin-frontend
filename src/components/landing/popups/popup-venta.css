@@ -7,10 +7,10 @@
 .pv-marco {
   --pv-noche: #0b1033; --pv-noche-2: #161c4a; --pv-azul: #2c56e8; --pv-azul-hover: #1f44c8; --pv-violeta: #5a3cf4;
   --pv-lila: #eeebff; --pv-lila-2: #d9d1ff; --pv-azul-suave: #dfe6ff; --pv-tinta: #0b1033; --pv-gris: #8a90a8;
-  --pv-fh: var(--font-outfit, "Outfit"), "Outfit", var(--font-inter, "Inter"), system-ui, sans-serif;
+  --pv-fh: var(--font-outfit, "Outfit"), "Outfit", var(--font-adamia, "Plus Jakarta Sans"), system-ui, sans-serif;
   container: pv / inline-size;
 }
-.pv-tarjeta { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); background: var(--pv-noche); color: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 40px 80px -30px rgba(11, 16, 51, .6); font-family: var(--font-inter, "Inter"), "Inter", system-ui, sans-serif; text-align: left; animation: pv-sube .35s cubic-bezier(.22, 1, .36, 1); }
+.pv-tarjeta { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); background: var(--pv-noche); color: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 40px 80px -30px rgba(11, 16, 51, .6); font-family: var(--font-adamia, "Plus Jakarta Sans"), "Plus Jakarta Sans", system-ui, sans-serif; text-align: left; animation: pv-sube .35s cubic-bezier(.22, 1, .36, 1); }
 
 /* Botón cerrar: círculo blanco arriba a la derecha. */
 .pv-cerrar { position: absolute; top: 14px; right: 14px; z-index: 2; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 0; background: #fff; color: var(--pv-tinta); cursor: pointer; box-shadow: 0 6px 18px -8px rgba(11, 16, 51, .55); transition: transform .15s; }
@@ -29,7 +29,7 @@
 
 .pv-campo { display: grid; gap: 7px; }
 .pv-campo label { font-size: .9rem; font-weight: 600; color: rgba(255, 255, 255, .92); }
-.pv-campo input, .pv-lada { height: 52px; border-radius: 12px; border: 1.5px solid transparent; background: #fff; color: var(--pv-tinta); font: 500 16px/1 var(--font-inter, "Inter"), "Inter", system-ui, sans-serif; }
+.pv-campo input, .pv-lada { height: 52px; border-radius: 12px; border: 1.5px solid transparent; background: #fff; color: var(--pv-tinta); font: 500 16px/1 var(--font-adamia, "Plus Jakarta Sans"), "Plus Jakarta Sans", system-ui, sans-serif; }
 .pv-campo input { width: 100%; min-width: 0; padding: 0 16px; }
 .pv-campo input::placeholder { color: #8a90a8; }
 .pv-campo input:focus-visible { outline: none; border-color: var(--pv-azul); box-shadow: 0 0 0 3px rgba(122, 151, 255, .55); }
