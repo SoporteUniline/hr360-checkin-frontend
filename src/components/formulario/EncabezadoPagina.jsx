@@ -45,7 +45,7 @@ export default function EncabezadoPagina({
     >
       <div className="flex min-w-0 flex-col gap-1.5">
         {volver ? (
-          <Link href={volver.href} className="inline-flex min-h-6 items-center gap-1 self-start text-cuerpo font-medium text-brand no-underline hover:text-brand-hover">
+          <Link href={volver.href} className="-my-3 inline-flex min-h-12 items-center gap-1 self-start text-cuerpo font-medium text-brand no-underline hover:text-brand-hover">
             <ChevronLeft className="size-5" aria-hidden="true" />
             {volver.texto}
           </Link>

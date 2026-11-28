@@ -91,6 +91,7 @@ const BORDE_CAMPO = "rgb(209, 213, 219)";
 
 /** Guardar azul de 56 px y Cancelar gris con contorno, dentro de `zona`. */
 async function revisarBotones(zona, donde, { principal, cancelar = "Cancelar" }) {
+  await dormir(400); // los botones cambian de color con transición (transition-colors): se lee ya terminado
   const p = await estilo(zona.getByRole("button", { name: principal }).first());
   assert.equal(p.fondo, AZUL, `${donde}: «${principal}» en azul ADAMIA`);
   assert.ok(p.alto >= 55.5, `${donde}: «${principal}» de 56 px (mide ${p.alto})`);
@@ -191,8 +192,12 @@ try {
       assert.equal(franja.fondo, GRIS_FRANJA, "ventana: franja gris");
       const x = await estilo(ventana.getByRole("button", { name: "Cerrar" }));
       assert.ok(x.alto >= 43.5, "ventana: X de 44 px");
-      await revisarBotones(ventana, `ventana ${sufijo}`, { principal: "Guardar" });
+      // Vacía: Guardar deshabilitado en gris sólido (#E5E7EB), no azul desvanecido.
+      assert.equal((await estilo(ventana.getByRole("button", { name: "Guardar" }))).fondo, "rgb(229, 231, 235)", "ventana vacía: Guardar deshabilitado en gris");
+      await ventana.getByRole("combobox", { name: /Empresa/ }).click();
+      await page.getByRole("option", { name: "Comercializadora Demo" }).click();
       await ventana.getByLabel(/Nombre del puesto/).fill("Supervisor de piso");
+      await revisarBotones(ventana, `ventana ${sufijo}`, { principal: "Guardar" });
       await revisarDiseno(page, movil, `ventana puesto ${sufijo}`, "[role=dialog]");
       if (movil) await page.touchscreen.tap(6, 6); else await page.mouse.click(6, 6);
       await dormir(400);
