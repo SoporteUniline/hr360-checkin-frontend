@@ -60,10 +60,13 @@ import {
   RefreshCw,
   History,
   TriangleAlert,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
+import Link from "next/link";
 import { categoriasApi, documentosApi } from "@/lib/expedienteApi";
+import { mensajeError, textoGuarda } from "@/lib/expediente/presentacion.mjs";
 import { docGeneradosApi } from "@/lib/gestionDocumentalApi";
 import { MENSAJE_ARCHIVO_PESADO } from "@/lib/errorSubida.mjs";
 import { TEXTO_PREPARANDO, usePrepararFoto } from "@/lib/imagenes/usePrepararFoto";
@@ -238,17 +241,25 @@ export default function PanelEmpleadoDocumentos({
     (d) => d.estatus === "VENCIDO" || d.estatus === "POR_VENCER",
   ).length;
 
-  // ── Eliminar ──
+  // ── Eliminar = depurar (28/11/2026, INC-EXPEDIENTE-001) ──
+  // Dentro del plazo legal de guarda no se borra (el backend responde 409): solo se archiva. Fuera del plazo, borrar es
+  // la confirmación explícita de este aviso y queda en la bitácora.
+  const enPlazo = Boolean(docAEliminar?.guarda?.en_plazo);
   const handleEliminar = async () => {
     if (!docAEliminar) return;
     setEliminando(true);
     try {
-      await documentosApi.eliminar(docAEliminar.id);
-      mostrarNotif("success", "Documento eliminado");
+      if (enPlazo) {
+        await documentosApi.archivar(docAEliminar.id);
+        mostrarNotif("success", "Documento archivado. Se conserva por ley.");
+      } else {
+        await documentosApi.eliminar(docAEliminar.id, { confirmar: true });
+        mostrarNotif("success", "Documento depurado. Quedó en la bitácora.");
+      }
       setDocAEliminar(null);
       await cargarTodo();
-    } catch {
-      mostrarNotif("error", "Error al eliminar el documento");
+    } catch (err) {
+      mostrarNotif("error", mensajeError(err, "No se pudo completar la acción."));
     } finally {
       setEliminando(false);
     }
@@ -315,6 +326,15 @@ export default function PanelEmpleadoDocumentos({
   return (
     <div className="space-y-4">
       {renderCampos("inicio", true)}
+      {/* (28/11/2026) Expediente por etapas: Ingreso, Durante la relación y Salida, lista de ley y exportar. */}
+      <Link
+        href={`/panel/expediente/${idEmpleado}?empresa=${idEmpresa}`}
+        data-ir-expediente
+        className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-base font-bold text-[#1D4ED8] hover:bg-blue-100"
+      >
+        <span>Ver expediente por etapas: lista de ley, ingreso y salida, y exportar en ZIP</span>
+        <ChevronRight className="h-5 w-5 shrink-0" aria-hidden="true" />
+      </Link>
       {/* ── Notificación flotante ── */}
       {notif && (
         <div
@@ -934,11 +954,13 @@ export default function PanelEmpleadoDocumentos({
       >
         <AlertDialogContent className="w-[calc(100vw-2rem)] sm:w-auto max-w-md">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar documento?</AlertDialogTitle>
+            <AlertDialogTitle>{enPlazo ? "Este documento se conserva por ley" : "¿Borrar el documento definitivamente?"}</AlertDialogTitle>
             <AlertDialogDescription>
-              Se eliminará permanentemente{" "}
-              <strong>{docAEliminar?.nombre_documento}</strong>. Esta acción no
-              se puede deshacer.
+              <strong>{docAEliminar?.nombre_documento}</strong>.{" "}
+              {textoGuarda(docAEliminar?.guarda) ?? ""}{" "}
+              {enPlazo
+                ? "No se puede borrar; puedes archivarlo para que ya no aparezca entre los vigentes."
+                : "Se borra el archivo y el movimiento queda en la bitácora. No se puede deshacer."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
@@ -956,7 +978,7 @@ export default function PanelEmpleadoDocumentos({
               {eliminando && (
                 <Loader2 className="w-4 h-4 animate-spin mr-1 inline" />
               )}
-              Eliminar
+              {enPlazo ? "Archivar" : "Borrar definitivamente"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1359,9 +1381,11 @@ function ModalCategorias({ open, onClose, idEmpresa, onSuccess, onError }) {
       return onError("El nombre de la categoría es requerido");
     setCreando(true);
     try {
-      await categoriasApi.crear(idEmpresa, nueva);
+      const r = await categoriasApi.crear(idEmpresa, nueva);
       setNueva({ nombre: "", descripcion: "", color: "#2563EB" });
-      onSuccess("Categoría creada");
+      // (28/11/2026) Art. 133 LFT: si parece prueba de embarazo o de VIH, el backend avisa.
+      if (r?.aviso) onError(`Categoría creada. Atención: ${r.aviso}`);
+      else onSuccess("Categoría creada");
       cargar();
     } catch (err) {
       onError(err?.response?.data?.error || "Error al crear categoría");
