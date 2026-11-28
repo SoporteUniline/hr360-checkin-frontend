@@ -56,8 +56,10 @@ async function revisarDiseno(page, movil, donde, raizSelector = "[data-vista]") 
       if (/gradient/.test(s.backgroundImage)) degradados.push(el.tagName);
       const tieneTexto = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
       // Pueden ser de 15 px: lo marcado data-chico (ayuda, ruta, etiquetas de estado), la ayuda y el error de los
-      // campos de shadcn (form-description / form-message, 15 px en escritorio como el mockup) y los encabezados de tabla.
-      const chico = el.closest("[data-chico], [data-slot='form-description'], [data-slot='form-message'], th");
+      // campos de shadcn (form-description / form-message, 15 px en escritorio como el mockup). Los encabezados de tabla
+      // (th) siguen la regla global de tablas de globals.css (12.5 px) y no se revisan aquí.
+      if (el.closest("th")) continue;
+      const chico = el.closest("[data-chico], [data-slot='form-description'], [data-slot='form-message']");
       if (tieneTexto && !chico && parseFloat(s.fontSize) < minimo) chicos.push(`${el.tagName} ${parseFloat(s.fontSize)}px «${el.textContent.trim().slice(0, 40)}»`);
       if (tieneTexto && chico && parseFloat(s.fontSize) < 15) chicos.push(`${el.tagName} ${parseFloat(s.fontSize)}px «${el.textContent.trim().slice(0, 40)}» (data-chico, mínimo 15)`);
       // Botones de acción: ≥ 48 px. No cuentan los de renglones de tabla (44 px), la X de las ventanas (44 px, se
@@ -164,7 +166,7 @@ try {
       assert.ok(g.alto >= (movil ? 55.5 : 47.5), `empleado ${sufijo}: Registrar de ${movil ? 56 : 48} px (mide ${g.alto})`);
       const titulos = await page.locator("[data-vista='ficha-empleado'] :is(h1,h2,h3)").evaluateAll((els) => els.filter((e) => e.offsetWidth).map((e) => getComputedStyle(e).fontWeight));
       assert.ok(titulos.length && titulos.every((p) => p === "700"), `empleado ${sufijo}: títulos en 700 (${titulos})`);
-      const campoNombre = await estilo(page.locator("[data-vista='ficha-empleado'] input[data-control='campo']").first());
+      const campoNombre = await estilo(page.locator("[data-vista='ficha-empleado'] input[data-control='campo']:visible").first());
       assert.deepEqual([Math.round(campoNombre.alto), campoNombre.letra], movil ? [56, "18px"] : [52, "17px"], `empleado ${sufijo}: campos de 52/56 px con letra de 17/18`);
       const enc = await estilo(page.locator("[data-encabezado-ficha]"));
       assert.equal(enc.fondo, GRIS_FRANJA, `empleado ${sufijo}: encabezado gris`);

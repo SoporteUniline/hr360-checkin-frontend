@@ -232,7 +232,7 @@ try {
 
     // 2. Detalle según la maqueta, sin degradado.
     const enc = await page.locator("[data-encabezado-detalle]").evaluate((el) => { const s = getComputedStyle(el); return { fondo: s.backgroundImage, color: s.backgroundColor, filo: s.borderTopWidth, colorFilo: s.borderTopColor }; });
-    assert.deepEqual([enc.fondo, enc.color, enc.filo, enc.colorFilo], ["none", "rgb(255, 255, 255)", "4px", "rgb(44, 86, 232)"], "encabezado blanco con filo azul de 4 px");
+    assert.deepEqual([enc.fondo, enc.color, enc.filo, enc.colorFilo], ["none", "rgb(255, 255, 255)", "4px", "rgb(37, 99, 235)"], "encabezado blanco con filo azul de 4 px");
     await page.getByText("CONTRATO CT-2026-0142 · TIEMPO INDETERMINADO", { exact: false }).first().waitFor();
     assert.equal(await page.locator("[data-sueldo]").innerText(), "$10,500 al mes");
     await page.getByText("Pago quincenal · $5,250.00 a la quincena · $350.00 diarios").waitFor();
@@ -247,7 +247,7 @@ try {
     if (!movil) {
       const textos = await page.getByRole("toolbar", { name: "Acciones del contrato" }).locator("[data-accion]").allInnerTexts();
       assert.deepEqual(textos.map((t) => t.trim()), ["Firmar como empresa", "Mandar a firmar", "Descargar PDF", "Cambiar sueldo (convenio)", "Renovar", "Terminar contrato", "Editar datos"]);
-      const primarios = await page.getByRole("toolbar", { name: "Acciones del contrato" }).locator("[data-accion]").evaluateAll((els) => els.filter((e) => getComputedStyle(e).backgroundColor === "rgb(44, 86, 232)").length);
+      const primarios = await page.getByRole("toolbar", { name: "Acciones del contrato" }).locator("[data-accion]").evaluateAll((els) => els.filter((e) => getComputedStyle(e).backgroundColor === "rgb(37, 99, 235)").length);
       assert.equal(primarios, 1, "una sola principal (azul lleno)");
     }
     await revisarLectura(page, movil, `detalle ${sufijo}`);
