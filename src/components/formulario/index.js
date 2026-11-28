@@ -11,3 +11,4 @@ export { default as BarraAccionesFormulario } from "./BarraAccionesFormulario";
 export { default as PasosGuiados } from "./PasosGuiados";
 export { default as EtiquetaEstado } from "./EtiquetaEstado";
 export { default as VentanaChica } from "./VentanaChica";
+export { Lista, Dato, Nota } from "./PiezasFormulario";

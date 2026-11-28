@@ -9,7 +9,8 @@
 import QuePasoMotivo, { GoceMotivo } from "@/components/asistencia/QuePasoMotivo";
 import { aplicado, opcionesMotivo, opcionesTipo, tiposPermisoCaptura } from "@/lib/asistencia/quePasoMotivo.mjs";
 
-export default function CamposQuePaso({ tipos, idTipo, onTipo, motivos, par, onPar, rh = true, disabled = false, movil = false, errorMotivo = false, conVacaciones = false }) {
+// grande: con las etiquetas y campos del sistema de diseño (página de Permiso, dentro de data-formulario-grande).
+export default function CamposQuePaso({ tipos, idTipo, onTipo, motivos, par, onPar, rh = true, disabled = false, movil = false, errorMotivo = false, conVacaciones = false, grande = false }) {
   const lista = tiposPermisoCaptura(tipos, { actual: idTipo || null, conVacaciones });
   const tipo = lista.find((t) => String(t.id) === String(idTipo)) ?? null;
   const { r, motivo, goce } = aplicado(par, tipo, motivos);
@@ -19,17 +20,17 @@ export default function CamposQuePaso({ tipos, idTipo, onTipo, motivos, par, onP
         tipoVacio={idTipo ? null : "Elige qué pasó…"} tipo={String(idTipo ?? "")} onTipo={onTipo}
         motivoVisible={Boolean(tipo) && r.motivoVisible} motivoOpciones={opcionesMotivo(motivos)} motivoVacio="Elige el motivo…"
         motivo={par.motivo} onMotivo={(m) => onPar({ ...par, motivo: m, texto: "", goce: null, horas: null })}
-        esOtro={Boolean(motivo?.otro)} texto={par.texto} onTexto={(t) => onPar({ ...par, texto: t })} errorMotivo={errorMotivo && !motivo} />
+        esOtro={Boolean(motivo?.otro)} texto={par.texto} onTexto={(t) => onPar({ ...par, texto: t })} errorMotivo={errorMotivo && !motivo} grande={grande} />
       {rh && tipo && goce && r.clase !== "parcial" ? (
-        <div className="flex flex-col gap-1" data-goce-permiso>
-          <span className="text-[12px] font-medium text-slate-500">Goce del día</span>
-          <GoceMotivo goce={goce} cambia={r.goceCambia} disabled={disabled} movil={movil} onCambio={(g) => onPar({ ...par, goce: g })}
-            className={r.goceCambia ? "w-full sm:w-1/2 sm:pr-1.5" : "h-9"} />
-          <span className="text-[12px] text-slate-500">{r.clase === "ley" ? "Lo fija la ley." : r.goceCambia ? "Viene del motivo; puedes cambiarlo en este caso." : "Lo fija el motivo."}</span>
+        <div className={grande ? "flex flex-col gap-2" : "flex flex-col gap-1"} data-goce-permiso>
+          <span className={grande ? "text-etiqueta font-semibold text-texto" : "text-[12px] font-medium text-slate-500"}>Goce del día</span>
+          <GoceMotivo goce={goce} cambia={r.goceCambia} disabled={disabled} movil={movil} grande={grande} onCambio={(g) => onPar({ ...par, goce: g })}
+            className={r.goceCambia ? "w-full sm:w-1/2 sm:pr-1.5" : grande ? "" : "h-9"} />
+          <span data-chico={grande ? "" : undefined} className={grande ? "text-ayuda text-texto-secundario" : "text-[12px] text-slate-500"}>{r.clase === "ley" ? "Lo fija la ley." : r.goceCambia ? "Viene del motivo; puedes cambiarlo en este caso." : "Lo fija el motivo."}</span>
         </div>
       ) : null}
       {tipo && r.clase === "parcial" && motivo ? (
-        <p className="text-[12px] text-slate-500">Día con goce; las horas no trabajadas se tratan como diga el motivo{rh ? "" : " (RH lo confirma)"}.</p>
+        <p data-chico={grande ? "" : undefined} className={grande ? "m-0 text-ayuda text-texto-secundario" : "text-[12px] text-slate-500"}>Día con goce; las horas no trabajadas se tratan como diga el motivo{rh ? "" : " (RH lo confirma)"}.</p>
       ) : null}
     </div>
   );

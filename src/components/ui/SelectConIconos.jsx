@@ -10,6 +10,9 @@
 // variante «fila»: el disparador se ve como texto con flechita, sin cuadro (fila de Asistencias).
 // Accesible: aria-label, flechas, Inicio/Fin, escribir para buscar, Esc y foco visible (lo da Radix).
 // Para las pruebas: data-valor en el disparador (valor actual) y en cada opción (su valor; "" = sin valor).
+// grande (28/11/2026, formularios en página del sistema de diseño): el disparador lleva data-control="campo", así dentro
+// de un contenedor data-formulario-grande toma el alto (52/56 px) y la letra (17/18 px) de los campos (globals.css), y
+// las opciones van en letra de 16/17 px y 48 px de alto. Sin `grande` todo queda igual que antes.
 import { useEffect, useRef, useState } from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";
 import { Check, ChevronDown } from "lucide-react";
@@ -64,14 +67,14 @@ function agrupar(opciones) {
   return out;
 }
 
-function Opcion({ o, movil }) {
+function Opcion({ o, movil, grande = false }) {
   const valor = o.valor === "" || o.valor == null ? VACIO : String(o.valor);
   return (
     <SelectPrimitive.Item value={valor} disabled={o.deshabilitada} data-valor={o.valor ?? ""}
       className={cn("relative flex w-full cursor-pointer select-none items-center gap-2.5 rounded-lg py-1.5 pl-2 pr-8 text-[13.5px] text-slate-800 outline-none",
         "data-[highlighted]:bg-slate-100 data-[state=checked]:font-semibold data-[state=checked]:text-slate-900",
         "data-[disabled]:pointer-events-none data-[disabled]:opacity-45",
-        movil ? "min-h-11 text-base" : "min-h-9 max-sm:min-h-11 max-sm:text-base")}>
+        grande ? "min-h-12 text-cuerpo text-texto" : movil ? "min-h-11 text-base" : "min-h-9 max-sm:min-h-11 max-sm:text-base")}>
       <span className="flex min-w-0 flex-1 flex-col">
         <SelectPrimitive.ItemText asChild>
           <span className="flex min-w-0 items-center gap-2.5">
@@ -79,7 +82,7 @@ function Opcion({ o, movil }) {
             <span className="min-w-0 break-words leading-snug">{o.texto}</span>
           </span>
         </SelectPrimitive.ItemText>
-        {o.ayuda ? <span className={cn("text-[12px] font-normal leading-snug text-slate-500", o.icono ? "pl-[34px]" : "")}>{o.ayuda}</span> : null}
+        {o.ayuda ? <span className={cn("font-normal leading-snug", grande ? "text-ayuda text-texto-secundario" : "text-[12px] text-slate-500", o.icono ? "pl-[34px]" : "")}>{o.ayuda}</span> : null}
       </span>
       <span className="absolute right-2.5 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center text-blue-600">
         <SelectPrimitive.ItemIndicator><Check className="h-4 w-4" strokeWidth={2.5} aria-hidden /></SelectPrimitive.ItemIndicator>
@@ -93,7 +96,7 @@ const detener = (e) => e.stopPropagation();
 
 export default function SelectConIconos({
   valor, onCambio, opciones = [], vacio = null, iconoVacio = null, tonoVacio = null, placeholder = "Elige…",
-  aria, id, disabled = false, variante = "campo", movil = false, error = false, autoFocus = false, className = "", ancho = null,
+  aria, id, disabled = false, variante = "campo", movil = false, error = false, autoFocus = false, className = "", ancho = null, grande = false,
 }) {
   const sinValor = valor === "" || valor == null;
   const radixValor = sinValor ? (vacio != null ? VACIO : "") : String(valor);
@@ -119,6 +122,7 @@ export default function SelectConIconos({
   return (
     <Select open={abierto} onOpenChange={cambiarAbierto} value={radixValor} disabled={disabled} onValueChange={(v) => onCambio?.(v === VACIO ? "" : v)}>
       <SelectPrimitive.Trigger ref={disparador} id={id} aria-label={aria} autoFocus={autoFocus} data-valor={sinValor ? "" : String(valor)}
+        data-control={grande ? "campo" : undefined} data-select-grande={grande ? "" : undefined} aria-invalid={grande && error ? true : undefined}
         // Un <fieldset disabled> deshabilita el botón, pero Radix abre en pointerdown: se evita.
         onPointerDown={(e) => { if (e.currentTarget.matches(":disabled")) e.preventDefault(); }}
         className={cn(claseDisparador({ variante, movil, error }), className)}>
@@ -145,11 +149,11 @@ export default function SelectConIconos({
               g.grupo ? (
                 <SelectGroup key={`g${i}`} className={i ? "mt-1 border-t border-slate-100 pt-1" : ""}>
                   <SelectPrimitive.Label data-grupo className="px-2 pb-1 pt-1.5 text-[11px] font-semibold uppercase tracking-[0.07em] text-slate-400">{g.grupo}</SelectPrimitive.Label>
-                  {g.items.map((o) => <Opcion key={String(o.valor)} o={o} movil={movil} />)}
+                  {g.items.map((o) => <Opcion key={String(o.valor)} o={o} movil={movil} grande={grande} />)}
                 </SelectGroup>
               ) : (
                 <div key={`s${i}`} className={i ? "mt-1 border-t border-slate-100 pt-1" : ""}>
-                  {g.items.map((o) => <Opcion key={String(o.valor)} o={o} movil={movil} />)}
+                  {g.items.map((o) => <Opcion key={String(o.valor)} o={o} movil={movil} grande={grande} />)}
                 </div>
               )
             ))}
