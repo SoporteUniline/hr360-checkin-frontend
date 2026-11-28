@@ -6,6 +6,7 @@ import {
   formularioDesdeContrato, cambiosDeEdicion, hayCambios, partirHorario, armarHorario, opcionDe, estaEnLista, JORNADAS, MODALIDADES, TIPOS_OPCIONES,
   validarFormulario, cuerpoDeAlta, formularioParaDuplicar, formularioDesdeFicha, formularioVacio, queSePuedeEditar, pestanaDe, pideFechaFin,
 } from "../src/lib/contratos/formularioContrato.mjs";
+import { faltanTextos, faltanPorPaso, resumenSueldo, jornadaTexto, resumenContrato, etiquetaPago } from "../src/lib/contratos/resumenContrato.mjs";
 
 // Un contrato como lo manda GET /contratos/:id/detalle (SELECT * con DECIMAL en texto), con valores como los escriben
 // el convenio, la renovación o la ficha («Quincenal», «Diurna», «Presencial»).
@@ -107,4 +108,40 @@ test("qué se puede editar según el estado (las reglas del servidor)", () => {
   assert.match(queSePuedeEditar({ ...CONTRATO, congelado: true }).motivo, /mandó a firmar o está firmado/);
   assert.equal(queSePuedeEditar({ ...CONTRATO, firmado_empresa: 1 }).editable, false);
   assert.match(queSePuedeEditar({ ...CONTRATO, estatus: "terminado" }).motivo, /ya terminó/);
+});
+
+// (28/11/2026, mockup v3) Panel «Resumen» y pastillas «Falta»: solo ponen en palabras lo capturado o lo del servidor.
+test("resumen: lo que falta, sin repetir y en el orden de los pasos", () => {
+  const errores = validarFormulario(formularioVacio(), { modo: "nuevo" });
+  assert.deepEqual(faltanTextos(errores), ["Empresa", "Persona", "Sueldo", "Cada cuándo se paga", "Tipo de contrato", "Fecha de inicio"]);
+  assert.deepEqual(faltanPorPaso(errores), { persona: 2, sueldo: 2, documento: 2 });
+  // Dos errores del mismo dato (horario) salen una sola vez.
+  assert.deepEqual(faltanTextos([{ campo: "hora_entrada" }, { campo: "fecha_inicio" }, { campo: "hora_salida" }]), ["Horario", "Fecha de inicio"]);
+  assert.deepEqual(faltanTextos([]), []);
+});
+
+test("resumen del sueldo: al editar, las cifras del servidor; al crear, solo lo escrito (no se inventan cálculos)", () => {
+  const servidor = { salario_base: 5250, periodicidad_pago: "Quincenal", salario_diario: 350, salario_mensual: 10500, pago: { periodicidad: "Quincenal", monto: 5250 } };
+  assert.deepEqual(resumenSueldo({ editar: true, sueldoServidor: servidor }).filas.map((f) => [f.clave, f.etiqueta, f.valor]),
+    [["mensual", "Al mes", "$10,500.00"], ["periodo", "Por quincena", "$5,250.00"], ["diario", "Diario", "$350.00"]]);
+  // «quincenal» en minúsculas sin `pago`: los cálculos lo leen como mensual; no se pone una quincena inventada.
+  assert.deepEqual(resumenSueldo({ editar: true, sueldoServidor: { salario_base: 5000, periodicidad_pago: "quincenal", salario_diario: 166.67, salario_mensual: 5000 } }).filas.map((f) => f.clave), ["mensual", "diario"]);
+  assert.equal(resumenSueldo({ editar: true, sueldoServidor: null }).nota, "Sin sueldo registrado.");
+  const nuevo = resumenSueldo({ form: { salario_base: "6000", periodicidad_pago: "Quincenal" } });
+  assert.deepEqual(nuevo.filas.map((f) => [f.etiqueta, f.valor]), [["Por quincena", "$6,000.00"]]);
+  assert.match(nuevo.nota, /calcula la nómina al guardar/);
+  assert.deepEqual(resumenSueldo({ form: { salario_base: "12000", periodicidad_pago: "Mensual" } }).filas.map((f) => [f.etiqueta, f.valor]), [["Al mes", "$12,000.00"]]);
+  assert.deepEqual(resumenSueldo({ form: { salario_base: "", periodicidad_pago: "Quincenal" } }).filas, []);
+  assert.equal(etiquetaPago("Semanal"), "Por semana");
+});
+
+test("resumen: jornada, puesto e inicio en palabras", () => {
+  assert.equal(jornadaTexto(formularioVacio()), "Diurna · 40 h a la semana · 09:00 a 18:00");
+  assert.equal(jornadaTexto(formularioDesdeContrato({ ...CONTRATO, horario: "Lunes a viernes de 8 a 4" })), "Diurna · 48 h a la semana · Lunes a viernes de 8 a 4");
+  const r = resumenContrato({ form: formularioDesdeContrato(CONTRATO), nombrePersona: "Persona Uno Demo", editar: false });
+  const fila = (clave) => r.filas.find((f) => f.clave === clave)?.valor;
+  assert.equal(fila("persona"), "Persona Uno Demo");
+  assert.equal(fila("puesto"), "Cajera · Ventas");
+  assert.equal(fila("inicio"), "1 nov 2026");
+  assert.equal(fila("periodo"), "$5,000.00");
 });

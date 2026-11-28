@@ -1,11 +1,12 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Clases del control de un campo (input, select o textarea) según el mockup: 52 px de alto (56 en celular), letra de
- * 17 px (18 en celular), borde #D1D5DB y radio de 10 px. Con error: borde rojo de 2 px. Úsalas si armas el control tú.
+ * Clases del control de un campo (input, select o textarea) según el mockup v3: 42 px de alto en escritorio (56 en
+ * celular), letra de 16 px (18 en celular), borde #D1D5DB y radio de 8 px (10 en celular). Con error: borde rojo de
+ * 2 px. Todo sale de los tokens (h-campo, text-campo, rounded-boton). Úsalas si armas el control tú.
  */
 export const CLASE_CONTROL =
-  "block w-full min-w-0 h-campo rounded-boton border border-borde-campo bg-white px-4 text-campo text-texto placeholder:text-texto-deshabilitado focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:cursor-not-allowed disabled:bg-franja disabled:text-texto-secundario";
+  "block w-full min-w-0 h-campo rounded-boton border border-borde-campo bg-white px-4 text-campo lg:px-3 text-texto placeholder:text-texto-deshabilitado focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/30 disabled:cursor-not-allowed disabled:bg-franja disabled:text-texto-secundario";
 export const CLASE_CONTROL_ERROR = "border-2 border-peligro focus:border-peligro focus:ring-peligro/25";
 /** Para <textarea>: crece con el texto. */
 export const CLASE_TEXTO_LARGO = "h-auto min-h-28 py-3";
@@ -13,8 +14,8 @@ export const CLASE_TEXTO_LARGO = "h-auto min-h-28 py-3";
 export const claseControl = (error = null, extra = "") => cn(CLASE_CONTROL, error ? CLASE_CONTROL_ERROR : "", extra);
 
 /**
- * Campo de formulario (28/11/2026, mockup aprobado; docs/sistema-diseno.md): etiqueta arriba (16 px, peso 600, ligada
- * con htmlFor/id), el control, y abajo la ayuda (gris) o el error (rojo). El error se anuncia al lector de pantalla con
+ * Campo de formulario (28/11/2026, mockup aprobado; docs/sistema-diseno.md): etiqueta arriba (15 px en escritorio y
+ * 17 en celular, peso 600, ligada con htmlFor/id), el control, y abajo la ayuda (gris) o el error (rojo). El error se anuncia al lector de pantalla con
  * aria-describedby y aria-invalid.
  *
  * Props:
@@ -45,7 +46,7 @@ export default function CampoFormulario({ id, etiqueta, obligatorio = false, ayu
     "aria-required": obligatorio || undefined,
   };
   return (
-    <div className={cn("flex min-w-0 flex-col gap-2", className)} data-campo={id}>
+    <div className={cn("flex min-w-0 flex-col gap-2 lg:gap-1.5", className)} data-campo={id}>
       <label htmlFor={id} className="text-etiqueta font-semibold text-texto">
         {etiqueta}
         {obligatorio ? <span className="text-peligro-texto" aria-hidden="true"> *</span> : null}

@@ -4,7 +4,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // (28/11/2026) Cada tipo de acción usa una variante del botón global (src/components/ui/button.jsx), así comparten
-// color, alto (48 px) y radio con todo el sistema (docs/sistema-diseno.md).
+// color, alto (38 px en escritorio, 48 en celular) y radio con todo el sistema (docs/sistema-diseno.md).
 const VARIANTE = {
   primaria: "default",
   contorno: "outline",
@@ -13,7 +13,7 @@ const VARIANTE = {
   peligro: "destructive-outline",
 };
 
-/** Un botón de acción con texto (≥ 48 px). accion: { clave, texto, onClick, href, tipo, deshabilitada, ayuda, cargando } */
+/** Un botón de acción con texto (38 px en escritorio, ≥ 48 en celular). accion: { clave, texto, onClick, href, tipo, deshabilitada, ayuda, cargando } */
 export function BotonAccion({ accion, className = "" }) {
   const clase = cn(buttonVariants({ variant: VARIANTE[accion.tipo ?? "normal"] ?? "outline" }), "min-h-boton whitespace-normal", className);
   const contenido = (

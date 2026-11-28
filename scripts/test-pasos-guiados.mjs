@@ -59,7 +59,8 @@ test("cn(): los tokens del sistema le ganan a las clases de fábrica y no se con
 
 test("cada token registrado en cn() existe en globals.css (@theme) y al revés", () => {
   const css = readFileSync(new URL("../src/app/globals.css", import.meta.url), "utf8");
-  const definidos = (prefijo) => [...css.matchAll(new RegExp(`--${prefijo}-([a-z-]+):\\s*var\\(--adamia-`, "g"))].map((m) => m[1]).sort();
+  // Sin las sub-propiedades de Tailwind 4 (p. ej. --text-titulo-pagina--letter-spacing): no son un token aparte.
+  const definidos = (prefijo) => [...css.matchAll(new RegExp(`--${prefijo}-([a-z]+(?:-[a-z]+)*):\\s*var\\(--adamia-`, "g"))].map((m) => m[1]).sort();
   assert.deepEqual(definidos("spacing"), [...TOKENS_TAMANO].sort());
   assert.deepEqual(definidos("text"), [...TOKENS_LETRA].sort());
   assert.deepEqual(definidos("radius"), [...TOKENS_RADIO].sort());
