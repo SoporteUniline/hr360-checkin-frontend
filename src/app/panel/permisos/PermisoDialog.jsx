@@ -1,5 +1,8 @@
 "use client";
 
+// SIN USO desde el 28/11/2026: el permiso pasó a página propia (formulario/FormularioPermiso.jsx). Se borra cuando el
+// dueño lo confirme.
+
 import React, { useEffect, useRef, useState } from "react";
 import dayjs from "dayjs";
 import {
