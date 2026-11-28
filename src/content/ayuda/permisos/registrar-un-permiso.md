@@ -3,11 +3,11 @@ titulo: Cómo registrar un permiso para uno o varios empleados
 resumen: Desde Permisos, RH registra un permiso por días o por horas para una o varias personas a la vez, con su motivo y su goce.
 modulo: permisos
 audiencia: [rh, dueno]
-pantallas: [/panel/permisos]
+pantallas: [/panel/permisos, /panel/permisos/nuevo]
 palabras: [permiso, nuevo permiso, registrar permiso, inasistencia justificada, motivo, goce, varios empleados, días completos, por horas, observaciones, traslape]
 orden: 10
-actualizado: 2026-11-27
-fuentes: [src/app/panel/permisos/page.jsx, src/app/panel/permisos/PermisoDialog.jsx, src/app/panel/permisos/CamposQuePaso.jsx, src/app/panel/permisos/CamposPermisoHoras.jsx, src/app/panel/permisos/PermisosTable.jsx, src/lib/asistencia/quePasoMotivo.mjs]
+actualizado: 2026-11-28
+fuentes: [src/app/panel/permisos/page.jsx, src/app/panel/permisos/formulario/FormularioPermiso.jsx, src/app/panel/permisos/formulario/usePermisoFormulario.js, src/app/panel/permisos/CamposQuePaso.jsx, src/app/panel/permisos/CamposPermisoHoras.jsx, src/app/panel/permisos/PermisosTable.jsx, src/lib/asistencia/quePasoMotivo.mjs]
 ---
 
 ## Para qué sirve
@@ -36,18 +36,18 @@ Recursos Humanos y el dueño. Los empleados piden sus permisos desde su app ([C�
 
 ## Cómo registrar un permiso por días
 
-1. Toca **Nuevo permiso**.
+1. Toca **Nuevo permiso**. Se abre la página **Nuevo permiso** (ya no es una ventana): arriba está **‹ Permisos** para regresar.
 2. Elige la **Empresa**.
 3. En **Qué pasó** elige el tipo (por ejemplo **Inasistencia**).
 4. Elige el **Motivo** (por ejemplo **Visita al médico**). El **Goce del día** viene del motivo; si dice «Viene del motivo; puedes cambiarlo en este caso.», puedes cambiarlo. Si dice «Lo fija el motivo.» o «Lo fija la ley.», no.
-5. En **Empleados (selección múltiple)** busca y marca a una o varias personas.
+5. En **Empleados** busca y marca a una o varias personas (abajo dice cuántas llevas elegidas).
 6. En **Duración** deja **Días completos** y elige **Fecha inicio** y **Fecha fin**.
 7. Escribe **Observaciones** si quieres.
-8. Toca **Guardar**.
+8. Toca **Guardar permiso** (abajo a la derecha; en el celular, el botón azul de abajo).
 
-Verás «Permiso(s) creado(s) correctamente.». El permiso queda **Pendiente** hasta que alguien lo apruebe. Ver [Cómo aprobar o rechazar un permiso](/ayuda/permisos/aprobar-o-rechazar-un-permiso).
+Regresas a la lista y verás «Permiso(s) creado(s) correctamente.». Si falta algo, arriba de la página sale **Corrige lo siguiente** con la lista de lo que falta. El permiso queda **Pendiente** hasta que alguien lo apruebe. Ver [Cómo aprobar o rechazar un permiso](/ayuda/permisos/aprobar-o-rechazar-un-permiso).
 
-![Ventana Nuevo permiso con la empresa, Qué pasó, el motivo, el goce y los empleados](/ayuda/capturas/permisos/permiso-nuevo.webp "El goce del día viene del motivo elegido")
+![Página Nuevo permiso con la empresa, Qué pasó, el motivo, el goce y los empleados](/ayuda/capturas/permisos/permiso-nuevo.webp "El goce del día viene del motivo elegido")
 
 ## Cómo registrar un permiso por horas
 

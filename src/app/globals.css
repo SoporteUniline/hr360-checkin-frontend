@@ -563,7 +563,7 @@ html.adamia-native .adamia-web-only {
    (Input, Select, Textarea, FormLabel, FormMessage): con el atributo data-formulario-grande en su contenedor toman los
    tamaños del mockup (campo de 52/56 px, letra de 17/18, etiqueta de 16/17 en 600, error rojo con borde de 2 px) sin
    tocar su lógica. Los campos se reconocen por data-control="campo" (lo ponen Input, SelectTrigger y Textarea de
-   components/ui; data-slot no sirve porque FormControl lo cambia). Hoy lo usa la ficha del empleado (src/app/panel/empleados/FormularioEmpleado.jsx). Los formularios
+   components/ui; data-slot no sirve porque FormControl lo cambia). Hoy lo usan la ficha del empleado (src/app/panel/empleados/FormularioEmpleado.jsx) y las páginas de Permiso y Acta. Los formularios
    nuevos usan CampoFormulario y no necesitan esto. Un campo que deba quedarse chico lleva data-compacto.
    Fuera de @layer a propósito: le gana a las clases h-12 / text-base que cada campo trae escritas. */
 [data-formulario-grande] [data-control="campo"]:is(input, button):not([data-compacto]):not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
@@ -573,6 +573,12 @@ html.adamia-native .adamia-web-only {
   border-color: var(--adamia-borde-campo);
   padding-inline: 16px;
   color: var(--adamia-texto);
+}
+/* El desplegable con iconos (SelectConIconos con `grande`, p. ej. «Qué pasó» y «Motivo» en la página de Permiso): si el
+   texto no cabe baja a un segundo renglón, así que crece en lugar de cortarse. */
+[data-formulario-grande] [data-control="campo"][data-select-grande] {
+  height: auto;
+  min-height: var(--adamia-alto-campo);
 }
 [data-formulario-grande] textarea[data-control="campo"]:not([data-compacto]) {
   font-size: var(--adamia-letra-campo);

@@ -1,5 +1,8 @@
 "use client";
 
+// SIN USO desde el 28/11/2026: el acta pasó a página propia y por pasos
+// (app/panel/actas-administrativas/formulario/FormularioActa.jsx). Se borra cuando el dueño lo confirme.
+
 import {
   Dialog,
   DialogContent,

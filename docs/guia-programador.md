@@ -64,12 +64,12 @@ Lo que se sumó después y también se sigue: las reglas puras en `src/lib/<modu
 | Asistencias | `app/panel/registro-asistencia/` | `hooks/useAsistencia*.js`, `lib/asistencia/` |
 | Reloj checador | `components/RelojChecador.jsx`, `components/Clock/` | `hooks/useRelojChecador.js`, `lib/reloj/` |
 | Contratos | `app/panel/contratos/` (`formulario/`, `[id]/`, `nuevo/`) | `lib/contratos/`, `lib/contratosApi.js` |
-| Vacaciones y permisos | `app/panel/vacaciones/`, `app/panel/permisos/` | `hooks/usePermisos*.js`, `lib/permisos/` |
+| Vacaciones y permisos | `app/panel/vacaciones/`, `app/panel/permisos/` (alta y edición en página: `permisos/formulario/`, `nuevo/`, `[id]/editar/`) | `hooks/usePermisos*.js`, `lib/permisos/` |
 | Incidencias | `app/panel/incidencias/` | — |
 | Nómina y préstamos | `app/panel/nomina/`, `components/nomina/` | `lib/nomina/` |
 | Expediente | `app/panel/expediente/`, `components/expediente/` | `lib/expediente/`, `lib/expedienteApi.js` |
 | Reclutamiento | `app/panel/reclutamiento/`, `components/reclutamiento/` | `hooks/useReclutamiento.js` |
-| Actas administrativas | `app/panel/actas-administrativas/`, `components/NewActaModal.jsx` | `hooks/useAdministrativeMinutes.js`, `lib/actasEstatus.mjs` |
+| Actas administrativas | `app/panel/actas-administrativas/` (alta y edición en página, por pasos: `formulario/`, `nueva/`, `[id]/editar/`) | `hooks/useAdministrativeMinutes.js`, `lib/actasEstatus.mjs`, `lib/actas/` |
 | Activos y uniformes | `app/panel/activos/`, `components/activos/` | `lib/activos/` |
 | Catálogos (puestos, departamentos…) | `app/panel/catalogos/` | — |
 | Menú lateral | `components/Sidebar/nav-main.jsx` | — |

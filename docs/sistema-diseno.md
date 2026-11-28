@@ -153,6 +153,20 @@ prueban en `scripts/test-pasos-guiados.mjs`.
 ```
 Ejemplo completo: `src/app/panel/contratos/formulario/FormularioContrato.jsx`.
 
+### Lista, Dato y Nota (`PiezasFormulario.jsx`)
+Lista desplegable nativa (en el celular abre la del teléfono, grande), un dato de solo lectura y una nota (explicación
+gris, aviso ámbar o error rojo). Nacieron en el contrato y las usan el permiso y el acta.
+```jsx
+<CampoFormulario id="permiso-empresa" etiqueta="Empresa" obligatorio>
+  {(p) => <Lista {...p} opciones={[{ value: "7", label: "Comercializadora" }]} valor={v} onCambio={setV} vacio="Selecciona empresa…" />}
+</CampoFormulario>
+```
+
+### Desplegables con iconos dentro de una página
+`SelectConIconos` (y `QuePasoMotivo`, `CamposQuePaso`, `CamposPermisoHoras` que lo usan) aceptan `grande`: dentro de un
+contenedor `data-formulario-grande` toman el alto y la letra de los campos (52/56 px, 17/18 px), las etiquetas de 16/17
+en 600 y la ayuda en #4B5563. Sin `grande` se ven como siempre (filas de Asistencias, reloj del día, app del empleado).
+
 ### EtiquetaEstado
 ```jsx
 <EtiquetaEstado tono="aviso">Por vencer</EtiquetaEstado>   // exito · aviso · error · info · neutro
@@ -221,9 +235,26 @@ archivo no puede tener más casos que los anotados; cuando migres uno, corre `no
 - `node --test scripts/test-candado-diseno.mjs` — reglas del candado.
 - `scripts/verify-diseno.mjs` (Playwright, 1440 y 390, backend simulado): contrato nuevo, alta de empleado (4
   pestañas) y la ventana «Crear puesto». `ETAPA=antes` solo toma capturas para comparar antes y después.
+- `scripts/verify-permiso-acta-pagina.mjs` (Playwright, 1440 y 390): permiso nuevo y editar, acta nueva por pasos y
+  editar, regreso al origen (`?volver=`), aviso de cambios sin guardar y las mismas reglas de diseño (están en
+  `scripts/lib/reglasDiseno.mjs`, compartidas con `verify-diseno`). Reglas puras: `node --test scripts/test-permiso-acta-pagina.mjs`.
 
-## 8. Qué falta migrar
+## 8. Formularios ya en página y qué falta migrar
 
-Ver la lista por módulo en `scripts/candado-diseno.excepciones.json` y el reporte de esta entrega. Propuestos para pasar
-a página (hoy son ventanas grandes con el estilo ya homologado): permiso (`PermisoDialog.jsx`) y acta administrativa
-(`NewActaModal.jsx`).
+**Permiso** y **acta administrativa** pasaron a página propia (28/11/2026):
+
+| Página | Desde dónde se llega | Archivos |
+|---|---|---|
+| `/panel/permisos/nuevo?empresa=&volver=` | «Nuevo permiso» de la lista de Permisos | `app/panel/permisos/formulario/` (`FormularioPermiso`, `usePermisoFormulario`, `PaginaPermiso`) |
+| `/panel/permisos/[id]/editar?empresa=&volver=` | lápiz «Editar» de la lista | lo mismo + `usePermisoAEditar` |
+| `/panel/actas-administrativas/nueva?volver=` | «Nueva acta» de la lista de actas | `app/panel/actas-administrativas/formulario/` (`FormularioActa`, `useFormularioActa`, `PaginaActa`) |
+| `/panel/actas-administrativas/[id]/editar?volver=` | lápiz «Editar» de la lista | lo mismo |
+
+- El permiso va en una sola página (es una idea: quién, qué pasó, cuándo); el acta va en 5 pasos (persona y tipo · qué
+  pasó · sanción y quién la elabora · declaraciones · revisar y guardar). La firma del acta sigue en su detalle.
+- `?volver=` regresa a donde estaba la persona al guardar o cancelar; solo acepta rutas `/panel/…`
+  (`lib/formulario/rutaRegreso.mjs`). Sin él, regresa a la lista del módulo.
+- La lógica de negocio no cambió: los hooks son copia fiel de las ventanas. `PermisoDialog.jsx` y `NewActaModal.jsx`
+  quedaron **sin uso** y se borran cuando el dueño lo confirme.
+
+Lo demás: ver la lista por módulo en `scripts/candado-diseno.excepciones.json`.

@@ -3,11 +3,11 @@ titulo: Cómo cancelar un permiso o unas vacaciones ya aprobadas
 resumen: Al cancelar un permiso aprobado, los días futuros vuelven a la normalidad y para los días que ya pasaron eliges qué tipo de registro les queda.
 modulo: permisos
 audiencia: [rh, dueno]
-pantallas: [/panel/permisos]
+pantallas: [/panel/permisos, /panel/permisos/[id]/editar]
 palabras: [cancelar permiso, cancelar vacaciones, días pasados, regresó antes, permiso aprobado, sin checar, tipo de registro]
 orden: 40
-actualizado: 2026-11-27
-fuentes: [src/app/panel/permisos/PermisoDialog.jsx, src/app/panel/permisos/PermisoCancelacionDiasPasadosDialog.jsx, src/app/panel/permisos/PermisoDeleteDialog.jsx]
+actualizado: 2026-11-28
+fuentes: [src/app/panel/permisos/formulario/FormularioPermiso.jsx, src/app/panel/permisos/formulario/usePermisoFormulario.js, src/app/panel/permisos/PermisoCancelacionDiasPasadosDialog.jsx, src/app/panel/permisos/PermisoDeleteDialog.jsx]
 ---
 
 ## Para qué sirve
@@ -24,10 +24,10 @@ Entra a **Ausencias y permisos → Permisos** y busca el permiso.
 
 ## Cómo cancelar un permiso aprobado
 
-1. Toca el lápiz (**Editar**) en la fila.
+1. Toca el lápiz (**Editar**) en la fila. Se abre la página **Editar permiso**.
 2. En **Estado** elige **Cancelado** (en un aprobado es la única opción).
 3. Si el permiso tiene **días que ya pasaron**, se abre «Cancelar permiso: definir días pasados» (ver abajo).
-4. Toca **Guardar**.
+4. Toca **Guardar cambios**. Regresas a la lista.
 
 Los días de **hoy en adelante** vuelven solos a «Sin checar» (respetando descansos y festivos): si la persona checa, cuentan como asistencia normal.
 
