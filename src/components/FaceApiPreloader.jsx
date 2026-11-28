@@ -9,14 +9,18 @@ export default function FaceApiPreloader() {
   const pathname = usePathname();
   const { isLoggedIn } = useAuth();
   // No en /panel: preparar los modelos (~7 MB y la GPU) compite con pantallas pesadas como Asistencias.
-  // El reloj los carga al abrirse.
-  const inApp = pathname === "/empleado" || pathname?.startsWith("/empleado/") ||
-    pathname === "/seleccionar-reloj";
+  // (INC-011) Tampoco en el panel del empleado: ahí solo se descargan los archivos; prepararlos bloqueaba el hilo
+  // principal segundos al abrir la app y los toques no respondían. El reloj (y la captura de rostro) los preparan al
+  // abrirse, ya con los archivos en caché. /seleccionar-reloj lleva directo al reloj: ahí sí se prepara completo.
+  const modo = !isLoggedIn ? null
+    : pathname === "/seleccionar-reloj" ? "completa"
+    : pathname === "/empleado" || pathname?.startsWith("/empleado/") ? "descarga"
+    : null;
 
   useEffect(() => {
-    if (!isLoggedIn || !inApp) return;
-    return scheduleFaceApiPreload();
-  }, [isLoggedIn, inApp]);
+    if (!modo) return;
+    return scheduleFaceApiPreload({ soloDescarga: modo === "descarga" });
+  }, [modo]);
 
   return null;
 }
