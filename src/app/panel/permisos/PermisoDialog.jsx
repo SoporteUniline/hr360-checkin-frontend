@@ -413,14 +413,14 @@ export default function PermisoDialog({
          - max-h-[85vh] overflow-y-auto: permite scroll interno si el contenido crece.
          Relación: este modal se invoca desde `src/app/panel/permisos/page.jsx`. */}
         <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-xl">
-          <DialogHeader className="p-5 bg-brand text-white">
-            <DialogTitle className="flex items-center gap-2 text-base font-bold">
-              <span className="grid size-9 place-items-center rounded-lg bg-white/15">
-                <CalendarCheck2 className="size-5 text-white" />
-              </span>
+          {/* Franja gris del sistema de diseño (28/11/2026, docs/sistema-diseno.md). Propuesto: pasar este formulario
+              a su propia página (tiene más de 6 campos). */}
+          <DialogHeader data-franja className="px-5 py-4 pr-14 bg-franja border-b border-borde">
+            <DialogTitle className="flex items-center gap-2 text-[22px] font-bold text-navy">
+              <CalendarCheck2 className="size-6 text-navy" aria-hidden="true" />
               {isEdit ? "Editar permiso" : "Nuevo permiso"}
             </DialogTitle>
-            <p className="text-sm text-white/80">
+            <p className="text-cuerpo text-texto-secundario">
               {isEdit
                 ? "Actualiza la solicitud y su estado."
                 : "Crea una solicitud de permiso para uno o varios empleados."}
@@ -428,7 +428,8 @@ export default function PermisoDialog({
           </DialogHeader>
 
           <div
-            className={`${styles.permisosTheme} max-h-[70vh] overflow-y-auto p-5 space-y-4`}
+            data-formulario-grande
+            className={`${styles.permisosTheme} max-h-[70vh] overflow-y-auto p-5 space-y-4 text-cuerpo`}
           >
             <div className="space-y-2">
               <Label>Empresa</Label>
@@ -664,19 +665,18 @@ export default function PermisoDialog({
               />
             </div>
 
-            <DialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
+            <DialogFooter className="bg-white border-t border-borde p-4 flex gap-3 sm:justify-end">
               <Button
                 variant="outline"
                 onClick={() => setOpen(false)}
                 disabled={loading}
-                className="border-gray-300 text-gray-700 hover:bg-gray-100"
               >
                 Cancelar
               </Button>
               <Button
                 onClick={guardar}
                 disabled={loading}
-                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
+                size="lg" className="gap-2"
               >
                 <Save className="h-4 w-4" />
                 Guardar

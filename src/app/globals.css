@@ -559,6 +559,51 @@ html.adamia-native .adamia-web-only {
   }
 }
 
+/* (28/11/2026, sistema de diseño; docs/sistema-diseno.md) Formularios grandes que todavía usan los campos de shadcn
+   (Input, Select, Textarea, FormLabel, FormMessage): con el atributo data-formulario-grande en su contenedor toman los
+   tamaños del mockup (campo de 52/56 px, letra de 17/18, etiqueta de 16/17 en 600, error rojo con borde de 2 px) sin
+   tocar su lógica. Los campos se reconocen por data-control="campo" (lo ponen Input, SelectTrigger y Textarea de
+   components/ui; data-slot no sirve porque FormControl lo cambia). Hoy lo usa la ficha del empleado (src/app/panel/empleados/FormularioEmpleado.jsx). Los formularios
+   nuevos usan CampoFormulario y no necesitan esto. Un campo que deba quedarse chico lleva data-compacto.
+   Fuera de @layer a propósito: le gana a las clases h-12 / text-base que cada campo trae escritas. */
+[data-formulario-grande] [data-control="campo"]:is(input, button):not([data-compacto]):not([type="checkbox"]):not([type="radio"]):not([type="file"]) {
+  height: var(--adamia-alto-campo);
+  font-size: var(--adamia-letra-campo);
+  border-radius: var(--adamia-radio-boton);
+  border-color: var(--adamia-borde-campo);
+  padding-inline: 16px;
+  color: var(--adamia-texto);
+}
+[data-formulario-grande] textarea[data-control="campo"]:not([data-compacto]) {
+  font-size: var(--adamia-letra-campo);
+  border-radius: var(--adamia-radio-boton);
+  border-color: var(--adamia-borde-campo);
+  padding: 12px 16px;
+}
+[data-formulario-grande] [data-control="campo"][aria-invalid="true"] {
+  border: 2px solid var(--adamia-peligro);
+}
+[data-formulario-grande] :is([data-slot="form-label"], [data-slot="label"]) {
+  font-size: var(--adamia-letra-etiqueta);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--adamia-texto);
+}
+[data-formulario-grande] [data-slot="form-label"][data-error="true"] { color: var(--adamia-texto); }
+[data-formulario-grande] [data-slot="form-message"] {
+  font-size: var(--adamia-letra-ayuda);
+  font-weight: 500;
+  color: var(--adamia-peligro-texto);
+}
+[data-formulario-grande] [data-slot="form-description"] {
+  font-size: var(--adamia-letra-ayuda);
+  color: var(--adamia-text-secondary);
+}
+[data-formulario-grande] :is(h2, h3) {
+  font-weight: 700;
+  color: var(--adamia-navy);
+}
+
 /* Encabezados de tabla en letra normal en todo el sistema («Entrada», no «ENTRADA»): se leen mejor.
    Fuera de @layer a propósito: le gana a las clases `uppercase`/`tracking-*`/`text-[10px]` de cada tabla. */
 th,

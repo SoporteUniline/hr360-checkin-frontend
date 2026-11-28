@@ -55,10 +55,14 @@ async function revisarDiseno(page, movil, donde, raizSelector = "[data-vista]") 
       const s = getComputedStyle(el);
       if (/gradient/.test(s.backgroundImage)) degradados.push(el.tagName);
       const tieneTexto = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
-      const chico = el.closest("[data-chico]");
+      // Pueden ser de 15 px: lo marcado data-chico (ayuda, ruta, etiquetas de estado), la ayuda y el error de los
+      // campos de shadcn (form-description / form-message, 15 px en escritorio como el mockup) y los encabezados de tabla.
+      const chico = el.closest("[data-chico], [data-slot='form-description'], [data-slot='form-message'], th");
       if (tieneTexto && !chico && parseFloat(s.fontSize) < minimo) chicos.push(`${el.tagName} ${parseFloat(s.fontSize)}px «${el.textContent.trim().slice(0, 40)}»`);
       if (tieneTexto && chico && parseFloat(s.fontSize) < 15) chicos.push(`${el.tagName} ${parseFloat(s.fontSize)}px «${el.textContent.trim().slice(0, 40)}» (data-chico, mínimo 15)`);
-      if (el.tagName === "BUTTON" && !el.closest("table") && el.getBoundingClientRect().height < 47.5) botones.push(`«${(el.textContent.trim() || el.getAttribute("aria-label") || "").slice(0, 30)}» ${Math.round(el.getBoundingClientRect().height)}px`);
+      // Botones de acción: ≥ 48 px. No cuentan los de renglones de tabla (44 px), la X de las ventanas (44 px, se
+      // revisa aparte) ni los interruptores y casillas.
+      if (el.tagName === "BUTTON" && !el.closest("table") && !el.matches("[role=switch], [role=checkbox], [role=radio], [aria-label='Cerrar']") && el.getBoundingClientRect().height < 47.5) botones.push(`«${(el.textContent.trim() || el.getAttribute("aria-label") || "").slice(0, 30)}» ${Math.round(el.getBoundingClientRect().height)}px`);
       if (/^H[1-3]$/.test(el.tagName) && Number(s.fontWeight) !== 700) titulos.push(`${el.tagName} ${s.fontWeight} «${el.textContent.trim().slice(0, 30)}»`);
       if (tieneTexto && !el.closest("button,[disabled],[data-estado]")) {
         const c = rgb(s.color);
@@ -160,7 +164,17 @@ try {
       assert.ok(g.alto >= (movil ? 55.5 : 47.5), `empleado ${sufijo}: Registrar de ${movil ? 56 : 48} px (mide ${g.alto})`);
       const titulos = await page.locator("[data-vista='ficha-empleado'] :is(h1,h2,h3)").evaluateAll((els) => els.filter((e) => e.offsetWidth).map((e) => getComputedStyle(e).fontWeight));
       assert.ok(titulos.length && titulos.every((p) => p === "700"), `empleado ${sufijo}: títulos en 700 (${titulos})`);
-      await revisarDiseno(page, movil, `empleado alta ${sufijo}`, "[data-vista='ficha-empleado']");
+      const campoNombre = await estilo(page.locator("[data-vista='ficha-empleado'] input[data-control='campo']").first());
+      assert.deepEqual([Math.round(campoNombre.alto), campoNombre.letra], movil ? [56, "18px"] : [52, "17px"], `empleado ${sufijo}: campos de 52/56 px con letra de 17/18`);
+      const enc = await estilo(page.locator("[data-encabezado-ficha]"));
+      assert.equal(enc.fondo, GRIS_FRANJA, `empleado ${sufijo}: encabezado gris`);
+      // Las 4 pestañas del alta, cada una con las reglas del sistema de diseño.
+      for (const pestana of ["Personal", "Trabajo", "Checador y acceso", "Pago"]) {
+        await page.getByRole("tab", { name: pestana }).click();
+        await dormir(700);
+        await revisarDiseno(page, movil, `empleado alta · ${pestana} ${sufijo}`, "[data-vista='ficha-empleado']");
+      }
+      await page.getByRole("tab", { name: "Personal" }).click();
     }
 
     // 3. Ventana chica: crear puesto.

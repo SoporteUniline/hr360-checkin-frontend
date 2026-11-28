@@ -806,8 +806,10 @@ export default function FormularioEmpleado({
 
   return (
     <Form {...form}>
-      {/* Contenedor principal: columna fija en mobile, flujo normal en desktop */}
-      <div className={`flex flex-col sm:block sm:h-auto ${enVentana ? "h-full" : "h-[calc(100dvh-3.5rem)]"}`}>
+      {/* Contenedor principal: columna fija en mobile, flujo normal en desktop.
+          data-formulario-grande (28/11/2026, docs/sistema-diseno.md): los campos toman el tamaño del sistema de diseño
+          (52/56 px, letra 17/18, etiqueta 16/17 en 600) desde globals.css, sin cambiar la lógica de las pestañas. */}
+      <div data-vista="ficha-empleado" data-formulario-grande className={`flex flex-col text-cuerpo text-texto sm:block sm:h-auto ${enVentana ? "h-full" : "h-[calc(100dvh-3.5rem)]"}`}>
         {/* ── Encabezado compacto (una sola franja): regresar, foto, nombre y estado, datos clave, credencial, guardar ── */}
         <EncabezadoFicha
           textoRegresar={textoRegresar}
@@ -844,9 +846,6 @@ export default function FormularioEmpleado({
               form="formulario-empleado"
               data-boton-guardar
               disabled={!botonGuardarActivo || isSubmitting}
-              className={`min-h-10 rounded-[10px] px-[18px] text-sm font-bold ${botonGuardarActivo
-                ? "bg-brand hover:bg-blue-700 text-white shadow-sm"
-                : "bg-slate-200 text-slate-500 shadow-none disabled:opacity-100"}`}
             >
               {isSubmitting ? "Guardando…" : editar ? "Guardar" : "Registrar"}
             </Button>
@@ -862,32 +861,32 @@ export default function FormularioEmpleado({
           >
             {/* TABS */}
             <Tabs value={tab} onValueChange={setTab} className="w-full">
-              <div className="bg-white sm:rounded-xl sm:shadow-sm sm:border sm:border-gray-100 overflow-hidden sm:mb-6">
+              <div className="bg-white sm:rounded-seccion sm:border sm:border-borde overflow-hidden sm:mb-6">
                 <div className="overflow-x-auto">
-                  <TabsList className="flex-nowrap w-max min-w-full bg-gray-50 rounded-none border-b border-gray-200 p-0 h-auto">
-                    <TabsTrigger value="personal" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none min-h-11 py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
-                      <User className="h-4 w-4 sm:mr-2" />
-                      <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Personal</span>
+                  <TabsList className="flex-nowrap w-max min-w-full bg-franja rounded-none border-b border-borde p-0 h-auto">
+                    <TabsTrigger value="personal" className="data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:border-b-2 data-[state=active]:border-brand rounded-none min-h-12 text-texto-boton py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
+                      <User className="size-5 sm:mr-2" />
+                      <span className="ml-1.5 whitespace-nowrap text-cuerpo font-semibold sm:ml-0">Personal</span>
                     </TabsTrigger>
-                    <TabsTrigger value="trabajo" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none min-h-11 py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
-                      <BriefcaseBusiness className="h-4 w-4 sm:mr-2" />
-                      <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Trabajo</span>
+                    <TabsTrigger value="trabajo" className="data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:border-b-2 data-[state=active]:border-brand rounded-none min-h-12 text-texto-boton py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
+                      <BriefcaseBusiness className="size-5 sm:mr-2" />
+                      <span className="ml-1.5 whitespace-nowrap text-cuerpo font-semibold sm:ml-0">Trabajo</span>
                     </TabsTrigger>
-                    <TabsTrigger value="checador" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none min-h-11 py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
-                      <ScanFace className="h-4 w-4 sm:mr-2" />
-                      <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Checador y acceso</span>
+                    <TabsTrigger value="checador" className="data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:border-b-2 data-[state=active]:border-brand rounded-none min-h-12 text-texto-boton py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
+                      <ScanFace className="size-5 sm:mr-2" />
+                      <span className="ml-1.5 whitespace-nowrap text-cuerpo font-semibold sm:ml-0">Checador y acceso</span>
                     </TabsTrigger>
-                    <TabsTrigger value="pago" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none min-h-11 py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
-                      <Wallet className="h-4 w-4 sm:mr-2" />
-                      <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Pago</span>
+                    <TabsTrigger value="pago" className="data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:border-b-2 data-[state=active]:border-brand rounded-none min-h-12 text-texto-boton py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
+                      <Wallet className="size-5 sm:mr-2" />
+                      <span className="ml-1.5 whitespace-nowrap text-cuerpo font-semibold sm:ml-0">Pago</span>
                     </TabsTrigger>
                     {(values?.id_empleado || camposConfigurados.some(c => c.activo && c.formulario && c.pestana === "documentos")) && (
                       <TabsTrigger
                         value="documentos"
-                        className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none min-h-11 py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
+                        className="data-[state=active]:bg-white data-[state=active]:text-brand data-[state=active]:border-b-2 data-[state=active]:border-brand rounded-none min-h-12 text-texto-boton py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
                       >
-                        <FolderOpen className="h-4 w-4 sm:mr-2" />
-                        <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Documentos</span>
+                        <FolderOpen className="size-5 sm:mr-2" />
+                        <span className="ml-1.5 whitespace-nowrap text-cuerpo font-semibold sm:ml-0">Documentos</span>
                       </TabsTrigger>
                     )}
                   </TabsList>
@@ -955,8 +954,8 @@ export default function FormularioEmpleado({
                           idEmpresa={values.id_empresa}
                         />
                       )}
-                      {errorCampos && <p role="alert" className="mt-4 text-sm text-red-600">No se pudieron cargar los campos personalizados.</p>}
-                      {cargandoCampos && <p className="mt-4 text-sm">Cargando campos personalizados…</p>}
+                      {errorCampos && <p role="alert" className="mt-4 text-cuerpo text-peligro-texto">No se pudieron cargar los campos personalizados.</p>}
+                      {cargandoCampos && <p className="mt-4 text-cuerpo text-texto-secundario">Cargando campos personalizados…</p>}
                       {tab === "documentos" && !values?.id_empleado && ["inicio", "encabezado", "filtros", "documentos", "fin"].map(posicion => <Fragment key={posicion}>{renderCampos(posicion, true)}</Fragment>)}
                     </motion.div>
                   </AnimatePresence>
@@ -966,24 +965,23 @@ export default function FormularioEmpleado({
           </form>
         </div>
 
-        {/* ── Barra de acción mobile (fija abajo) ── */}
-        <div className="sm:hidden shrink-0 bg-white border-t border-gray-100 px-4 py-3">
+        {/* ── Barra de acción mobile (fija abajo): el principal a todo lo ancho, 56 px (sistema de diseño) ── */}
+        <div className="sm:hidden shrink-0 bg-white border-t border-borde px-4 pt-3 pb-5">
           {soloLectura ? (
-            <p className="text-center text-xs text-gray-400 py-1">
+            <p className="text-center text-cuerpo text-texto-secundario py-1">
               Vista de solo lectura
             </p>
           ) : (
-            <button
+            <Button
               type="submit"
+              size="lg"
               form="formulario-empleado"
               data-boton-guardar
               disabled={!botonGuardarActivo || isSubmitting}
-              className={`w-full min-h-[44px] text-sm font-bold py-3 rounded-xl ${botonGuardarActivo
-                ? "bg-brand active:bg-blue-800 text-white"
-                : "bg-gray-100 text-gray-400"}`}
+              className="w-full"
             >
               {isSubmitting ? "Guardando…" : editar ? "Guardar" : "Registrar empleado"}
-            </button>
+            </Button>
           )}
         </div>
       </div>

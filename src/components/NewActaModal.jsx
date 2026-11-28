@@ -506,14 +506,14 @@ const NewActaModal = ({
             "sm:max-w-xl md:max-w-2xl lg:max-w-3xl p-0 overflow-hidden",
           )}
         >
-          {/* Header - Diseño ADAMIA (patrón Contratos) */}
-          <DialogHeader className="bg-brand text-white p-6 rounded-t-lg">
-            <div className="flex items-center gap-3">
-              <FileText className="h-6 w-6" />
-              <DialogTitle className="text-white text-lg font-semibold">
+          {/* Encabezado: franja gris del sistema de diseño (28/11/2026, docs/sistema-diseno.md). */}
+          <DialogHeader data-franja className="bg-franja border-b border-borde px-6 py-4">
+            <div className="flex items-center gap-3 pr-10">
+              <FileText className="size-6 text-navy" aria-hidden="true" />
+              <DialogTitle className="text-[22px] font-bold text-navy">
                 {mode === "edit"
-                  ? "✏️ Editar Acta Administrativa"
-                  : "➕ Nueva Acta Administrativa"}
+                  ? "Editar acta administrativa"
+                  : "Nueva acta administrativa"}
               </DialogTitle>
             </div>
           </DialogHeader>
@@ -521,20 +521,19 @@ const NewActaModal = ({
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="text-sm space-y-4 max-h-[70vh] overflow-y-auto px-6 py-6"
+              data-formulario-grande
+              className="text-cuerpo text-texto space-y-4 max-h-[70vh] overflow-y-auto px-6 py-6"
             >
-              {/* ======================
-                  Secciones por color (Diseño ADAMIA)
-                  - Patrón tomado de `src/app/panel/contratos/ContratoDialog.jsx`
-                  ====================== */}
+              {/* Secciones: tarjeta blanca con borde, SIN fondos de color (28/11/2026, sistema de diseño: el color solo
+                  dice estado). Propuesto: pasar esta acta a su propia página con SeccionFormulario (docs/sistema-diseno.md). */}
 
               {/* Información básica */}
-              <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-5 space-y-4">
+              <div className="bg-white border border-borde rounded-seccion p-5 space-y-4">
                 <div className="flex items-center gap-2">
-                  <div className="bg-[#2563EB] p-2 rounded-lg">
-                    <User className="h-4 w-4 text-white" />
+                  <div className="bg-franja p-2 rounded-lg">
+                    <User className="h-4 w-4 text-navy" />
                   </div>
-                  <div className="font-semibold text-gray-900">
+                  <div className="text-titulo-seccion font-bold text-navy">
                     Información básica
                   </div>
                 </div>
@@ -757,11 +756,14 @@ const NewActaModal = ({
 
                               <Button
                                 type="button"
-                                className="p-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                                variant="outline"
+                                size="icon"
+                                className="size-boton"
                                 onClick={() => setOpenNewTipoActa(true)}
                                 title="Crear tipo de acta"
+                                aria-label="Crear tipo de acta"
                               >
-                                <PlusIcon className="w-4 h-4 text-[#7C3AED]" />
+                                <PlusIcon aria-hidden="true" />
                               </Button>
                             </div>
                           </FormControl>
@@ -775,12 +777,12 @@ const NewActaModal = ({
               </div>
 
               {/* Incidente */}
-              <div className="bg-green-50/60 border border-green-100 rounded-xl p-5 space-y-4">
+              <div className="bg-white border border-borde rounded-seccion p-5 space-y-4">
                 <div className="flex items-center gap-2">
-                  <div className="bg-emerald-600 p-2 rounded-lg">
-                    <CalendarDays className="h-4 w-4 text-white" />
+                  <div className="bg-franja p-2 rounded-lg">
+                    <CalendarDays className="h-4 w-4 text-navy" />
                   </div>
-                  <div className="font-semibold text-gray-900">
+                  <div className="text-titulo-seccion font-bold text-navy">
                     Detalles del incidente
                   </div>
                 </div>
@@ -840,12 +842,12 @@ const NewActaModal = ({
               </div>
 
               {/* Hechos y testigos */}
-              <div className="bg-yellow-50/60 border border-yellow-100 rounded-xl p-5 space-y-4">
+              <div className="bg-white border border-borde rounded-seccion p-5 space-y-4">
                 <div className="flex items-center gap-2">
-                  <div className="bg-yellow-500 p-2 rounded-lg">
-                    <FileText className="h-4 w-4 text-white" />
+                  <div className="bg-franja p-2 rounded-lg">
+                    <FileText className="h-4 w-4 text-navy" />
                   </div>
-                  <div className="font-semibold text-gray-900">
+                  <div className="text-titulo-seccion font-bold text-navy">
                     Hechos y testigos
                   </div>
                 </div>
@@ -893,12 +895,12 @@ const NewActaModal = ({
               </div>
 
               {/* Sanción */}
-              <div className="bg-purple-50/60 border border-purple-100 rounded-xl p-5 space-y-4">
+              <div className="bg-white border border-borde rounded-seccion p-5 space-y-4">
                 <div className="flex items-center gap-2">
-                  <div className="bg-[#7C3AED] p-2 rounded-lg">
-                    <ShieldAlert className="h-4 w-4 text-white" />
+                  <div className="bg-franja p-2 rounded-lg">
+                    <ShieldAlert className="h-4 w-4 text-navy" />
                   </div>
-                  <div className="font-semibold text-gray-900">Sanción</div>
+                  <div className="text-titulo-seccion font-bold text-navy">Sanción</div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
@@ -950,12 +952,12 @@ const NewActaModal = ({
               </div>
 
               {/* Elaboración */}
-              <div className="bg-teal-50/60 border border-teal-100 rounded-xl p-5 space-y-4">
+              <div className="bg-white border border-borde rounded-seccion p-5 space-y-4">
                 <div className="flex items-center gap-2">
-                  <div className="bg-teal-600 p-2 rounded-lg">
-                    <FileSignature className="h-4 w-4 text-white" />
+                  <div className="bg-franja p-2 rounded-lg">
+                    <FileSignature className="h-4 w-4 text-navy" />
                   </div>
-                  <div className="font-semibold text-gray-900">Elaboración</div>
+                  <div className="text-titulo-seccion font-bold text-navy">Elaboración</div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
@@ -1057,12 +1059,12 @@ const NewActaModal = ({
               </div>
 
               {/* Declaraciones */}
-              <div className="bg-slate-50/60 border border-slate-200 rounded-xl p-5 space-y-4">
+              <div className="bg-white border border-borde rounded-seccion p-5 space-y-4">
                 <div className="flex items-center gap-2">
-                  <div className="bg-slate-700 p-2 rounded-lg">
-                    <FileText className="h-4 w-4 text-white" />
+                  <div className="bg-franja p-2 rounded-lg">
+                    <FileText className="h-4 w-4 text-navy" />
                   </div>
-                  <div className="font-semibold text-gray-900">
+                  <div className="text-titulo-seccion font-bold text-navy">
                     Declaraciones
                   </div>
                 </div>
@@ -1097,7 +1099,7 @@ const NewActaModal = ({
                             checked={field.value}
                             onCheckedChange={field.onChange}
                             className="h-7 w-11 [&>span]:size-5.5 
-             data-[state=checked]:bg-emerald-500 
+             data-[state=checked]:bg-brand 
              data-[state=unchecked]:bg-gray-300"
                           />
                           <div>
@@ -1121,7 +1123,7 @@ const NewActaModal = ({
                           checked={field.value}
                           onCheckedChange={field.onChange}
                           className="h-7 w-11 [&>span]:size-5.5 
-             data-[state=checked]:bg-emerald-500 
+             data-[state=checked]:bg-brand 
              data-[state=unchecked]:bg-gray-300"
                         />
 
@@ -1138,18 +1140,17 @@ const NewActaModal = ({
                 </div>
               </div>
 
-              <div className="bg-gray-50 -mx-6 px-6 py-4 flex flex-col-reverse sm:flex-row justify-end gap-2 mt-6 border-t">
+              <div className="bg-white -mx-6 px-6 pt-4 flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6 border-t border-borde">
                 <Button
                   variant="outline"
                   type="button"
                   onClick={handleClose}
-                  className="border-gray-300"
                 >
                   Cancelar
                 </Button>
 
                 <Button
-                  className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
+                  size="lg"
                   type="submit"
                   disabled={isSubmitting}
                 >

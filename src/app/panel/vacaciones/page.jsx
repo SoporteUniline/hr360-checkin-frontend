@@ -806,7 +806,7 @@ export default function VacacionesPage() {
                                       <div className="text-[11px] uppercase text-slate-500">
                                         Días Cargados
                                       </div>
-                                      <div className="text-xl font-extrabold">
+                                      <div className="text-xl font-bold">
                                         {numberFormat(emp.dias_cargados)}
                                       </div>
                                     </Card>
@@ -814,7 +814,7 @@ export default function VacacionesPage() {
                                       <div className="text-[11px] uppercase text-slate-500">
                                         Días Tomados
                                       </div>
-                                      <div className="text-xl font-extrabold">
+                                      <div className="text-xl font-bold">
                                         {numberFormat(emp.dias_tomados)}
                                       </div>
                                     </Card>
@@ -823,7 +823,7 @@ export default function VacacionesPage() {
                                         Disponibles
                                       </div>
                                       <div
-                                        className="text-xl font-extrabold"
+                                        className="text-xl font-bold"
                                         style={{
                                           color:
                                             dDisp === 0
@@ -934,7 +934,7 @@ export default function VacacionesPage() {
                                             <div className="text-[11px] uppercase text-slate-500">
                                               Total Días
                                             </div>
-                                            <div className="text-2xl font-extrabold">
+                                            <div className="text-2xl font-bold">
                                               {numberFormat(
                                                 cacheTomados[emp.id_empleado]
                                                   ?.total ??
@@ -981,7 +981,7 @@ export default function VacacionesPage() {
                                                   className="pl-4 border-l-4 border-slate-300"
                                                 >
                                                   <div className="mb-3">
-                                                    <div className="text-lg font-extrabold text-slate-700">
+                                                    <div className="text-lg font-bold text-slate-700">
                                                       {g.year}
                                                     </div>
                                                     <div className="text-sm font-semibold text-slate-500">
@@ -999,7 +999,7 @@ export default function VacacionesPage() {
                                                           key={v.id}
                                                           className="flex items-center gap-3 rounded-md border bg-white p-3 shadow-sm transition hover:shadow-md"
                                                         >
-                                                          <div className="w-12 h-12 rounded-md text-white flex items-center justify-center font-extrabold text-xl bg-brand ">
+                                                          <div className="w-12 h-12 rounded-md text-white flex items-center justify-center font-bold text-xl bg-brand ">
                                                             {f.day}
                                                           </div>
                                                           <div className="min-w-0">
@@ -1176,7 +1176,7 @@ export default function VacacionesPage() {
                 <Button
                   disabled={guardandoMasivos}
                   onClick={guardarCambiosMasivos}
-                  className="bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
+                  size="lg"
                 >
                   {guardandoMasivos ? "Guardando..." : "Guardar cambios"}
                 </Button>
@@ -1246,7 +1246,7 @@ export default function VacacionesPage() {
                         <Card key={p.id} className="p-4">
                           <div className="flex items-center justify-between mb-1">
                             <div className="font-semibold">Año {p?.anios}</div>
-                            <div className="text-xl font-extrabold text-emerald-600">
+                            <div className="text-xl font-bold text-emerald-600">
                               {numberFormat(p?.dias)} días
                             </div>
                           </div>
@@ -1289,7 +1289,7 @@ export default function VacacionesPage() {
                       <div className="text-[11px] uppercase text-slate-500">
                         Total días tomados
                       </div>
-                      <div className="font-extrabold text-red-600">
+                      <div className="font-bold text-red-600">
                         {numberFormat(detalleData?.total)} días
                       </div>
                     </div>

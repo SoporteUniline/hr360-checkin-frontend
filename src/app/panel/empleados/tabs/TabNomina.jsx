@@ -92,7 +92,7 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
           </div>
           <div>
             <h3 className="text-xl font-bold text-gray-900">Datos de nómina</h3>
-            <p className="text-sm text-gray-600">
+            <p className="text-cuerpo text-texto-secundario">
               Configura la información salarial
             </p>
           </div>
@@ -279,7 +279,7 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
       {/* Nómina R1: cómo se le paga y qué bonos o descuentos tiene. */}
       <div className="rounded-xl border-2 border-gray-100 bg-white p-6">
         <h3 className="text-lg font-bold text-gray-900">Pago en la nómina</h3>
-        <p className="mb-4 text-sm text-gray-600">Cómo recibe su pago y sus bonos o descuentos de cada periodo.</p>
+        <p className="mb-4 text-cuerpo text-texto-secundario">Cómo recibe su pago y sus bonos o descuentos de cada periodo.</p>
         <MedioPago form={form} soloLectura={soloLectura} />
         <h4 className="mb-2 mt-6 font-semibold text-gray-900">Bonos y descuentos</h4>
         {conNomina ? <BonosEmpleado idEmpleado={form.watch("id_empleado")} soloLectura={soloLectura} /> : null}
