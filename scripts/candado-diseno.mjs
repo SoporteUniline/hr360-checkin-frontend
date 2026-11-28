@@ -39,6 +39,11 @@ export const MIGRADOS = [
   "src/components/nomina/RegistrarPrestamo.jsx",
   "src/components/NewActaModal.jsx",
   "src/app/panel/permisos/PermisoDialog.jsx",
+  // (28/11/2026) Permiso y acta en página propia (las dos ventanas de arriba quedaron sin uso).
+  "src/app/panel/permisos/formulario/FormularioPermiso.jsx",
+  "src/app/panel/permisos/formulario/PaginaPermiso.jsx",
+  "src/app/panel/actas-administrativas/formulario/FormularioActa.jsx",
+  "src/app/panel/actas-administrativas/formulario/PaginaActa.jsx",
 ];
 const esMigrado = (ruta) => MIGRADOS.includes(ruta) || ruta.startsWith("src/components/formulario/");
 

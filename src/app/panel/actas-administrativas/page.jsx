@@ -1,14 +1,10 @@
 "use client";
 
 import AdministrativeTable from "@/components/AdministrativeMinutesTable";
-import NewActaModal from "@/components/NewActaModal";
 import StatCard from "@/components/StatCard";
 import TablePagination from "@/components/TablePagination";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/AuthContext";
 import { useAdministrativeMinutes } from "@/hooks/useAdministrativeMinutes";
-import useEmpleadosActivosData from "@/hooks/useEmpleadosActivos";
-import useTiposActa from "@/hooks/useTiposActa";
 import {
   PlusIcon,
   AlertTriangle,
@@ -19,7 +15,8 @@ import {
 } from "lucide-react";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import React, { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { rutaEditarActa, rutaNuevaActa } from "@/lib/actas/formularioActa.mjs";
 import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
 import AccesosRapidos from "@/components/AccesosRapidos";
@@ -47,13 +44,12 @@ const ActasAdministrativasPage = () => {
     active: false,
     total: 0,
   });
-  const [openNewActa, setOpenNewActa] = useState(false);
-  const [openEditActa, setOpenEditActa] = useState(false);
-  const [actaToEdit, setActaToEdit] = useState(null);
+  // (28/11/2026) Nueva y editar: en su propia página, por pasos (antes la ventana NewActaModal). Al guardar o cancelar
+  // se regresa aquí.
+  const router = useRouter();
   const [actaToView, setActaToView] = useState(null);
   const [openView, setOpenView] = useState(false);
   const [deleteRow, setDeleteRow] = useState(null);
-  const { dataUser } = useAuth();
   // Enlace desde Asistencias («📄 Acta en borrador»): ?acta=<id_acta> abre su detalle.
   const searchParams = useSearchParams();
   const actaEnlace = searchParams.get("acta");
@@ -75,19 +71,6 @@ const ActasAdministrativasPage = () => {
     isLoading,
   } = useAdministrativeMinutes(empresaSeleccionada, page, limit, filters);
 
-  const {
-    data: empleados,
-    error,
-    isLoading: loadingEmpleados,
-    mutate: mutateEmpleados,
-  } = useEmpleadosActivosData(dataUser?.id_empresa);
-
-  const {
-    data: tiposActa,
-    isLoading: loadingTipos,
-    mutate: mutateTiposActa,
-  } = useTiposActa(dataUser?.id_empresa, 1, 100, "");
-
   /**
    * Acciones por fila (Ver/Editar/Eliminar).
    * Relación:
@@ -99,10 +82,7 @@ const ActasAdministrativasPage = () => {
     setOpenView(true);
   };
 
-  const onEditActa = (acta) => {
-    setActaToEdit(acta);
-    setOpenEditActa(true);
-  };
+  const onEditActa = (acta) => router.push(rutaEditarActa(acta.id_acta));
 
   const onDeleteActa = (acta) => {
     setDeleteRow(acta);
@@ -144,7 +124,7 @@ const ActasAdministrativasPage = () => {
           subtitulo="Registro y seguimiento de actas por empleado"
           acciones={
             <Button
-              onClick={() => setOpenNewActa(true)}
+              onClick={() => router.push(rutaNuevaActa())}
               className="bg-brand font-semibold text-white"
             >
               <PlusIcon className="w-4 h-4 mr-2" />
@@ -210,32 +190,6 @@ const ActasAdministrativasPage = () => {
           total={headerFilterMeta.active ? headerFilterMeta.total : total}
           onPageChange={setPage}
           onLimitChange={setLimit}
-        />
-
-        <NewActaModal
-          open={openNewActa}
-          onClose={() => setOpenNewActa(false)}
-          empleados={empleados}
-          tiposActa={tiposActa}
-          refetch={mutateActas}
-          dataUser={dataUser}
-          mutateTiposActa={mutateTiposActa}
-        />
-
-        {/* Modal de edición (reutiliza el mismo formulario) */}
-        <NewActaModal
-          open={openEditActa}
-          onClose={() => {
-            setOpenEditActa(false);
-            setActaToEdit(null);
-          }}
-          empleados={empleados}
-          tiposActa={tiposActa}
-          refetch={mutateActas}
-          dataUser={dataUser}
-          mutateTiposActa={mutateTiposActa}
-          mode="edit"
-          actaToEdit={actaToEdit}
         />
 
         {/* Ver (detalle + Descargar PDF) */}

@@ -449,12 +449,15 @@ try {
   } });
 
   // 5) Permisos (RH): el mismo par.
+  // (28/11/2026) El permiso ya no es ventana: «Nuevo permiso» abre /panel/permisos/nuevo (FormularioPermiso.jsx).
   await page.goto(base + "/panel/permisos", { waitUntil: "domcontentloaded" });
+  await page.getByText("Sin permisos para mostrar").waitFor({ timeout: 30000 });
   await page.getByRole("button", { name: /Nuevo permiso/ }).first().click();
-  const dp = page.getByRole("dialog");
-  const empresaSel = dp.getByRole("combobox").first();
+  await page.waitForURL(/\/panel\/permisos\/nuevo/, { timeout: 30000 });
+  const dp = page.locator("[data-vista='formulario-permiso']");
+  const empresaSel = dp.locator("#permiso-empresa");
   await empresaSel.waitFor({ timeout: 15000 });
-  if (!/Empresa prueba/.test(await empresaSel.innerText())) { await empresaSel.click(); await page.getByRole("option", { name: "Empresa prueba" }).click(); }
+  if ((await empresaSel.inputValue()) !== "10") await empresaSel.selectOption({ label: "Empresa prueba" });
   assert.deepEqual(await textos(dp.getByLabel("Qué pasó")), ["Elige qué pasó…", "Inasistencia", "Entrada tarde", "Salida temprano", "Salir en medio turno"]);
   await elegir(dp.getByLabel("Qué pasó"), "2");
   await dp.getByText("Diego León").waitFor({ timeout: 10000 });
@@ -462,24 +465,34 @@ try {
   const [ini, fin] = proximaSemana();
   await dp.locator('input[type="date"]').nth(0).fill(ini);
   await dp.locator('input[type="date"]').nth(1).fill(fin);
-  await dp.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("button", { name: "Guardar permiso" }).click();
   await dp.getByText("Elige el motivo del permiso.").waitFor({ timeout: 5000 });
   await elegir(dp.getByLabel("Motivo"), { label: "Permiso personal" });
   assert.equal(await valorDe(dp.getByLabel("Goce del día")), "sin", "goce del motivo");
   await parAlineado(dp, "permisos");
-  await letraCampos(dp.locator("[data-que-paso-permiso]"), "permisos");
+  // En página, los campos llevan la letra del sistema de diseño (17 px en escritorio).
+  await letraCampos(dp.locator("[data-que-paso-permiso]"), "permisos", 16, 18);
   await foto(page, "permisos", dp);
-  await dp.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("button", { name: "Guardar permiso" }).click();
   await esperar(() => pet.permisos.length === 1, "POST permiso");
   assert.deepEqual(pet.permisos[0], { ids_empleados: [601], id_tipo_permiso: 2, fecha_inicio: ini, fecha_fin: fin, motivo: null, id_motivo_permiso: 2, goce: "sin" });
   // Salida temprano · Permiso laboral (no se cambia al aplicar): horas 🔒 y sin goce que elegir.
+  // Al guardar regresa a la lista con el aviso; de ahí, otro permiso nuevo.
+  await page.waitForURL(/\/panel\/permisos$/, { timeout: 15000 });
+  await page.getByText("Permiso(s) creado(s) correctamente.").first().waitFor({ timeout: 5000 });
+  await page.getByText("Sin permisos para mostrar").waitFor({ timeout: 30000 });
   await page.getByRole("button", { name: /Nuevo permiso/ }).first().click();
-  const dp2 = page.getByRole("dialog");
+  await page.waitForURL(/\/panel\/permisos\/nuevo/, { timeout: 30000 });
+  const dp2 = page.locator("[data-vista='formulario-permiso']");
+  await dp2.locator("#permiso-empresa").selectOption({ label: "Empresa prueba" });
   await elegir(dp2.getByLabel("Qué pasó"), "5");
   await elegir(dp2.getByLabel("Motivo"), { label: "Permiso laboral" });
   assert.equal(await dp2.getByLabel("Horas no trabajadas").isDisabled(), true);
   assert.equal(await dp2.getByLabel("Goce del día").count(), 0, "parcial con motivo: día con goce");
-  await page.keyboard.press("Escape");
+  // Cancelar con cambios: pregunta; «Salir sin guardar» regresa a la lista sin mandar nada.
+  await page.getByRole("button", { name: "Cancelar" }).click();
+  await page.locator("[data-dialogo-cambios]").getByRole("button", { name: "Salir sin guardar" }).click();
+  await page.waitForURL(/\/panel\/permisos$/, { timeout: 15000 });
 
   // 6) Celular 390.
   await page.setViewportSize({ width: 390, height: 844 });

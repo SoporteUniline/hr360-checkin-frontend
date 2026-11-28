@@ -3,11 +3,11 @@ titulo: Cómo aprobar o rechazar un permiso o unas vacaciones
 resumen: Aprueba o rechaza en un clic las solicitudes pendientes; al aprobar, los días quedan marcados en Asistencias con su tipo, motivo y goce.
 modulo: permisos
 audiencia: [rh, dueno]
-pantallas: [/panel/permisos]
+pantallas: [/panel/permisos, /panel/permisos/[id]/editar]
 palabras: [aprobar permiso, rechazar permiso, autorizar, solicitud pendiente, vacaciones, estado, aprobado, rechazado, goce]
 orden: 20
-actualizado: 2026-11-27
-fuentes: [src/app/panel/permisos/page.jsx, src/app/panel/permisos/PermisosTable.jsx, src/app/panel/permisos/PermisoDialog.jsx]
+actualizado: 2026-11-28
+fuentes: [src/app/panel/permisos/page.jsx, src/app/panel/permisos/PermisosTable.jsx, src/app/panel/permisos/formulario/FormularioPermiso.jsx, src/app/panel/permisos/formulario/usePermisoFormulario.js]
 ---
 
 ## Para qué sirve
@@ -35,10 +35,10 @@ En la fila de un permiso **Pendiente** verás dos botones:
 
 Si el motivo permite cambiar el goce y quieres decidirlo al aprobar:
 
-1. Toca el lápiz (**Editar**).
+1. Toca el lápiz (**Editar**). Se abre la página **Editar permiso**.
 2. Revisa el **Goce del día**.
 3. En **Estado** elige **Aprobado**.
-4. Toca **Guardar**.
+4. Toca **Guardar cambios**.
 
 ## Qué pasa al aprobar
 

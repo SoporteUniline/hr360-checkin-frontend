@@ -5,12 +5,15 @@
 // puede pedir otro mientras tenga uno abierto; otra persona pide uno en quincenas.
 // (27/11/2026) Los dos formularios (RH y Mi espacio) a 1440 y 390: letra ≥ 16 px en escritorio y ≥ 17 px en celular,
 // botones y campos de 48 px o más, títulos en 700, sin fondos degradados y sin desborde horizontal.
+// (28/11/2026, mockup v3) En escritorio: botones ≥ 38 px, campos ≥ 42 y la etiqueta y el texto de los botones de 15 px
+// (las medidas viven en scripts/lib/reglasDiseno.mjs); en celular, como antes.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-prestamos.mjs
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
 import crypto from "node:crypto";
+import { minimos } from "./lib/reglasDiseno.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -118,9 +121,10 @@ async function rutas(ctx, usuario) {
   });
 }
 
-// Legibilidad del formulario (regla del dueño): letra, botones/campos de 48 px, títulos 700, sin degradados ni desborde.
+// Legibilidad del formulario (regla del dueño): letra, alto de botones y campos, títulos 700, sin degradados ni desborde.
 async function revisarFormulario(page, ancho, nombre) {
-  const r = await page.evaluate(({ minimo }) => {
+  const m = minimos(ancho < 1024);
+  const r = await page.evaluate(({ m }) => {
     const form = document.querySelector("[data-formulario-prestamo]");
     if (!form) return { falta: true };
     const visible = (el) => { const b = el.getBoundingClientRect(); const s = getComputedStyle(el); return b.width > 0 && b.height > 0 && s.visibility !== "hidden" && s.display !== "none"; };
@@ -129,17 +133,20 @@ async function revisarFormulario(page, ancho, nombre) {
       if (!visible(el) || el.closest("[data-chico]")) continue;
       const conTexto = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
       const control = ["INPUT", "SELECT", "TEXTAREA"].includes(el.tagName);
+      // Etiquetas y texto de botones: 15 px en escritorio; lo que se escribe en un campo: 16 (mockup v3).
+      const minimo = !control && el.closest("label, .text-etiqueta, button, [data-slot='button']") ? m.letraControl : m.letra;
       if ((conTexto || control) && parseFloat(getComputedStyle(el).fontSize) < minimo) chicas.push(`${el.tagName} ${parseFloat(getComputedStyle(el).fontSize)}px «${(el.textContent || el.value || "").trim().slice(0, 40)}»`);
     }
     const controles = [...form.querySelectorAll("button, input, select, a"), ...document.querySelectorAll("[data-barra-formulario] button, [data-barra-formulario] a")].filter(visible);
-    const bajos = controles.filter((el) => el.getBoundingClientRect().height < 47.5).map((el) => `${el.tagName} ${Math.round(el.getBoundingClientRect().height)}px «${(el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 30)}»`);
+    const altoMinimo = (el) => (["INPUT", "SELECT"].includes(el.tagName) ? m.campo : el.dataset.tamano === "icon" ? m.icono : m.boton) - 0.5;
+    const bajos = controles.filter((el) => el.getBoundingClientRect().height < altoMinimo(el)).map((el) => `${el.tagName} ${Math.round(el.getBoundingClientRect().height)}px «${(el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 30)}»`);
     const titulos = [...document.querySelectorAll("h1, h2, h3")].filter(visible).filter((h) => Number(getComputedStyle(h).fontWeight) > 700).map((h) => h.textContent.trim().slice(0, 30));
     const degradados = [...document.querySelectorAll("body *")].filter((el) => /gradient/.test(getComputedStyle(el).backgroundImage)).map((el) => el.tagName);
     return { chicas, bajos, titulos, degradados, desborde: document.documentElement.scrollWidth > window.innerWidth };
-  }, { minimo: ancho < 1024 ? 17 : 16 });
+  }, { m });
   assert.ok(!r.falta, `${nombre}: no está el formulario`);
-  assert.deepEqual(r.chicas, [], `${nombre} @${ancho}: letra menor a ${ancho < 1024 ? 17 : 16} px`);
-  assert.deepEqual(r.bajos, [], `${nombre} @${ancho}: botones o campos de menos de 48 px`);
+  assert.deepEqual(r.chicas, [], `${nombre} @${ancho}: letra menor a ${m.letra} px (${m.letraControl} en etiquetas y botones)`);
+  assert.deepEqual(r.bajos, [], `${nombre} @${ancho}: botones de menos de ${m.boton} px o campos de menos de ${m.campo}`);
   assert.deepEqual(r.titulos, [], `${nombre} @${ancho}: títulos de más de 700`);
   assert.deepEqual(r.degradados, [], `${nombre} @${ancho}: fondos degradados`);
   assert.equal(r.desborde, false, `${nombre} @${ancho}: desborde horizontal`);
@@ -316,7 +323,7 @@ try {
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK préstamos: lista y filtros, aprobar en N pagos, plan calculado de uno viejo, abono en efectivo, RH no cancela vigente, registrar en página (6 quincenas = 5 × $833.33 + $833.35, calendario, tope → «Usar 14 quincenas», modo abono, entero ≥ 1), celular con barra fija y guardia de salida, Mi espacio → plan y firmar, pedir en quincenas (390 y 1440); letra 16/17 px, botones 48 px, títulos 700, sin degradados ni desborde");
+  console.log("OK préstamos: lista y filtros, aprobar en N pagos, plan calculado de uno viejo, abono en efectivo, RH no cancela vigente, registrar en página (6 quincenas = 5 × $833.33 + $833.35, calendario, tope → «Usar 14 quincenas», modo abono, entero ≥ 1), celular con barra fija y guardia de salida, Mi espacio → plan y firmar, pedir en quincenas (390 y 1440); letra 16/17 px (15 en etiquetas y botones de escritorio), botones 38/48 px y campos 42/48, títulos 700, sin degradados ni desborde");
 } finally {
   await browser.close();
   try { process.kill(-next.pid); } catch { next.kill(); }

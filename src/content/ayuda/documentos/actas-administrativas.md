@@ -3,11 +3,11 @@ titulo: Actas administrativas — registrar faltas e incidentes
 resumen: Levanta un acta con los hechos, testigos, sanción y descargo de la persona; cambia su estatus, descárgala en PDF y mándala a firmar.
 modulo: documentos
 audiencia: [rh, dueno]
-pantallas: [/panel/actas-administrativas]
+pantallas: [/panel/actas-administrativas, /panel/actas-administrativas/nueva, /panel/actas-administrativas/[id]/editar]
 palabras: [acta administrativa, falta, incidente, sanción, amonestación, suspensión, rescisión, descargo, testigos, reincidencia, borrador, falta injustificada]
 orden: 70
-actualizado: 2026-11-27
-fuentes: [src/app/panel/actas-administrativas/page.jsx, src/components/NewActaModal.jsx, src/components/NewTipoActaModal.jsx, src/components/AdministrativeMinutesTable.jsx, src/components/AdministrativeDetailsModal.jsx, src/lib/actasEstatus.mjs]
+actualizado: 2026-11-28
+fuentes: [src/app/panel/actas-administrativas/page.jsx, src/app/panel/actas-administrativas/formulario/FormularioActa.jsx, src/app/panel/actas-administrativas/formulario/useFormularioActa.js, src/components/NewTipoActaModal.jsx, src/components/AdministrativeMinutesTable.jsx, src/components/AdministrativeDetailsModal.jsx, src/lib/actasEstatus.mjs]
 ---
 
 ## Para qué sirve
@@ -30,23 +30,22 @@ Arriba ves **Total actas**, **Borradores**, **Elaboradas**, **Cerradas** y **Gra
 
 ## Cómo levantar un acta
 
-1. Toca `Nueva acta`.
-2. **Información básica:** Empresa, **Empleado** (búscalo por nombre) y **Tipo de Acta**. Si el tipo no existe, créalo con el botón **Crear tipo de acta**.
-3. **Detalles del incidente:** Fecha del incidente (obligatoria), Hora y Lugar.
-4. **Hechos y testigos:** describe detalladamente lo sucedido (obligatorio) y escribe los testigos (opcional).
-5. **Sanción:** elige el **Tipo de sanción**: amonestación verbal, amonestación escrita, suspensión o rescisión.
-6. **Elaboración:** quién elabora el acta (se llena con tu usuario cuando aplica) y su cargo.
-7. **Declaraciones:** el **Descargo del trabajador** (su versión), si **el trabajador acepta los hechos** y si **es reincidencia**.
-8. Toca `Guardar`. Verás «Acta creada correctamente».
+Toca `Nueva acta`. Se abre la página **Nueva acta administrativa** (ya no es una ventana), en **5 pasos**. En la computadora ves los pasos a la izquierda; en el celular, arriba dice «Paso 1 de 5». En cada paso toca `Continuar`: si falta algo, el dato se marca en rojo y no avanza.
 
-![Ventana Nueva Acta Administrativa](/ayuda/capturas/documentos/nueva-acta.webp "Secciones del acta")
+1. **Persona y tipo de acta:** Empresa, **Empleado** (búscalo por nombre y elígelo de la lista) y **Tipo de acta**. Si el tipo no existe, créalo con el botón **+** (Crear tipo de acta).
+2. **Qué pasó:** Fecha del incidente (obligatoria), Hora, Lugar, la **Descripción de los hechos** (obligatoria) y los **Testigos** (opcional).
+3. **Sanción y quién la elabora:** el **Tipo de sanción** (amonestación verbal, amonestación escrita, suspensión o rescisión), quién **elabora el acta** (se llena con tu usuario cuando aplica) y su cargo.
+4. **Declaraciones:** el **Descargo del trabajador** (su versión), si **el trabajador acepta los hechos** y si **es reincidencia**.
+5. **Revisar y guardar:** lees todo junto; con **Cambiar** regresas al paso que quieras corregir. Toca `Guardar acta`.
+
+Regresas a la lista y verás «Acta creada correctamente». Para corregir un acta toca el lápiz (**Editar**): se abre la página **Editar acta administrativa** con todos los pasos llenos; cambia lo que haga falta y toca `Guardar cambios`. Si sales con cambios sin guardar, el sistema te pregunta antes.
 
 ## Cómo crear tipos de acta
 
-1. En la ventana del acta, toca **Crear tipo de acta**.
+1. En el paso **Persona y tipo de acta**, toca el botón **+** (Crear tipo de acta).
 2. Escribe el **Nombre del tipo** (por ejemplo «Falta injustificada») y una **Descripción**.
 3. Elige **Clasificación** (Falta o Sanción) y **Gravedad** (Leve o Grave).
-4. Guarda. En la misma ventana ves los **Tipos existentes** para editarlos o eliminarlos.
+4. Guarda. En esa ventana ves los **Tipos existentes** para editarlos o eliminarlos.
 
 ## Los estatus del acta
 

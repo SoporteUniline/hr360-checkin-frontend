@@ -117,17 +117,18 @@ try {
 
   // 2) Permisos › Nuevo permiso › Por horas.
   await page.goto(base + "/panel/permisos", { waitUntil: "domcontentloaded" });
+  // (28/11/2026) El permiso ya no es ventana: «Nuevo permiso» abre /panel/permisos/nuevo (FormularioPermiso.jsx).
+  await page.getByText("Sin permisos para mostrar").waitFor({ timeout: 30000 }); // ya cargó la lista
   await page.getByRole("button", { name: /Nuevo permiso/ }).first().click();
-  const dialogo = page.getByRole("dialog");
+  await page.waitForURL(/\/panel\/permisos\/nuevo/, { timeout: 30000 });
+  const dialogo = page.locator("[data-vista='formulario-permiso']");
+  await dialogo.waitFor({ timeout: 30000 });
   await dialogo.getByRole("radio", { name: "Por horas" }).click();
   // Sin datos completos no se guarda.
-  await dialogo.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("button", { name: "Guardar permiso" }).click();
   await dialogo.getByText("Elige el tipo de permiso por horas.").waitFor({ timeout: 5000 });
-  const empresaSel = dialogo.getByRole("combobox").first();
-  if (!/Empresa prueba/.test(await empresaSel.innerText())) {
-    await empresaSel.click();
-    await page.getByRole("option", { name: "Empresa prueba" }).click();
-  }
+  const empresaSel = dialogo.locator("#permiso-empresa");
+  if ((await empresaSel.inputValue()) !== "10") await empresaSel.selectOption({ label: "Empresa prueba" });
   // (24/11/2026) «Qué pasó» + «Motivo» (verify-quepaso-motivo.mjs): un tipo propio marcado como permiso se sigue pidiendo.
   await elegir(dialogo.getByLabel("Qué pasó"), { label: "Permiso personal" });
   await dialogo.getByText("Juan Prueba").waitFor({ timeout: 10000 });
@@ -139,13 +140,16 @@ try {
   await dialogo.getByRole("radio", { name: /Se repone/ }).click();
   await elegir(dialogo.getByLabel("Motivo", { exact: true }), { label: "Visita al médico" });
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/permiso-horas-form.png" });
-  await dialogo.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("button", { name: "Guardar permiso" }).click();
   for (let i = 0; i < 60 && !posts.length; i++) await dormir(100);
   assert.deepEqual(posts[0], {
     id_empleado: 300, id_tipo_permiso: 30, motivo: null, modalidad: "horas", tipo_horas: "sale_regresa", tratamiento: "repone",
     hora_inicio: "10:00", hora_fin: "12:00", fecha_inicio: "2026-11-24", fecha_fin: "2026-11-24",
     id_motivo_permiso: 1, goce: "con",
   });
+  // Al guardar regresa a la lista con el aviso.
+  await page.waitForURL(/\/panel\/permisos$/, { timeout: 15000 });
+  await page.getByText("Permiso por horas creado.").first().waitFor({ timeout: 5000 });
 
   // 3) Cuenta de horas en la ficha: debe 3 h, condonar 1 h con nota.
   await page.goto(base + "/panel/panel-empleado?emp=300", { waitUntil: "domcontentloaded" });

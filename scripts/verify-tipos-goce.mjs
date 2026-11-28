@@ -383,12 +383,15 @@ try {
   assert.deepEqual(await page.locator("[data-estatus-acta]").allInnerTexts(), ["Borrador"], "filtro por borrador");
 
   // 4) Permisos a futuro: falta justificada por permiso personal, sin goce, 3 días de la próxima semana.
+  // (28/11/2026) El permiso ya no es ventana: «Nuevo permiso» abre /panel/permisos/nuevo (FormularioPermiso.jsx).
   await page.goto(base + "/panel/permisos", { waitUntil: "domcontentloaded" });
+  await page.getByText("Sin permisos para mostrar").waitFor({ timeout: 30000 });
   await page.getByRole("button", { name: /Nuevo permiso/ }).first().click();
-  const dp = page.getByRole("dialog");
-  const empresaSel = dp.getByRole("combobox").first();
+  await page.waitForURL(/\/panel\/permisos\/nuevo/, { timeout: 30000 });
+  const dp = page.locator("[data-vista='formulario-permiso']");
+  const empresaSel = dp.locator("#permiso-empresa");
   await empresaSel.waitFor({ timeout: 15000 });
-  if (!/Empresa prueba/.test(await empresaSel.innerText())) { await empresaSel.click(); await page.getByRole("option", { name: "Empresa prueba" }).click(); }
+  if ((await empresaSel.inputValue()) !== "10") await empresaSel.selectOption({ label: "Empresa prueba" });
   const opcionesTipo = await textosOpciones(dp.getByLabel("Qué pasó"));
   assert.deepEqual(opcionesTipo, ["Elige qué pasó…", "Falta injustificada", "Entrada después de tiempo", "Salida antes de tiempo", "Salida entre jornada"]);
   await elegir(dp.getByLabel("Qué pasó"), "2");
@@ -399,21 +402,31 @@ try {
   await dp.locator('input[type="date"]').nth(1).fill(fin);
   await elegir(dp.getByLabel("Motivo", { exact: true }), { label: "Permiso personal" });
   assert.equal(await valorDe(dp.getByLabel("Goce del día")), "sin", "goce preseleccionado");
-  await letraCampos(dp.locator("[data-que-paso-permiso]"), "permisos qué pasó y motivo");
+  // En página, los campos llevan la letra del sistema de diseño (17 px en escritorio).
+  await letraCampos(dp.locator("[data-que-paso-permiso]"), "permisos qué pasó y motivo", 17, 17);
   await foto(page, "1440-permisos");
-  await dp.getByRole("button", { name: "Guardar" }).click();
+  await page.getByRole("button", { name: "Guardar permiso" }).click();
   await esperar(() => pet.permisos.length === 1, "POST permiso masivo");
   assert.deepEqual(pet.permisos[0], { ids_empleados: [601], id_tipo_permiso: 2, fecha_inicio: ini, fecha_fin: fin, motivo: null,
     id_motivo_permiso: 2, goce: "sin" });
   // Un parcial: por horas (lo dice el tipo), día con goce y las horas del motivo.
+  // Al guardar regresa a la lista con el aviso; de ahí, otro permiso nuevo.
+  await page.waitForURL(/\/panel\/permisos$/, { timeout: 15000 });
+  await page.getByText("Permiso(s) creado(s) correctamente.").first().waitFor({ timeout: 5000 });
+  await page.getByText("Sin permisos para mostrar").waitFor({ timeout: 30000 });
   await page.getByRole("button", { name: /Nuevo permiso/ }).first().click();
-  const dp2 = page.getByRole("dialog");
+  await page.waitForURL(/\/panel\/permisos\/nuevo/, { timeout: 30000 });
+  const dp2 = page.locator("[data-vista='formulario-permiso']");
+  await dp2.locator("#permiso-empresa").selectOption({ label: "Empresa prueba" });
   await elegir(dp2.getByLabel("Qué pasó"), "5");
   await elegir(dp2.getByLabel("Motivo", { exact: true }), { label: "Visita al médico" });
   assert.equal(await dp2.getByLabel("Goce del día").count(), 0, "parcial con motivo: día con goce");
   assert.equal(await dp2.getByLabel("Horas no trabajadas").isDisabled(), false);
   assert.equal(await dp2.getByRole("radiogroup", { name: "Duración del permiso" }).count(), 0, "el tipo ya dice que es por horas");
-  await page.keyboard.press("Escape");
+  // Cancelar con cambios: pregunta; «Salir sin guardar» regresa a la lista sin mandar nada.
+  await page.getByRole("button", { name: "Cancelar" }).click();
+  await page.locator("[data-dialogo-cambios]").getByRole("button", { name: "Salir sin guardar" }).click();
+  await page.waitForURL(/\/panel\/permisos$/, { timeout: 15000 });
 
   // 5) Celular 390: catálogo, lista con permiso y acta, detalle y reloj sin desbordes.
   await page.setViewportSize({ width: 390, height: 844 });

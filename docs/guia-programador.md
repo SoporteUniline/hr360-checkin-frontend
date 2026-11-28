@@ -19,7 +19,7 @@ para escribir, **react-hook-form + zod** en los formularios grandes, **Radix/sha
 | `app/(public)/`, `app/(landing)/`, `app/home/` | Página pública (estilo propio aprobado; no usa el sistema de diseño del panel). |
 | `components/` | Piezas compartidas entre módulos. Archivos sueltos en PascalCase (`ComboboxSucursal.jsx`, `RelojChecador.jsx`) y carpetas por tema (`nomina/`, `reclutamiento/`, `activos/`, `detalle/`…). |
 | `components/ui/` | Componentes base de shadcn/Radix (`button.jsx`, `dialog.jsx`, `input.jsx`…). Nombres en minúscula. |
-| `components/formulario/` | Piezas del sistema de diseño: encabezado, sección, campo, barra de acciones, pasos, etiqueta de estado, ventana chica. |
+| `components/formulario/` | Piezas del sistema de diseño: encabezado, sección, campo, barra de acciones, pasos (lista o pestañas), resumen, etiqueta de estado, ventana chica. |
 | `hooks/` | Hooks `useAlgo.js`: leer datos (`useEmpleadosData`) o acciones (`useAsistenciaActions`). `hooks/Capacitor/` para la app nativa. |
 | `lib/` | Lógica **pura** y clientes de API. Las reglas van en `.mjs` sin React para poder probarlas con `node --test` (`lib/contratos/formularioContrato.mjs`, `lib/asistencia/*.mjs`). Clientes: `contratosApi.js`, `expedienteApi.js`… |
 | `schemas/` | Esquemas zod de formularios (`schemaEmpleado.jsx`). |
@@ -64,12 +64,12 @@ Lo que se sumó después y también se sigue: las reglas puras en `src/lib/<modu
 | Asistencias | `app/panel/registro-asistencia/` | `hooks/useAsistencia*.js`, `lib/asistencia/` |
 | Reloj checador | `components/RelojChecador.jsx`, `components/Clock/` | `hooks/useRelojChecador.js`, `lib/reloj/` |
 | Contratos | `app/panel/contratos/` (`formulario/`, `[id]/`, `nuevo/`) | `lib/contratos/`, `lib/contratosApi.js` |
-| Vacaciones y permisos | `app/panel/vacaciones/`, `app/panel/permisos/` | `hooks/usePermisos*.js`, `lib/permisos/` |
+| Vacaciones y permisos | `app/panel/vacaciones/`, `app/panel/permisos/` (alta y edición en página: `permisos/formulario/`, `nuevo/`, `[id]/editar/`) | `hooks/usePermisos*.js`, `lib/permisos/` |
 | Incidencias | `app/panel/incidencias/` | — |
 | Nómina y préstamos | `app/panel/nomina/`, `components/nomina/` | `lib/nomina/` |
 | Expediente | `app/panel/expediente/`, `components/expediente/` | `lib/expediente/`, `lib/expedienteApi.js` |
 | Reclutamiento | `app/panel/reclutamiento/`, `components/reclutamiento/` | `hooks/useReclutamiento.js` |
-| Actas administrativas | `app/panel/actas-administrativas/`, `components/NewActaModal.jsx` | `hooks/useAdministrativeMinutes.js`, `lib/actasEstatus.mjs` |
+| Actas administrativas | `app/panel/actas-administrativas/` (alta y edición en página, por pasos: `formulario/`, `nueva/`, `[id]/editar/`) | `hooks/useAdministrativeMinutes.js`, `lib/actasEstatus.mjs`, `lib/actas/` |
 | Activos y uniformes | `app/panel/activos/`, `components/activos/` | `lib/activos/` |
 | Catálogos (puestos, departamentos…) | `app/panel/catalogos/` | — |
 | Menú lateral | `components/Sidebar/nav-main.jsx` | — |
@@ -107,5 +107,6 @@ compilaste en una copia de trabajo.
 - Nada de degradados ni `font-extrabold`; títulos en 700 (el candado lo revisa).
 - Un solo botón principal azul por pantalla; Cancelar gris con contorno.
 - Más de 6 campos → página; hasta 6 y una idea → ventana chica. Las ventanas no se cierran al tocar afuera.
-- Letra de 16 px en escritorio y 17 en celular; botones de 48 px (principal 56).
+- Letra Plus Jakarta Sans (`var(--font-adamia)`). Letra de 16 px en escritorio y 17 en celular; botones de 38 px y
+  campos de 42 en escritorio, botones de 48 (principal 56) y campos de 56 en celular (mockup v3; todo sale de los tokens).
 - No uses nombres de personas reales en datos de ejemplo ni en pruebas.

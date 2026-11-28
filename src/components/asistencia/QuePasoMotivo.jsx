@@ -28,11 +28,11 @@ export const opcionesQuePaso = (opciones) => opciones.map((o) => ({
 }));
 export const opcionesDeMotivo = (opciones) => opciones.map((o) => ({ valor: o.value, texto: textoLimpio(o.label), ...iconoMotivo(o.label, { otro: o.otro }) }));
 
-function Campo({ etiqueta, children }) {
+function Campo({ etiqueta, grande = false, children }) {
   if (!etiqueta) return children;
   return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <span className="text-[12px] font-medium text-slate-500" aria-hidden>{etiqueta}</span>
+    <div className={grande ? "flex min-w-0 flex-col gap-2" : "flex min-w-0 flex-col gap-1"}>
+      <span className={grande ? "text-etiqueta font-semibold text-texto" : "text-[12px] font-medium text-slate-500"} aria-hidden>{etiqueta}</span>
       {children}
     </div>
   );
@@ -50,46 +50,49 @@ function vacioMotivoIcono(texto) {
 }
 
 // tipo / motivo: valores del select ("" = vacío). motivoVisible: false en Asistencia y días de ley.
+// grande: etiquetas y campos del sistema de diseño (formulario en página, dentro de data-formulario-grande).
 // tipoVacio / motivoVacio: texto de la opción vacía (null = sin opción vacía).
 export default function QuePasoMotivo({
   variante = "campo", movil = false, etiquetas = false, nombre = "", disabled = false,
   tipoOpciones, tipoVacio = null, tipo, onTipo,
   motivoVisible = false, motivoOpciones = [], motivoVacio = "Sin motivo", motivo, onMotivo, esOtro = false, texto = "", onTexto,
   errorMotivo = false, autoFocusMotivo = false, solo = null, // solo: null | "tipo" | "motivo" (columnas separadas)
+  grande = false,
 }) {
   const de = nombre ? ` de ${nombre}` : "";
   const fila = variante === "fila";
   return (
     <span className="flex min-w-0 flex-col gap-1.5" data-que-paso-motivo>
       <span className={fila ? "flex min-w-0 flex-wrap items-center gap-1" : `grid min-w-0 gap-3 ${movil ? "" : "sm:grid-cols-2"}`}>
-        {solo === "motivo" ? null : <Campo etiqueta={etiquetas ? "Qué pasó" : null}>
+        {solo === "motivo" ? null : <Campo etiqueta={etiquetas ? "Qué pasó" : null} grande={grande}>
           <SelectConIconos aria={`Qué pasó${de}`} valor={tipo} onCambio={onTipo} opciones={opcionesQuePaso(tipoOpciones)}
-            vacio={tipoVacio} {...vacioTipoIcono(tipoVacio)} variante={variante} movil={movil} disabled={disabled} />
+            vacio={tipoVacio} {...vacioTipoIcono(tipoVacio)} variante={variante} movil={movil} disabled={disabled} grande={grande} />
         </Campo>}
         {motivoVisible && solo !== "tipo" ? (
-          <Campo etiqueta={etiquetas ? "Motivo" : null}>
+          <Campo etiqueta={etiquetas ? "Motivo" : null} grande={grande}>
             <SelectConIconos aria={`Motivo${de}`} valor={motivo} onCambio={onMotivo} opciones={opcionesDeMotivo(motivoOpciones)}
-              vacio={motivoVacio} {...vacioMotivoIcono(motivoVacio)} variante={variante} movil={movil} disabled={disabled} error={errorMotivo} autoFocus={autoFocusMotivo} />
+              vacio={motivoVacio} {...vacioMotivoIcono(motivoVacio)} variante={variante} movil={movil} disabled={disabled} error={errorMotivo} autoFocus={autoFocusMotivo} grande={grande} />
           </Campo>
         ) : null}
       </span>
       {motivoVisible && esOtro && solo !== "tipo" ? (
         <input aria-label="Escribe el motivo" placeholder="Escribe el motivo" value={texto} maxLength={120} disabled={disabled}
-          onChange={(e) => onTexto?.(e.target.value)} className={claseCampo({ variante: "campo", movil }).replace("pr-8", "pr-2.5")} />
+          onChange={(e) => onTexto?.(e.target.value)} className={claseCampo({ variante: "campo", movil }).replace("pr-8", "pr-2.5")}
+          data-control={grande ? "campo" : undefined} />
       ) : null}
     </span>
   );
 }
 
 // Goce del día que trae el motivo (o el tipo de ley): select si se cambia al aplicar; si no, texto con 🔒.
-export function GoceMotivo({ goce, cambia, onCambio, movil = false, disabled = false, className = "" }) {
+export function GoceMotivo({ goce, cambia, onCambio, movil = false, disabled = false, className = "", grande = false }) {
   if (!goce) return null;
   if (!cambia) {
-    return <span data-goce-fijo className={`inline-flex items-center whitespace-nowrap text-[13px] text-slate-600 ${className}`}>🔒 {goceTxt(goce)}</span>;
+    return <span data-goce-fijo className={`inline-flex items-center whitespace-nowrap ${grande ? "text-cuerpo text-texto" : "text-[13px] text-slate-600"} ${className}`}>🔒 {goceTxt(goce)}</span>;
   }
   return (
     <span className={`inline-flex min-w-0 ${className}`}>
-      <SelectConIconos aria="Goce del día" valor={goce} disabled={disabled} onCambio={(v) => onCambio?.(v)} movil={movil}
+      <SelectConIconos aria="Goce del día" valor={goce} disabled={disabled} onCambio={(v) => onCambio?.(v)} movil={movil} grande={grande}
         opciones={GOCES.map(([v, t]) => ({ valor: v, texto: t, ...ICONO_GOCE[v] }))} />
     </span>
   );

@@ -7,17 +7,22 @@
 //   4. Cambiar sueldo con convenio: el servidor recibe el sueldo, la fecha y el motivo; la tarjeta y el historial cambian.
 //   5. «Revisar sueldos»: la diferencia ficha ≠ contrato y su solución; la «periodicidad por confirmar» (hoy / como dice
 //      y la decisión); la nómina muestra el aviso (con los dos motivos) y no deja autorizar.
-//   2b. Editar en página con pasos guiados (solo manda lo que cambió; sueldo de solo lectura; aviso al salir con cambios).
+//   2b. Editar en página con pasos en pestañas (solo manda lo que cambió; sueldo de solo lectura; aviso al salir con
+//       cambios). Mockup v3 (28/11/2026): grilla de 3 columnas a 1440, resumen a la derecha (plegable en celular) con el
+//       sueldo que manda el servidor y «Ver documento».
 //   2c. Ventanas: no se cierran con clic o toque afuera; sí con Esc y la X. «Más acciones» (menú) sí.
-//   2d. Alta en página: errores por pestaña; duplicar copia condiciones y encadena la renovación.
+//   2d. Alta en página: errores por pestaña (pastillas «Falta N» y «Falta» del resumen); duplicar copia condiciones y
+//       encadena la renovación.
 //   6. Editor de plantillas (categoría Contrato): «Se usa para», «Datos que se llenan solos» insertan {{contrato.*}} y la
 //      vista previa con un empleado la llena el servidor.
-//   En cada pantalla: letra ≥ 16 px (≥ 17 px en celular, salvo etiquetas y pastillas `data-chico`), títulos en 700,
-//   botones ≥ 48 px, sin desborde horizontal y sin fondos degradados.
+//   En cada pantalla: letra ≥ 16 px (≥ 17 px en celular, salvo pastillas `data-chico`; en escritorio las etiquetas de
+//   campo y los botones, 15), títulos en 700, botones ≥ 38 px en escritorio y ≥ 48 en celular (mockup v3,
+//   scripts/lib/reglasDiseno.mjs), sin desborde horizontal y sin fondos degradados.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build
 //      CAPTURAS=/ruta PLAYWRIGHT_MODULE_PATH=/opt/node22/lib/node_modules/playwright node scripts/verify-contratos.mjs
 import assert from "node:assert/strict";
 import { chromium, contexto, dormir, levantarNext } from "./capturas-ayuda/comun.mjs";
+import { minimos } from "./lib/reglasDiseno.mjs";
 
 const OUT = process.env.CAPTURAS || null;
 const captura = async (page, nombre, completa = false) => { if (OUT) await page.screenshot({ path: `${OUT}/${nombre}.png`, fullPage: completa }); };
@@ -146,7 +151,7 @@ function manejar({ ruta, metodo, cuerpo, json }) {
 
 // ——— Reglas de lectura del dueño ———
 async function revisarLectura(page, movil, donde) {
-  const r = await page.evaluate((minimo) => {
+  const r = await page.evaluate((m) => {
     const raiz = document.querySelector("[data-vista]") ?? document.body;
     const visible = (el) => { const b = el.getBoundingClientRect(); const s = getComputedStyle(el); return b.width > 0 && b.height > 0 && s.visibility !== "hidden" && s.display !== "none"; };
     const chicos = [];
@@ -158,26 +163,29 @@ async function revisarLectura(page, movil, donde) {
       const s = getComputedStyle(el);
       if (/gradient/.test(s.backgroundImage)) degradados.push(el.tagName);
       const tieneTexto = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      // Etiquetas de campo, botones y pestañas: 15 px en escritorio (mockup v3); en celular, como el texto normal.
+      const minimo = el.closest("label, .text-etiqueta, button, [role=tab], [data-accion], [data-slot='button']") ? m.letraControl : m.letra;
       if (tieneTexto && !el.closest("[data-chico]") && parseFloat(s.fontSize) < minimo) chicos.push(`${el.tagName} ${parseFloat(s.fontSize)}px «${el.textContent.trim().slice(0, 40)}»`);
-      if ((el.tagName === "BUTTON" || el.hasAttribute("data-accion")) && el.getBoundingClientRect().height < 47.5) botones.push(`«${el.textContent.trim().slice(0, 30)}» ${Math.round(el.getBoundingClientRect().height)}px`);
+      const minBoton = el.dataset.tamano === "icon" ? m.icono : m.boton;
+      if ((el.tagName === "BUTTON" || el.hasAttribute("data-accion")) && el.getBoundingClientRect().height < minBoton - 0.5) botones.push(`«${el.textContent.trim().slice(0, 30)}» ${Math.round(el.getBoundingClientRect().height)}px`);
       if (/^H[1-3]$/.test(el.tagName) && Number(s.fontWeight) !== 700) titulos.push(`${el.tagName} ${s.fontWeight}`);
     }
     return { chicos, botones, titulos, degradados, doc: document.documentElement.scrollWidth, ventana: window.innerWidth };
-  }, movil ? 17 : 16);
+  }, minimos(movil));
   assert.deepEqual(r.chicos, [], `${donde}: letra chica`);
-  assert.deepEqual(r.botones, [], `${donde}: botones de menos de 48 px`);
+  assert.deepEqual(r.botones, [], `${donde}: botones de menos de ${minimos(movil).boton} px`);
   assert.deepEqual(r.titulos, [], `${donde}: títulos que no son 700`);
   assert.deepEqual(r.degradados, [], `${donde}: fondos degradados`);
   assert.ok(r.doc <= r.ventana + 1, `${donde}: scroll horizontal (${r.doc} > ${r.ventana})`);
 }
-// (28/11/2026) Pasos guiados del formulario del contrato. En escritorio se salta con la lista de la izquierda; en celular
+// (28/11/2026) Pasos guiados del formulario del contrato. En escritorio se salta con las pestañas de arriba (mockup v3); en celular
 // se avanza con «Continuar» (alta: revisa el paso) o «Siguiente» (editar) y se regresa con «Atrás».
 const PASOS = ["persona", "sueldo", "jornada", "prestaciones", "documento"];
 let irAPaso = async () => {};
 function preparaPasos(page, movil) {
   irAPaso = async (clave) => {
     if (!movil) {
-      await page.locator(`[data-pasos-lista] [data-paso='${clave}'] button`).click();
+      await page.locator(`[data-pasos-pestanas] [data-paso='${clave}']`).click();
     } else {
       for (let i = 0; i < PASOS.length; i++) {
         const texto = await page.locator("[data-pasos-movil]").innerText();
@@ -270,12 +278,25 @@ try {
       await page.locator("#ct-puesto").waitFor({ timeout: 30000 });
     };
     await abrirEditar();
-    // (28/11/2026) Sistema de diseño: encabezado gris y pasos guiados (lista en escritorio, «Paso N de M» en celular).
+    // (28/11/2026) Sistema de diseño: encabezado gris y pasos (pestañas arriba en escritorio, «Paso N de M» en celular).
     const encE = await page.locator("[data-encabezado-pagina]").evaluate((el) => { const st = getComputedStyle(el); return [st.backgroundImage, st.backgroundColor]; });
     assert.deepEqual(encE, ["none", "rgb(243, 244, 246)"], "editar: encabezado gris sin degradado");
     if (movil) assert.match(await page.locator("[data-pasos-movil]").innerText(), /Paso 1 de 5 · Persona y puesto/);
-    else assert.deepEqual(await page.locator("[data-pasos-lista] [data-paso]").evaluateAll((els) => els.map((e) => e.dataset.paso)), PASOS);
-    if (!movil) assert.equal(await page.locator("[data-pasos-lista] [data-estado-paso='listo']").count(), 4, "editar: los demás pasos ya están «Listo»");
+    else assert.deepEqual(await page.locator("[data-pasos-pestanas] [data-paso]").evaluateAll((els) => els.map((e) => e.dataset.paso)), PASOS);
+    if (!movil) assert.equal(await page.locator("[data-pasos-pestanas] [data-estado-paso='listo']").count(), 4, "editar: los demás pasos ya están «Listo»");
+    // Mockup v3: la grilla usa todo el ancho (3 columnas de 1200 a 1599 px; 1 en celular) y el resumen va a la derecha
+    // (en celular, plegable abajo) con el sueldo que manda el servidor. «Ver documento» abre el contrato en otra pestaña.
+    const columnas = await page.locator("[data-panel='persona'] > div").last().evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length);
+    assert.equal(columnas, movil ? 1 : 3, `editar: ${movil ? 1 : 3} columnas a ${ancho} px`);
+    const resumen = page.locator(movil ? "[data-resumen-plegable]" : "[data-resumen-formulario]");
+    assert.ok(await resumen.isVisible(), "editar: resumen visible");
+    if (movil) await resumen.locator("summary").click();
+    assert.equal((await resumen.locator("[data-resumen='persona'] dd").innerText()).trim(), "Ana Torres Ruiz");
+    assert.equal((await resumen.locator("[data-resumen='mensual'] dd").innerText()).trim(), "$10,500.00", "resumen: al mes (del servidor)");
+    assert.equal((await resumen.locator("[data-resumen='periodo'] dd").innerText()).trim(), "$5,250.00", "resumen: por quincena (del servidor)");
+    assert.equal((await resumen.locator("[data-resumen='diario'] dd").innerText()).trim(), "$350.00", "resumen: diario (del servidor)");
+    assert.equal(await page.locator("[data-accion='ver-documento']").getAttribute("href"), "/panel/contratos/142#documento");
+    assert.equal(await page.locator("[data-accion='ver-documento']").getAttribute("target"), "_blank");
     assert.equal(await page.locator("#ct-puesto").inputValue(), "Cajera");
     assert.equal(await page.locator("#ct-modalidad_trabajo").inputValue(), "presencial", "«Presencial» guardado se ve seleccionado, no en blanco");
     await revisarLectura(page, movil, `editar · persona ${sufijo}`);
@@ -345,11 +366,25 @@ try {
     E.contrato.puesto = "Cajera";
 
     // 2d. Alta en página: vacía marca los errores por pestaña; duplicar copia las condiciones y encadena.
+    await page.clock.install(); // corre normal hasta que se pausa (regresión INC-012, abajo)
     await page.goto(base + "/panel/contratos/nuevo", { waitUntil: "domcontentloaded" });
     await page.locator("#ct-id_empleado").waitFor({ timeout: 60000 });
     // «Continuar» revisa solo el paso: sin persona no avanza y marca ese dato.
+    // Regresión INC-012: el foco va a «Persona», pero si la persona ya está escribiendo en otro campo no se le quita
+    // (antes llegaba 60 ms después a ciegas: lo tecleado caía en la lista de personas). El reloj se pausa para que esa
+    // espera ocurra a la mitad de lo que se teclea, siempre.
+    await page.clock.pauseAt(Date.now() + 60_000);
     await page.locator("[data-barra-formulario] [data-accion='continuar']").click();
     await page.locator("[data-errores]").waitFor();
+    await page.locator("#ct-puesto").click();
+    await page.keyboard.type("Caj");
+    await page.clock.runFor(1000);
+    await page.keyboard.type("era");
+    await page.clock.resume();
+    assert.equal(await page.evaluate(() => document.activeElement?.id), "ct-puesto", "el foco no brinca de campo mientras se escribe");
+    assert.equal(await page.locator("#ct-puesto").inputValue(), "Cajera", "lo que se escribe tras el error se queda en su campo");
+    assert.equal(await page.locator("#ct-id_empleado").inputValue(), "", "y no cae en la lista de personas");
+    await page.locator("#ct-puesto").fill("");
     assert.deepEqual((await page.locator("[data-errores] button").allInnerTexts()).map((t) => t.trim()), ["Persona y puesto (1)"]);
     await page.locator("#ct-id_empleado-error").waitFor();
     if (!movil) {
@@ -358,6 +393,11 @@ try {
       await page.locator("[data-barra-formulario] [data-accion='guardar']").click();
       await page.waitForFunction(() => document.querySelectorAll("[data-errores] button").length === 3);
       assert.deepEqual((await page.locator("[data-errores] button").allInnerTexts()).map((t) => t.trim()), ["Persona y puesto (1)", "Sueldo y pago (2)", "Documento (2)"]);
+      // Mockup v3: las pestañas llevan la pastilla «Falta N» y el resumen dice qué falta.
+      const pastillas = await page.locator("[data-pasos-pestanas] [data-falta]").evaluateAll((els) => els.map((e) => `${e.closest("[data-paso]").dataset.paso} ${e.textContent.trim()}`));
+      assert.deepEqual(pastillas, ["persona Falta 1", "sueldo Falta 2", "documento Falta 2"]);
+      assert.deepEqual(await page.locator("[data-resumen-formulario] [data-resumen='falta'] [data-estado='error']").allInnerTexts(),
+        ["Persona", "Sueldo", "Cada cuándo se paga", "Tipo de contrato", "Fecha de inicio"]);
     }
     assert.equal(E.pedidos.crear.length, 0, "no se manda nada con datos faltantes");
     await revisarLectura(page, movil, `nuevo con errores ${sufijo}`);

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import dayjs from "dayjs";
 import useSWR from "swr";
 import { useAuth } from "@/context/AuthContext";
@@ -33,7 +33,7 @@ import TablePagination from "@/components/TablePagination";
 import StatCard from "@/components/StatCard";
 import PermisosTable from "./PermisosTable";
 import PermisosCalendario from "./PermisosCalendario";
-import PermisoDialog from "./PermisoDialog";
+import { rutaEditarPermiso, rutaNuevoPermiso } from "@/lib/permisos/paginaPermiso.mjs";
 import PermisoDeleteDialog from "./PermisoDeleteDialog";
 import PermisoViewDialog from "./PermisoViewDialog";
 import RespuestasWhatsapp from "./RespuestasWhatsapp";
@@ -51,12 +51,14 @@ import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
  * - Relación:
  *   - Hooks: `usePermisosData`, `useTiposPermisoData`
  *   - API: `src/lib/permisosApi.js`
- *   - Componentes: `PermisosTable`, `PermisoDialog`
+ *   - Componentes: `PermisosTable`; alta y edición en página: /panel/permisos/nuevo y /panel/permisos/[id]/editar
+ *     (`formulario/FormularioPermiso.jsx`, 28/11/2026; antes era la ventana `PermisoDialog`).
  */
 export default function PermisosPage() {
   const { dataUser } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   // Lógica Multiempresa replicada
   const [unidadActiva, setUnidadActiva] = useState("all");
@@ -93,9 +95,10 @@ export default function PermisosPage() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
-  // Modal de alta/edición
-  const [openDialog, setOpenDialog] = useState(false);
-  const [editItem, setEditItem] = useState(null);
+  // Alta y edición: en su propia página (28/11/2026). Se manda la unidad elegida para que la empresa venga puesta, como
+  // en la ventana de antes; al guardar o cancelar se regresa aquí.
+  const abrirNuevo = () => router.push(rutaNuevoPermiso({ empresa: idEmpresa }));
+  const abrirEditar = (row) => router.push(rutaEditarPermiso(row.id, { empresa: idEmpresa }));
   const [openView, setOpenView] = useState(false);
   const [viewItem, setViewItem] = useState(null);
   const [openDelete, setOpenDelete] = useState(false);
@@ -732,14 +735,8 @@ export default function PermisosPage() {
             onHeaderFilteringMetaChange={setHeaderFilterMeta}
             loading={isLoading}
             festivosSet={festivosSet}
-            onCreate={() => {
-              setEditItem(null);
-              setOpenDialog(true);
-            }}
-            onEdit={(row) => {
-              setEditItem(row);
-              setOpenDialog(true);
-            }}
+            onCreate={abrirNuevo}
+            onEdit={abrirEditar}
             onChanged={() => {
               mutate();
               mutateCalendario && mutateCalendario();
@@ -817,21 +814,6 @@ export default function PermisosPage() {
           </CardContent>
         </Card>
       ) : null}
-
-      {/* Modal crear/editar */}
-      <PermisoDialog
-        open={openDialog}
-        setOpen={setOpenDialog}
-        editItem={editItem}
-        idEmpresa={idEmpresa}
-        tiposPermiso={tiposPermiso}
-        festivosSet={festivosSet}
-        onSaved={() => {
-          setEditItem(null);
-          mutate();
-          mutateCalendario && mutateCalendario();
-        }}
-      />
 
       {/* Confirmación de eliminación */}
       <PermisoDeleteDialog

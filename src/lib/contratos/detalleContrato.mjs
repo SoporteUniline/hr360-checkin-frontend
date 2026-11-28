@@ -122,6 +122,21 @@ export function lineaDeTiempo(eventos = []) {
 }
 
 /**
+ * El sueldo que manda el servidor (GET /contratos/:id/detalle → sueldo) en sus tres cifras, SIN calcular nada aquí:
+ *   pago     { periodicidad, monto } de cada pago (`sueldo.pago`, la misma conversión que la nómina). Sin `pago`
+ *            (servidor anterior), el sueldo guardado solo si la periodicidad es una que los cálculos reconocen.
+ *   mensual  `salario_mensual` (o el sueldo guardado si es mensual).
+ *   diario   `salario_diario`.
+ * Lo usan la tarjeta «Sueldo» (sueldoTarjeta) y el resumen del formulario (resumenContrato.mjs).
+ */
+export function sueldoDesglose(sueldo) {
+  if (!sueldo) return { pago: null, mensual: null, diario: null };
+  const pago = sueldo.pago ?? (POR_PERIODO[sueldo.periodicidad_pago] ? { periodicidad: sueldo.periodicidad_pago, monto: sueldo.salario_base } : null);
+  const mensual = sueldo.salario_mensual ?? (sueldo.periodicidad_pago === "Mensual" ? sueldo.salario_base : null);
+  return { pago, mensual, diario: sueldo.salario_diario ?? null };
+}
+
+/**
  * Sueldo diario y mensual en palabras para la tarjeta «Sueldo». El monto de cada pago lo da el servidor
  * (`sueldo.pago = { periodicidad, monto }`, la misma conversión que la nómina: D.sueldoEnPeriodo). Antes se ponía el
  * sueldo guardado junto a «Pago quincenal» aunque los cálculos lo leyeran como mensual («$5,000 al mes · Pago
@@ -130,8 +145,7 @@ export function lineaDeTiempo(eventos = []) {
  */
 export function sueldoTarjeta(sueldo) {
   if (!sueldo) return null;
-  const pago = sueldo.pago ?? (POR_PERIODO[sueldo.periodicidad_pago] ? { periodicidad: sueldo.periodicidad_pago, monto: sueldo.salario_base } : null);
-  const mensual = sueldo.salario_mensual ?? (sueldo.periodicidad_pago === "Mensual" ? sueldo.salario_base : null);
+  const { pago, mensual } = sueldoDesglose(sueldo);
   return {
     principal: `${dinero(mensual)}`,
     sufijo: "al mes",
