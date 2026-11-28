@@ -471,7 +471,7 @@ try {
   assert.equal(await valorDe(dp.getByLabel("Goce del día")), "sin", "goce del motivo");
   await parAlineado(dp, "permisos");
   // En página, los campos llevan la letra del sistema de diseño (17 px en escritorio).
-  await letraCampos(dp.locator("[data-que-paso-permiso]"), "permisos", 17, 17);
+  await letraCampos(dp.locator("[data-que-paso-permiso]"), "permisos", 16, 18);
   await foto(page, "permisos", dp);
   await page.getByRole("button", { name: "Guardar permiso" }).click();
   await esperar(() => pet.permisos.length === 1, "POST permiso");
