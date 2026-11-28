@@ -3,11 +3,11 @@ titulo: Permisos por horas: llegar tarde, salir antes o salir y regresar
 resumen: Registra permisos de unas horas en un solo día; el tiempo que la persona no trabaje se repone (va a su cuenta de horas), se descuenta o se paga.
 modulo: permisos
 audiencia: [rh, dueno, jefe, empleado]
-pantallas: [/panel/permisos]
+pantallas: [/panel/permisos, /panel/permisos/nuevo]
 palabras: [permiso por horas, llega tarde, sale antes, sale y regresa, unas horas, reponer, rebajar, descontar, pagar, cuenta de horas, cita médica, tiempo por tiempo]
 orden: 30
-actualizado: 2026-11-27
-fuentes: [src/app/panel/permisos/CamposPermisoHoras.jsx, src/app/panel/permisos/PermisoDialog.jsx, src/lib/asistencia/permisoHoras.mjs, src/lib/asistencia/tiposGoce.mjs, src/components/Permission/PermissionDialog.jsx]
+actualizado: 2026-11-28
+fuentes: [src/app/panel/permisos/CamposPermisoHoras.jsx, src/app/panel/permisos/formulario/FormularioPermiso.jsx, src/app/panel/permisos/formulario/usePermisoFormulario.js, src/lib/asistencia/permisoHoras.mjs, src/lib/asistencia/tiposGoce.mjs, src/components/Permission/PermissionDialog.jsx]
 ---
 
 ## Para qué sirve
@@ -47,9 +47,9 @@ Si en **Qué pasó** eliges **Entrada tarde**, **Salida temprano** o **Salir en 
 6. Decide cómo se cubre el tiempo:
    - Con un tipo de parte del día, en **Horas no trabajadas**: Se reponen (tiempo por tiempo), Se descuentan o Se pagan. Si dice «🔒 Lo fija el tipo de registro.», no se puede cambiar.
    - Con **Por horas**, en **¿Cómo se cubre el tiempo?**: **Se repone** («Va a su cuenta de horas; lo repone otro día o el mismo día.») o **Se rebaja** («Queda como permiso con descuento para nómina.»).
-7. Toca **Guardar**. Verás «Permiso por horas creado.».
+7. Toca **Guardar permiso**. Regresas a la lista y verás «Permiso por horas creado.».
 
-![Ventana Nuevo permiso por horas con el día, la hora y las horas no trabajadas](/ayuda/capturas/permisos/permiso-por-horas.webp "Un permiso por horas es de un solo día y dice cómo se cubre el tiempo")
+![Página Nuevo permiso por horas con el día, la hora y las horas no trabajadas](/ayuda/capturas/permisos/permiso-por-horas.webp "Un permiso por horas es de un solo día y dice cómo se cubre el tiempo")
 
 > **Importante:** se cuenta lo que **realmente faltó** según sus checadas, sin pasar del permiso. Si llegó más tarde de lo que permitía el permiso, lo de más cuenta como retardo normal.
 
