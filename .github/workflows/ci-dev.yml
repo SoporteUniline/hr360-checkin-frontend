@@ -106,7 +106,7 @@ jobs:
       # scripts/candado-diseno.excepciones.json y solo puede bajar.
       - name: Sistema de diseño — pruebas y candado
         run: |
-          node --test scripts/test-pasos-guiados.mjs scripts/test-candado-diseno.mjs scripts/test-foco-campo.mjs
+          node --test scripts/test-pasos-guiados.mjs scripts/test-candado-diseno.mjs scripts/test-foco-campo.mjs scripts/test-lista-buscador.mjs
           node scripts/candado-diseno.mjs
 
       # (28/11/2026) Expediente por etapas: estados (hecho / falta / no aplica), plazo de guarda en palabras, botones de
@@ -295,7 +295,7 @@ jobs:
           mkdir -p capturas-contratos
           CAPTURAS=capturas-contratos node scripts/verify-contratos.mjs
 
-      # (28/11/2026) Sistema de diseño con el backend simulado (1440 y 390): contrato nuevo con pasos guiados, alta de
+      # (28/11/2026) Sistema de diseño con el backend simulado (1440 y 390): contrato nuevo en una sola hoja, alta de
       # empleado (4 pestañas) y la ventana chica «Crear puesto»: botones ≥ 48 (principal 56) azul / gris con contorno,
       # encabezado gris, letra 16/17, títulos 700, gris no más claro que #4B5563, campos 52/56, sin degradados ni
       # desborde, y la ventana no se cierra al hacer clic afuera. Reusa la compilación anterior.

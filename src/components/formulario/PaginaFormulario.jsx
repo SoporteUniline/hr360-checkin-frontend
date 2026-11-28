@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
  *   barra       <BarraAccionesFormulario … /> (va fija abajo)
  *   resumen     (28/11/2026, mockup v3) <ResumenFormulario … />: desde 1200 px va en una columna de 320 px a la
  *               derecha; con menos, como bloque plegable debajo del contenido. Opcional.
+ *   indice      (28/11/2026, contrato en una sola hoja) <IndiceSecciones … />: desde 1200 px va en una columna de
+ *               232 px a la izquierda; con menos, como fila compacta de pastillas arriba, pegada al bajar. Opcional.
  *   ancho       "normal" (por omisión, márgenes de 48 px) o "completo" (mockup v3: márgenes de 32 px y el contenido
  *               ocupa todo el ancho; úsalo con SeccionFormulario columnas="auto").
  *   children    el contenido: secciones, o <PasosGuiados> con sus secciones.
@@ -23,15 +25,16 @@ import { cn } from "@/lib/utils";
  *     <SeccionFormulario titulo="Datos de la vacante" columnas="auto">…</SeccionFormulario>
  *   </PaginaFormulario>
  */
-export default function PaginaFormulario({ encabezado = null, barra = null, resumen = null, ancho = "normal", children, className = "", ...resto }) {
+export default function PaginaFormulario({ encabezado = null, barra = null, resumen = null, indice = null, ancho = "normal", children, className = "", ...resto }) {
   const completo = ancho === "completo";
   const margen = completo ? "px-4 py-4 lg:px-8 lg:py-6" : "px-4 py-4 lg:px-12 lg:py-8";
   return (
     <div className={cn("-m-5 flex min-h-[calc(100dvh-4rem)] flex-col bg-fondo-pagina text-cuerpo text-texto", className)} data-ancho={ancho} {...resto}>
       {encabezado}
-      {resumen ? (
-        <div className={cn("flex flex-1 flex-col gap-4 min-[75rem]:flex-row min-[75rem]:items-start min-[75rem]:gap-6", margen)}>
-          <div className="flex min-w-0 flex-1 flex-col gap-4 lg:gap-5">{children}</div>
+      {resumen || indice ? (
+        <div className={cn("flex flex-1 flex-col gap-4 min-[75rem]:flex-row min-[75rem]:items-start min-[75rem]:gap-5", margen)}>
+          {indice}
+          <div className="flex min-w-0 flex-1 flex-col gap-4 lg:gap-5" data-contenido-formulario>{children}</div>
           {resumen}
         </div>
       ) : (

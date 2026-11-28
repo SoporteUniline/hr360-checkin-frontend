@@ -6,7 +6,7 @@ import {
   formularioDesdeContrato, cambiosDeEdicion, hayCambios, partirHorario, armarHorario, opcionDe, estaEnLista, JORNADAS, MODALIDADES, TIPOS_OPCIONES,
   validarFormulario, cuerpoDeAlta, formularioParaDuplicar, formularioDesdeFicha, formularioVacio, queSePuedeEditar, pestanaDe, pideFechaFin,
 } from "../src/lib/contratos/formularioContrato.mjs";
-import { faltanTextos, faltanPorPaso, resumenSueldo, jornadaTexto, resumenContrato, etiquetaPago } from "../src/lib/contratos/resumenContrato.mjs";
+import { faltanTextos, faltanPorPaso, primerError, resumenSueldo, jornadaTexto, resumenContrato, etiquetaPago } from "../src/lib/contratos/resumenContrato.mjs";
 
 // Un contrato como lo manda GET /contratos/:id/detalle (SELECT * con DECIMAL en texto), con valores como los escriben
 // el convenio, la renovación o la ficha («Quincenal», «Diurna», «Presencial»).
@@ -118,6 +118,13 @@ test("resumen: lo que falta, sin repetir y en el orden de los pasos", () => {
   // Dos errores del mismo dato (horario) salen una sola vez.
   assert.deepEqual(faltanTextos([{ campo: "hora_entrada" }, { campo: "fecha_inicio" }, { campo: "hora_salida" }]), ["Horario", "Fecha de inicio"]);
   assert.deepEqual(faltanTextos([]), []);
+});
+
+test("una sola hoja: el primer error es el de más arriba en la hoja, no el primero de la revisión", () => {
+  // La revisión marca el tipo de contrato (Documento) antes que el horario (Jornada); en la hoja, Jornada va antes.
+  assert.deepEqual(primerError([{ campo: "tipo_contrato" }, { campo: "hora_entrada" }]), { campo: "hora_entrada", seccion: "jornada" });
+  assert.deepEqual(primerError([{ campo: "fecha_inicio" }, { campo: "id_empleado" }]), { campo: "id_empleado", seccion: "persona" });
+  assert.equal(primerError([]), null);
 });
 
 test("resumen del sueldo: al editar, las cifras del servidor; al crear, solo lo escrito (no se inventan cálculos)", () => {

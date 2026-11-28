@@ -26,9 +26,20 @@ export const etiquetaPago = (periodicidad) => POR[periodicidad] ?? "Por periodo"
  * Errores de validarFormulario → textos de las pastillas «Falta», sin repetir y en el orden de los pasos.
  * [{ campo: "fecha_inicio" }, { campo: "id_empleado" }] → ["Persona", "Fecha de inicio"]
  */
+const orden = (campo) => PESTANAS.findIndex((p) => p.clave === pestanaDe(campo)) * 100 + PESTANAS.find((p) => p.clave === pestanaDe(campo)).campos.indexOf(campo);
 export function faltanTextos(errores = []) {
-  const orden = (campo) => PESTANAS.findIndex((p) => p.clave === pestanaDe(campo)) * 100 + PESTANAS.find((p) => p.clave === pestanaDe(campo)).campos.indexOf(campo);
   return [...new Set([...errores].sort((a, b) => orden(a.campo) - orden(b.campo)).map((e) => ETIQUETA_CAMPO[e.campo] ?? e.campo))];
+}
+
+/**
+ * (28/11/2026, contrato en una sola hoja) El primer error EN EL ORDEN DE LA HOJA (no en el de la revisión, que pone el
+ * horario después del tipo de contrato): ahí baja la pantalla y va el foco al guardar con datos faltantes.
+ * → { campo, seccion } o null.
+ */
+export function primerError(errores = []) {
+  if (!errores.length) return null;
+  const e = [...errores].sort((a, b) => orden(a.campo) - orden(b.campo))[0];
+  return { campo: e.campo, seccion: pestanaDe(e.campo) };
 }
 
 /** Cuántos datos faltan o hay que corregir en cada paso: { persona: 1, documento: 2 }. */

@@ -15,8 +15,8 @@ import { TIPOS_OPCIONES, PERIODICIDADES } from "./detalleContrato.mjs";
 export { TIPOS_OPCIONES, PERIODICIDADES };
 
 export const JORNADAS = [
-  { value: "diurna", label: "Diurna (entre 6:00 y 20:00)" },
-  { value: "nocturna", label: "Nocturna (entre 20:00 y 6:00)" },
+  { value: "diurna", label: "Diurna (6:00 a 20:00)" },
+  { value: "nocturna", label: "Nocturna (20:00 a 6:00)" },
   { value: "mixta", label: "Mixta" },
   { value: "reducida", label: "Reducida" },
 ];

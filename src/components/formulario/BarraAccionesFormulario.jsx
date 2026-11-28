@@ -16,6 +16,9 @@ import { cn } from "@/lib/utils";
  *   siguiente   gris con contorno con flecha (para moverse entre pasos sin guardar; opcional).
  * aviso: texto o nodo chico junto a los botones (p. ej. «Borrador guardado hace 1 min» o «Tienes cambios sin guardar»).
  * Cada botón deja data-accion="<clave>" para las pruebas.
+ * enRenglon (28/11/2026, contrato en una sola hoja): solo Cancelar y la principal, también EN UN RENGLÓN en celular
+ *   (Cancelar a la izquierda y la principal ocupando el resto), con el aviso arriba en una línea: la barra fija ocupa
+ *   menos pantalla. El aviso puede ser un nodo (p. ej. con color de estado).
  *
  * Ejemplo:
  *   <BarraAccionesFormulario
@@ -24,7 +27,26 @@ import { cn } from "@/lib/utils";
  *     principal={{ texto: "Continuar", flecha: true, onClick: continuar, cargando: guardando }}
  *     aviso="Borrador guardado hace 1 min" />
  */
-export default function BarraAccionesFormulario({ principal, cancelar = null, atras = null, siguiente = null, aviso = null, etiqueta = "Acciones del formulario", className = "" }) {
+export default function BarraAccionesFormulario({ principal, cancelar = null, atras = null, siguiente = null, aviso = null, etiqueta = "Acciones del formulario", enRenglon = false, className = "" }) {
+  if (enRenglon) {
+    return (
+      <div role="toolbar" aria-label={etiqueta} data-barra-formulario
+        className={cn("sticky bottom-0 z-20 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-borde bg-white px-4 pb-4 pt-2.5 lg:flex-nowrap lg:gap-4 lg:px-12 lg:py-3", className)}>
+        {cancelar ? (
+          <Button type="button" variant="outline" onClick={cancelar.onClick} disabled={cancelar.deshabilitado} data-accion={cancelar.clave ?? "cancelar"} className="order-1 h-boton-principal lg:order-1 lg:h-boton">
+            {cancelar.texto ?? "Cancelar"}
+          </Button>
+        ) : null}
+        {aviso ? <div data-chico data-aviso-barra className="order-0 w-full text-[15px] text-texto-secundario lg:order-2 lg:ml-auto lg:w-auto lg:text-right">{aviso}</div> : null}
+        {principal ? (
+          <Button type={principal.type ?? "button"} form={principal.form} size="lg" onClick={principal.onClick} disabled={principal.deshabilitado}
+            loading={principal.cargando} data-accion={principal.clave ?? "guardar"} className={cn("order-2 flex-1 lg:order-3 lg:flex-none", !aviso && "lg:ml-auto")}>
+            {principal.texto ?? "Guardar"}
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
   const boton = (accion, { clave, texto, orden, icono = null, alFinal = false }) => (
     <Button
       type="button"
