@@ -98,7 +98,21 @@ jobs:
         run: node --test scripts/test-activos-modules.mjs scripts/test-activos-api.mjs
 
       - name: Asistencias — cálculo de horas y exportación
-        run: node --test scripts/test-fecha-input.mjs scripts/test-jornada-asistencia.mjs scripts/test-asistencias-hoy.mjs scripts/test-monitor.mjs scripts/test-situacion-hoy.mjs scripts/test-pausas-dia.mjs scripts/test-pin-rh.mjs scripts/test-pantalla-firma.mjs scripts/test-qr-imagen.mjs scripts/test-credencial.mjs scripts/test-consulta-periodo.mjs scripts/test-cambios-asistencia.mjs scripts/test-calendario-asistencia.mjs scripts/test-horas-extra.mjs scripts/test-horas-extra-dia.mjs scripts/test-reloj-dia.mjs scripts/test-tipos-goce.mjs scripts/test-quepaso-motivo.mjs scripts/test-monitor-equipo.mjs scripts/test-historial-asistencia.mjs scripts/test-semana-horas.mjs scripts/test-turnos-extra.mjs scripts/test-motivo-pendiente.mjs scripts/test-hora12.mjs scripts/test-masivo-asistencia.mjs scripts/test-control-horas-extra.mjs scripts/test-matriz-horas-extra.mjs scripts/test-permiso-horas.mjs scripts/test-horas-por-reponer.mjs scripts/test-fecha-hora.mjs scripts/test-activos.mjs scripts/test-evaluaciones.mjs scripts/test-reloj-recientes.mjs scripts/test-reloj-confirmacion.mjs scripts/test-facial-startup.mjs scripts/test-faceapi-browser.mjs scripts/test-cuerpo-bloqueado.mjs scripts/test-faceapi-preload.mjs scripts/test-local-clock-events.mjs scripts/test-diagnostico-reloj.mjs scripts/test-popups.mjs scripts/test-consentimiento.mjs scripts/test-nomina.mjs scripts/test-rutas-internas.mjs scripts/test-fetch-seguro.mjs scripts/test-pdf-marca.mjs scripts/test-html-seguro.mjs scripts/test-postulacion-token.mjs scripts/test-reporte-comida.mjs scripts/test-limite-legal.mjs scripts/test-whatsapp.mjs scripts/test-whatsapp-agente.mjs scripts/test-whatsapp-agenda.mjs scripts/test-whatsapp-adjuntos.mjs scripts/test-whatsapp-calendario.mjs scripts/test-whatsapp-salud.mjs scripts/test-modulos.mjs scripts/test-reclutamiento-adaptador.mjs scripts/test-proceso-whatsapp.mjs scripts/test-rostro-celular.mjs scripts/test-bolsa-trabajo.mjs scripts/test-cambios-pendientes.mjs scripts/test-rostro-guia.mjs scripts/test-rostro-poses.mjs scripts/test-rostro-reglas.mjs scripts/test-reloj-en-linea.mjs scripts/test-reloj-sonido.mjs scripts/test-encuadre-rostro.mjs scripts/test-pantalla-encendida.mjs scripts/test-retire-offline-worker.mjs scripts/test-mi-cuenta.mjs scripts/test-datos-vivos.mjs scripts/test-guion-landing.mjs scripts/test-clima.mjs scripts/test-clima-resultados.mjs scripts/test-clima-aviso.mjs scripts/test-clima-sugerencias.mjs scripts/test-whatsapp-atencion.mjs scripts/test-permisos.mjs scripts/test-whatsapp-lumo.mjs scripts/test-whatsapp-lumo-b.mjs scripts/test-aprobacion-whatsapp.mjs scripts/test-motivo-correccion.mjs scripts/test-calculos-lft.mjs scripts/test-mosaico.mjs scripts/test-contratos.mjs scripts/test-formulario-contrato.mjs
+        run: node --test scripts/test-fecha-input.mjs scripts/test-jornada-asistencia.mjs scripts/test-asistencias-hoy.mjs scripts/test-monitor.mjs scripts/test-situacion-hoy.mjs scripts/test-pausas-dia.mjs scripts/test-pin-rh.mjs scripts/test-pantalla-firma.mjs scripts/test-qr-imagen.mjs scripts/test-credencial.mjs scripts/test-consulta-periodo.mjs scripts/test-cambios-asistencia.mjs scripts/test-calendario-asistencia.mjs scripts/test-horas-extra.mjs scripts/test-horas-extra-dia.mjs scripts/test-reloj-dia.mjs scripts/test-tipos-goce.mjs scripts/test-quepaso-motivo.mjs scripts/test-monitor-equipo.mjs scripts/test-historial-asistencia.mjs scripts/test-semana-horas.mjs scripts/test-turnos-extra.mjs scripts/test-motivo-pendiente.mjs scripts/test-hora12.mjs scripts/test-masivo-asistencia.mjs scripts/test-control-horas-extra.mjs scripts/test-matriz-horas-extra.mjs scripts/test-permiso-horas.mjs scripts/test-horas-por-reponer.mjs scripts/test-fecha-hora.mjs scripts/test-activos.mjs scripts/test-evaluaciones.mjs scripts/test-reloj-recientes.mjs scripts/test-reloj-confirmacion.mjs scripts/test-facial-startup.mjs scripts/test-faceapi-browser.mjs scripts/test-cuerpo-bloqueado.mjs scripts/test-faceapi-preload.mjs scripts/test-local-clock-events.mjs scripts/test-diagnostico-reloj.mjs scripts/test-popups.mjs scripts/test-prospectos.mjs scripts/test-newsletter.mjs scripts/test-consentimiento.mjs scripts/test-nomina.mjs scripts/test-rutas-internas.mjs scripts/test-fetch-seguro.mjs scripts/test-pdf-marca.mjs scripts/test-html-seguro.mjs scripts/test-postulacion-token.mjs scripts/test-reporte-comida.mjs scripts/test-limite-legal.mjs scripts/test-whatsapp.mjs scripts/test-whatsapp-agente.mjs scripts/test-whatsapp-agenda.mjs scripts/test-whatsapp-adjuntos.mjs scripts/test-whatsapp-calendario.mjs scripts/test-whatsapp-salud.mjs scripts/test-modulos.mjs scripts/test-reclutamiento-adaptador.mjs scripts/test-proceso-whatsapp.mjs scripts/test-rostro-celular.mjs scripts/test-bolsa-trabajo.mjs scripts/test-cambios-pendientes.mjs scripts/test-rostro-guia.mjs scripts/test-rostro-poses.mjs scripts/test-rostro-reglas.mjs scripts/test-reloj-en-linea.mjs scripts/test-reloj-sonido.mjs scripts/test-encuadre-rostro.mjs scripts/test-pantalla-encendida.mjs scripts/test-retire-offline-worker.mjs scripts/test-mi-cuenta.mjs scripts/test-datos-vivos.mjs scripts/test-guion-landing.mjs scripts/test-clima.mjs scripts/test-clima-resultados.mjs scripts/test-clima-aviso.mjs scripts/test-clima-sugerencias.mjs scripts/test-whatsapp-atencion.mjs scripts/test-permisos.mjs scripts/test-whatsapp-lumo.mjs scripts/test-whatsapp-lumo-b.mjs scripts/test-aprobacion-whatsapp.mjs scripts/test-motivo-correccion.mjs scripts/test-calculos-lft.mjs scripts/test-mosaico.mjs scripts/test-descargas.mjs scripts/test-contratos.mjs scripts/test-formulario-contrato.mjs scripts/test-nomina-formal.mjs
+
+      # (28/11/2026) Sistema de diseño de formularios (docs/sistema-diseno.md): reglas de los pasos guiados y de cn() con
+      # los tokens, y el CANDADO: falla si aparece un degradado, peso 800, un <Button> de otro color, un --primary propio
+      # en un .module.css o un fondo de color decorativo en un archivo ya migrado. Lo viejo está en
+      # scripts/candado-diseno.excepciones.json y solo puede bajar.
+      - name: Sistema de diseño — pruebas y candado
+        run: |
+          node --test scripts/test-pasos-guiados.mjs scripts/test-candado-diseno.mjs
+          node scripts/candado-diseno.mjs
+
+      # (28/11/2026) Expediente por etapas: estados (hecho / falta / no aplica), plazo de guarda en palabras, botones de
+      # cada documento (en plazo no hay «Depurar»), resumen, filtros del tablero y mensajes de error (409, 503, Blob).
+      - name: Expediente por etapas — reglas de presentación
+        run: node --test scripts/test-expediente.mjs
 
       - name: Asistencias — horas extra con la jornada diaria (misma regla que el servidor)
         run: node --test scripts/test-extra-del-dia.mjs
@@ -210,6 +224,42 @@ jobs:
           mkdir -p capturas-landing
           CAPTURAS=capturas-landing node scripts/verify-landing.mjs
 
+      # (27/11/2026) Pop-ups y prospectos con la compilación anterior (backend simulado, 1440 y 390): pop-up con correo
+      # opcional y casilla de noticias aparte (pide el correo al marcarla), WhatsApp se abre aunque el guardado tarde o falle,
+      # sin promesas de timbrado; /contacto guarda con origen «contacto»; /baja con botón, idempotente y sin token; panel
+      # /dashboard/prospectos solo Admin con buscador, filtros, CSV y páginas; letra ≥ 16/17 px, botones ≥ 48 px, sin degradados.
+      - name: Pop-ups y prospectos — correo opcional, noticias, baja y panel (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-popups capturas-prospectos
+          CAPTURAS_POPUPS=capturas-popups node scripts/verify-popups.mjs
+          CAPTURAS=capturas-prospectos node scripts/verify-prospectos.mjs
+
+      # (27/11/2026, docs/newsletter.md) Newsletter semanal y «Avisar por WhatsApp a» con el backend simulado (1440 y 390):
+      # «Falta configurar Resend», boletín con secciones y fuente oficial/periodística, editar y quitar notas (PUT con lo
+      # que cambió), aprobar y cancelar con confirmación en línea, ajustes, Guía 2027 «por confirmar» → confirmada, celulares
+      # de aviso en prospectos; solo Admin; letra ≥ 16 px, botones ≥ 48 px, sin degradados, sin ventanas. Reusa la compilación.
+      - name: Newsletter semanal y avisos de prospectos (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-newsletter
+          CAPTURAS=capturas-newsletter node scripts/verify-newsletter.mjs
+
+      # (27/11/2026) Brochure y tríptico en PDF con la compilación anterior: portada y Cotizar a 1440 y 390 (dos tarjetas,
+      # alt, «Descargar … en PDF», descarga real con nombre bonito, PDF 200 application/pdf, botón ≥ 48 px, 16/17 px,
+      # títulos 700, sin degradados, apiladas en celular, reducir movimiento) y robots.txt sin bloquear /descargas/.
+      - name: Descargas (brochure y tríptico) — verificación en navegador (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-descargas
+          CAPTURAS=capturas-descargas node scripts/verify-descargas.mjs
+
       # (27/11/2026) Bolsa de trabajo v2 con el backend simulado (1440, 390 y 360) y la compilación anterior: lista + vacante
       # elegida (?v=), chips y hoja de filtros con los parámetros del API, «Postularme por WhatsApp» (wa.me exacto, QR),
       # solicitud corta con SMS, JSON-LD, letra ≥ 17 px en celular, botones ≥ 48 px, sin degradados ni desborde.
@@ -245,6 +295,18 @@ jobs:
           mkdir -p capturas-contratos
           CAPTURAS=capturas-contratos node scripts/verify-contratos.mjs
 
+      # (28/11/2026) Sistema de diseño con el backend simulado (1440 y 390): contrato nuevo con pasos guiados, alta de
+      # empleado (4 pestañas) y la ventana chica «Crear puesto»: botones ≥ 48 (principal 56) azul / gris con contorno,
+      # encabezado gris, letra 16/17, títulos 700, gris no más claro que #4B5563, campos 52/56, sin degradados ni
+      # desborde, y la ventana no se cierra al hacer clic afuera. Reusa la compilación anterior.
+      - name: Sistema de diseño — formularios y ventana chica (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-diseno
+          CAPTURAS=capturas-diseno node scripts/verify-diseno.mjs
+
       - name: Hojas de celular — no se cierran al tocar afuera; sí con la X, Esc o deslizando (Playwright)
         env:
           NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
@@ -252,6 +314,69 @@ jobs:
           set -euo pipefail
           mkdir -p capturas-hojas
           CAPTURAS=capturas-hojas node scripts/verify-hojas.mjs
+
+      # (27/11/2026, INC-010) Panel de RH en celular con 200 personas (perfil iPhone 13): al entrar a Asistencias ningún
+      # endpoint se pide dos veces (antes asistencias ×4, empleados ×2), tocar un módulo del menú lateral deja el <body>
+      # libre ≤ 150 ms (antes 0.7–1.5 s con pointer-events:none: se perdían los toques), la foto del usuario no se vuelve a
+      # pedir al reabrir el menú, y portada del muro / foto del aviso emergente con tamaño y decodificación asíncrona.
+      # Reusa la compilación anterior.
+      - name: Panel en celular — Asistencias sin peticiones repetidas y menú que no se come toques (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-panel-rapido
+          CAPTURAS=capturas-panel-rapido node scripts/verify-panel-rapido.mjs
+
+      # (28/11/2026, INC-011) Modo empleado en celular (iPhone 13, CPU ×4, backend de 1–3 s con un endpoint colgado y otro
+      # que falla): el panel no ejecuta el reconocimiento facial (antes bloqueaba el hilo 3.5 + 1.1 + 2.2 s al abrir, y con
+      # red celular a los ~55 s: «ya funcionó después de 1 minuto»), cambiar de vista con la barra ≤ 300 ms (el primer
+      # toque ≤ 800 ms; antes 4.4–5.8 s), sin tareas largas > 200 ms al navegar, y el reloj deja el rostro listo.
+      # Reusa la compilación anterior.
+      - name: Modo empleado en celular — navegación sin bloqueos al abrir (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-empleado-rapido
+          CAPTURAS=capturas-empleado-rapido node scripts/verify-empleado-rapido.mjs
+
+      # (27/11/2026) Préstamos «¿En cuántos pagos?» con el backend simulado (1440 y 390): registrar en su página (no
+      # ventana), plan al centavo ($5,000 en 6 = 5 × $833.33 + $833.35), calendario, aviso del tope con «Usar N quincenas»,
+      # modo «Prefiero poner cuánto por nómina», aprobar en N pagos y pedirlo desde Mi espacio; letra ≥ 16/17 px, botones
+      # ≥ 48 px, títulos 700, sin degradados ni desborde. Reusa la compilación anterior.
+      - name: Préstamos — formularios en pagos, calendario y legibilidad (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-prestamos
+          CAPTURAS=capturas-prestamos node scripts/verify-prestamos.mjs
+
+      # (27/11/2026) Nómina formal con el backend simulado (1440 y 390): Nómina › Configuración (apagada, por qué no se
+      # enciende, datos fiscales de la empresa, lo que falta por persona), datos fiscales de una persona (SDI de ley,
+      # sugerencia SAT), /dashboard/tablas-fiscales (vigencia, fuente, «Confirmar» con la huella), encender en la página y
+      # el desglose del recibo (ISR e IMSS de solo lectura, «Pre-nómina, no timbrada»); letra ≥ 16 px, títulos 700,
+      # botones ≥ 48 px, sin degradados ni desborde. Reusa la compilación anterior.
+      - name: Nómina formal — configuración, tablas fiscales y desglose del recibo (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-nomina-formal
+          CAPTURAS=capturas-nomina-formal node scripts/verify-nomina-formal.mjs
+
+      # (28/11/2026) Expediente por etapas con el backend simulado (1440 y 390): tablero (porcentaje general, más incompleto
+      # primero, filtro, Excel), pasos con quién y cuándo, «no aplica» con motivo, subir en la página (Esc), en plazo sin
+      # «Depurar», depurar confirmando en la página y ZIP; letra ≥ 16/17 px, títulos 700, botones ≥ 48 px (principal ≥ 56),
+      # secundario #4B5563, sin degradados, sin ventanas ni desborde. Reusa la compilación anterior.
+      - name: Expediente por etapas — tablero, pasos, depurar y exportar (Playwright)
+        env:
+          NEXT_PUBLIC_RUTA_BACKEND: https://api.prueba.invalid/api
+        run: |
+          set -euo pipefail
+          mkdir -p capturas-expediente
+          CAPTURAS=capturas-expediente node scripts/verify-expediente.mjs
 
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación

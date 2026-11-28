@@ -18,6 +18,8 @@ import AsistenciaRecibo from "@/components/nomina/AsistenciaRecibo";
 import AvisoSueldosPorRevisar from "@/components/nomina/AvisoSueldosPorRevisar";
 import EditarDiaAsistencia from "@/app/panel/registro-asistencia/EditarDiaAsistencia";
 import { ENVIOS, ESTADOS, acciones, dinero, fechaCorta, horas } from "@/lib/nomina/nomina.mjs";
+import { tarjetasFormal } from "@/lib/nomina/formal.mjs";
+import Link from "next/link";
 
 const get = (url) => axios.get(url).then((r) => r.data);
 
@@ -81,6 +83,27 @@ export default function DetalleNomina() {
       ) : null}
       {/* (27/11/2026) Ver la nómina se puede; autorizarla no, mientras haya sueldos por revisar. */}
       <AvisoSueldosPorRevisar personas={data.sueldos_por_revisar ?? []} accion="autorizar" />
+      {/* (27/11/2026) Nómina formal: totales de ISR e IMSS, quién quedó sin calcular y si el interruptor cambió. */}
+      {Number(periodo.formal) === 1 ? (
+        <section aria-label="Nómina formal" className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 text-base" data-nomina-formal>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-bold text-[#0B1033]">Nómina formal: lleva ISR e IMSS</h2>
+            <span className="rounded-full bg-[#F1F5F9] px-3 py-1 text-base font-bold text-[#374151]">Pre-nómina, no timbrada</span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-3">{tarjetasFormal(data.fiscal).map((t) => <Kpi key={t.titulo} titulo={t.titulo} valor={t.valor} nota={t.nota} />)}</div>
+          {(data.fiscal?.sin_calcular ?? []).length ? (
+            <div role="alert" className="grid gap-1 rounded-lg border border-red-300 bg-red-50 p-3 text-red-900">
+              <p className="font-bold">Sin ISR ni IMSS (no se puede enviar ni autorizar): {data.fiscal.sin_calcular.map((x) => x.nombre).join(", ")}.</p>
+              <Link href="/panel/nomina/configuracion" className="w-fit font-bold underline">Completar en Nómina › Configuración</Link>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+      {["borrador", "por_autorizar"].includes(periodo.estado) && data.formal_empresa != null && Boolean(data.formal_empresa) !== (Number(periodo.formal) === 1) ? (
+        <p role="alert" className="rounded-xl bg-amber-50 p-3 text-base text-amber-950">
+          {data.formal_empresa ? "La empresa encendió la nómina formal después de calcular esta nómina: recalcúlala para que lleve ISR e IMSS." : "La empresa apagó la nómina formal después de calcular esta nómina: recalcúlala."}
+        </p>
+      ) : null}
       {periodo.estado === "por_autorizar" && !puedeAutorizar ? (
         <p className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Enviada al dueño de la cuenta para su autorización.</p>
       ) : null}

@@ -134,6 +134,55 @@ test("salir del reloj antes de empezar: no se descarga nada hasta volver", async
   soltar();
 });
 
+// INC-011: «entro en modo empleado y está trabada, después de 1 minuto ya funcionó». El panel del empleado solo baja los
+// archivos a la caché (uno por uno, prioridad baja): no ejecuta el script ni crea tensores ni calienta la GPU.
+test("descargarFaceApi baja script y pesos sin preparar el reconocimiento", async () => {
+  const env = setup();
+  const pedidos = [];
+  let activos = 0;
+  let maxActivos = 0;
+  const manifiestos = { tiny_face_detector_model: ["tiny-shard1"], face_landmark_68_model: ["land-shard1"], face_recognition_model: ["rec-shard1", "rec-shard2"] };
+  env.context.fetch = async (url, opciones) => {
+    pedidos.push(url);
+    assert.equal(opciones?.priority, "low");
+    activos++; maxActivos = Math.max(maxActivos, activos);
+    await new Promise(setImmediate);
+    activos--;
+    const modelo = Object.keys(manifiestos).find((m) => url === `/models/${m}-weights_manifest.json`);
+    return { ok: true, json: async () => [{ paths: manifiestos[modelo] }], blob: async () => ({}) };
+  };
+  const bajada = env.context.descargarFaceApi();
+  assert.equal(env.context.descargarFaceApi(), bajada, "una sola descarga a la vez");
+  await bajada;
+  assert.deepEqual(pedidos, ["/vendor/face-api/face-api-0.22.2.min.js",
+    "/models/tiny_face_detector_model-weights_manifest.json", "/models/tiny-shard1",
+    "/models/face_landmark_68_model-weights_manifest.json", "/models/land-shard1",
+    "/models/face_recognition_model-weights_manifest.json", "/models/rec-shard1", "/models/rec-shard2"]);
+  assert.equal(maxActivos, 1, "de uno en uno");
+  assert.deepEqual(env.counts(), { scripts: 0, warmups: 0 }, "no ejecuta el script ni calienta la GPU");
+  assert.equal(env.cargados.length, 0, "no crea los modelos en memoria");
+  // Ya cargado (o cargándose) para el reloj: no descarga nada más.
+  const ready = env.load();
+  pedidos.length = 0;
+  await env.context.descargarFaceApi();
+  assert.equal(pedidos.length, 0);
+  await new Promise(setImmediate);
+  env.pending.forEach((finish) => finish());
+  assert.equal(await ready, env.api);
+});
+
+test("descargarFaceApi: si falla una descarga se puede reintentar", async () => {
+  const env = setup();
+  let falla = true;
+  env.context.fetch = async () => ({ ok: !falla, json: async () => [], blob: async () => ({}) });
+  const primera = env.context.descargarFaceApi();
+  await assert.rejects(primera);
+  falla = false;
+  const segunda = env.context.descargarFaceApi();
+  assert.notEqual(segunda, primera);
+  await segunda;
+});
+
 test("local runtime matches installed face-api 0.22.2 and includes its license", async () => {
   const root = new URL("../", import.meta.url);
   const local = await readFile(new URL("public/vendor/face-api/face-api-0.22.2.min.js", root));

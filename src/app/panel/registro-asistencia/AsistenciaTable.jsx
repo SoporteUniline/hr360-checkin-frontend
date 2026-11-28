@@ -10,7 +10,6 @@ import LocalClockRows from '@/components/Clock/LocalClockRows';
 import AsistenciaRow from "./AsistenciaRow";
 import { Button } from "@/components/ui/button";
 import { Plus, FileSpreadsheet } from "lucide-react";
-import { exportToExcel } from "@/utils/exportExcelJS";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -37,6 +36,9 @@ import { FIJA_RELOJ, derechaEstado, derechaMotivo, fijaEstado, fijaMotivo } from
 import { permisoFila } from "@/lib/asistencia/tiposGoce.mjs";
 import { estadoMotivo, textoColumnaEstado } from "@/lib/asistencia/quePasoMotivo.mjs";
 import { AGRUPAR_SITUACION, agruparPorSituacion } from "@/lib/asistencia/situacionHoy.mjs";
+
+// ExcelJS (~900 KB) se descarga y evalúa solo al exportar, no al entrar a Asistencias (27/11/2026, rendimiento en celular).
+const cargarExportador = () => import("@/utils/exportExcelJS").then((m) => m.exportToExcel);
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -577,7 +579,7 @@ export default function AsistenciaTable({
         enqueueSnackbar("No hay registros en el periodo con estos filtros.", { variant: "info" });
         return;
       }
-      await exportToExcel(filas.map(aFilaExcel), columns, "Reporte_Asistencias", {
+      await (await cargarExportador())(filas.map(aFilaExcel), columns, "Reporte_Asistencias", {
         sheetName: "Asistencias",
         headerColor: "2563EB",
       });

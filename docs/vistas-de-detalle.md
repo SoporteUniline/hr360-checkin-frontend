@@ -43,7 +43,10 @@ Piezas en `src/components/detalle/` (importa desde `@/components/detalle`):
    Cancelar, Guardar o la X**: un clic o toque afuera no la cierra. Lo hace `src/components/ui/dialog.jsx` para TODAS
    las ventanas; `alert-dialog.jsx` (Radix) ya no se cerraba afuera; `sheet.jsx` igual, salvo los paneles que son un
    **menú** (`<SheetContent menu>`: menú lateral, «Más acciones», menú de la página pública), que sí se cierran al tocar
-   afuera como cualquier menú. Los menús y listas desplegables (Popover, DropdownMenu, Select) no son ventanas.
+   afuera como cualquier menú. Los `menu` se cierran **sin animación de salida** (27/11/2026, INC-010): mientras Radix
+   animaba el cierre dejaba el `<body>` con `pointer-events:none` y el velo encima, y en celular se perdían los toques
+   0.7–1.5 s después de elegir un módulo. El menú lateral móvil además se monta solo abierto y suelta el foco antes de
+   cerrarse (`ui/sidebar.jsx`). Prueba: `scripts/verify-panel-rapido.mjs`. Los menús y listas desplegables (Popover, DropdownMenu, Select) no son ventanas.
    Las hojas de celular (`drawer.jsx`, vaul: filtros, detalle) tampoco: se cierran con su X o botón de cerrar, con Esc o
    deslizándolas hacia abajo; toda hoja sin botón de cerrar visible lleva una X de 48 px. Las que son menú
    (`<DrawerContent menu>`: menú del Navbar en celular) sí se cierran al tocar afuera.

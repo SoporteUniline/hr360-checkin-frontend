@@ -6,7 +6,7 @@ audiencia: [rh, dueno]
 pantallas: [/panel/empleados, /panel/panel-empleado]
 palabras: [expediente, documentos, subir, cargar, ine, comprobante, vencimiento, por vencer, categorías, pdf, archivo]
 orden: 75
-actualizado: 2026-11-27
+actualizado: 2026-11-28
 fuentes: [src/app/panel/panel-empleado/components/PanelEmpleadoDocumentos.jsx, src/app/panel/empleados/FormularioEmpleado.jsx, src/lib/expedienteApi.js]
 ---
 
@@ -51,7 +51,7 @@ Arriba ves los contadores **Cargados**, **Vigentes**, **Por vencer**, **Vencidos
 - Filtra por categoría con los botones de arriba, escribe en **Buscar documento…** o elige un estatus: Vigente, Sin vencimiento, **Por vencer (30 días)** o Vencido.
 - Toca el ojo (**Ver documento**) para abrirlo. Queda registrado en la bitácora que lo viste.
 - Toca **Bitácora** para ver quién subió, vio o cambió el documento y cuándo.
-- Toca el bote (**Eliminar**) y confirma. **Se elimina permanentemente.**
+- Toca el bote (**Eliminar**). Si el documento está en su **plazo legal de guarda** (por ejemplo, el contrato mientras dure la relación y un año después de la baja), no se puede borrar: el aviso te ofrece `Archivar`. Si su plazo ya terminó, toca `Borrar definitivamente`; queda en la bitácora. Ve [Expediente por etapas](/ayuda/empleados/expediente-por-etapas).
 
 ## Cómo administrar las categorías
 
@@ -77,7 +77,7 @@ Los documentos del expediente los administra RH. La persona ve y firma lo que le
 
 ### ¿Puedo reemplazar un documento vencido?
 
-Sube el nuevo con su nueva fecha de vencimiento. Si ya no necesitas el anterior, elimínalo.
+Desde el [expediente por etapas](/ayuda/empleados/expediente-por-etapas) toca `Reemplazar`: la versión anterior se conserva archivada. También puedes subir el nuevo aquí con su nueva fecha de vencimiento y archivar el anterior.
 
 ## Qué pasa si…
 
@@ -88,6 +88,8 @@ Sube el nuevo con su nueva fecha de vencimiento. Si ya no necesitas el anterior,
 - **…no tengo permiso:** verás «No tienes permisos para subir documentos a este empleado.»
 
 ## Relacionado
+
+- [Expediente por etapas, lista de ley y exportar en ZIP](/ayuda/empleados/expediente-por-etapas)
 
 - [La ficha del empleado y sus 5 pestañas](/ayuda/empleados/ficha-del-empleado)
 - [Panel de empleado: expediente 360°](/ayuda/empleados/panel-empleado)

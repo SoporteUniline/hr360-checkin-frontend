@@ -5,6 +5,7 @@
 // muestra un QR (dibujado aquí: el enlace no se manda a servicios externos) y el enlace para copiar. Mientras el diálogo
 // está abierto se consulta el estado cada 2.5 s; al detectar «usado» se cierra y avisa. Backend:
 // /checador/rostro-celular (docs/rostro-desde-celular.md del backend). Reglas puras: src/lib/rostro/enlaceCelular.mjs.
+import { buttonVariants } from "@/components/ui/button";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSnackbar } from "notistack";
 import { Copy, RefreshCw, Smartphone } from "lucide-react";
@@ -112,7 +113,7 @@ export default function RostroCelular({ idEmpleado, nombre, onRegistrado, onAbri
   return (
     <>
       <button type="button" onClick={generar} disabled={generando}
-        className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[#2563EB] bg-white px-4 text-sm font-semibold text-[#2563EB] hover:bg-blue-50 disabled:opacity-60">
+        className={`${buttonVariants({ variant: "outline" })} w-full`}>
         <Smartphone className="size-4" aria-hidden="true" />{generando ? "Generando enlace…" : "Continuar desde el celular"}
       </button>
 
@@ -146,7 +147,7 @@ export default function RostroCelular({ idEmpleado, nombre, onRegistrado, onAbri
               </div>
               <p role="status" className="sr-only">{vencido ? "El enlace venció." : `Esperando a que ${quien} registre su rostro.`}</p>
               <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
-                <span className="inline-flex items-center gap-2 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-2 text-cuerpo text-texto-secundario">
                   {!vencido ? <span className="size-2 animate-pulse rounded-full bg-[#2563EB] motion-reduce:animate-none" aria-hidden="true" /> : null}
                   {vencido ? "Sin enlace vigente" : "Esperando el registro…"}
                 </span>

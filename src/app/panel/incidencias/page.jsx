@@ -746,7 +746,7 @@ export default function CentroIncidenciasPage() {
               <ChevronRight className="h-3.5 w-3.5" />
               <span className="text-blue-600">Centro de incidencias</span>
             </div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-950 sm:text-3xl">
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
               Centro de incidencias
             </h1>
             <p className="mt-1 text-sm text-slate-500">
@@ -838,7 +838,7 @@ export default function CentroIncidenciasPage() {
             </span>
             <div>
               <div className="text-xs font-semibold text-slate-500">Empleados</div>
-              <div className="text-2xl font-extrabold text-slate-950">
+              <div className="text-2xl font-bold text-slate-950">
                 {empleados.length}
               </div>
             </div>
@@ -854,7 +854,7 @@ export default function CentroIncidenciasPage() {
               <div className="text-xs font-semibold text-slate-500">
                 Incidencias totales
               </div>
-              <div className="text-2xl font-extrabold text-slate-950">
+              <div className="text-2xl font-bold text-slate-950">
                 {totalIncidencias}
               </div>
             </div>
@@ -868,7 +868,7 @@ export default function CentroIncidenciasPage() {
             </span>
             <div>
               <div className="text-xs font-semibold text-slate-500">Por revisar</div>
-              <div className="text-2xl font-extrabold text-orange-600">
+              <div className="text-2xl font-bold text-orange-600">
                 {porRevisar}
               </div>
             </div>
@@ -884,7 +884,7 @@ export default function CentroIncidenciasPage() {
               <div className="text-xs font-semibold text-slate-500">
                 Listos para prenómina
               </div>
-              <div className="text-2xl font-extrabold text-emerald-700">
+              <div className="text-2xl font-bold text-emerald-700">
                 {listos}
               </div>
             </div>
@@ -953,7 +953,7 @@ export default function CentroIncidenciasPage() {
         </div>
 
         {seleccionados.size > 0 && (
-          <div className="flex flex-col gap-3 border-b border-blue-100 bg-blue-50/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-b border-borde bg-franja px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm font-bold text-slate-800">
               {seleccionados.size} empleado
               {seleccionados.size === 1 ? "" : "s"} seleccionado
@@ -1065,7 +1065,7 @@ export default function CentroIncidenciasPage() {
                             onClick={() => setExpandido(open ? null : emp.key)}
                             className="flex min-h-10 w-full items-center gap-3 text-left"
                           >
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50/60 text-xs font-extrabold text-blue-700">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50/60 text-xs font-bold text-blue-700">
                               {emp.nombre
                                 .split(" ")
                                 .map((x) => x[0])
@@ -1115,7 +1115,7 @@ export default function CentroIncidenciasPage() {
                           <button
                             type="button"
                             onClick={() => setExpandido(open ? null : emp.key)}
-                            className={`min-h-10 min-w-10 rounded-lg font-extrabold ${emp.incidencias.length ? "text-violet-700 hover:bg-violet-50" : "text-slate-400"}`}
+                            className={`min-h-10 min-w-10 rounded-lg font-bold ${emp.incidencias.length ? "text-violet-700 hover:bg-violet-50" : "text-slate-400"}`}
                           >
                             {emp.incidencias.length}
                           </button>
@@ -1126,10 +1126,10 @@ export default function CentroIncidenciasPage() {
                             onClick={() => setExpandido(open ? null : emp.key)}
                             className={
                               emp.estado === "ready"
-                                ? "min-h-9 rounded-full bg-emerald-50 px-3 text-xs font-extrabold text-emerald-700"
+                                ? "min-h-9 rounded-full bg-emerald-50 px-3 text-xs font-bold text-emerald-700"
                                 : emp.estado === "pending"
-                                  ? "min-h-9 rounded-full bg-rose-50 px-3 text-xs font-extrabold text-rose-700"
-                                  : "min-h-9 rounded-full bg-orange-50 px-3 text-xs font-extrabold text-orange-700"
+                                  ? "min-h-9 rounded-full bg-rose-50 px-3 text-xs font-bold text-rose-700"
+                                  : "min-h-9 rounded-full bg-orange-50 px-3 text-xs font-bold text-orange-700"
                             }
                           >
                             {emp.estado === "ready"
@@ -1150,7 +1150,7 @@ export default function CentroIncidenciasPage() {
                             <div className="border-l-4 border-blue-600 p-4">
                               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
-                                  <div className="font-extrabold text-slate-900">
+                                  <div className="font-bold text-slate-900">
                                     Incidencias de <NombreEmpleado id={emp.idEmpleado}>{emp.nombre}</NombreEmpleado>
                                   </div>
                                   <div className="text-xs text-slate-500">
@@ -1204,7 +1204,7 @@ export default function CentroIncidenciasPage() {
 
                                         <div>
                                           <span
-                                            className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-extrabold ${estiloIncidencia(inc.tipo)}`}
+                                            className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-bold ${estiloIncidencia(inc.tipo)}`}
                                           >
                                             {inc.tipo}
                                           </span>

@@ -25,8 +25,10 @@ export function Portada({ portada, acciones = null }) {
   const enlace = enlaceSeguro(portada.enlace);
   const contenido = (
     <>
+      {/* Es lo primero que se ve: sin loading="lazy"; decodifica fuera del hilo y con tamaño declarado (la caja ya
+          tiene proporción fija, así no salta). El backend no da miniaturas: se usa la foto original. */}
       {/* eslint-disable-next-line @next/next/no-img-element -- URL firmada de S3 */}
-      <img src={portada.url} alt={portada.titulo || "Portada del muro"} className="size-full object-cover" />
+      <img src={portada.url} alt={portada.titulo || "Portada del muro"} width={1600} height={700} decoding="async" className="size-full object-cover" />
       {portada.titulo ? (
         <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 bg-black/55 px-4 py-3 text-white">
           <span className="break-words text-lg font-extrabold leading-tight drop-shadow">{portada.titulo}</span>

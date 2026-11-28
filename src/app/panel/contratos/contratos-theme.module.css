@@ -3,11 +3,8 @@
    - No afectan otros módulos */
 
 .contratosTheme {
-  /* Tokens relevantes para el panel (scoped) */
-  --primary: #37495E;
-  --primary-foreground: #ffffff;
-  --border: #e5e7eb;
-  --ring: rgba(55, 73, 94, 0.35);
+  /* (28/11/2026) Sin colores propios: el primario, el borde y el foco salen de los tokens globales de
+     src/app/globals.css (sistema de diseño, docs/sistema-diseno.md). Antes aquí se pintaba otro color primario. */
   /* NOTA:
      La tipografía del proyecto está estandarizada globalmente (Inter en `src/app/layout.jsx` + `globals.css`).
      No sobreescribimos `font-family` aquí para mantener consistencia visual con módulos como Empleados. */

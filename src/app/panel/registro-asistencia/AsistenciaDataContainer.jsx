@@ -19,7 +19,7 @@ import { useSearchParams } from "next/navigation";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
 import useRefrescoChecadas from "@/hooks/useRefrescoChecadas";
-import { cargarPeriodoCompleto, LIMITE_TODOS, parametrosPeriodo } from "@/lib/asistencia/consultaPeriodo.mjs";
+import { cargarPeriodoCompleto, cargarPeriodoDeUnaVez, parametrosPeriodo, tablaTraeTodoElPeriodo } from "@/lib/asistencia/consultaPeriodo.mjs";
 import { conRefrescoAsistencias } from "@/lib/asistencia/refrescoAsistencias";
 import { indiceFestivos as crearIndiceFestivos } from "@/lib/asistencia/calendario.mjs";
 import useSWR from "swr";
@@ -126,15 +126,17 @@ export default function AsistenciaDataContainer({
   };
   const cargarPeriodoParaExportar = () => cargarPeriodoCompleto(fetcherWithToken, filtrosPeriodo);
 
-  // Con "Todos los registros" la tabla ya trae el periodo completo: no se descarga dos veces.
-  const mostrarTodos = Number(limit) >= LIMITE_TODOS;
+  // Con "Todos los registros", o si el total cabe en la primera página (celular: páginas de 500), la tabla ya trae
+  // el periodo completo: no se descarga dos veces. Mientras la tabla carga no se decide (no se pide nada extra).
+  const mostrarTodos = tablaTraeTodoElPeriodo(data, { limit, page });
 
   // Periodo completo (tarjetas, filtros por columna, matriz): clave SWR propia que empieza con /checador/asistencias,
-  // así el refrescador la recarga con lo demás. Con "Todos los registros" no se pide (la tabla ya lo trae).
-  const clavePeriodo = idEmpresa && !mostrarTodos
+  // así el refrescador la recarga con lo demás. Solo se pide cuando la tabla respondió y NO trae todo el periodo,
+  // y en una sola petición (antes: conteo + todo).
+  const clavePeriodo = idEmpresa && data && !mostrarTodos
     ? ["/checador/asistencias#periodo", parametrosPeriodo(filtrosPeriodo).toString()]
     : null;
-  const { data: periodo, error: errorPeriodo } = useSWR(clavePeriodo, () => cargarPeriodoCompleto(fetcherWithToken, filtrosPeriodo), {
+  const { data: periodo, error: errorPeriodo } = useSWR(clavePeriodo, () => cargarPeriodoDeUnaVez(fetcherWithToken, filtrosPeriodo), {
     revalidateOnFocus: false,
     shouldRetryOnError: false,
     keepPreviousData: true,

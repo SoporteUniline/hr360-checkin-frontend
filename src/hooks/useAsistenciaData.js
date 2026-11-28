@@ -23,7 +23,8 @@ export default function useAsistenciaData(
 ) {
   let url = null;
 
-  if (idEmpresa) {
+  // limit null = la pantalla aún no sabe si es celular o escritorio: no se pide (evita una consulta que se tira).
+  if (idEmpresa && limit != null) {
     const params = new URLSearchParams({
       empresa: String(idEmpresa),
       page: String(page),

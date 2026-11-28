@@ -77,7 +77,9 @@ Si algún recibo quedó como **No se envió**, presiona **Reintentar envíos**. 
 
 ## Cómo descargar el Excel de pagos
 
-En el detalle de cualquier nómina presiona **Excel de pagos**. Se descarga un archivo de Excel con una fila por persona y las columnas **Empleado**, **Banco**, **Cuenta / CLABE**, **Neto**, **Transferencia** y **Efectivo**. Úsalo para dispersar en tu banco, para tu contador o como base para timbrar en otro sistema.
+En el detalle de cualquier nómina presiona **Excel de pagos**. Se descarga un archivo de Excel con una fila por persona y las columnas **Empleado**, **Banco**, **Cuenta / CLABE**, **Neto**, **Transferencia**, **Efectivo** y **Aviso**. Úsalo para dispersar en tu banco o para tu contador. Solo trae el neto, sin el desglose por concepto: no sirve por sí solo para timbrar en otro sistema.
+
+> **Ojo:** Si una persona tiene más de una cuenta bancaria, el Excel usa la **más reciente** y lo dice en la columna **Aviso**. Revísala antes de pagar.
 
 ## Cómo cancelar una nómina
 

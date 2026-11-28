@@ -31,6 +31,7 @@ import {
   Gift,
   Wallet,
   Megaphone,
+  Contact,
   HandCoins,
   MapPin,
   Route,
@@ -70,6 +71,7 @@ import {
   Grid3x3,
   MessageSquareHeart,
   UserPlus,
+  FolderCheck,
   ClipboardPen,
   Sparkles,
   ShieldAlert,
@@ -192,6 +194,13 @@ const dashboardItems = [
     url: "/dashboard/popups",
     rol: "Admin",
     icon: Megaphone,
+  },
+  // (27/11/2026) Quienes dejaron sus datos en los pop-ups y en Contacto, con su permiso de noticias y CSV.
+  {
+    title: "Prospectos",
+    url: "/dashboard/prospectos",
+    rol: "Admin",
+    icon: Contact,
   },
   {
     title: "Mensajes sistema",
@@ -338,6 +347,14 @@ const menuGroups = [
         matchPrefix: true,
         rol: "Recruiter",
         icon: UserPlus,
+      },
+      // (28/11/2026) Expediente por etapas y cumplimiento de ley (lo que falta a cada persona, ZIP y paquete para juicio).
+      {
+        title: "Expediente y cumplimiento",
+        url: "/panel/expediente",
+        matchPrefix: true,
+        rol: "Recruiter",
+        icon: FolderCheck,
       },
       // {
       //   title: "Reclutamiento",

@@ -23,6 +23,14 @@ export const metadata = {
   },
   description:
     "ADAMIA es una plataforma empresarial de Recursos Humanos para control de asistencia biométrico, gestión de personal, incidencias y reportes en tiempo real.",
+  // (27/11/2026) Al instalarla (Android «Instalar app», iPhone «Agregar a inicio») se llama «Adamia» y lleva el logo.
+  applicationName: "Adamia",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, title: "Adamia", statusBarStyle: "default" },
+  icons: {
+    icon: [{ url: "/favicon.ico" }, { url: "/assets/icons/icon-192.png", type: "image/png", sizes: "192x192" }],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
   openGraph: {
     title: "ADAMIA | Plataforma Empresarial de Recursos Humanos",
     description:
@@ -41,7 +49,6 @@ export default function RootLayout({ children }) {
         <script
           dangerouslySetInnerHTML={{ __html: NATIVE_PREPAINT_SCRIPT }}
         />
-        <link rel="icon" href="/favicon.ico" />
 
         <meta
           name="facebook-domain-verification"

@@ -82,6 +82,7 @@ const RUTAS_PROPIAS = [
   ["/panel/reglas-aviso", "asistencias"], ["/panel/configuracion-checador", "asistencias"],
   ["/panel/empleados", "empleados"], ["/panel/panel-empleado", "empleados"], ["/panel/catalogos", "empleados"],
   ["/panel/contratos", "empleados"], ["/panel/actas-administrativas", "empleados"], ["/panel/mapa-de-rutas", "empleados"],
+  ["/panel/expediente", "empleados"], // (28/11/2026) expediente por etapas y cumplimiento de ley
   ["/panel/clima", "clima"],
   ["/panel/plantillas-felicitacion", "configuracion"], ["/panel/campos-personalizados", "configuracion"],
 ];

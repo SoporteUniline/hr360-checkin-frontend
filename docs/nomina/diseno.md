@@ -18,6 +18,7 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
 - **D-7 Recibo (21/11/2026):** al autorizar, el PDF se envía por correo y queda en **Mi espacio**, donde el empleado lo **firma digitalmente** (firma existente de ADAMIA). Constancia de pago para la empresa.
 - **D-8 Permisos e incapacidades (21/11/2026):** cada tipo de permiso indica **con goce / sin goce** y la nómina lo aplica solo. Incapacidades con tipo (enfermedad general, riesgo de trabajo, maternidad); por defecto la empresa no paga esos días (los cubre el IMSS). Todo editable en la nómina.
 - **D-9 Aprobación de préstamos (21/11/2026):** los que pide el empleado los aprueba **RH o el dueño** en el panel (no el jefe directo). `APROBADO R2`.
+- **D-10 Nómina formal (27/11/2026, aprobada por el dueño vía el agente principal):** «el cálculo de ISR y todo eso, pero que la empresa lo configure; que diga "manejar nómina formal"». Amplía el alcance original («sin ISR ni IMSS») solo para las empresas que la encienden. Construido como R3 (base fiscal) + R4 (motor ISR e IMSS): `docs/nomina/formal.md`. ❓ PENDIENTE: validación de un contador.
 - **R2 Préstamos (aprobada 21/11/2026):** sin intereses (art. 111); el empleado firma el acuerdo de descuento (art. 110 fr. I) y hasta entonces no se descuenta; abono sugerido = el menor entre lo pactado, el saldo y el 30 % del excedente del salario mínimo, editable; el saldo baja al autorizar la nómina y se regresa si se cancela; un préstamo vigente por persona (🧭 criterio); aviso si pasa de un mes de salario; abonos en efectivo fuera de nómina. Salario mínimo: ❓ PENDIENTE confirmar el valor 2026 y si alguna empresa está en zona fronteriza.
 
 ## Lo que ya existe (comprobado en código)
@@ -42,6 +43,20 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
   cancelar; uno vigente solo lo cancela el dueño). «Registrar préstamo» muestra antes de guardar los pagos estimados y los avisos de la ley.
 - Mi espacio → **Mis préstamos**: pedirlo (monto, abono y motivo), firmar el acuerdo, ver saldo y abonos. Uno abierto a la vez.
 - Prueba en navegador: `scripts/verify-prestamos.mjs`.
+
+### «¿En cuántos pagos?» (aprobado por el dueño, 27/11/2026)
+- Registrar (RH) es una **página** `/panel/nomina/prestamos/nuevo?empresa=` (ya no ventana; `docs/vistas-de-detalle.md`
+  regla 7): encabezado de las vistas de detalle, Guardar/Cancelar a la vista (barra fija en celular) y guardia de salida.
+- El dato principal es **«¿En cuántos pagos?»** con la palabra del periodo de la persona al lado («quincenas», «semanas»,
+  «catorcenas», «meses»); la opción **«Prefiero poner cuánto por nómina»** es el modo del abono. Lo mismo al aprobar (detalle)
+  y en Mi espacio («¿En cuántas quincenas lo quieres pagar?»). Sin máximo de pagos; entero ≥ 1.
+- El plan («6 quincenas de $833.33 · la última de $833.35»), el calendario («Primer descuento · Último», «aproximado» si la
+  empresa no tiene nóminas de ese periodo), los avisos de la ley y `pagos_minimos` («Usar 14 quincenas») los da el servidor
+  (`simular`, también en `POST /mis-prestamos`). El frontend solo los pone en palabras (`src/lib/nomina/nomina.mjs`:
+  `palabraPeriodo`, `resumenPlan`, `textoCalendario`; `src/components/nomina/PlanPrestamo.jsx`). Regla del redondeo: backend
+  `docs/nomina-r1.md` (R2 · Número de pagos).
+- Detalle: «Acordado en …» (o «calculado con el abono» en los de antes), pagos restantes con su palabra, último descuento y
+  calendario. Letra 17/16 px, títulos 700, botones ≥ 48 px, sin degradados (lo revisa `verify-prestamos`, en `ci-dev.yml`).
 
 ## Detalle de la asistencia en la nómina (21/11/2026, pedido del dueño)
 - Misma tipografía que Asistencias: franja de totales con cuadritos de color y encabezados en versalitas.

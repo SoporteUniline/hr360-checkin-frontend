@@ -72,9 +72,39 @@ export const documentosApi = {
   editar: (id, body) =>
     axios.put(`/checador/expediente/documentos/doc/${id}`, body, { headers: h() }).then((r) => r.data),
 
-  eliminar: (id) =>
-    axios.delete(`/checador/expediente/documentos/doc/${id}`, { headers: h() }).then((r) => r.data),
+  // (28/11/2026, INC-EXPEDIENTE-001) El backend solo borra fuera del plazo de guarda y con { confirmar: true }:
+  // dentro del plazo responde 409 (solo se archiva); sin confirmar, 428.
+  eliminar: (id, { confirmar = false } = {}) =>
+    axios.delete(`/checador/expediente/documentos/doc/${id}`, { headers: h(), data: confirmar ? { confirmar: true } : undefined }).then((r) => r.data),
+
+  archivar: (id) =>
+    axios.post(`/checador/expediente/documentos/doc/${id}/archivar`, {}, { headers: h() }).then((r) => r.data),
+
+  restaurar: (id) =>
+    axios.post(`/checador/expediente/documentos/doc/${id}/restaurar`, {}, { headers: h() }).then((r) => r.data),
+
+  // Versión nueva; la anterior se conserva archivada con su archivo.
+  reemplazar: (id, formData) =>
+    axios.post(`/checador/expediente/documentos/doc/${id}/reemplazar`, formData, { headers: { ...h(), "Content-Type": "multipart/form-data" } }).then((r) => r.data),
 
   bitacora: (id) =>
     axios.get(`/checador/expediente/documentos/doc/${id}/bitacora`, { headers: h() }).then((r) => r.data),
+};
+
+// ─── Expediente por etapas, lista de ley, exportación y cumplimiento (28/11/2026) ─────────────────────────────────
+// Backend: /checador/expediente/* (hr360-checkin-backend/docs/expediente-ley.md).
+const E = "/checador/expediente";
+export const expedienteApi = {
+  reglas: () => axios.get(`${E}/reglas`, { headers: h() }).then((r) => r.data),
+  persona: (empleado_id, empresa) => axios.get(`${E}/persona/${empleado_id}`, { headers: h(), params: { empresa } }).then((r) => r.data),
+  marcarPaso: (empleado_id, clave, { empresa_id, estado, nota }) =>
+    axios.post(`${E}/persona/${empleado_id}/pasos/${clave}`, { empresa_id, estado, nota }, { headers: h() }).then((r) => r.data),
+  iniciarSalida: (empleado_id, { empresa_id, motivo }) => axios.post(`${E}/persona/${empleado_id}/salida`, { empresa_id, motivo }, { headers: h() }).then((r) => r.data),
+  cancelarSalida: (empleado_id, empresa) => axios.delete(`${E}/persona/${empleado_id}/salida`, { headers: h(), params: { empresa } }).then((r) => r.data),
+  // ZIP (modo «expediente» o «juicio»): llega completo como blob.
+  exportar: (empleado_id, empresa, modo = "expediente") =>
+    axios.get(`${E}/persona/${empleado_id}/exportar`, { headers: h(), params: { empresa, modo }, responseType: "blob" }),
+  cumplimiento: (empresa, consulta = "") => axios.get(`${E}/empresa/${empresa}/cumplimiento${consulta}`, { headers: h() }).then((r) => r.data),
+  exportarCumplimiento: (empresa, consulta = "", formato = "xlsx") =>
+    axios.get(`${E}/empresa/${empresa}/cumplimiento/exportar${consulta ? `${consulta}&` : "?"}formato=${formato}`, { headers: h(), responseType: "blob" }),
 };

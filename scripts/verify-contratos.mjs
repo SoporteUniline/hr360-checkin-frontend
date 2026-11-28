@@ -7,7 +7,7 @@
 //   4. Cambiar sueldo con convenio: el servidor recibe el sueldo, la fecha y el motivo; la tarjeta y el historial cambian.
 //   5. «Revisar sueldos»: la diferencia ficha ≠ contrato y su solución; la «periodicidad por confirmar» (hoy / como dice
 //      y la decisión); la nómina muestra el aviso (con los dos motivos) y no deja autorizar.
-//   2b. Editar en página con pestañas (solo manda lo que cambió; sueldo de solo lectura; aviso al salir con cambios).
+//   2b. Editar en página con pasos guiados (solo manda lo que cambió; sueldo de solo lectura; aviso al salir con cambios).
 //   2c. Ventanas: no se cierran con clic o toque afuera; sí con Esc y la X. «Más acciones» (menú) sí.
 //   2d. Alta en página: errores por pestaña; duplicar copia condiciones y encadena la renovación.
 //   6. Editor de plantillas (categoría Contrato): «Se usa para», «Datos que se llenan solos» insertan {{contrato.*}} y la
@@ -170,6 +170,29 @@ async function revisarLectura(page, movil, donde) {
   assert.deepEqual(r.degradados, [], `${donde}: fondos degradados`);
   assert.ok(r.doc <= r.ventana + 1, `${donde}: scroll horizontal (${r.doc} > ${r.ventana})`);
 }
+// (28/11/2026) Pasos guiados del formulario del contrato. En escritorio se salta con la lista de la izquierda; en celular
+// se avanza con «Continuar» (alta: revisa el paso) o «Siguiente» (editar) y se regresa con «Atrás».
+const PASOS = ["persona", "sueldo", "jornada", "prestaciones", "documento"];
+let irAPaso = async () => {};
+function preparaPasos(page, movil) {
+  irAPaso = async (clave) => {
+    if (!movil) {
+      await page.locator(`[data-pasos-lista] [data-paso='${clave}'] button`).click();
+    } else {
+      for (let i = 0; i < PASOS.length; i++) {
+        const texto = await page.locator("[data-pasos-movil]").innerText();
+        const actual = Number(texto.match(/Paso (\d+)/)[1]) - 1;
+        const meta = PASOS.indexOf(clave);
+        if (actual === meta) break;
+        const barra = page.locator("[data-barra-formulario]");
+        if (actual > meta) await barra.locator("[data-accion='atras']").click();
+        else await barra.locator("[data-accion='siguiente'], [data-accion='continuar']").first().click();
+        await dormir(150);
+      }
+    }
+    await page.locator(`[data-panel='${clave}']`).waitFor();
+  };
+}
 const ignorar = (m) => /ResizeObserver|Failed to load resource|hydrat/i.test(m);
 
 const { base, firmar, cerrar } = await levantarNext();
@@ -183,6 +206,7 @@ try {
     const { ctx, page } = await contexto(browser, { base, ancho, alto, cookie: firmar("Recruiter", { id_usuario: 1 }), usuario: () => RH, manejar });
     const errores = [];
     page.on("pageerror", (e) => errores.push(e.message));
+    preparaPasos(page, movil);
     // Botón de acción visible: en escritorio la barra; en celular la barra fija o «Más acciones».
     const accion = async (texto) => {
       if (!movil) return page.getByRole("toolbar", { name: "Acciones del contrato" }).getByRole("button", { name: texto, exact: true }).click();
@@ -208,7 +232,7 @@ try {
 
     // 2. Detalle según la maqueta, sin degradado.
     const enc = await page.locator("[data-encabezado-detalle]").evaluate((el) => { const s = getComputedStyle(el); return { fondo: s.backgroundImage, color: s.backgroundColor, filo: s.borderTopWidth, colorFilo: s.borderTopColor }; });
-    assert.deepEqual([enc.fondo, enc.color, enc.filo, enc.colorFilo], ["none", "rgb(255, 255, 255)", "4px", "rgb(44, 86, 232)"], "encabezado blanco con filo azul de 4 px");
+    assert.deepEqual([enc.fondo, enc.color, enc.filo, enc.colorFilo], ["none", "rgb(255, 255, 255)", "4px", "rgb(37, 99, 235)"], "encabezado blanco con filo azul de 4 px");
     await page.getByText("CONTRATO CT-2026-0142 · TIEMPO INDETERMINADO", { exact: false }).first().waitFor();
     assert.equal(await page.locator("[data-sueldo]").innerText(), "$10,500 al mes");
     await page.getByText("Pago quincenal · $5,250.00 a la quincena · $350.00 diarios").waitFor();
@@ -223,7 +247,7 @@ try {
     if (!movil) {
       const textos = await page.getByRole("toolbar", { name: "Acciones del contrato" }).locator("[data-accion]").allInnerTexts();
       assert.deepEqual(textos.map((t) => t.trim()), ["Firmar como empresa", "Mandar a firmar", "Descargar PDF", "Cambiar sueldo (convenio)", "Renovar", "Terminar contrato", "Editar datos"]);
-      const primarios = await page.getByRole("toolbar", { name: "Acciones del contrato" }).locator("[data-accion]").evaluateAll((els) => els.filter((e) => getComputedStyle(e).backgroundColor === "rgb(44, 86, 232)").length);
+      const primarios = await page.getByRole("toolbar", { name: "Acciones del contrato" }).locator("[data-accion]").evaluateAll((els) => els.filter((e) => getComputedStyle(e).backgroundColor === "rgb(37, 99, 235)").length);
       assert.equal(primarios, 1, "una sola principal (azul lleno)");
     }
     await revisarLectura(page, movil, `detalle ${sufijo}`);
@@ -246,31 +270,34 @@ try {
       await page.locator("#ct-puesto").waitFor({ timeout: 30000 });
     };
     await abrirEditar();
-    const encE = await page.locator("[data-encabezado-detalle]").evaluate((el) => { const st = getComputedStyle(el); return [st.backgroundImage, st.backgroundColor, st.borderTopWidth]; });
-    assert.deepEqual(encE, ["none", "rgb(255, 255, 255)", "4px"], "editar: encabezado blanco con filo azul");
-    assert.deepEqual((await page.locator("[data-pestanas] [role=tab]").allInnerTexts()).map((t) => t.trim()), ["Persona y puesto", "Sueldo", "Jornada", "Prestaciones", "Documento"]);
+    // (28/11/2026) Sistema de diseño: encabezado gris y pasos guiados (lista en escritorio, «Paso N de M» en celular).
+    const encE = await page.locator("[data-encabezado-pagina]").evaluate((el) => { const st = getComputedStyle(el); return [st.backgroundImage, st.backgroundColor]; });
+    assert.deepEqual(encE, ["none", "rgb(243, 244, 246)"], "editar: encabezado gris sin degradado");
+    if (movil) assert.match(await page.locator("[data-pasos-movil]").innerText(), /Paso 1 de 5 · Persona y puesto/);
+    else assert.deepEqual(await page.locator("[data-pasos-lista] [data-paso]").evaluateAll((els) => els.map((e) => e.dataset.paso)), PASOS);
+    if (!movil) assert.equal(await page.locator("[data-pasos-lista] [data-estado-paso='listo']").count(), 4, "editar: los demás pasos ya están «Listo»");
     assert.equal(await page.locator("#ct-puesto").inputValue(), "Cajera");
     assert.equal(await page.locator("#ct-modalidad_trabajo").inputValue(), "presencial", "«Presencial» guardado se ve seleccionado, no en blanco");
     await revisarLectura(page, movil, `editar · persona ${sufijo}`);
     await captura(page, `editar-persona-${sufijo}`, true);
-    await page.getByRole("tab", { name: "Sueldo" }).click();
+    await irAPaso("sueldo");
     await page.locator("[data-sueldo-solo-lectura]").getByText("Pago quincenal · $5,250.00 a la quincena · $350.00 diarios").waitFor();
     assert.equal(await page.locator("#ct-salario_base").count(), 0, "el sueldo no se edita aquí");
     await page.locator("[data-sueldo-solo-lectura]").getByRole("button", { name: "Cambiar sueldo (convenio)" }).waitFor();
     await revisarLectura(page, movil, `editar · sueldo ${sufijo}`);
     await captura(page, `editar-sueldo-${sufijo}`, true);
-    await page.getByRole("tab", { name: "Jornada" }).click();
+    await irAPaso("jornada");
     assert.equal(await page.locator("#ct-tipo_jornada").inputValue(), "diurna", "«Diurna» guardado se ve seleccionado");
     assert.deepEqual([await page.locator("#ct-hora_entrada").inputValue(), await page.locator("#ct-hora_salida").inputValue(), await page.locator("#ct-hora_comida_fin").inputValue()], ["08:00", "16:00", "12:30"]);
     await revisarLectura(page, movil, `editar · jornada ${sufijo}`);
     await captura(page, `editar-jornada-${sufijo}`, true);
-    await page.getByRole("tab", { name: "Prestaciones" }).click();
+    await irAPaso("prestaciones");
     assert.equal(await page.locator("#ct-dias_vacaciones").inputValue(), "12");
-    await page.getByRole("tab", { name: "Documento" }).click();
+    await irAPaso("documento");
     assert.equal(await page.locator("#ct-tipo_contrato").inputValue(), "indefinido");
     await revisarLectura(page, movil, `editar · documento ${sufijo}`);
-    const guardarE = movil ? page.locator("[data-barra-movil] [data-accion='guardar']") : page.locator("[data-barra-guardar] [data-accion='guardar']");
-    const cancelarE = movil ? page.locator("[data-barra-movil] [data-accion='cancelar']") : page.locator("[data-barra-guardar] [data-accion='cancelar']");
+    const guardarE = page.locator("[data-barra-formulario] [data-accion='guardar']");
+    const cancelarE = page.locator("[data-barra-formulario] [data-accion='cancelar']");
     assert.ok(await guardarE.isVisible() && await cancelarE.isVisible(), "Guardar y Cancelar siempre a la vista");
     if (movil) assert.ok((await guardarE.boundingBox()).height >= 55.5, "Guardar de 56 px en celular");
     // Sin cambios, Cancelar regresa sin preguntar.
@@ -306,7 +333,7 @@ try {
     await page.keyboard.press("Escape");
     await ventana.waitFor({ state: "detached", timeout: 5000 });
     await accion("Cambiar sueldo (convenio)");
-    await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Cerrar" }).click();
     await page.getByRole("dialog").waitFor({ state: "detached", timeout: 5000 });
     if (movil) {
       // «Más acciones» es un menú, no una ventana: se cierra al tocar afuera.
@@ -320,22 +347,31 @@ try {
     // 2d. Alta en página: vacía marca los errores por pestaña; duplicar copia las condiciones y encadena.
     await page.goto(base + "/panel/contratos/nuevo", { waitUntil: "domcontentloaded" });
     await page.locator("#ct-id_empleado").waitFor({ timeout: 60000 });
-    await (movil ? page.locator("[data-barra-movil] [data-accion='guardar']") : page.locator("[data-barra-guardar] [data-accion='guardar']")).click();
+    // «Continuar» revisa solo el paso: sin persona no avanza y marca ese dato.
+    await page.locator("[data-barra-formulario] [data-accion='continuar']").click();
     await page.locator("[data-errores]").waitFor();
-    assert.deepEqual((await page.locator("[data-errores] button").allInnerTexts()).map((t) => t.trim()), ["Persona y puesto (1)", "Sueldo (2)", "Documento (2)"]);
+    assert.deepEqual((await page.locator("[data-errores] button").allInnerTexts()).map((t) => t.trim()), ["Persona y puesto (1)"]);
+    await page.locator("#ct-id_empleado-error").waitFor();
+    if (!movil) {
+      // En escritorio se puede saltar al último paso: «Guardar contrato» vacío marca lo que falta en cada paso.
+      await irAPaso("documento");
+      await page.locator("[data-barra-formulario] [data-accion='guardar']").click();
+      await page.waitForFunction(() => document.querySelectorAll("[data-errores] button").length === 3);
+      assert.deepEqual((await page.locator("[data-errores] button").allInnerTexts()).map((t) => t.trim()), ["Persona y puesto (1)", "Sueldo y pago (2)", "Documento (2)"]);
+    }
     assert.equal(E.pedidos.crear.length, 0, "no se manda nada con datos faltantes");
     await revisarLectura(page, movil, `nuevo con errores ${sufijo}`);
     await captura(page, `nuevo-errores-${sufijo}`, true);
     await page.goto(base + "/panel/contratos/nuevo?duplicar=142", { waitUntil: "domcontentloaded" });
     await page.locator("#ct-puesto").waitFor({ timeout: 60000 });
     assert.equal(await page.locator("#ct-puesto").inputValue(), "Cajera");
-    await page.getByRole("tab", { name: "Documento" }).click();
-    await page.locator("#ct-tipo_contrato").selectOption("indefinido");
-    await page.getByRole("tab", { name: "Sueldo" }).click();
+    await irAPaso("sueldo");
     assert.equal(await page.locator("#ct-periodicidad_pago").inputValue(), "Quincenal");
     assert.equal(await page.locator("#ct-salario_base").inputValue(), "5250");
     await captura(page, `duplicar-sueldo-${sufijo}`, true);
-    await (movil ? page.locator("[data-barra-movil] [data-accion='guardar']") : page.locator("[data-barra-guardar] [data-accion='guardar']")).click();
+    await irAPaso("documento");
+    await page.locator("#ct-tipo_contrato").selectOption("indefinido");
+    await page.locator("[data-barra-formulario] [data-accion='guardar']").click();
     await page.waitForURL(/\/panel\/contratos\/142$/, { timeout: 30000 });
     const alta = E.pedidos.crear.at(-1);
     assert.deepEqual([alta.id_empleado, alta.tipo_contrato, alta.salario_base, alta.periodicidad_pago, alta.es_renovacion, alta.contrato_anterior_id, alta.horario, alta.modalidad_trabajo],
@@ -445,7 +481,7 @@ try {
 
     assert.deepEqual(errores.filter((m) => !ignorar(m)), [], `errores: ${errores.join(" | ")}`);
     await ctx.close();
-    console.log(`✔ ${sufijo}: lista → detalle, editar en página (pestañas, solo lo cambiado, aviso al salir), ventanas que no se cierran afuera, alta y duplicar, ${completo ? "firmas, convenio, " : ""}revisar sueldos, nómina bloqueada, editor de plantillas; letra, botones, sin desborde ni degradados`);
+    console.log(`✔ ${sufijo}: lista → detalle, editar en página (pasos guiados, solo lo cambiado, aviso al salir), ventanas que no se cierran afuera, alta y duplicar, ${completo ? "firmas, convenio, " : ""}revisar sueldos, nómina bloqueada, editor de plantillas; letra, botones, sin desborde ni degradados`);
   }
   ok = true;
   console.log("verify-contratos: todo bien");

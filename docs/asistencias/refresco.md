@@ -23,6 +23,12 @@ abrirlo) y los catálogos (festivos, tipos, motivos, empleados).
 `filterOptionsRows` (periodo completo) dejó de ser un `useEffect` que cargaba una vez: ahora es una clave SWR con
 `keepPreviousData`, así entra en la misma recarga.
 
+(27/11/2026, INC-010) El periodo completo solo se pide cuando la respuesta de la tabla **no** lo trae entero
+(`tablaTraeTodoElPeriodo` en `lib/asistencia/consultaPeriodo.mjs`: «Todos los registros», o primera página con todo el
+total; en celular un día de 200 personas cabe en la página de 500) y en **una** petición (`cargarPeriodoDeUnaVez`,
+límite de «Todos»), ya no conteo + todo. Exportar sigue con `cargarPeriodoCompleto` (conteo + todo). La pantalla no pide
+la tabla hasta saber si es celular o escritorio (`limit` en `null`; antes pedía «Todos» y luego 500).
+
 ## Cuándo recarga
 
 1. **Guardado en este navegador** (cualquier pantalla): el interceptor de respuestas de `lib/axios.js` (instancia y
@@ -46,7 +52,8 @@ edición. Con la pestaña oculta, igual: se recarga al volver. El guardado propi
 
 - Escritorio (vista «Todos los registros»): **3** — tabla, cuenta de horas, «Horas por reponer». Igual para guardado,
   evento `asistencia` y `checada`. Antes: 1 (solo la tabla; lo demás se quedaba viejo).
-- Celular / tabla paginada: **5** — tabla, conteo del periodo, periodo completo, cuenta de horas, por reponer.
+- Celular / tabla paginada (el periodo no cabe en la página): **4** — tabla, periodo completo, cuenta de horas, por
+  reponer (antes 5, con un conteo aparte). Si el periodo cabe en la página (lo normal en un día): **3**, como escritorio.
 - Monitor: **2** — registros (ayer y hoy) y cuenta de horas.
 - Pestaña «Horas de ley» abierta: +1 (`horas-ley`). Panel de edición abierto: +checadas del día y horas extra.
 - Un guardado + su `onGuardado` + el eco SSE = una sola vuelta. Ráfaga de 25 eventos = una vuelta.

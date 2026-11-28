@@ -482,7 +482,7 @@ const NewTipoActaModal = ({
 
                 <Button
                   type="submit"
-                  className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm w-full sm:w-auto"
+                  size="lg" className="w-full sm:w-auto"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
@@ -578,7 +578,7 @@ const NewTipoActaModal = ({
                               type="button"
                               size="sm"
                               variant="outline"
-                              className="border-[#fecaca] text-[#b91c1c] hover:bg-[#fee2e2]"
+                              className="border-peligro-borde text-peligro-texto hover:bg-peligro-suave"
                               onClick={() => setDeletingTipo(tipo)}
                               disabled={isSubmitting}
                             >

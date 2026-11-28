@@ -4,6 +4,7 @@ import "@/components/landing/home/landing-home.css";
 import "./cotiza.css";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import DescargasAdamia from "@/components/landing/DescargasAdamia";
 import AceptoLegal from "@/components/legal/AceptoLegal";
 import { DOCS_AVISO, registrarAceptacion } from "@/lib/legal/aceptacion";
 import axios from "@/lib/axios";
@@ -965,6 +966,9 @@ export default function CotizaPage() {
           </details>
         ))}
       </section>
+
+      {/* Brochure y tríptico para llevarse y compartir con su equipo (mismo componente que la portada). */}
+      <DescargasAdamia variante="compacta" />
 
       <section className="cz-final">
         <div className="wrap">

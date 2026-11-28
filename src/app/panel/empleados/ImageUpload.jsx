@@ -132,7 +132,7 @@ export default function ImageUpload({
     <span className="relative block size-12">
       <Avatar className="size-12 cursor-[inherit] bg-slate-300">
         <AvatarImage src={tieneImagenValida ? imagePreview : undefined} alt="" className="object-cover" />
-        <AvatarFallback className="bg-slate-300 text-[15px] font-bold text-slate-700">{iniciales || "?"}</AvatarFallback>
+        <AvatarFallback data-chico className="bg-slate-300 text-[15px] font-bold text-slate-700">{iniciales || "?"}</AvatarFallback>
       </Avatar>
       {!soloLectura && (
         <span aria-hidden="true" className="absolute -bottom-0.5 -right-0.5 flex size-5 items-center justify-center rounded-full border-2 border-white bg-slate-700 text-white">

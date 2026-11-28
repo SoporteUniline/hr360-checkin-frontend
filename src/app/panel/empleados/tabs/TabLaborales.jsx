@@ -428,7 +428,7 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
               render={({ field }) => (
                 <FormItem className="flex flex-col gap-1 rounded-lg border p-4">
                   <FormLabel className="text-base">Método de chequeo</FormLabel>
-                  <div className="text-sm text-muted-foreground mb-2">
+                  <div className="text-cuerpo text-texto-secundario mb-2">
                     Selecciona cómo el empleado registrará su entrada/salida
                   </div>
                   <Select
@@ -452,7 +452,7 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
                     </SelectContent>
                   </Select>
                   {field.value === "codigo_cara" ? (
-                    <p className="text-sm text-muted-foreground" data-ayuda-codigo-cara>
+                    <p className="text-cuerpo text-texto-secundario" data-ayuda-codigo-cara>
                       En el reloj escribe su código y la cámara confirma que es él. La cara sola no basta: es más rápido y más seguro.
                     </p>
                   ) : null}
@@ -471,7 +471,7 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
                 <FormItem className="flex flex-col gap-1 rounded-lg border p-4">
                   <FormLabel className="text-base">Cierre de turno</FormLabel>
 
-                  <div className="text-sm text-muted-foreground mb-2">
+                  <div className="text-cuerpo text-texto-secundario mb-2">
                     Define si el sistema cierra el turno automáticamente o si el
                     empleado debe hacerlo manualmente
                   </div>
@@ -505,7 +505,7 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
             <div className="col-span-1 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4 sm:col-span-2">
               <div>
                 <p className="text-base font-medium">Contraseña de la app</p>
-                <p className="text-sm text-muted-foreground">Entra a su app con su correo y esta contraseña.</p>
+                <p className="text-cuerpo text-texto-secundario">Entra a su app con su correo y esta contraseña.</p>
               </div>
               {cambiarContrasena}
             </div>
@@ -668,7 +668,7 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
                 <div className="space-y-0.5">
                   <FormLabel className="text-base">Checar GPS</FormLabel>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-cuerpo text-texto-secundario">
                     Requerir ubicación GPS al checar entrada/salida
                   </div>
                 </div>
@@ -693,7 +693,7 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
                   <FormLabel className="text-base">
                     Asistencia Automática
                   </FormLabel>
-                  <div className="text-sm text-muted-foreground">
+                  <div className="text-cuerpo text-texto-secundario">
                     El sistema generará los registros de entrada y salida
                     basados en su horario sin que el empleado tenga que checar
                     manualmente.
