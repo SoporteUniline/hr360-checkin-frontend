@@ -366,11 +366,25 @@ try {
     E.contrato.puesto = "Cajera";
 
     // 2d. Alta en página: vacía marca los errores por pestaña; duplicar copia las condiciones y encadena.
+    await page.clock.install(); // corre normal hasta que se pausa (regresión INC-012, abajo)
     await page.goto(base + "/panel/contratos/nuevo", { waitUntil: "domcontentloaded" });
     await page.locator("#ct-id_empleado").waitFor({ timeout: 60000 });
     // «Continuar» revisa solo el paso: sin persona no avanza y marca ese dato.
+    // Regresión INC-012: el foco va a «Persona», pero si la persona ya está escribiendo en otro campo no se le quita
+    // (antes llegaba 60 ms después a ciegas: lo tecleado caía en la lista de personas). El reloj se pausa para que esa
+    // espera ocurra a la mitad de lo que se teclea, siempre.
+    await page.clock.pauseAt(Date.now() + 60_000);
     await page.locator("[data-barra-formulario] [data-accion='continuar']").click();
     await page.locator("[data-errores]").waitFor();
+    await page.locator("#ct-puesto").click();
+    await page.keyboard.type("Caj");
+    await page.clock.runFor(1000);
+    await page.keyboard.type("era");
+    await page.clock.resume();
+    assert.equal(await page.evaluate(() => document.activeElement?.id), "ct-puesto", "el foco no brinca de campo mientras se escribe");
+    assert.equal(await page.locator("#ct-puesto").inputValue(), "Cajera", "lo que se escribe tras el error se queda en su campo");
+    assert.equal(await page.locator("#ct-id_empleado").inputValue(), "", "y no cae en la lista de personas");
+    await page.locator("#ct-puesto").fill("");
     assert.deepEqual((await page.locator("[data-errores] button").allInnerTexts()).map((t) => t.trim()), ["Persona y puesto (1)"]);
     await page.locator("#ct-id_empleado-error").waitFor();
     if (!movil) {

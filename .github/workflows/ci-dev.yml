@@ -106,7 +106,7 @@ jobs:
       # scripts/candado-diseno.excepciones.json y solo puede bajar.
       - name: Sistema de diseño — pruebas y candado
         run: |
-          node --test scripts/test-pasos-guiados.mjs scripts/test-candado-diseno.mjs
+          node --test scripts/test-pasos-guiados.mjs scripts/test-candado-diseno.mjs scripts/test-foco-campo.mjs
           node scripts/candado-diseno.mjs
 
       # (28/11/2026) Expediente por etapas: estados (hecho / falta / no aplica), plazo de guarda en palabras, botones de

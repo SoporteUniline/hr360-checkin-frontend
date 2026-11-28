@@ -29,6 +29,7 @@ import {
   CAMPO_ANCHO, CLASE_TEXTO_LARGO, RENGLON_COMPLETO,
 } from "@/components/formulario";
 import { cn } from "@/lib/utils";
+import { prepararFocoCampo } from "@/lib/formulario/focoCampo.mjs";
 import { vecinosDePaso } from "@/lib/formulario/pasosGuiados.mjs";
 import {
   TIPOS, estadoContrato, vigenciaTexto, firmaResumen, sueldoTarjeta, dinero, porPeriodo, mensajeDeError,
@@ -61,13 +62,16 @@ export default function FormularioContrato({ modo, id = null, duplicar = null, i
     setPestana(clave);
     window.scrollTo({ top: 0 });
   };
-  // Lleva el foco al campo con error (ya dentro de su paso).
-  const enfocar = (campo) => setTimeout(() => document.getElementById(`ct-${campo}`)?.focus(), 60);
+  // Lleva el foco al campo con error (ya dentro de su paso), pero NO se lo quita a quien ya está escribiendo en otro
+  // campo (INC-012: el mismo foco a ciegas de 60 ms hacía perder lo escrito en el acta). Se prepara al INICIO de la
+  // acción, cuando el foco aún está en el botón oprimido (src/lib/formulario/focoCampo.mjs).
+  const prepararEnfoque = () => { const enfocar = prepararFocoCampo(); return (campo) => enfocar(`ct-${campo}`); };
 
   const volverA = editar ? `/panel/contratos/${id}` : duplicar ? `/panel/contratos/${duplicar}` : "/panel/contratos";
   const irA = (ruta) => ({ reemplazar }) => (reemplazar ? router.replace(ruta) : router.push(ruta));
 
   const guardar = async () => {
+    const enfocar = prepararEnfoque();
     setGuardando(true);
     setErrorServidor("");
     const r = await f.guardar();
@@ -106,6 +110,7 @@ export default function FormularioContrato({ modo, id = null, duplicar = null, i
   const cancelar = () => confirmarSalida(irA(volverA), { navega: true });
   // «Continuar» (alta): revisa solo los datos de este paso; si están bien, pasa al siguiente. No guarda nada todavía.
   const continuar = (siguiente) => {
+    const enfocar = prepararEnfoque();
     const r = f.revisarPaso(pestana);
     if (!r.ok) {
       enfocar(r.campo);
