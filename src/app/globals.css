@@ -47,6 +47,59 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* ── Sistema de diseño de formularios (28/11/2026, mockup aprobado; docs/sistema-diseno.md) ──────────────────────
+     Cada token de abajo crea utilidades de Tailwind con nombre propio, para no repetir hex ni px por el código:
+       colores   → bg-navy, text-texto-secundario, border-borde-campo, bg-estado-exito …
+       alturas   → h-boton (48), h-boton-principal (56), size-icono (44), h-campo (52 / 56 en celular)
+       letra     → text-cuerpo, text-boton, text-campo, text-etiqueta, text-ayuda, text-titulo-seccion …
+       radios    → rounded-boton (10), rounded-seccion (14)
+     El valor vive en :root (más abajo); cambiarlo ahí cambia todo el sistema. Si agregas un token de tamaño, de letra o
+     de radio, regístralo también en src/lib/utils.js (cn) para que tailwind-merge lo reconozca. */
+  --color-brand-hover: var(--adamia-blue-hover);
+  --color-navy: var(--adamia-navy);
+  --color-franja: var(--adamia-franja);
+  --color-fondo-pagina: var(--adamia-bg-light);
+  --color-borde: var(--adamia-borde);
+  --color-borde-campo: var(--adamia-borde-campo);
+  --color-texto: var(--adamia-texto);
+  --color-texto-boton: var(--adamia-text-primary);
+  --color-texto-secundario: var(--adamia-text-secondary);
+  --color-texto-deshabilitado: var(--adamia-texto-deshabilitado);
+  --color-seleccion: var(--adamia-seleccion);
+  --color-seleccion-texto: var(--adamia-seleccion-texto);
+  --color-peligro: var(--adamia-peligro);
+  --color-peligro-texto: var(--adamia-peligro-texto);
+  --color-peligro-borde: var(--adamia-peligro-borde);
+  --color-peligro-suave: var(--adamia-peligro-suave);
+  --color-paso-listo: var(--adamia-paso-listo);
+  --color-estado-exito: var(--adamia-estado-exito);
+  --color-estado-exito-texto: var(--adamia-estado-exito-texto);
+  --color-estado-aviso: var(--adamia-estado-aviso);
+  --color-estado-aviso-texto: var(--adamia-estado-aviso-texto);
+  --color-estado-error: var(--adamia-estado-error);
+  --color-estado-error-texto: var(--adamia-estado-error-texto);
+  --color-estado-info: var(--adamia-estado-info);
+  --color-estado-info-texto: var(--adamia-estado-info-texto);
+  --color-estado-neutro: var(--adamia-estado-neutro);
+  --color-estado-neutro-texto: var(--adamia-estado-neutro-texto);
+
+  --spacing-boton: var(--adamia-alto-boton);
+  --spacing-boton-principal: var(--adamia-alto-boton-principal);
+  --spacing-icono: var(--adamia-alto-icono);
+  --spacing-campo: var(--adamia-alto-campo);
+
+  --radius-boton: var(--adamia-radio-boton);
+  --radius-seccion: var(--adamia-radio-seccion);
+
+  --text-cuerpo: var(--adamia-letra-cuerpo);
+  --text-boton: var(--adamia-letra-boton);
+  --text-boton-principal: var(--adamia-letra-boton-principal);
+  --text-campo: var(--adamia-letra-campo);
+  --text-etiqueta: var(--adamia-letra-etiqueta);
+  --text-ayuda: var(--adamia-letra-ayuda);
+  --text-titulo-seccion: var(--adamia-letra-titulo-seccion);
+  --text-titulo-pagina: var(--adamia-letra-titulo-pagina);
 }
 
 :root {
@@ -59,6 +112,49 @@
   /* (21/11/2026) Azul marino de los textos de la app del empleado: el oscuro de la marca (no el gris pizarra). */
   --adamia-navy: #080d36;
   --adamia-bg-dark: #0f172a;
+
+  /* ── Sistema de diseño de formularios (28/11/2026, mockup aprobado; docs/sistema-diseno.md) ──
+     Los valores de celular van primero; desde 1024 px (lg) se ajustan los de escritorio en el @media de abajo.
+     Sin degradados, nunca. El color fuerte solo dice estado (verde, ámbar, rojo, azul, gris). */
+  --adamia-blue-hover: #1d4ed8;
+  --adamia-franja: #f3f4f6;          /* encabezado de página y franja de título de cada sección */
+  --adamia-borde: #e5e7eb;           /* bordes de tarjetas y separadores */
+  --adamia-borde-campo: #d1d5db;     /* borde de campos y de botones con contorno */
+  --adamia-texto: #111827;
+  --adamia-texto-deshabilitado: #6b7280;
+  --adamia-seleccion: #eff6ff;       /* fondo del paso o del elemento elegido */
+  --adamia-seleccion-texto: #1d4ed8;
+  --adamia-peligro: #dc2626;
+  --adamia-peligro-texto: #b91c1c;   /* texto de error y del botón «Dar de baja» */
+  --adamia-peligro-borde: #fca5a5;
+  --adamia-peligro-suave: #fef2f2;
+  --adamia-paso-listo: #16a34a;
+  /* Etiquetas de estado: fondo / texto */
+  --adamia-estado-exito: #dcfce7;
+  --adamia-estado-exito-texto: #166534;
+  --adamia-estado-aviso: #fef3c7;
+  --adamia-estado-aviso-texto: #92400e;
+  --adamia-estado-error: #fee2e2;
+  --adamia-estado-error-texto: #991b1b;
+  --adamia-estado-info: #dbeafe;
+  --adamia-estado-info-texto: #1e40af;
+  --adamia-estado-neutro: #f3f4f6;
+  --adamia-estado-neutro-texto: #374151;
+  /* Tamaños (celular) */
+  --adamia-alto-boton: 48px;
+  --adamia-alto-boton-principal: 56px;
+  --adamia-alto-icono: 44px;         /* botón de solo ícono: SOLO dentro de renglones de tabla */
+  --adamia-radio-boton: 10px;
+  --adamia-radio-seccion: 14px;
+  --adamia-alto-campo: 56px;
+  --adamia-letra-cuerpo: 17px;
+  --adamia-letra-boton: 17px;
+  --adamia-letra-boton-principal: 18px;
+  --adamia-letra-campo: 18px;
+  --adamia-letra-etiqueta: 17px;
+  --adamia-letra-ayuda: 16px;
+  --adamia-letra-titulo-seccion: 20px;
+  --adamia-letra-titulo-pagina: 26px;
 
   --radius: 0.625rem;
   --card: oklch(1 0 0);
@@ -93,6 +189,21 @@
   --sidebar-ring: var(--adamia-blue);
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
+}
+
+/* Sistema de diseño: valores de escritorio (desde lg, 1024 px). En celular quedan los de :root (un punto más grandes). */
+@media (min-width: 1024px) {
+  :root {
+    --adamia-alto-campo: 52px;
+    --adamia-letra-cuerpo: 16px;
+    --adamia-letra-boton: 16px;
+    --adamia-letra-boton-principal: 17px;
+    --adamia-letra-campo: 17px;
+    --adamia-letra-etiqueta: 16px;
+    --adamia-letra-ayuda: 15px;
+    --adamia-letra-titulo-seccion: 21px;
+    --adamia-letra-titulo-pagina: 30px;
+  }
 }
 
 .dark {

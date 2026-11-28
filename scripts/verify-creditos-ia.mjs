@@ -262,7 +262,7 @@ try {
       assert.equal(await recargar.getAttribute("href"), "/panel/creditos-ia");
       await dormir(400); // termina la animación de entrada (zoom 95 %) antes de medir
       // La X de cerrar es la del Dialog compartido (components/ui/dialog.jsx, fuera de este cambio): se revisan los botones propios.
-      if (ancho < 500) assert.deepEqual((await pequenos(aviso)).filter((x) => x.t !== "Close"), [], "táctiles ≥ 44 px en el aviso");
+      if (ancho < 500) assert.deepEqual((await pequenos(aviso)).filter((x) => x.t !== "Cerrar"), [], "táctiles ≥ 44 px en el aviso");
       assert.ok(await sinDesborde(page), `sin desborde lateral a ${ancho}`);
       await foto(page, `${ancho}-aviso-sin-creditos-clima`, false);
       await recargar.click();
@@ -379,7 +379,7 @@ try {
       await dlg.getByLabel("Escribe ENCENDER para confirmar").fill("encender");
       assert.equal(await confirmar.isDisabled(), false);
       await dormir(300);
-      if (ancho < 500) assert.deepEqual((await pequenos(dlg)).filter((x) => x.t !== "Close"), [], "táctiles ≥ 44 px en el diálogo");
+      if (ancho < 500) assert.deepEqual((await pequenos(dlg)).filter((x) => x.t !== "Cerrar"), [], "táctiles ≥ 44 px en el diálogo");
       await foto(page, `${ancho}-cobro-confirmar`, false);
       assert.equal(pedidos.filter((x) => x.metodo === "PUT" && x.ruta === "/checador/ia/admin/cobro").length, 0, "nada cambia sin confirmar");
       await confirmar.click();

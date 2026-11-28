@@ -54,11 +54,14 @@ const quedarseAbierta = (manejador) => (evento) => {
   evento.preventDefault();
 };
 
+// showCloseButton={false}: sin la X de la esquina (la Ventana chica pone su propia X de 44 px en la franja gris:
+// src/components/formulario/VentanaChica.jsx).
 function DialogContent({
   className,
   children,
   onPointerDownOutside,
   onInteractOutside,
+  showCloseButton = true,
   ...props
 }) {
   return (
@@ -74,11 +77,11 @@ function DialogContent({
         )}
         {...props}>
         {children}
-        <DialogPrimitive.Close
+        {showCloseButton ? <DialogPrimitive.Close
           className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4">
           <XIcon />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
+          <span className="sr-only">Cerrar</span>
+        </DialogPrimitive.Close> : null}
       </DialogPrimitive.Content>
     </DialogPortal>
   );
@@ -115,7 +118,7 @@ function DialogTitle({
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-lg leading-none font-semibold", className)}
+      className={cn("text-lg leading-tight font-bold text-navy", className)}
       {...props} />
   );
 }
@@ -127,7 +130,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn("text-texto-secundario text-sm", className)}
       {...props} />
   );
 }

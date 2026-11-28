@@ -480,14 +480,14 @@ async function main() {
   await noOverflow();
   await page.getByRole("button", { name: "Rechazar", exact: true }).click();
   await page.getByRole("button", { name: "Confirmar decisión" }).click();
-  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
   await page
     .getByRole("tab", { name: "Por autorizar 1", exact: true })
     .waitFor();
   await page.getByRole("button", { name: /Carlos Ramírez.*Revisar/ }).click();
   await page.getByRole("button", { name: "Aprobar", exact: true }).click();
   await page.getByRole("button", { name: "Confirmar decisión" }).click();
-  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
   await page.getByText("Todo al día", { exact: true }).waitFor();
   await page.getByRole("tab", { name: "Historial", exact: true }).click();
   assert.equal(

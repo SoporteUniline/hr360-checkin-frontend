@@ -306,7 +306,7 @@ try {
     await page.keyboard.press("Escape");
     await ventana.waitFor({ state: "detached", timeout: 5000 });
     await accion("Cambiar sueldo (convenio)");
-    await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Cerrar" }).click();
     await page.getByRole("dialog").waitFor({ state: "detached", timeout: 5000 });
     if (movil) {
       // «Más acciones» es un menú, no una ventana: se cierra al tocar afuera.
