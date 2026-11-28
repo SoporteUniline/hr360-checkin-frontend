@@ -57,6 +57,17 @@ test("cn(): los tokens del sistema le ganan a las clases de fábrica y no se con
   assert.equal(unirClases("bg-primary bg-brand"), "bg-brand");
 });
 
+// (28/11/2026) Lupa encimada: «B🔍scar por nombre…». La clase de campo traía `lg:px-3`, que en escritorio le ganaba al
+// `pl-12` del campo con ícono (va en un @media). Ahora el relleno es un token sin prefijo y el `pl-*` de quien lo usa gana.
+test("la clase de campo no fija el relleno de lado con prefijos de pantalla (lupa encimada)", () => {
+  const fuente = readFileSync(new URL("../src/components/formulario/CampoFormulario.jsx", import.meta.url), "utf8");
+  const clases = [...fuente.matchAll(/export const CLASE_CONTROL(?:_LINEA)? =\s*"([^"]+)"/g)].map((m) => m[1]);
+  assert.equal(clases.length, 2, "CLASE_CONTROL y CLASE_CONTROL_LINEA");
+  for (const c of clases) assert.doesNotMatch(c, /(^|\s)[a-z0-9[\]-]+:p[xl]-/, `sin md:/lg:px-* ni pl-*: ${c}`);
+  assert.match(clases[0], /(^|\s)px-relleno-campo(\s|$)/);
+  assert.equal(unirClases(`${clases[0]} pl-12`).includes("pl-12"), true, "el pl-12 de un campo con lupa se queda");
+});
+
 test("cada token registrado en cn() existe en globals.css (@theme) y al revés", () => {
   const css = readFileSync(new URL("../src/app/globals.css", import.meta.url), "utf8");
   // Sin las sub-propiedades de Tailwind 4 (p. ej. --text-titulo-pagina--letter-spacing): no son un token aparte.

@@ -77,6 +77,8 @@ los que React escribe el valor en cada pintado, y su prueba revisa los valores a
   «Caja 2» en Lugar y Fecha vacía. Luego se llena el paso, se va al paso 3, «Atrás», y los cinco valores del DOM deben
   ser los escritos; el POST se compara completo como antes. A 1440 y a 390.
 - `scripts/verify-contratos.mjs`, alta vacía: lo mismo con «Puesto» (no debe caer nada en la lista de personas).
+  (28/11/2026) El contrato pasó a una sola hoja: ahora se oprime «Guardar contrato» vacío y se escribe en «Causa u obra»
+  mientras llega el foco; también se comprobó en RED (con el foco a ciegas de 60 ms, el foco brinca y falla).
 - `scripts/test-foco-campo.mjs` (en CI, «Sistema de diseño — pruebas y candado»): reglas de `prepararFocoCampo` y que
   `PasosGuiados` conserve la llave.
 

@@ -6,13 +6,15 @@
 //   botones y de las pestañas, y lo marcado data-chico pueden ser de 15).
 // En CELULAR (< 1024 px) se queda como antes, porque se tocan con el dedo: botón ≥ 48 px, letra de 17 px (lo marcado
 //   data-chico, 15). Campos ≥ 48 px.
+// (28/11/2026) Campos «en línea» (solo línea abajo, el contrato; data-variante="linea"): ≥ 40 px en escritorio (el dueño
+//   pidió 36–40) y ≥ 48 en celular.
 // En las dos: títulos en 700, sin degradados, grises no más claros que #4B5563 y sin desborde horizontal.
 import assert from "node:assert/strict";
 
 /** Medidas mínimas (px) según el ancho. Las usan también las pruebas que revisan un botón o un campo suelto. */
 export const MINIMOS = {
-  escritorio: { boton: 38, icono: 36, campo: 42, principal: 38, letra: 16, letraControl: 15, chico: 15 },
-  movil: { boton: 48, icono: 44, campo: 48, principal: 56, letra: 17, letraControl: 17, chico: 15 },
+  escritorio: { boton: 38, icono: 36, campo: 42, campoLinea: 40, principal: 38, letra: 16, letraControl: 15, chico: 15 },
+  movil: { boton: 48, icono: 44, campo: 48, campoLinea: 48, principal: 56, letra: 17, letraControl: 17, chico: 15 },
 };
 export const minimos = (movil) => (movil ? MINIMOS.movil : MINIMOS.escritorio);
 
@@ -50,8 +52,9 @@ export async function revisarDiseno(page, movil, donde, raizSelector = "[data-vi
       // <select> escondido que Radix pone junto a su lista para los formularios: aria-hidden y de 1 px).
       const oculto = el.closest("[aria-hidden=true]") || el.getBoundingClientRect().width <= 2;
       const esCampo = !oculto && el.matches("input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=range]):not([type=hidden]):not([type=color]), select, [data-control='campo']:not(textarea)");
-      if (esCampo && !el.closest("table, [data-compacto]") && !el.matches("[data-compacto]") && alto < m.campo - 0.5) {
-        campos.push(`${el.tagName} #${el.id || el.getAttribute("name") || "?"} ${Math.round(alto)}px (mínimo ${m.campo})`);
+      const minCampo = el.matches("[data-variante='linea']") ? m.campoLinea : m.campo;
+      if (esCampo && !el.closest("table, [data-compacto]") && !el.matches("[data-compacto]") && alto < minCampo - 0.5) {
+        campos.push(`${el.tagName} #${el.id || el.getAttribute("name") || "?"} ${Math.round(alto)}px (mínimo ${minCampo})`);
       }
       if (/^H[1-3]$/.test(el.tagName) && Number(s.fontWeight) !== 700) titulos.push(`${el.tagName} ${s.fontWeight} «${el.textContent.trim().slice(0, 30)}»`);
       if (tieneTexto && !el.closest("button,[disabled],[data-estado]")) {

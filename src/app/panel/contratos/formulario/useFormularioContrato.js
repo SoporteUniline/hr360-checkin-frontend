@@ -48,8 +48,6 @@ export default function useFormularioContrato({ modo, id = null, duplicar = null
   const [form, setForm] = useState(null);
   const [errores, setErrores] = useState([]);
   const [intentado, setIntentado] = useState(false);
-  // Paso guiado que se revisó con «Continuar» (antes de intentar guardar): solo se marcan los errores de ese paso.
-  const [pasoRevisado, setPasoRevisado] = useState(null);
   const llenado = useRef(false);
   const vacacionesTocadas = useRef(false);
 
@@ -110,40 +108,25 @@ export default function useFormularioContrato({ modo, id = null, duplicar = null
   };
 
   const revisar = (f = form) => validarFormulario(f, { modo: editar ? "editar" : "nuevo", vacacionesLey: vacacionesLey?.dias ?? null, original: editar ? original : null });
-  // Después del primer intento, los errores se actualizan mientras se corrige.
-  // Antes de intentar guardar, solo los del paso que se revisó con «Continuar».
+  // Después del primer intento de guardar, los errores se actualizan mientras se corrige. (28/11/2026) El contrato va
+  // en una sola hoja: ya no hay «Continuar» por paso; nada se marca en rojo hasta que se intenta guardar.
   useEffect(() => {
-    if (!form) return;
-    if (intentado) setErrores(revisar(form));
-    else if (pasoRevisado) setErrores(revisar(form).filter((e) => pestanaDe(e.campo) === pasoRevisado));
-  }, [form, intentado, pasoRevisado]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  /**
-   * «Continuar» de los pasos guiados: revisa SOLO los datos del paso `clave` (no manda nada al servidor).
-   * → { ok, campo? } (campo: el primero con error, para llevar ahí el foco).
-   */
-  const revisarPaso = (clave) => {
-    const errs = revisar(form).filter((e) => pestanaDe(e.campo) === clave);
-    if (!intentado) {
-      setPasoRevisado(clave);
-      setErrores(errs);
-    }
-    return errs.length ? { ok: false, campo: errs[0].campo } : { ok: true };
-  };
+    if (form && intentado) setErrores(revisar(form));
+  }, [form, intentado]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // (28/11/2026, mockup v3) Lo que falta para poder guardar, con la MISMA revisión que «Guardar», pero sin marcar nada en
-  // rojo: lo usan el panel «Resumen» (pastillas «Falta») y las pestañas de los pasos ya visitados.
+  // rojo: lo usan el panel «Resumen» (pastillas «Falta») y el índice de secciones (✓ o «Falta N»).
   const faltantes = useMemo(() => (form ? revisar(form) : []), [form, vacacionesLey, original]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const permiso = editar && contrato ? queSePuedeEditar(contrato) : { editable: true, motivo: null };
   const sucio = Boolean(form && original && permiso.editable && hayCambios(original, form));
 
-  /** Guarda. → { ok, id?, mensaje?, sinCambios?, pestana? } (no lanza). */
+  /** Guarda. → { ok, id?, mensaje?, sinCambios?, pestana?, campo? } (no lanza). pestana: la sección del primer error. */
   const guardar = async () => {
     setIntentado(true);
     const errs = revisar(form);
     setErrores(errs);
-    if (errs.length) return { ok: false, pestana: pestanaDe(errs[0].campo), campo: errs[0].campo };
+    if (errs.length) return { ok: false, pestana: pestanaDe(errs[0].campo), campo: errs[0].campo, errores: errs };
     try {
       if (editar) {
         const cuerpo = cambiosDeEdicion(original, form);
@@ -162,7 +145,7 @@ export default function useFormularioContrato({ modo, id = null, duplicar = null
 
   return {
     cargando: (idFuente && detalle.isLoading) || !form, error: detalle.error ?? null, datos: detalle.data ?? null, contrato, mutarDetalle: detalle.mutate,
-    form, original, cambiar, errores, faltantes, guardar, revisarPaso, sucio, permiso, empleados, puestos: catalogo.data?.puestos ?? [], cargandoPersonas: catalogo.isLoading,
+    form, original, cambiar, errores, faltantes, guardar, sucio, permiso, empleados, puestos: catalogo.data?.puestos ?? [], cargandoPersonas: catalogo.isLoading,
     persona, vacacionesLey,
   };
 }

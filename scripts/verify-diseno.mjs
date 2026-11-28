@@ -10,7 +10,7 @@
 //   · texto gris no más claro que #4B5563;
 //   · sin degradados y sin desborde horizontal;
 //   · la ventana chica (crear puesto) NO se cierra al hacer clic afuera (sí con Esc, Cancelar o la X).
-// Páginas: contrato nuevo y editar (pasos en pestañas, grilla a todo el ancho y resumen), alta de empleado y la ventana «Nuevo puesto». El permiso y el acta en página
+// Páginas: contrato nuevo y editar (una sola hoja: índice, grilla a todo el ancho, campos en línea y resumen), alta de empleado y la ventana «Nuevo puesto». El permiso y el acta en página
 // se revisan con las mismas reglas (scripts/lib/reglasDiseno.mjs) en scripts/verify-permiso-acta-pagina.mjs.
 //
 // Uso (después de «NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build»):
@@ -90,10 +90,10 @@ try {
     const errores = [];
     page.on("pageerror", (e) => errores.push(e.message));
 
-    // 1. Contrato nuevo en página con pasos guiados.
+    // 1. Contrato nuevo en UNA SOLA HOJA (28/11/2026): índice a la izquierda, secciones una debajo de otra, resumen a la
+    //    derecha, campos «en línea» y la barra con Cancelar y Guardar.
     await page.goto(base + "/panel/contratos/nuevo", { waitUntil: "domcontentloaded" });
     await page.locator("#ct-id_empleado").waitFor({ timeout: 60000 });
-    await page.locator("#ct-id_empleado").selectOption("15").catch(() => {});
     await dormir(600);
     await captura(page, `contrato-nuevo-${sufijo}`);
     if (!SOLO_CAPTURAS) {
@@ -101,52 +101,50 @@ try {
       assert.equal(enc.fondo, GRIS_FRANJA, "contrato: encabezado gris");
       const h1 = await estilo(page.locator("[data-encabezado-pagina] h1"));
       assert.deepEqual([h1.letra, h1.peso], ["26px", "700"], "contrato: título de página de 26 px en 700");
-      if (movil) {
-        assert.match(await page.locator("[data-pasos-movil]").innerText(), /Paso 1 de 5/);
-        assert.equal(await page.locator("[data-pasos-pestanas]").isVisible(), false, "en celular no se ven las pestañas de pasos");
-      } else {
-        assert.equal(await page.locator("[data-pasos-pestanas] [role=tab]").count(), 5, "contrato: 5 pestañas de pasos arriba");
-        assert.equal(await page.locator("[data-pasos-pestanas] [aria-selected=true]").count(), 1);
-      }
+      // Una sola hoja: las cinco secciones a la vista, sin pestañas ni «Continuar».
+      assert.deepEqual(await page.locator("[data-seccion-formulario]").evaluateAll((els) => els.map((e) => e.dataset.panel)), ["persona", "sueldo", "jornada", "prestaciones", "documento"]);
+      assert.equal(await page.locator("[data-pasos-pestanas], [data-pasos-movil], [data-accion='continuar'], [data-accion='atras']").count(), 0, "contrato: sin pasos ni Continuar/Atrás");
+      // Índice: columna a la izquierda desde 1200 px; con menos, pastillas arriba.
+      assert.equal(await page.locator("[data-indice-secciones]").isVisible(), ancho >= 1200, `contrato ${sufijo}: índice a la izquierda`);
+      assert.equal(await page.locator("[data-indice-compacto]").isVisible(), ancho < 1200, `contrato ${sufijo}: índice compacto arriba`);
+      const indice = page.locator(ancho >= 1200 ? "[data-indice-secciones]" : "[data-indice-compacto]");
+      assert.equal(await indice.locator("[data-indice]").count(), 5);
+      if (ancho >= 1200) assert.equal(Math.round((await page.locator("[data-indice-secciones]").boundingBox()).width), 232, "índice de 232 px");
       const seccion = await estilo(page.locator("[data-seccion-formulario] [data-franja]").first());
       assert.equal(seccion.fondo, GRIS_FRANJA, "contrato: franja gris de la sección");
-      const campo = await estilo(page.locator("#ct-puesto"));
-      assert.deepEqual([Math.round(campo.alto), campo.letra], movil ? [56, "18px"] : [42, "16px"], "contrato: campo de 42/56 px con letra de 16/18");
+      // Campo «en línea» (pedido del dueño): sin caja, línea gris de 1 px abajo, 40 px en escritorio / 48 en celular.
+      const linea = await page.locator("#ct-salario_base").evaluate((el) => { const st = getComputedStyle(el); return { alto: el.getBoundingClientRect().height, letra: st.fontSize, arriba: st.borderTopWidth, abajo: st.borderBottomWidth, colorAbajo: st.borderBottomColor, fondo: st.backgroundColor, radio: st.borderTopLeftRadius }; });
+      assert.deepEqual([Math.round(linea.alto), linea.letra], movil ? [48, "18px"] : [40, "16px"], "contrato: campo en línea de 40/48 px con letra de 16/18");
+      assert.deepEqual([linea.arriba, linea.abajo, linea.colorAbajo, linea.fondo, linea.radio], ["0px", "1px", BORDE_CAMPO, "rgba(0, 0, 0, 0)", "0px"], "contrato: solo línea abajo, sin caja");
       const barra = page.locator("[data-barra-formulario]");
-      await revisarBotones(barra, `contrato ${sufijo}`, { principal: "Continuar", movil });
-      await revisarDiseno(page, movil, `contrato paso 1 ${sufijo}`);
-      // Continuar con lo obligatorio del paso hecho → paso 2; Atrás regresa.
-      await page.locator("#ct-puesto").fill("Cajera");
-      await barra.getByRole("button", { name: "Continuar" }).click();
-      await page.locator("#ct-periodicidad_pago").waitFor();
-      if (movil) assert.match(await page.locator("[data-pasos-movil]").innerText(), /Paso 2 de 5 · Sueldo y pago[\s\S]*40 %/);
-      else assert.equal(await page.locator("[data-pasos-pestanas] [data-paso]").first().getAttribute("data-estado-paso"), "listo");
-      // Error de un campo: borde rojo de 2 px y mensaje debajo.
-      await barra.getByRole("button", { name: "Continuar" }).click();
-      const conError = await estilo(page.locator("#ct-salario_base"));
-      assert.equal(conError.ancho, "2px", "un campo con error lleva borde de 2 px");
-      assert.equal(conError.borde, "rgb(220, 38, 38)", "y en rojo #DC2626");
-      await page.locator("#ct-salario_base-error").waitFor();
-      await captura(page, `contrato-error-${sufijo}`);
-      await revisarDiseno(page, movil, `contrato paso 2 con error ${sufijo}`);
-      await barra.getByRole("button", { name: "Atrás" }).click();
-      await page.locator("#ct-puesto").waitFor();
-      // Mockup v3: grilla que se acomoda al ancho (4 columnas desde 1600 px, 3 desde 1200, 2 desde 768, 1 en celular) y
-      // resumen a la derecha desde 1200 px (con menos, plegable abajo).
-      const columnas = await page.locator("[data-panel='persona'] > div").last().evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(" ").length);
-      assert.equal(columnas, ancho >= 1600 ? 4 : ancho >= 1200 ? 3 : ancho >= 768 ? 2 : 1, `contrato ${sufijo}: columnas de la grilla`);
+      await revisarBotones(barra, `contrato ${sufijo}`, { principal: "Guardar contrato", movil });
+      await revisarDiseno(page, movil, `contrato nuevo ${sufijo}`);
+      // Grilla que se acomoda al ancho de la TARJETA: 1, 2, 3 o 4 columnas (Persona y puesto, hasta 4).
+      const grilla = await page.locator("[data-panel='persona'] > div").last().evaluate((el) => ({ columnas: getComputedStyle(el).gridTemplateColumns.split(" ").length, ancho: el.closest("section").getBoundingClientRect().width }));
+      const esperadas = grilla.ancho >= 960 ? 4 : grilla.ancho >= 672 ? 3 : grilla.ancho >= 416 ? 2 : 1;
+      assert.equal(grilla.columnas, esperadas, `contrato ${sufijo}: ${esperadas} columnas con la tarjeta de ${Math.round(grilla.ancho)} px`);
+      if (!movil) assert.ok(grilla.columnas >= 2, `contrato ${sufijo}: en escritorio, al menos 2 columnas (${grilla.columnas})`);
       assert.equal(await page.locator("[data-resumen-formulario]").isVisible(), ancho >= 1200, `contrato ${sufijo}: resumen a la derecha`);
       assert.equal(await page.locator("[data-resumen-plegable]").isVisible(), ancho < 1200, `contrato ${sufijo}: resumen plegable abajo`);
-      if (ancho >= 1200) assert.equal(Math.round((await page.locator("[data-resumen-formulario]").boundingBox()).width), 320, "resumen de 320 px");
+      if (ancho >= 1200) assert.equal(Math.round((await page.locator("[data-resumen-formulario]").boundingBox()).width), 300, "resumen de 300 px");
+      // Guardar vacío: el campo con error lleva la línea roja de 2 px (1 de borde + 1 de sombra) y el mensaje debajo.
+      await barra.getByRole("button", { name: "Guardar contrato" }).click();
+      await page.locator("#ct-salario_base-error").waitFor();
+      const conError = await page.locator("#ct-salario_base").evaluate((el) => { const st = getComputedStyle(el); return [st.borderBottomColor, st.borderBottomWidth, st.boxShadow]; });
+      assert.equal(conError[0], "rgb(220, 38, 38)", "con error, la línea en rojo #DC2626");
+      assert.match(conError[2], /rgb\(220, 38, 38\).*inset|inset.*rgb\(220, 38, 38\)/, "y de 2 px (sombra interior roja)");
+      await captura(page, `contrato-error-${sufijo}`);
+      await revisarDiseno(page, movil, `contrato con errores ${sufijo}`);
     }
 
-    // 1b. Editar un contrato: todos los pasos listos, se guarda desde cualquiera; resumen con el sueldo del servidor.
+    // 1b. Editar un contrato: todas las secciones completas (✓), se guarda con «Guardar cambios»; resumen con el sueldo del servidor.
     await page.goto(base + "/panel/contratos/41/editar", { waitUntil: "domcontentloaded" });
     await page.locator("#ct-puesto").waitFor({ timeout: 60000 });
     await dormir(600);
     await captura(page, `contrato-editar-${sufijo}`);
     if (!SOLO_CAPTURAS) {
-      if (!movil) assert.equal(await page.locator("[data-pasos-pestanas] [data-estado-paso='listo']").count(), 4, "editar: los otros pasos, listos");
+      const indice = page.locator(ancho >= 1200 ? "[data-indice-secciones]" : "[data-indice-compacto]");
+      assert.equal(await indice.locator("[data-completa]").count(), 5, "editar: las cinco secciones completas (✓)");
       await revisarBotones(page.locator("[data-barra-formulario]"), `contrato editar ${sufijo}`, { principal: "Guardar cambios", movil });
       await revisarDiseno(page, movil, `contrato editar ${sufijo}`);
       const resumen = page.locator(ancho >= 1200 ? "[data-resumen-formulario]" : "[data-resumen-plegable]");
@@ -213,7 +211,7 @@ try {
 
     assert.deepEqual(errores.filter((m) => !/ResizeObserver|hydrat/i.test(m)), [], `errores en la página (${sufijo})`);
     await ctx.close();
-    console.log(`✔ ${sufijo}: ${SOLO_CAPTURAS ? "capturas «antes»" : "contrato (pasos, campos, error, botones), alta de empleado y ventana chica según el sistema de diseño"}`);
+    console.log(`✔ ${sufijo}: ${SOLO_CAPTURAS ? "capturas «antes»" : "contrato en una sola hoja (índice, campos en línea, error, botones), alta de empleado y ventana chica según el sistema de diseño"}`);
   }
   ok = true;
 } finally {

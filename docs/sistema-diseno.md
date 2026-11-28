@@ -11,6 +11,17 @@ quedaron enormes (48 y 56 px) y de que el formulario era angosto y dejaba vacía
 - el **contrato** pasó a pantalla a todo el ancho: pasos como **pestañas** arriba, **grilla que se acomoda** (2, 3 o 4
   columnas) y **panel de resumen** a la derecha. Los demás formularios se migran uno por uno cuando el dueño lo pida.
 
+**Contrato en una sola hoja (28/11/2026, pedido del dueño; lo evalúa antes de llevarlo a otras pantallas).** El dueño
+pidió el contrato «todo en una sola hoja hacia abajo, sin siguiente, siguiente», con un índice a la izquierda, el resumen a
+la derecha, **campos en línea** («no quiero que pongas cuadro envolviendo los valores, solo línea abajo, del tamaño del
+texto») y **buscador en todo lo que viene de un catálogo**. Las pestañas de pasos (`PestanasPasos`) quedan para quien las
+use; el contrato ya no. Ver la sección 9.
+
+> **Regla de listas (28/11/2026):** una lista de **más de 7 opciones o que viene de un catálogo → con buscador**
+> (`ListaConBuscador`); **si es catálogo, con alta en ventana chica** («+ Crear "texto"» abre una `VentanaChica`, respeta
+> los permisos y deja elegido lo creado sin perder lo capturado). Las listas cortas y fijas (modalidad, moneda: 7 o
+> menos y que no vienen de un catálogo) siguen con `Lista` (nativa).
+
 > Regla de oro: los colores, alturas, letras y radios viven en **un solo lugar** (`src/app/globals.css`). Si el dueño
 > pide «botones más grandes» o «otro azul», se cambia ahí y cambia en todo el sistema.
 
@@ -74,6 +85,8 @@ mano; las utilidades ya cambian solas en 1024 px.
 | `--adamia-alto-boton-principal` | 56 | **38** | `h-boton-principal` |
 | `--adamia-alto-icono` | 44 | **36** | `size-icono` (solo ícono: renglones de tabla y la X de las ventanas) |
 | `--adamia-alto-campo` | 56 | **42** | `h-campo` |
+| `--adamia-alto-campo-linea` | 48 | **40** | `h-campo-linea` (campo «en línea», 28/11/2026) |
+| `--adamia-relleno-campo` | 16 | **12** | `px-relleno-campo` (relleno a los lados del campo de caja) |
 | `--adamia-letra-cuerpo` | 17 | 16 | `text-cuerpo` |
 | `--adamia-letra-boton` / `-principal` | 17 / 18 | **15 / 15** | `text-boton`, `text-boton-principal` (peso 600) |
 | `--adamia-letra-campo` | 18 | **16** | `text-campo` |
@@ -83,7 +96,7 @@ mano; las utilidades ya cambian solas en 1024 px.
 | `--adamia-letra-titulo-pagina` | 26 | **26** | `text-titulo-pagina` (h1, peso 700, `letter-spacing: -0.02em`) |
 | `--adamia-radio-boton` | 10 | **8** | `rounded-boton` (botones y campos) |
 | `--adamia-radio-seccion` | 14 | 14 | `rounded-seccion` (tarjetas) |
-| `--adamia-ancho-resumen` | — | 320 | `w-resumen` (panel de resumen, desde 1200 px) |
+| `--adamia-ancho-resumen` | — | 300 | `w-resumen` (panel de resumen, desde 1200 px; 320 → 300 el 28/11/2026, con el índice a la izquierda) |
 
 Los botones llevan **16 px de relleno** a los lados en escritorio. El espaciado del título (`-0.02em`) viene con
 `text-titulo-pagina` (`--adamia-espaciado-titulo-pagina`). Títulos siempre en **700**, nunca 800 (`font-bold`, no
@@ -148,6 +161,7 @@ El marco de un formulario grande: fondo `#F9FAFB`, encabezado arriba, contenido 
 ```
 - `ancho="completo"` (mockup v3): márgenes de 32 px en lugar de 48 y el contenido usa todo el ancho.
 - `resumen={<ResumenFormulario … />}`: lo acomoda a la derecha desde 1200 px y abajo (plegable) con menos.
+- `indice={<IndiceSecciones … />}` (28/11/2026): lo acomoda a la izquierda desde 1200 px y arriba (pastillas) con menos.
 
 ### SeccionFormulario
 Tarjeta blanca con franja gris y título h2 (18 px en escritorio, 700). `columnas` = 1, 2 (por defecto), 3 o **"auto"**.
@@ -155,10 +169,13 @@ Tarjeta blanca con franja gris y título h2 (18 px en escritorio, 700). `columna
 <SeccionFormulario titulo="Sueldo" descripcion="Lo que gana y cada cuándo se le paga." columnas={2}>…</SeccionFormulario>
 ```
 
-**Grilla que se acomoda (`columnas="auto"`, mockup v3).** Para formularios a todo el ancho: **1 columna en celular, 2
-desde 768 px, 3 desde 1200 px y 4 desde 1600 px**, con la tarjeta más compacta (franja de 12 px, título y descripción en
-un renglón, cuerpo de 20 px). Úsala con `PaginaFormulario ancho="completo"`. Un campo largo (CLABE, dirección) ocupa 2
-columnas con `CAMPO_ANCHO`; una nota, un aviso o un texto largo (observaciones) va a lo ancho con `RENGLON_COMPLETO`:
+**Grilla que se acomoda (`columnas="auto"`).** Para formularios a todo el ancho. Desde el 28/11/2026 se acomoda al **ancho
+de la tarjeta** (container queries `@container` / `@[26rem]:`), no al de la pantalla: con el índice y el resumen a los
+lados, a 1366 px el formulario mide ~460 px y las columnas por ancho de pantalla quedaban de 140 px. **1 columna hasta
+416 px, 2 hasta 672, 3 hasta 960 y 4 desde ahí**, con la tarjeta más compacta (franja de 12 px, título y descripción en un
+renglón, cuerpo de 20 px). `maxColumnas={3}` para una sección de 3 o 6 datos, así no queda un hueco a la derecha. Úsala
+con `PaginaFormulario ancho="completo"`. Un campo largo (CLABE, dirección) ocupa 2 columnas con `CAMPO_ANCHO`; una nota,
+un aviso o un texto largo (observaciones) va a lo ancho con `RENGLON_COMPLETO`:
 ```jsx
 <SeccionFormulario titulo="Forma de pago" descripcion="A dónde se le deposita." columnas="auto">
   <CampoFormulario id="banco" etiqueta="Banco">{(p) => <Lista {...p} … />}</CampoFormulario>
@@ -179,6 +196,52 @@ Etiqueta arriba (ligada con `htmlFor`/`id`), el control, y abajo la ayuda o el e
 Para un `<textarea>`: `className={cn(p.className, CLASE_TEXTO_LARGO)}`. Si armas el control tú: `claseControl(error)`.
 Un campo que ocupa todo el renglón: `className="md:col-span-2"`.
 
+**Campo con ícono a la izquierda (lupa).** Pon `pl-12` (o `pl-10`) en el control y el ícono `absolute left-4`. El relleno
+de los lados del campo es el token `px-relleno-campo` (16 / 12 px), **sin** `lg:px-*`: antes `CLASE_CONTROL` traía
+`lg:px-3`, que en escritorio le ganaba al `pl-12` y la lupa quedaba encima del texto («B🔍scar por nombre…», 28/11/2026;
+se veía en «Nuevo permiso» y en el buscador de empleado del acta). Lo mismo con los campos de shadcn dentro de
+`data-formulario-grande`: el relleno izquierdo de `globals.css` no se aplica si el campo trae su `pl-*`. Lo revisa
+`verify-permiso-acta-pagina` (el texto empieza después de la lupa) y `test-pasos-guiados` (la clase no trae `lg:px-*`).
+
+**Campos «en línea» (`variante="linea"`, 28/11/2026, pedido del dueño en el contrato).** Sin caja: solo una **línea de
+1 px gris (#D1D5DB) abajo**, fondo transparente, sin radio y **sin relleno a los lados** (el valor queda alineado con la
+etiqueta). **40 px** de alto en escritorio (48 en celular), letra de 16 / 18 px. Al enfocar, la línea pasa a **azul de 2 px**;
+con error, a **rojo de 2 px** (el segundo píxel es una sombra interior, así el campo no brinca). La lista nativa dibuja su
+flecha a la derecha (`select[data-variante="linea"]` en `globals.css`) y `ListaConBuscador` su chevrón. Se pone para todo
+un formulario con `<EstiloCampos variante="linea">` (o campo por campo con `variante="linea"`); `Dato` toma la misma
+altura. Clases sueltas: `claseControl(error, extra, "linea")`, `CLASE_CONTROL_LINEA`, `CLASE_TEXTO_LARGO_LINEA` (el
+`<textarea>` empieza de un renglón y crece con el texto). **Hoy solo el contrato** los usa: el dueño quiere evaluarlos ahí
+antes de llevarlos a las demás pantallas; cuando lo apruebe, este será el estilo de los campos de formulario.
+
+### ListaConBuscador (28/11/2026)
+Lista desplegable **con buscador** para todo lo que viene de un catálogo o tiene más de 7 opciones (persona, jefe,
+puesto, departamento, lugar de trabajo). Escribes y filtra **sin importar acentos ni mayúsculas** (y por palabras en
+cualquier orden: «ana ruiz» encuentra «Ana Torres Ruiz»); ↓ ↑ Enter Esc; escribir sobre el botón abre ya buscando. Cada
+opción puede llevar un `detalle` gris (el puesto de la persona, también se busca ahí). En celular la lista mide lo que el
+campo (mínimo 280 px) y los renglones son de 48 px.
+- `alCrear(texto)`: si viene, cuando lo escrito no existe aparece **«+ Crear «texto»»**; quien la usa abre una
+  `VentanaChica` para el alta y, al guardar, lo deja elegido. Sin permiso, no se pasa y no se ofrece.
+- Un valor guardado que **ya no está en el catálogo** (un contrato viejo) se ve como «Vendedorx (no está en el
+  catálogo)» y **se conserva**: no se borra solo.
+- `opcionVacia="Sin jefe directo"` agrega la opción para dejarlo vacío.
+- Las reglas (filtrar, «Crear», fuera de catálogo, flechas) son puras: `src/lib/formulario/listaConBuscador.mjs`, con
+  pruebas en `scripts/test-lista-buscador.mjs`. Deja `data-lista-buscador` y `data-valor` en el botón para las pruebas.
+```jsx
+<CampoFormulario id="ct-puesto" etiqueta="Puesto">
+  {(p) => <ListaConBuscador {...p} opciones={[{ value: "Cajera", label: "Cajera" }]} valor={puesto} onCambio={setPuesto}
+    vacio="Elige el puesto" buscar="Buscar puesto…" alCrear={puedeCrear ? (texto) => abrirAlta(texto) : null} />}
+</CampoFormulario>
+```
+Antes de esto había `Combobox`, `CreatableCombobox`, `ComboboxDepartamento` y `ComboboxSucursal` (shadcn, sin los tokens
+ni la búsqueda sin acentos); siguen en sus pantallas y se cambian a `ListaConBuscador` cuando se migre cada una.
+
+### IndiceSecciones (28/11/2026)
+Índice de un formulario largo **en una sola hoja**. Cada sección con ✓ (completa) o la pastilla roja **«Falta N»**; con
+clic la pantalla baja suave a la sección (sin animación si la persona pidió menos movimiento) y la que se está viendo
+queda resaltada. **Desde 1200 px**: columna fija de 232 px a la izquierda; **con menos**: fila compacta de pastillas
+arriba, pegada al bajar. Va en el prop `indice` de `PaginaFormulario`; cada sección lleva `id={anclaSeccion(clave)}` y
+`irASeccion(clave)` lleva a ella (lo usan los enlaces del aviso de errores).
+
 ### BarraAccionesFormulario
 Pegada abajo. Escritorio: Cancelar a la izquierda y solo; a la derecha el aviso, «← Atrás», Siguiente y la principal
 (azul, la única llamativa; con `flecha: true` dice «Continuar →»). Celular: la principal a todo lo ancho y los demás
@@ -189,6 +252,9 @@ sin guardar», «Borrador guardado…») va en el encabezado, a la derecha, y la
   principal={{ texto: "Continuar", onClick: continuar }} aviso="Borrador guardado hace 1 min" />
 ```
 Con un `<form id="x">`: `principal={{ texto: "Guardar", type: "submit", form: "x" }}`.
+`enRenglon` (28/11/2026, el contrato): solo Cancelar a la izquierda y, a la derecha, el estado («Faltan 3 datos para
+guardar», «Tienes cambios sin guardar») y la principal; en celular, Cancelar y la principal en un renglón y el estado
+arriba en una línea (la barra fija ocupa menos pantalla).
 
 ### PestanasPasos (mockup v3)
 Los pasos como **pestañas horizontales** debajo del encabezado gris, de orilla a orilla (el contenido usa todo el ancho).
@@ -298,8 +364,9 @@ La ventana se cierra solo con Esc, Cancelar, Guardar o la X; lo escrito no se pi
 6. Si sales con cambios sin guardar, usa `useGuardiaSalida` (`src/components/cambios/CambiosPendientes.jsx`).
 7. Agrega el archivo a `MIGRADOS` en `scripts/candado-diseno.mjs` y corre `node scripts/candado-diseno.mjs`.
 8. Revisa en el navegador a 1920, 1366 y 390 (puedes copiar `scripts/verify-diseno.mjs`).
-9. ¿Es largo, por pasos y debe aprovechar el ancho? Sigue el contrato (mockup v3): `ancho="completo"`, `PestanasPasos`,
-   `columnas="auto"` y `ResumenFormulario`.
+9. ¿Es largo y debe aprovechar el ancho? Sigue el contrato (una sola hoja, 28/11/2026): `ancho="completo"`,
+   `IndiceSecciones`, `columnas="auto"`, `ResumenFormulario` y la barra `enRenglon`. Las listas de un catálogo, con
+   `ListaConBuscador`.
 
 ## 6. El candado
 
@@ -320,13 +387,18 @@ archivo no puede tener más casos que los anotados; cuando migres uno, corre `no
 
 ## 7. Pruebas del sistema de diseño
 
-- `node --test scripts/test-pasos-guiados.mjs` — pasos guiados y `cn()` con los tokens.
+- `node --test scripts/test-pasos-guiados.mjs` — pasos guiados, `cn()` con los tokens y que la clase de campo no traiga
+  `lg:px-*` (lupa encimada).
+- `node --test scripts/test-lista-buscador.mjs` — buscador sin acentos, «+ Crear», valor fuera de catálogo y flechas.
+- `node --test scripts/test-foco-campo.mjs` — `prepararFocoCampo` (INC-012), también con `desplazar`.
 - `node --test scripts/test-candado-diseno.mjs` — reglas del candado.
 - `scripts/verify-diseno.mjs` (Playwright, 1440 y 390, backend simulado; `ANCHOS=1920,1366,390` para otros): contrato
-  nuevo y editar (pestañas, columnas de la grilla según el ancho, resumen a la derecha o plegable), alta de empleado (4
+  nuevo y editar en una sola hoja (índice, campos en línea de 40/48 px, columnas según el ancho de la tarjeta, resumen a la
+  derecha o plegable, línea roja con error), alta de empleado (4
   pestañas) y la ventana «Crear puesto». `ETAPA=antes` solo toma capturas para comparar antes y después.
 - `scripts/lib/reglasDiseno.mjs` tiene las medidas mínimas (`MINIMOS`): en escritorio botón ≥ 38 (ícono ≥ 36), campo ≥ 42,
-  letra ≥ 16 (etiquetas, botones, pestañas y lo `data-chico`, ≥ 15); en celular botón ≥ 48, campo ≥ 48, letra ≥ 17. La
+  letra ≥ 16 (etiquetas, botones, pestañas y lo `data-chico`, ≥ 15); en celular botón ≥ 48, campo ≥ 48, letra ≥ 17. Los campos en línea (`data-variante="linea"`): ≥ 40 en
+  escritorio y ≥ 48 en celular. La
   usan `verify-diseno`, `verify-contratos`, `verify-permiso-acta-pagina` y `verify-prestamos`.
 - `scripts/verify-letra.mjs` (1920, 1366 y 390): la letra cargada es Plus Jakarta Sans, sin desborde ni textos recortados
   nuevos en las pantallas principales.
@@ -354,19 +426,31 @@ archivo no puede tener más casos que los anotados; cuando migres uno, corre `no
 
 Lo demás: ver la lista por módulo en `scripts/candado-diseno.excepciones.json`.
 
-## 9. El contrato con el mockup v3 (28/11/2026)
+## 9. El contrato en una sola hoja (28/11/2026)
 
-`src/app/panel/contratos/formulario/FormularioContrato.jsx` (nuevo, duplicar, desde la ficha y editar):
-- **Encabezado delgado**: «← Contratos» (o «← Contrato CT-…») y el título; a la derecha «Tienes cambios sin guardar» y, al
-  editar, el estado y «Ver documento» (abre en otra pestaña el documento ya guardado, en `/panel/contratos/[id]#documento`).
-  Al crear no hay documento todavía, así que no hay vista previa.
-- **Pestañas** de los 5 pasos. «Falta N» sale en un paso cuando ya se revisó con «Continuar», al intentar guardar o
-  cuando ya lo visitaste y le falta algo (la misma revisión de `validarFormulario`). Al crear, «Guardar contrato» está en
-  el último paso y revisa todo; al editar, «Guardar cambios» está en todos.
-- **Grilla** `columnas="auto"` en cada paso; las notas y los textos largos van a lo ancho.
-- **Resumen** (`src/lib/contratos/resumenContrato.mjs`, con pruebas en `scripts/test-formulario-contrato.mjs`): persona,
-  puesto y área, sueldo, jornada, fecha de inicio y lo que falta. Al **editar**, el sueldo al mes, por periodo y diario son
-  los que manda el servidor (la misma conversión que la nómina, `sueldoDesglose`). Al **crear** solo se muestra lo que se
-  escribió (el sueldo de cada periodo); el mensual y el diario los calcula la nómina al guardar y no se adivinan.
-- La lógica no cambió: mismas validaciones, llamadas, aviso de salida y parámetros (`?duplicar`, `?empleado`, `?empresa`,
-  `?sueldo`, `?periodicidad`).
+`src/app/panel/contratos/formulario/FormularioContrato.jsx` (nuevo, duplicar, desde la ficha y editar). Antes iba por
+pestañas de pasos (mockup v3); el dueño pidió «todo en una sola hoja hacia abajo, sin siguiente, siguiente»:
+- **Encabezado delgado**: «← Contratos» (o «← Contrato CT-…») y el título; al editar, la línea con folio, tipo, vigencia y
+  firma, el estado y «Ver documento» (abre en otra pestaña `/panel/contratos/[id]#documento`). Al crear no hay vista previa.
+- **Las cinco secciones una debajo de otra**, cada una con su franja gris: Persona y puesto · Sueldo y pago · Jornada y
+  horario · Prestaciones · Documento. Grilla `columnas="auto"` por ancho de tarjeta: Persona y puesto y Jornada hasta 4
+  columnas (8 y 4 datos, sin huecos), las demás hasta 3. El horario y la comida van en un renglón cada uno («08:00 a
+  16:00»). Campos **en línea** (`EstiloCampos variante="linea"`).
+- **Índice** a la izquierda (`IndiceSecciones`): ✓ o «Falta N» con la misma revisión que «Guardar» (`validarFormulario`).
+- **Resumen** a la derecha (`src/lib/contratos/resumenContrato.mjs`): persona, puesto y área, sueldo, jornada, inicio y lo
+  que falta. Al editar, el sueldo al mes, por periodo y diario son los del servidor; al crear, solo lo escrito.
+- **Barra fija abajo**: Cancelar (gris) a la izquierda; a la derecha el estado y **Guardar contrato** / **Guardar cambios**
+  (azul). Ya no hay «Atrás» ni «Continuar».
+- **Guardar con faltantes**: se marcan en rojo **todos** los campos con error, arriba aparece el aviso con un enlace por
+  sección (pegado arriba en escritorio), la pantalla baja a la **primera sección con errores en el orden de la hoja**
+  (`primerError`) y el foco va a su campo con `prepararFocoCampo(…)(id, { desplazar })`: si la persona ya está en otro
+  campo, ni se le mueve la pantalla ni el foco (INC-012).
+- **Catálogos**: persona, jefe, puesto, departamento o área y lugar de trabajo son `ListaConBuscador`. Puesto, departamento
+  y lugar salen de los catálogos de la empresa (`/checador/puestos`, `/checador/departamentos`, `/checador/sucursales` con
+  `?id_empresa=`, los de las pantallas Catálogos) y tienen «+ Crear» en ventana chica (`VentanaAltaCatalogo.jsx`, POST
+  `{ nombre, id_empresa }`; un 409 elige el que ya existía). «+ Crear» se ofrece solo si la persona puede editar la pantalla
+  de ese catálogo (`nivelEnRuta`); el servidor decide al final. **El contrato sigue guardando el nombre (texto)** de
+  puesto, departamento y lugar: no cambió lo que espera el servidor. Un valor viejo que no está en el catálogo se ve
+  «(no está en el catálogo)» y se conserva (al editar no se manda si no se toca).
+- La lógica no cambió: mismas validaciones, cálculos, llamadas, aviso de salida y parámetros (`?duplicar`, `?empleado`,
+  `?empresa`, `?sueldo`, `?periodicidad`); al editar solo se manda lo que cambió (INC-CONTRATO-EDITAR-001).

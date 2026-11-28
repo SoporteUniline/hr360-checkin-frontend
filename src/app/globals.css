@@ -89,6 +89,8 @@
   --spacing-boton-principal: var(--adamia-alto-boton-principal);
   --spacing-icono: var(--adamia-alto-icono);
   --spacing-campo: var(--adamia-alto-campo);
+  --spacing-campo-linea: var(--adamia-alto-campo-linea);
+  --spacing-relleno-campo: var(--adamia-relleno-campo);
 
   --radius-boton: var(--adamia-radio-boton);
   --radius-seccion: var(--adamia-radio-seccion);
@@ -150,6 +152,13 @@
   --adamia-radio-boton: 10px;
   --adamia-radio-seccion: 14px;
   --adamia-alto-campo: 56px;
+  /* (28/11/2026) Campo «en línea» (solo una línea abajo, pedido del dueño para el contrato): un poco más bajo que el de
+     caja porque no tiene relleno ni borde arriba. En celular, 48 para el dedo. */
+  --adamia-alto-campo-linea: 48px;
+  /* (28/11/2026) Relleno a los lados del texto en los campos de caja. Es un token (y no `px-4 lg:px-3`) para que un
+     campo con ícono a la izquierda (`pl-12`, la lupa) conserve su espacio: la clase con `lg:` le ganaba al `pl-*` y la
+     lupa quedaba encima del texto («B🔍scar por nombre…»). */
+  --adamia-relleno-campo: 16px;
   --adamia-letra-cuerpo: 17px;
   --adamia-letra-boton: 17px;
   --adamia-letra-boton-principal: 18px;
@@ -159,7 +168,7 @@
   --adamia-letra-titulo-seccion: 20px;
   --adamia-letra-titulo-pagina: 26px;
   --adamia-espaciado-titulo-pagina: -0.02em; /* el título de página va un poco apretado (mockup v3) */
-  --adamia-ancho-resumen: 320px;     /* panel de resumen a la derecha de un formulario en página (desde 1200 px) */
+  --adamia-ancho-resumen: 300px;     /* panel de resumen a la derecha de un formulario en página (desde 1200 px). (28/11/2026) 300 con el índice a la izquierda */
 
   --radius: 0.625rem;
   --card: oklch(1 0 0);
@@ -206,6 +215,8 @@
     --adamia-alto-icono: 36px;
     --adamia-radio-boton: 8px;
     --adamia-alto-campo: 42px;
+    --adamia-alto-campo-linea: 40px;
+    --adamia-relleno-campo: 12px;
     --adamia-letra-cuerpo: 16px;
     --adamia-letra-boton: 15px;
     --adamia-letra-boton-principal: 15px;
@@ -582,8 +593,23 @@ html.adamia-native .adamia-web-only {
   font-size: var(--adamia-letra-campo);
   border-radius: var(--adamia-radio-boton);
   border-color: var(--adamia-borde-campo);
-  padding-inline: 16px;
+  padding-inline-end: 16px;
   color: var(--adamia-texto);
+}
+/* (28/11/2026) El relleno de la izquierda solo si el campo no trae el suyo (`pl-10` de un campo con lupa o ícono): este
+   bloque está fuera de @layer y le ganaba al `pl-*`, y el ícono quedaba encima del texto. */
+[data-formulario-grande] [data-control="campo"]:is(input, button):not([data-compacto]):not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([class*="pl-"]) {
+  padding-inline-start: 16px;
+}
+/* (28/11/2026) Campo «en línea» del contrato (CampoFormulario variante="linea"): la lista nativa pierde su caja, así
+   que la flecha se dibuja a la derecha y el texto deja su lugar para que no se encimen. */
+select[data-variante="linea"] {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234b5563' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 2px center;
+  background-size: 18px;
+  padding-right: 28px;
 }
 /* El desplegable con iconos (SelectConIconos con `grande`, p. ej. «Qué pasó» y «Motivo» en la página de Permiso): si el
    texto no cabe baja a un segundo renglón, así que crece en lugar de cortarse. */
