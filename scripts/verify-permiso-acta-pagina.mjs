@@ -7,8 +7,9 @@
 //   · ?volver= regresa a la pantalla de origen (solo rutas internas del panel);
 //   · «Nueva acta» y «Editar» llevan a /panel/actas-administrativas/nueva y /[id]/editar; el acta va por pasos (datos,
 //     hecho, sanción, declaraciones, revisar) y manda lo mismo que antes; editar guarda y regresa;
-//   · en cada página: botones de 48 px (principal 56), letra de 16/17, títulos 700, grises ≥ #4B5563, sin degradados
-//     ni desborde horizontal (las mismas reglas de scripts/verify-diseno.mjs).
+//   · en cada página: botones de 38 px en escritorio y 48 en celular (principal 56 en celular), campos de 42 / 56,
+//     letra de 16/17 (etiquetas y botones de 15 en escritorio), títulos 700, grises ≥ #4B5563, sin degradados ni
+//     desborde horizontal (las mismas reglas de scripts/verify-diseno.mjs; mockup v3 del 28/11/2026).
 //
 // Uso (después de «NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npx next build»):
 //   CAPTURAS=/ruta PLAYWRIGHT_MODULE_PATH=/opt/node22/lib/node_modules/playwright node scripts/verify-permiso-acta-pagina.mjs
@@ -16,7 +17,7 @@
 import assert from "node:assert/strict";
 import { chromium, contexto, dormir, levantarNext } from "./capturas-ayuda/comun.mjs";
 import { elegir } from "./lib/desplegable.mjs";
-import { revisarDiseno } from "./lib/reglasDiseno.mjs";
+import { minimos, revisarDiseno } from "./lib/reglasDiseno.mjs";
 
 const OUT = process.env.CAPTURAS || null;
 const SOLO_CAPTURAS = process.env.ETAPA === "antes";
@@ -100,14 +101,15 @@ async function esperar(cond, texto) {
   for (let i = 0; i < 100; i++) { if (cond()) return; await dormir(100); }
   throw new Error(`No llegó: ${texto}`);
 }
-async function revisarBotones(barra, donde, principal) {
+async function revisarBotones(barra, donde, principal, movil) {
   await dormir(400);
+  const m = minimos(movil);
   const p = await estilo(barra.getByRole("button", { name: principal }).first());
   assert.equal(p.fondo, AZUL, `${donde}: «${principal}» en azul`);
-  assert.ok(p.alto >= 55.5, `${donde}: «${principal}» de 56 px (mide ${p.alto})`);
+  assert.ok(p.alto >= m.principal - 0.5, `${donde}: «${principal}» de ${m.principal} px (mide ${p.alto})`);
   const c = await estilo(barra.getByRole("button", { name: "Cancelar" }));
   assert.deepEqual([c.fondo, c.borde, c.ancho], [BLANCO, BORDE_CAMPO, "1px"], `${donde}: Cancelar gris con contorno`);
-  assert.ok(c.alto >= 47.5, `${donde}: Cancelar de 48 px`);
+  assert.ok(c.alto >= m.boton - 0.5, `${donde}: Cancelar de ${m.boton} px`);
   // Cancelar a la izquierda de la principal en escritorio; en celular la principal va arriba, a todo lo ancho.
   const bp = await barra.getByRole("button", { name: principal }).first().boundingBox();
   const bc = await barra.getByRole("button", { name: "Cancelar" }).boundingBox();
@@ -119,7 +121,7 @@ async function encabezado(page, donde, titulo, movil) {
   const h1 = page.locator("[data-encabezado-pagina] h1");
   assert.equal((await h1.innerText()).trim(), titulo, `${donde}: título`);
   const e = await estilo(h1);
-  assert.deepEqual([e.letra, e.peso], [movil ? "26px" : "30px", "700"], `${donde}: h1 de 26/30 en 700`);
+  assert.deepEqual([e.letra, e.peso], ["26px", "700"], `${donde}: h1 de 26 en 700`);
 }
 // Un aviso de notistack con ese texto.
 const aviso = (page, texto) => page.locator("#notistack-snackbar, [role=alert], .notistack-MuiContent").filter({ hasText: texto }).first();
@@ -165,7 +167,7 @@ try {
     await encabezado(page, `permiso nuevo ${sufijo}`, "Nuevo permiso", movil);
     assert.equal(await page.locator("[data-encabezado-pagina] a").first().getAttribute("href"), "/panel/permisos", "«← Permisos» vuelve a la lista");
     const barraP = page.locator("[data-barra-formulario]");
-    await revisarBotones(barraP, `permiso nuevo ${sufijo}`, "Guardar permiso");
+    await revisarBotones(barraP, `permiso nuevo ${sufijo}`, "Guardar permiso", movil);
     // Con «Todas las unidades» en la lista, la empresa se elige aquí (como en la ventana).
     assert.equal(await vista.locator("#permiso-empresa").inputValue(), "");
     await dormir(500);
@@ -190,9 +192,9 @@ try {
     await vista.locator("#permiso-observaciones").fill("Trámite personal");
     await barraP.getByText("Tienes cambios sin guardar").waitFor({ timeout: 5000 });
     const campo = await estilo(vista.locator("#permiso-fecha-inicio"));
-    assert.deepEqual([Math.round(campo.alto), campo.letra], movil ? [56, "18px"] : [52, "17px"], `permiso ${sufijo}: campo de 52/56 px con letra de 17/18`);
+    assert.deepEqual([Math.round(campo.alto), campo.letra], movil ? [56, "18px"] : [42, "16px"], `permiso ${sufijo}: campo de 42/56 px con letra de 16/18`);
     const combo = await estilo(vista.getByLabel("Qué pasó"));
-    assert.ok(combo.alto >= 51.5 && parseFloat(combo.letra) >= 17, `permiso ${sufijo}: «Qué pasó» grande (${combo.alto} px, ${combo.letra})`);
+    assert.ok(combo.alto >= minimos(movil).campo - 0.5 && parseFloat(combo.letra) >= (movil ? 17 : 16), `permiso ${sufijo}: «Qué pasó» del alto de un campo (${combo.alto} px, ${combo.letra})`);
     await captura(page, `permiso-nuevo-lleno-${sufijo}`);
     await revisarDiseno(page, movil, `permiso nuevo lleno ${sufijo}`, "[data-vista='formulario-permiso']");
     await barraP.getByRole("button", { name: "Guardar permiso" }).click();
@@ -216,7 +218,7 @@ try {
     await dormir(500);
     await captura(page, `permiso-editar-${sufijo}`);
     await revisarDiseno(page, movil, `permiso editar ${sufijo}`, "[data-vista='formulario-permiso']");
-    await revisarBotones(barraP, `permiso editar ${sufijo}`, "Guardar cambios");
+    await revisarBotones(barraP, `permiso editar ${sufijo}`, "Guardar cambios", movil);
     await vista.locator("#permiso-observaciones").fill("Trámite en el banco, regresa el miércoles");
     await barraP.getByText("Tienes cambios sin guardar").waitFor({ timeout: 5000 });
     // Salir por «← Permisos» con cambios: pregunta; «Seguir editando» se queda con lo escrito.
@@ -258,7 +260,7 @@ try {
     const barraA = page.locator("[data-barra-formulario]");
     if (movil) assert.match(await page.locator("[data-pasos-movil]").innerText(), /Paso 1 de 5/);
     else assert.equal(await page.locator("[data-pasos-lista] [data-paso]").count(), 5, "acta: 5 pasos");
-    await revisarBotones(barraA, `acta paso 1 ${sufijo}`, "Continuar");
+    await revisarBotones(barraA, `acta paso 1 ${sufijo}`, "Continuar", movil);
     await dormir(600);
     await captura(page, `acta-nueva-paso1-${sufijo}`);
     await revisarDiseno(page, movil, `acta paso 1 ${sufijo}`, "[data-vista='formulario-acta']");
@@ -304,7 +306,7 @@ try {
     assert.match(await resumen.innerText(), /Persona Uno Demo[\s\S]*Retardos[\s\S]*Faltaron \$200[\s\S]*Amonestacion Escrita[\s\S]*Sí/);
     await captura(page, `acta-nueva-revisar-${sufijo}`);
     await revisarDiseno(page, movil, `acta revisar ${sufijo}`, "[data-vista='formulario-acta']");
-    await revisarBotones(barraA, `acta revisar ${sufijo}`, "Guardar acta");
+    await revisarBotones(barraA, `acta revisar ${sufijo}`, "Guardar acta", movil);
     await barraA.getByRole("button", { name: "Guardar acta" }).click();
     await esperar(() => pet.actaPost.length === 1, "POST acta");
     assert.deepEqual(pet.actaPost[0], {
@@ -327,7 +329,7 @@ try {
     await dormir(500);
     await captura(page, `acta-editar-${sufijo}`);
     await revisarDiseno(page, movil, `acta editar ${sufijo}`, "[data-vista='formulario-acta']");
-    await revisarBotones(barraA, `acta editar ${sufijo}`, "Guardar cambios");
+    await revisarBotones(barraA, `acta editar ${sufijo}`, "Guardar cambios", movil);
     // Ir al paso del hecho y cambiar la descripción; «Guardar cambios» siempre disponible.
     if (movil) { await barraA.getByRole("button", { name: "Siguiente" }).click(); }
     else await page.locator("[data-pasos-lista] [data-paso]").nth(1).click();

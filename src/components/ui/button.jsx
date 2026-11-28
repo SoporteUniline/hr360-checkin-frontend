@@ -13,17 +13,23 @@ import { Icon } from "@iconify/react";
  *   variant="default"             azul · la acción principal (Guardar, Continuar, Enviar). Una por pantalla.
  *   variant="outline"             gris con contorno · Cancelar, Salir, Atrás, Exportar.
  *   variant="destructive"         rojo · borrar o cancelar algo que no se deshace (siempre con confirmación).
+ *   variant="outline-brand"       blanco con contorno y texto azul · SOLO acciones de consulta junto al título, como
+ *                                 «Vista previa». No compite con la principal (que es azul relleno).
  *   variant="destructive-outline" contorno rojo · «Dar de baja»: abre la confirmación.
  *   variant="secondary"           gris relleno · acciones de apoyo poco importantes.
  *   variant="ghost" / "link"      sin caja · acciones de texto.
- * Tamaños:
- *   size="default"  48 px (lo normal)        size="lg"   56 px (el principal de un formulario o ventana)
- *   size="sm"       44 px (compacto: barras con muchos botones y renglones de tabla)
- *   size="icon"     44 × 44 (solo ícono; SOLO en renglones de tabla, siempre con aria-label)
+ * Tamaños (28/11/2026, mockup v3: en escritorio se usan con el mouse y bajan; en celular siguen grandes para el dedo):
+ *                   escritorio (≥1024)        celular
+ *   size="default"  38 px, letra 15, 16 px    48 px, letra 17          lo normal
+ *   size="lg"       38 px, letra 15, 16 px    56 px, letra 18          el principal de un formulario o ventana
+ *   size="sm"       38 px                     44 px                    compacto: barras con muchos botones
+ *   size="icon"     36 × 36                   44 × 44                  solo ícono (renglones de tabla), con aria-label
+ *   Radio de 8 px en escritorio y 10 en celular. Todo sale de los tokens --adamia-* (globals.css).
  *
  * Ejemplo:
  *   <Button size="lg" onClick={guardar}>Guardar</Button>
  *   <Button variant="outline" onClick={cancelar}>Cancelar</Button>
+ *   <Button variant="outline-brand" onClick={verDocumento}>Vista previa</Button>
  *   <Button variant="outline" size="icon" aria-label="Editar"><Pencil /></Button>
  *
  * Props extra: loading (muestra los puntos y deshabilita), startIcon, endIcon, asChild (Radix Slot). El botón deja
@@ -43,6 +49,8 @@ const buttonVariants = cva(
           "border border-peligro-borde bg-white text-peligro-texto hover:bg-peligro-suave focus-visible:ring-peligro/30",
         outline:
           "border border-borde-campo bg-white text-texto-boton hover:bg-franja",
+        "outline-brand":
+          "border border-brand bg-white text-brand hover:bg-seleccion hover:text-brand-hover",
         secondary:
           "bg-franja text-texto-boton hover:bg-borde",
         ghost:
@@ -50,9 +58,9 @@ const buttonVariants = cva(
         link: "text-brand underline-offset-4 hover:text-brand-hover hover:underline",
       },
       size: {
-        default: "h-boton px-6 text-boton has-[>svg]:px-5",
-        sm: "h-icono gap-1.5 px-4 text-boton has-[>svg]:px-3.5",
-        lg: "h-boton-principal px-7 text-boton-principal has-[>svg]:px-6",
+        default: "h-boton px-6 text-boton has-[>svg]:px-5 lg:px-4 lg:has-[>svg]:px-4",
+        sm: "h-icono gap-1.5 px-4 text-boton has-[>svg]:px-3.5 lg:h-boton",
+        lg: "h-boton-principal px-7 text-boton-principal has-[>svg]:px-6 lg:px-4 lg:has-[>svg]:px-4",
         icon: "size-icono",
       },
     },

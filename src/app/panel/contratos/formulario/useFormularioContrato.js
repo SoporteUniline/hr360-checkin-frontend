@@ -131,6 +131,10 @@ export default function useFormularioContrato({ modo, id = null, duplicar = null
     return errs.length ? { ok: false, campo: errs[0].campo } : { ok: true };
   };
 
+  // (28/11/2026, mockup v3) Lo que falta para poder guardar, con la MISMA revisión que «Guardar», pero sin marcar nada en
+  // rojo: lo usan el panel «Resumen» (pastillas «Falta») y las pestañas de los pasos ya visitados.
+  const faltantes = useMemo(() => (form ? revisar(form) : []), [form, vacacionesLey, original]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const permiso = editar && contrato ? queSePuedeEditar(contrato) : { editable: true, motivo: null };
   const sucio = Boolean(form && original && permiso.editable && hayCambios(original, form));
 
@@ -158,7 +162,7 @@ export default function useFormularioContrato({ modo, id = null, duplicar = null
 
   return {
     cargando: (idFuente && detalle.isLoading) || !form, error: detalle.error ?? null, datos: detalle.data ?? null, contrato, mutarDetalle: detalle.mutate,
-    form, original, cambiar, errores, guardar, revisarPaso, sucio, permiso, empleados, puestos: catalogo.data?.puestos ?? [], cargandoPersonas: catalogo.isLoading,
+    form, original, cambiar, errores, faltantes, guardar, revisarPaso, sucio, permiso, empleados, puestos: catalogo.data?.puestos ?? [], cargandoPersonas: catalogo.isLoading,
     persona, vacacionesLey,
   };
 }

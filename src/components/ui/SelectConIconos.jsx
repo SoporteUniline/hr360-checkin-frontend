@@ -11,7 +11,7 @@
 // Accesible: aria-label, flechas, Inicio/Fin, escribir para buscar, Esc y foco visible (lo da Radix).
 // Para las pruebas: data-valor en el disparador (valor actual) y en cada opción (su valor; "" = sin valor).
 // grande (28/11/2026, formularios en página del sistema de diseño): el disparador lleva data-control="campo", así dentro
-// de un contenedor data-formulario-grande toma el alto (52/56 px) y la letra (17/18 px) de los campos (globals.css), y
+// de un contenedor data-formulario-grande toma el alto (42/56 px) y la letra (16/18 px) de los campos (globals.css), y
 // las opciones van en letra de 16/17 px y 48 px de alto. Sin `grande` todo queda igual que antes.
 import { useEffect, useRef, useState } from "react";
 import * as SelectPrimitive from "@radix-ui/react-select";

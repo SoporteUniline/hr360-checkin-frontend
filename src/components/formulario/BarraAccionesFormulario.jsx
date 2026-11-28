@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
  * Es UN solo juego de botones (no uno por tamaño de pantalla): el acomodo cambia con `order` y `lg:contents`.
  *
  * Cada acción es un objeto { texto, onClick, cargando, deshabilitado, clave } o null para no mostrarla:
- *   principal   azul, 56 px. Por defecto texto «Guardar», clave «guardar». Acepta type="submit" y form="id-del-form".
+ *   principal   azul (38 px en escritorio, 56 en celular). Por defecto texto «Guardar», clave «guardar». Acepta
+ *               type="submit", form="id-del-form" y flecha: true («Continuar →», para avanzar de paso).
  *   cancelar    gris con contorno. Por defecto «Cancelar».
  *   atras       gris con contorno con flecha. Por defecto «Atrás».
  *   siguiente   gris con contorno con flecha (para moverse entre pasos sin guardar; opcional).
@@ -20,7 +21,7 @@ import { cn } from "@/lib/utils";
  *   <BarraAccionesFormulario
  *     cancelar={{ onClick: salir }}
  *     atras={paso > 1 ? { onClick: anterior } : null}
- *     principal={{ texto: "Guardar y continuar", onClick: continuar, cargando: guardando }}
+ *     principal={{ texto: "Continuar", flecha: true, onClick: continuar, cargando: guardando }}
  *     aviso="Borrador guardado hace 1 min" />
  */
 export default function BarraAccionesFormulario({ principal, cancelar = null, atras = null, siguiente = null, aviso = null, etiqueta = "Acciones del formulario", className = "" }) {
@@ -59,6 +60,7 @@ export default function BarraAccionesFormulario({ principal, cancelar = null, at
           className="order-1 w-full lg:order-5 lg:w-auto"
         >
           {principal.texto ?? "Guardar"}
+          {principal.flecha ? <ArrowRight aria-hidden="true" /> : null}
         </Button>
       ) : null}
       <div className="order-2 flex gap-2.5 lg:contents">

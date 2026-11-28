@@ -11,10 +11,32 @@ const CIRCULO = {
 };
 
 /**
+ * Barra de avance para celular: «Paso 2 de 5 · Sueldo y pago», el porcentaje y una barra azul. La usan PasosGuiados
+ * (lista a la izquierda) y PestanasPasos (pestañas arriba). Se esconde desde 1024 px (lg).
+ * Ejemplo: <AvancePasosMovil pasos={PASOS} actual="sueldo" />
+ */
+export function AvancePasosMovil({ pasos, actual, className = "" }) {
+  const avance = avancePasos(pasos, actual);
+  return (
+    <div data-pasos-movil className={cn("flex flex-col gap-2.5 lg:hidden", className)}>
+      <div className="flex items-baseline justify-between gap-3 font-semibold text-texto">
+        <span>{avance.texto} · {avance.titulo}</span>
+        <span className="shrink-0 text-texto-secundario">{avance.porcentaje} %</span>
+      </div>
+      <div role="progressbar" aria-label="Avance del formulario" aria-valuemin={0} aria-valuemax={100} aria-valuenow={avance.porcentaje} className="h-2 rounded-full bg-borde">
+        <div className="h-2 rounded-full bg-brand transition-[width]" style={{ width: `${avance.porcentaje}%` }} />
+      </div>
+    </div>
+  );
+}
+
+/**
  * Pasos guiados de un formulario grande (28/11/2026, mockup aprobado; docs/sistema-diseno.md).
  *   Escritorio (lg): la lista de pasos a la izquierda (listo en verde con ✓, el actual en azul «Estás aquí», los demás
  *                    «Pendiente», con errores en rojo «Falta corregir») y el contenido del paso a la derecha.
  *   Celular:         arriba «Paso 2 de 5 · Sueldo y pago» con el porcentaje y una barra azul.
+ * (28/11/2026, mockup v3) Para un formulario que debe usar todo el ancho, los mismos pasos van como PESTAÑAS arriba:
+ * PestanasPasos (lo usa el contrato). Esta versión con la lista a la izquierda la siguen usando el acta y otros.
  * Las reglas (estado de cada paso, porcentaje) están en src/lib/formulario/pasosGuiados.mjs, con pruebas.
  *
  * Props:
@@ -33,18 +55,9 @@ const CIRCULO = {
  */
 export default function PasosGuiados({ pasos, actual, visitados = [], errores = {}, todosListos = false, alElegir = null, children }) {
   const lista = pasosConEstado(pasos, { actual, visitados, errores, todosListos });
-  const avance = avancePasos(pasos, actual);
   return (
     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:gap-8">
-      <div data-pasos-movil className="flex flex-col gap-2.5 lg:hidden">
-        <div className="flex items-baseline justify-between gap-3 font-semibold text-texto">
-          <span>{avance.texto} · {avance.titulo}</span>
-          <span className="shrink-0 text-texto-secundario">{avance.porcentaje} %</span>
-        </div>
-        <div role="progressbar" aria-label="Avance del formulario" aria-valuemin={0} aria-valuemax={100} aria-valuenow={avance.porcentaje} className="h-2 rounded-full bg-borde">
-          <div className="h-2 rounded-full bg-brand transition-[width]" style={{ width: `${avance.porcentaje}%` }} />
-        </div>
-      </div>
+      <AvancePasosMovil pasos={pasos} actual={actual} />
 
       <ol data-pasos-lista aria-label="Pasos" className="m-0 hidden w-[280px] shrink-0 list-none flex-col gap-2 p-0 lg:flex">
         {lista.map((paso) => {

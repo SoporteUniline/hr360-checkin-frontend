@@ -10,7 +10,7 @@
 import { extendTailwindMerge } from "tailwind-merge";
 
 /** Alturas y anchos (h-*, w-*, size-*, min-h-*…): --spacing-* en globals.css. */
-export const TOKENS_TAMANO = ["boton", "boton-principal", "icono", "campo"];
+export const TOKENS_TAMANO = ["boton", "boton-principal", "icono", "campo", "resumen"];
 /** Tamaños de letra (text-*): --text-* en globals.css. */
 export const TOKENS_LETRA = ["cuerpo", "boton", "boton-principal", "campo", "etiqueta", "ayuda", "titulo-seccion", "titulo-pagina"];
 /** Radios (rounded-*): --radius-* en globals.css. */

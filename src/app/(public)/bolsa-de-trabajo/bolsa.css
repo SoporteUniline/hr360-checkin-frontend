@@ -23,7 +23,7 @@
   --rojo: #b91c1c;
   --marino: #0b1033;
   --enc: 76px; /* alto del encabezado fijo del sitio */
-  --f: var(--font-inter), "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f: var(--font-adamia), "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   box-sizing: border-box;
   font-family: var(--f);
   font-size: 17px;

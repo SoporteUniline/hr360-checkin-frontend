@@ -4,7 +4,10 @@ import { cn } from "@/lib/utils";
 
 /**
  * Encabezado de página del sistema (28/11/2026, mockup aprobado; docs/sistema-diseno.md): franja gris (#F3F4F6) con la
- * ruta o el enlace para volver, el título (h1 en azul marino, peso 700), una descripción y las acciones a la derecha.
+ * ruta o el enlace para volver, el título (h1 en azul marino de 26 px, peso 700, un poco apretado: -0.02em, todo
+ * desde el token text-titulo-pagina), una descripción y las acciones a la derecha.
+ * Encabezado delgado del mockup v3 (formulario a todo el ancho): `completo className="lg:px-8 lg:py-4"` y en `acciones`
+ * el aviso («Tienes cambios sin guardar») y, si existe, un botón secundario de vista previa.
  * Es el mismo en listas y formularios: cambia su estilo aquí y cambia en todas las páginas.
  *
  * Props:
